@@ -25,6 +25,13 @@
     <ClCompile Include="Source\System\CameraSystem.cpp" />
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\imgui_demo.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\imgui_draw.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\imgui_tables.cpp" />
+    <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="Source\System\kariRenderer.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -47,6 +54,14 @@
     <ClInclude Include="Source\System\CameraSystem.h" />
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
+    <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
+    <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h" />
+    <ClInclude Include="Source\System\imgui-docking\imconfig.h" />
+    <ClInclude Include="Source\System\imgui-docking\imgui.h" />
+    <ClInclude Include="Source\System\imgui-docking\imgui_internal.h" />
+    <ClInclude Include="Source\System\imgui-docking\imstb_rectpack.h" />
+    <ClInclude Include="Source\System\imgui-docking\imstb_textedit.h" />
+    <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
     <ClInclude Include="Source\System\kariapp.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClInclude>
