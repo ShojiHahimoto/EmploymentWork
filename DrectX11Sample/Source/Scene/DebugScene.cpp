@@ -1,5 +1,6 @@
 ﻿#include "Scene/DebugScene.h"
 #include "System/CameraSystem.h"
+#include "System/DebugCameraControlSystem.h"
 #include "System/Renderer.h"
 
 using namespace DirectX::SimpleMath;
@@ -20,6 +21,8 @@ void DebugScene::Enter()
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
+	debugCameraControlState = DebugCameraControlState{};
+
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	CameraSystem::SetPerspective(camera, 45.0f, aspectRatio, 0.1f, 1000.0f);
@@ -35,6 +38,15 @@ void DebugScene::Exit()
 
 void DebugScene::RunSystems()
 {
+	if (world.HasActiveCamera())
+	{
+		TransformComponent* cameraTransform = world.GetTransform(world.GetActiveCameraId());
+		if (cameraTransform)
+		{
+			DebugCameraControlSystem::Update(*cameraTransform, debugCameraControlState);
+		}
+	}
+
 	TransformSystem::UpdateWorldTransforms(world.GetTransforms());
 
 	if (world.HasActiveCamera())
