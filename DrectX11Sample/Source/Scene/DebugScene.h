@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Scene/Scene.h"
+#include "System/DebugCameraControlSystem.h"
 #include "World/World.h"
 
 class DebugScene : public Scene
@@ -20,6 +21,7 @@ public:
 
 private:
 	World world;
+	DebugCameraControlState debugCameraControlState;
 	int width;
 	int height;
 };
