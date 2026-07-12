@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 // GameObject を直接ポインタで参照しないための識別子。
@@ -18,5 +19,6 @@ struct GameObject
 	// GameObject は ID と Component 群だけを持つデータコンテナ。
 	// Component の追加、取得、更新判断は World / System 側で行う。
 	GameObjectId id = INVALID_GAME_OBJECT_ID;
+	std::string name;
 	std::vector<std::unique_ptr<Component>> components;
 };

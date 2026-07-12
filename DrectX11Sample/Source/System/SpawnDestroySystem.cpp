@@ -22,7 +22,7 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 		case SpawnType::DebugCube:
 		default:
 		{
-			const GameObjectId objectId = world.CreateTransform();
+			const GameObjectId objectId = world.CreateTransform(request.name);
 			TransformComponent* transform = world.GetTransform(objectId);
 			if (transform)
 			{

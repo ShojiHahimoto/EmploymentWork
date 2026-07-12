@@ -63,6 +63,7 @@ GameObject にロジックを持たせてはいけない。
 現行実装では、World が `std::vector<GameObject>` として GameObject 群を保持する。
 
 - GameObject は `GameObjectId` と Component 群だけを持つ
+- GameObject はデバッグ表示や識別用の name を持つ
 - GameObject ごとの Component 群は `std::vector<std::unique_ptr<Component>>` として保持する
 - `TransformComponent`、`CameraComponent`、`VelocityComponent`、`StateComponent` などは共通基底 `Component` を継承する
 - `Component` の継承は型管理のためだけに使い、ゲームロジックは持たせない
@@ -212,7 +213,7 @@ Debug 系 System
 生成内容は SpawnType で分岐する。
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
-- SpawnRequest は type、position、rotationDegrees を指定できる
+- SpawnRequest は type、name、position、rotationDegrees を指定できる
 
 ## オブジェクト参照
 

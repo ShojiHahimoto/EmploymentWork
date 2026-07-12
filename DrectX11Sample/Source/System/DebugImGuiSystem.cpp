@@ -269,8 +269,9 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 			ImGui::PushID(static_cast<int>(object.id));
 
 			const bool isActiveCamera = object.id == world.GetActiveCameraId();
-			char label[64] = {};
-			sprintf_s(label, "GameObject %u%s", object.id, isActiveCamera ? " [Active Camera]" : "");
+			const char* objectName = object.name.empty() ? "GameObject" : object.name.c_str();
+			char label[128] = {};
+			sprintf_s(label, "%s (ID: %u)%s", objectName, object.id, isActiveCamera ? " [Active Camera]" : "");
 
 			if (ImGui::TreeNode(label))
 			{
@@ -336,22 +337,45 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 	}
 
 	static int selectedType = 0;
+	static char objectName[64] = "DebugCube";
 	static Vector3 position = Vector3(0.0f, 0.0f, 6.0f);
 	static Vector3 rotation = Vector3::Zero;
 
 	ImGui::SetNextWindowPos(ImVec2(460.0f, 20.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(320.0f, 160.0f), ImGuiCond_FirstUseEver);
 
-	if (ImGui::Begin("Spawn Object"))
+	if (ImGui::Begin("Debug Spawn"))
 	{
-		const char* spawnTypes[] = { "DebugCube" };
-		ImGui::Combo("Type", &selectedType, spawnTypes, IM_ARRAYSIZE(spawnTypes));
+		struct SpawnTypeOption
+		{
+			const char* label;
+			SpawnType type;
+		};
+
+		static constexpr SpawnTypeOption spawnTypeOptions[] =
+		{
+			{ "DebugCube", SpawnType::DebugCube },
+		};
+
+		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
+		for (int i = 0; i < IM_ARRAYSIZE(spawnTypeOptions); ++i)
+		{
+			spawnTypeLabels[i] = spawnTypeOptions[i].label;
+		}
+
+		if (selectedType < 0 || selectedType >= IM_ARRAYSIZE(spawnTypeOptions))
+		{
+			selectedType = 0;
+		}
+
+		ImGui::Combo("Type", &selectedType, spawnTypeLabels, IM_ARRAYSIZE(spawnTypeLabels));
+		ImGui::InputText("Name", objectName, IM_ARRAYSIZE(objectName));
 		ImGui::DragFloat3("Position", &position.x, 0.05f);
 		ImGui::DragFloat3("Rotation", &rotation.x, 0.5f);
 
 		if (ImGui::Button("Spawn"))
 		{
-			world.RequestSpawn(SpawnType::DebugCube, position, rotation);
+			world.RequestSpawn(spawnTypeOptions[selectedType].type, objectName, position, rotation);
 		}
 	}
 
