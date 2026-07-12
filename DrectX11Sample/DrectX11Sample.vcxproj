@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\DebugScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\System\Application.cpp" />
     <ClCompile Include="Source\System\CameraSystem.cpp" />
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp" />
+    <ClCompile Include="Source\System\DebugImGuiSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
@@ -45,14 +47,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
+    <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
+    <ClInclude Include="Source\Component\VelocityComponent.h" />
+    <ClInclude Include="Source\Core\GameObject.h" />
     <ClInclude Include="Source\Core\GameObjectId.h" />
+    <ClInclude Include="Source\Scene\BattleScene.h" />
     <ClInclude Include="Source\Scene\DebugScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\System\Application.h" />
     <ClInclude Include="Source\System\CameraSystem.h" />
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
+    <ClInclude Include="Source\System\DebugImGuiSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h" />
@@ -146,6 +154,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -161,6 +170,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -176,6 +186,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -193,6 +204,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

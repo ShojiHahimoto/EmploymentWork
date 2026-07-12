@@ -1,56 +1,80 @@
 ﻿#include "World/World.h"
 
-GameObjectId World::CreateTransform()
+GameObjectId World::CreateGameObject()
 {
 	const GameObjectId objectId = nextObjectId++;
-	transforms.emplace(objectId, TransformComponent{});
+
+	GameObject object;
+	object.id = objectId;
+	gameObjects.push_back(std::move(object));
+
+	return objectId;
+}
+
+GameObjectId World::CreateTransform()
+{
+	const GameObjectId objectId = CreateGameObject();
+	AddComponent<TransformComponent>(objectId);
 	return objectId;
 }
 
 void World::Clear()
 {
-	transforms.clear();
+	gameObjects.clear();
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
-	activeCamera = CameraComponent{};
 }
 
-TransformSystem::TransformTable& World::GetTransforms()
+std::vector<GameObject>& World::GetGameObjects()
 {
-	return transforms;
+	return gameObjects;
 }
 
-const TransformSystem::TransformTable& World::GetTransforms() const
+const std::vector<GameObject>& World::GetGameObjects() const
 {
-	return transforms;
+	return gameObjects;
+}
+
+GameObject* World::GetGameObject(GameObjectId objectId)
+{
+	for (GameObject& object : gameObjects)
+	{
+		if (object.id == objectId)
+		{
+			return &object;
+		}
+	}
+
+	return nullptr;
+}
+
+const GameObject* World::GetGameObject(GameObjectId objectId) const
+{
+	for (const GameObject& object : gameObjects)
+	{
+		if (object.id == objectId)
+		{
+			return &object;
+		}
+	}
+
+	return nullptr;
 }
 
 TransformComponent* World::GetTransform(GameObjectId objectId)
 {
-	auto it = transforms.find(objectId);
-	if (it == transforms.end())
-	{
-		return nullptr;
-	}
-
-	return &it->second;
+	return GetComponent<TransformComponent>(objectId);
 }
 
 const TransformComponent* World::GetTransform(GameObjectId objectId) const
 {
-	auto it = transforms.find(objectId);
-	if (it == transforms.end())
-	{
-		return nullptr;
-	}
-
-	return &it->second;
+	return GetComponent<TransformComponent>(objectId);
 }
 
 void World::SetActiveCamera(GameObjectId cameraId, const CameraComponent& camera)
 {
 	activeCameraId = cameraId;
-	activeCamera = camera;
+	AddComponent<CameraComponent>(cameraId, camera);
 }
 
 GameObjectId World::GetActiveCameraId() const
@@ -60,15 +84,22 @@ GameObjectId World::GetActiveCameraId() const
 
 CameraComponent& World::GetActiveCamera()
 {
-	return activeCamera;
+	CameraComponent* camera = GetComponent<CameraComponent>(activeCameraId);
+	assert(camera != nullptr);
+	return *camera;
 }
 
 const CameraComponent& World::GetActiveCamera() const
 {
-	return activeCamera;
+	const CameraComponent* camera = GetComponent<CameraComponent>(activeCameraId);
+	assert(camera != nullptr);
+	return *camera;
 }
 
 bool World::HasActiveCamera() const
 {
-	return activeCameraId != INVALID_GAME_OBJECT_ID && transforms.find(activeCameraId) != transforms.end();
+	return activeCameraId != INVALID_GAME_OBJECT_ID
+		&& GetGameObject(activeCameraId) != nullptr
+		&& HasComponent<TransformComponent>(activeCameraId)
+		&& HasComponent<CameraComponent>(activeCameraId);
 }

@@ -1,8 +1,9 @@
 ﻿#pragma once
 
+#include "Component/Component.h"
 #include <SimpleMath.h>
 
-struct CameraComponent
+struct CameraComponent : public Component
 {
 	// カメラ固有の投影設定。
 	// 位置と回転は TransformComponent 側で管理する。

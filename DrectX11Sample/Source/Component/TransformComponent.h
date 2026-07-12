@@ -1,10 +1,11 @@
 ﻿#pragma once
 
+#include "Component/Component.h"
 #include "Core/GameObjectId.h"
 #include <SimpleMath.h>
 #include <vector>
 
-struct TransformComponent
+struct TransformComponent : public Component
 {
 	// 親から見た相対 Transform。
 	// parentId が INVALID の場合は、Local と World が同じ意味になる。

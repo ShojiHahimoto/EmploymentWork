@@ -86,10 +86,10 @@ bool TransformSystem::SetParent(TransformTable& transforms, GameObjectId childId
 		return false;
 	}
 
-	auto childIt = transforms.find(childId);
-	auto parentIt = transforms.find(parentId);
+	TransformComponent* child = FindTransform(transforms, childId);
+	TransformComponent* parent = FindTransform(transforms, parentId);
 
-	if (childIt == transforms.end() || parentIt == transforms.end())
+	if (!child || !parent)
 	{
 		return false;
 	}
@@ -104,27 +104,27 @@ bool TransformSystem::SetParent(TransformTable& transforms, GameObjectId childId
 	// 親子関係を変更する前にキャッシュを最新化しておく。
 	UpdateWorldTransformsBeforeHierarchyChange(transforms);
 
-	Matrix childWorld = childIt->second.worldMatrix;
+	Matrix childWorld = child->worldMatrix;
 
 	// すでに親がいる場合は、古い親の childIds から先に外す。
-	if (childIt->second.parentId != INVALID_GAME_OBJECT_ID)
+	if (child->parentId != INVALID_GAME_OBJECT_ID)
 	{
-		auto oldParentIt = transforms.find(childIt->second.parentId);
-		if (oldParentIt != transforms.end())
+		TransformComponent* oldParent = FindTransform(transforms, child->parentId);
+		if (oldParent)
 		{
-			RemoveChildId(oldParentIt->second, childId);
+			RemoveChildId(*oldParent, childId);
 		}
 	}
 
-	childIt->second.parentId = parentId;
-	AddChildId(parentIt->second, childId);
+	child->parentId = parentId;
+	AddChildId(*parent, childId);
 
 	if (keepMode == ParentKeepMode::KeepWorldTransform)
 	{
 		// childWorld = childLocal * parentWorld なので、
 		// childLocal = childWorld * inverseParentWorld で逆算する。
-		Matrix inverseParentWorld = parentIt->second.worldMatrix.Invert();
-		SetLocalFromWorldMatrix(childIt->second, childWorld * inverseParentWorld);
+		Matrix inverseParentWorld = parent->worldMatrix.Invert();
+		SetLocalFromWorldMatrix(*child, childWorld * inverseParentWorld);
 	}
 
 	// 親子関係が変わった子以下は World キャッシュを作り直す必要がある。
@@ -140,13 +140,13 @@ bool TransformSystem::RemoveParent(TransformTable& transforms, GameObjectId chil
 		return false;
 	}
 
-	auto childIt = transforms.find(childId);
-	if (childIt == transforms.end())
+	TransformComponent* child = FindTransform(transforms, childId);
+	if (!child)
 	{
 		return false;
 	}
 
-	GameObjectId parentId = childIt->second.parentId;
+	GameObjectId parentId = child->parentId;
 	if (parentId == INVALID_GAME_OBJECT_ID)
 	{
 		return true;
@@ -155,20 +155,20 @@ bool TransformSystem::RemoveParent(TransformTable& transforms, GameObjectId chil
 	// 親を外す前の World 行列を保存するため、先に最新化する。
 	UpdateWorldTransformsBeforeHierarchyChange(transforms);
 
-	Matrix childWorld = childIt->second.worldMatrix;
+	Matrix childWorld = child->worldMatrix;
 
-	auto parentIt = transforms.find(parentId);
-	if (parentIt != transforms.end())
+	TransformComponent* parent = FindTransform(transforms, parentId);
+	if (parent)
 	{
-		RemoveChildId(parentIt->second, childId);
+		RemoveChildId(*parent, childId);
 	}
 
-	childIt->second.parentId = INVALID_GAME_OBJECT_ID;
+	child->parentId = INVALID_GAME_OBJECT_ID;
 
 	if (keepMode == ParentKeepMode::KeepWorldTransform)
 	{
 		// 親がなくなるので、今までの World Transform をそのまま Local に移す。
-		SetLocalFromWorldMatrix(childIt->second, childWorld);
+		SetLocalFromWorldMatrix(*child, childWorld);
 	}
 
 	MarkDirtyRecursive(transforms, childId);
@@ -179,27 +179,28 @@ bool TransformSystem::RemoveParent(TransformTable& transforms, GameObjectId chil
 void TransformSystem::UpdateWorldTransforms(TransformTable& transforms)
 {
 	// root から再帰的に更新することで、親の World を先に確定させる。
-	for (auto& pair : transforms)
+	for (GameObject& object : transforms)
 	{
-		if (pair.second.parentId == INVALID_GAME_OBJECT_ID)
+		TransformComponent* transform = FindTransform(transforms, object.id);
+		if (transform && transform->parentId == INVALID_GAME_OBJECT_ID)
 		{
-			UpdateWorldTransformRecursive(transforms, pair.first);
+			UpdateWorldTransformRecursive(transforms, object.id);
 		}
 	}
 }
 
 void TransformSystem::MarkDirtyRecursive(TransformTable& transforms, GameObjectId objectId)
 {
-	auto it = transforms.find(objectId);
-	if (it == transforms.end())
+	TransformComponent* transform = FindTransform(transforms, objectId);
+	if (!transform)
 	{
 		return;
 	}
 
 	// 親が変わると子孫の World Transform もすべて変わる可能性がある。
-	it->second.dirty = true;
+	transform->dirty = true;
 
-	for (GameObjectId childId : it->second.childIds)
+	for (GameObjectId childId : transform->childIds)
 	{
 		MarkDirtyRecursive(transforms, childId);
 	}
@@ -222,16 +223,58 @@ bool TransformSystem::HasAncestor(const TransformTable& transforms, GameObjectId
 			return true;
 		}
 
-		auto it = transforms.find(currentId);
-		if (it == transforms.end())
+		const TransformComponent* transform = FindTransform(transforms, currentId);
+		if (!transform)
 		{
 			return false;
 		}
 
-		currentId = it->second.parentId;
+		currentId = transform->parentId;
 	}
 
 	return false;
+}
+
+TransformComponent* TransformSystem::FindTransform(TransformTable& transforms, GameObjectId objectId)
+{
+	for (GameObject& object : transforms)
+	{
+		if (object.id != objectId)
+		{
+			continue;
+		}
+
+		for (std::unique_ptr<Component>& component : object.components)
+		{
+			if (TransformComponent* transform = dynamic_cast<TransformComponent*>(component.get()))
+			{
+				return transform;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
+const TransformComponent* TransformSystem::FindTransform(const TransformTable& transforms, GameObjectId objectId)
+{
+	for (const GameObject& object : transforms)
+	{
+		if (object.id != objectId)
+		{
+			continue;
+		}
+
+		for (const std::unique_ptr<Component>& component : object.components)
+		{
+			if (const TransformComponent* transform = dynamic_cast<const TransformComponent*>(component.get()))
+			{
+				return transform;
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 void TransformSystem::RemoveChildId(TransformComponent& parent, GameObjectId childId)
@@ -251,38 +294,37 @@ void TransformSystem::AddChildId(TransformComponent& parent, GameObjectId childI
 
 void TransformSystem::UpdateWorldTransformRecursive(TransformTable& transforms, GameObjectId objectId)
 {
-	auto it = transforms.find(objectId);
-	if (it == transforms.end())
+	TransformComponent* transform = FindTransform(transforms, objectId);
+	if (!transform)
 	{
 		return;
 	}
 
-	TransformComponent& transform = it->second;
-	Matrix localMatrix = CreateLocalMatrix(transform);
+	Matrix localMatrix = CreateLocalMatrix(*transform);
 
-	if (transform.parentId != INVALID_GAME_OBJECT_ID)
+	if (transform->parentId != INVALID_GAME_OBJECT_ID)
 	{
-		auto parentIt = transforms.find(transform.parentId);
-		if (parentIt != transforms.end())
+		TransformComponent* parent = FindTransform(transforms, transform->parentId);
+		if (parent)
 		{
 			// SimpleMath は S * R * T の行列を local * parentWorld で合成する。
-			ApplyWorldMatrixCache(transform, localMatrix * parentIt->second.worldMatrix);
+			ApplyWorldMatrixCache(*transform, localMatrix * parent->worldMatrix);
 		}
 		else
 		{
 			// 親 Transform が消えていた場合は、孤立 root として扱う。
-			transform.parentId = INVALID_GAME_OBJECT_ID;
-			ApplyWorldMatrixCache(transform, localMatrix);
+			transform->parentId = INVALID_GAME_OBJECT_ID;
+			ApplyWorldMatrixCache(*transform, localMatrix);
 		}
 	}
 	else
 	{
-		ApplyWorldMatrixCache(transform, localMatrix);
+		ApplyWorldMatrixCache(*transform, localMatrix);
 	}
 
-	transform.dirty = false;
+	transform->dirty = false;
 
-	for (GameObjectId childId : transform.childIds)
+	for (GameObjectId childId : transform->childIds)
 	{
 		UpdateWorldTransformRecursive(transforms, childId);
 	}

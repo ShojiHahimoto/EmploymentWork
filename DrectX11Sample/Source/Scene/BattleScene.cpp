@@ -1,4 +1,5 @@
-﻿#include "Scene/DebugScene.h"
+﻿#include "Scene/BattleScene.h"
+
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
@@ -7,13 +8,13 @@
 
 using namespace DirectX::SimpleMath;
 
-DebugScene::DebugScene(int initialWidth, int initialHeight)
+BattleScene::BattleScene(int initialWidth, int initialHeight)
 	: width(initialWidth)
 	, height(initialHeight)
 {
 }
 
-void DebugScene::Enter()
+void BattleScene::Enter()
 {
 	GameObjectId cameraId = world.CreateTransform();
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
@@ -25,6 +26,7 @@ void DebugScene::Enter()
 
 	debugCameraControlState = DebugCameraControlState{};
 
+	// 現段階ではバトル用 GameObject 構造の表示確認として、仮の立方体を 1 つ配置する。
 	debugCubeId = world.CreateTransform();
 	TransformComponent* debugCubeTransform = world.GetTransform(debugCubeId);
 	if (debugCubeTransform)
@@ -42,13 +44,13 @@ void DebugScene::Enter()
 	RunSystems();
 }
 
-void DebugScene::Exit()
+void BattleScene::Exit()
 {
 	debugCubeId = INVALID_GAME_OBJECT_ID;
 	world.Clear();
 }
 
-void DebugScene::RunSystems()
+void BattleScene::RunSystems()
 {
 	if (world.HasActiveCamera())
 	{
@@ -72,7 +74,7 @@ void DebugScene::RunSystems()
 	}
 }
 
-void DebugScene::Draw(Renderer& renderer)
+void BattleScene::Draw(Renderer& renderer)
 {
 	if (!world.HasActiveCamera())
 	{
@@ -86,11 +88,11 @@ void DebugScene::Draw(Renderer& renderer)
 	if (debugCubeTransform)
 	{
 		renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*debugCubeTransform));
-		DebugImGuiSystem::DrawTransformEditor("Debug Cube Transform", *debugCubeTransform);
+		DebugImGuiSystem::DrawTransformEditor("Battle Debug Cube Transform", *debugCubeTransform);
 	}
 }
 
-void DebugScene::OnResize(int newWidth, int newHeight)
+void BattleScene::OnResize(int newWidth, int newHeight)
 {
 	if (newWidth <= 0 || newHeight <= 0)
 	{
@@ -108,12 +110,12 @@ void DebugScene::OnResize(int newWidth, int newHeight)
 	}
 }
 
-World& DebugScene::GetWorld()
+World& BattleScene::GetWorld()
 {
 	return world;
 }
 
-const World& DebugScene::GetWorld() const
+const World& BattleScene::GetWorld() const
 {
 	return world;
 }

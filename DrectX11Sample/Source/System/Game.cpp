@@ -1,7 +1,8 @@
 ﻿#include "System/Game.h"
-#include "Scene/DebugScene.h"
+#include "Scene/BattleScene.h"
 #include "Scene/SceneManager.h"
 #include "System/Application.h"
+#include "System/DebugImGuiSystem.h"
 
 #include <memory>
 
@@ -13,9 +14,14 @@ void Game::Init()
 		return;
 	}
 
+	DebugImGuiSystem::Init(
+		Application::GetWindow(),
+		Renderer::GetDevice(),
+		Renderer::GetDeviceContext());
+
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RequestChangeScene(
-		std::make_unique<DebugScene>(
+		std::make_unique<BattleScene>(
 			static_cast<int>(Application::GetWidth()),
 			static_cast<int>(Application::GetHeight())));
 	sceneManager.ApplyPendingSceneChange();
@@ -36,7 +42,9 @@ void Game::Draw()
 	}
 
 	renderer.DrawStart();
+	DebugImGuiSystem::BeginFrame();
 	SceneManager::GetInstance().Draw(renderer);
+	DebugImGuiSystem::Render();
 	renderer.DrawEnd();
 }
 
@@ -59,6 +67,7 @@ void Game::OnResize(int width, int height)
 void Game::Uninit()
 {
 	SceneManager::GetInstance().Shutdown();
+	DebugImGuiSystem::Shutdown();
 	rendererInitialized = false;
 
 	renderer.Uninit();
