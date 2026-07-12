@@ -4,11 +4,11 @@
 #include "System/DebugCameraControlSystem.h"
 #include "World/World.h"
 
-class DebugScene : public Scene
+class BattleScene : public Scene
 {
 public:
-	DebugScene(int initialWidth, int initialHeight);
-	~DebugScene() override = default;
+	BattleScene(int initialWidth, int initialHeight);
+	~BattleScene() override = default;
 
 	void Enter() override;
 	void Exit() override;

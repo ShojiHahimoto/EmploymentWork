@@ -160,6 +160,16 @@ void Renderer::DrawEnd()
 	m_pSwapChain->Present(1, 0);
 }
 
+ID3D11Device* Renderer::GetDevice()
+{
+	return m_pDevice;
+}
+
+ID3D11DeviceContext* Renderer::GetDeviceContext()
+{
+	return m_pDeviceContext;
+}
+
 HRESULT Renderer::ResizeWindow(int width, int height)
 {
 	if (!m_pSwapChain || width <= 0 || height <= 0)

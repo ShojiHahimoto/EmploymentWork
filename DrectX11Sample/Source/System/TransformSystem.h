@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Component/TransformComponent.h"
-#include <unordered_map>
+#include "Core/GameObject.h"
 
 enum class ParentKeepMode
 {
@@ -17,9 +17,8 @@ enum class ParentKeepMode
 class TransformSystem
 {
 public:
-	// World が TransformComponent を GameObjectId で管理する想定の最小テーブル。
-	// World 実装後は、この型か同等の管理構造を System に渡す。
-	using TransformTable = std::unordered_map<GameObjectId, TransformComponent>;
+	// World が持つ GameObject 群を受け取り、必要な TransformComponent を参照する。
+	using TransformTable = std::vector<GameObject>;
 
 	// Local 値は親から見た相対値。
 	static const DirectX::SimpleMath::Vector3& GetLocalPosition(const TransformComponent& transform);
@@ -49,6 +48,8 @@ private:
 	static void MarkDirtyRecursive(TransformTable& transforms, GameObjectId objectId);
 	static void UpdateWorldTransformsBeforeHierarchyChange(TransformTable& transforms);
 	static bool HasAncestor(const TransformTable& transforms, GameObjectId objectId, GameObjectId ancestorId);
+	static TransformComponent* FindTransform(TransformTable& transforms, GameObjectId objectId);
+	static const TransformComponent* FindTransform(const TransformTable& transforms, GameObjectId objectId);
 	static void RemoveChildId(TransformComponent& parent, GameObjectId childId);
 	static void AddChildId(TransformComponent& parent, GameObjectId childId);
 	static void UpdateWorldTransformRecursive(TransformTable& transforms, GameObjectId objectId);

@@ -60,6 +60,16 @@ GameObject はデータのみを保持する。
 
 GameObject にロジックを持たせてはいけない。
 
+現行実装では、World が `std::vector<GameObject>` として GameObject 群を保持する。
+
+- GameObject は `GameObjectId` と Component 群だけを持つ
+- GameObject ごとの Component 群は `std::vector<std::unique_ptr<Component>>` として保持する
+- `TransformComponent`、`CameraComponent`、`VelocityComponent`、`StateComponent` などは共通基底 `Component` を継承する
+- `Component` の継承は型管理のためだけに使い、ゲームロジックは持たせない
+- Component の追加、取得、存在確認は World が提供する
+- System は World の GameObject 群を走査し、必要な Component を参照・変更する
+- GameObject 自身に Update やゲームロジックを持たせない
+
 ## Transform 設計
 
 Transform は Component と System に分離する。
@@ -72,6 +82,17 @@ Transform は Component と System に分離する。
 - 親子関係の変更、循環参照チェック、ワールド行列更新は TransformSystem が担当する
 - SetParent / RemoveParent は KeepLocalTransform と KeepWorldTransform の方針を選べるようにする
 - Collider は見た目用 Transform と密結合しない。処理は 2D を前提に別管理する
+
+### Transform 更新の扱い
+
+TransformSystem は、位置変更リクエストを後から一括適用する System ではない。
+
+- 各 System が位置を変更する場合は、`TransformSystem::SetLocalPosition` などを通して local 値を即時変更する
+- Movement / CollisionResolve / DebugEditor などの処理中に参照する座標は、原則として localPosition を正とする
+- worldMatrix / worldPosition / worldRotation / worldScale は描画、カメラ、親子階層反映用のキャッシュとする
+- TransformSystem の `UpdateWorldTransforms` は、変更済み local 値から world キャッシュを再計算する役割とする
+- world キャッシュを参照する System は、その前に TransformSystem による更新が済んでいる順序で実行する
+- バトル処理の移動、接地、壁、押し合い解決は worldMatrix に依存しない
 
 ## Camera 設計
 
@@ -106,7 +127,7 @@ Component は struct で定義し、データ専用とする。
 
 ## System 設計
 
-System は固定順序で更新する。
+System は固定順序で更新する。ただし、Component にロジックを持たせないことと、System を過度に細分化することは同義ではない。
 
 ```text
 Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
@@ -114,13 +135,60 @@ Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
 
 各 System は World を入力として受け取り、必要な Component / GameObject データを処理する。
 
+### バトル用 System 粒度
+
+バトル中は同一フレーム内の整合性を優先するため、System の更新順を固定する。
+一方で、管理が複雑になりすぎるほど細かい System 分割は避ける。
+
+当面のバトル基礎では、次の粒度を基準とする。
+
+```text
+InputSystem
+CharacterControlSystem
+MovementResolveSystem
+HitCollisionSystem
+HitResolveSystem
+TransformSystem
+CameraSystem
+Debug 系 System
+```
+
+- InputSystem は、キーボードやコントローラー入力を 1 フレーム分の入力状態に変換する
+- CharacterControlSystem は、入力、State、Velocity を見て、歩き、ジャンプ、落下などを決める
+- MovementResolveSystem は、Velocity による移動、仮地面、壁、プレイヤー同士の押し合い、めり込み解消までを扱う
+- HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
+- HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
+- TransformSystem は、描画やカメラ用の world キャッシュを更新する
+- CameraSystem は、カメラ Transform から View / Projection を更新する
+- Debug 系 System は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
+
+### Collision の種類
+
+格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。
+
+- 地面、壁、プレイヤー押し合いは MovementResolveSystem で位置を補正する
+- 攻撃判定、やられ判定、ガード判定は HitCollisionSystem で収集する
+- ダメージ、State 変更、ヒットストップなどの結果は HitResolveSystem で確定する
+- HitCollisionSystem は結果を直接確定しない
+
 ## Collision / Resolve
 
-Collision は衝突情報の収集のみを行う。
+ヒット用 Collision は衝突情報の収集のみを行う。
 
-- CollisionSystem は結果を直接確定しない
+- HitCollisionSystem は結果を直接確定しない
 - HitResolveSystem が全体の衝突情報を見て結果を確定する
 - 同一フレーム内の整合性を優先する
+
+地面、壁、プレイヤー押し合いなど、移動結果を補正する接触は MovementResolveSystem の責務とする。
+
+## ダメージ / バトル状態
+
+ダメージやヒット結果は、個別の CollisionSystem 内で直接反映しない。
+
+- HP などの値は HealthComponent または BattleStatusComponent として保持する
+- ダメージ適用、のけぞり、ヒットストップ、無敵などの結果確定は HitResolveSystem が担当する
+- StateComponent は現在状態と stateFrame を保持する
+- stateFrame は、状態に入ってからの経過フレームとして扱う
 
 ## 生成 / 削除
 
@@ -130,6 +198,21 @@ Collision は衝突情報の収集のみを行う。
 - DestroyRequest に削除要求を積む
 - フレーム最後に一括反映する
 - Update 中に直接追加・削除してはいけない
+
+現行実装では、World が SpawnRequest / DestroyRequest を保持する。
+
+- System や Debug UI は `World::RequestSpawn` / `World::RequestDestroy` を呼ぶ
+- GameObject 配列の実変更は SpawnDestroySystem だけが行う
+- SpawnDestroySystem は TransformSystem / CameraSystem の直前で実行する
+- System 更新中に発生した生成・削除は、同一フレームの判定処理には参加しない
+- SpawnDestroySystem 反映後に TransformSystem を実行するため、生成されたオブジェクトは同一フレームの描画には反映される
+- 親 GameObject を削除する場合は、TransformComponent の childIds を辿り、子も再帰的に削除する
+- 存在しない GameObject への削除要求や重複した削除要求は無視できる実装にする
+
+生成内容は SpawnType で分岐する。
+
+- `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
+- SpawnRequest は type、position、rotationDegrees を指定できる
 
 ## オブジェクト参照
 

@@ -101,6 +101,9 @@ public:
 	static void DrawStart();
 	static void DrawEnd();
 
+	static ID3D11Device* GetDevice();
+	static ID3D11DeviceContext* GetDeviceContext();
+
 	static HRESULT ResizeWindow(int width, int height);
 
 	static void SetViewProjection(

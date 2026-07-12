@@ -57,6 +57,16 @@
 
 改行コードだけの差分が大量に出た場合は、作業前に対象ファイルの文字コードと改行コードを確認する。
 
+## C++ 言語標準
+
+このプロジェクトは C++20 を使用する。
+
+理由:
+
+- GameObject が異なる型の Component を共通基底 `Component` 経由で保持する
+- World が型付き Component 取得 API を提供し、System が必要な Component を参照する
+- Visual Studio の全構成で `stdcpp20` を指定し、構成差によるビルド差異を避ける
+
 ## Windows.h
 
 `NOMINMAX` は Visual Studio プロジェクトのプリプロセッサ定義に入れる。

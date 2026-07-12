@@ -1,27 +1,36 @@
-﻿#include "Scene/DebugScene.h"
+﻿#include "Scene/BattleScene.h"
+
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
+#include "System/DebugImGuiSystem.h"
 #include "System/Renderer.h"
+#include "System/SpawnDestroySystem.h"
+#include "System/TransformSystem.h"
 
 using namespace DirectX::SimpleMath;
 
-DebugScene::DebugScene(int initialWidth, int initialHeight)
+BattleScene::BattleScene(int initialWidth, int initialHeight)
 	: width(initialWidth)
 	, height(initialHeight)
 {
 }
 
-void DebugScene::Enter()
+void BattleScene::Enter()
 {
 	GameObjectId cameraId = world.CreateTransform();
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
-		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 0.0f, -6.0f));
+		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
 	debugCameraControlState = DebugCameraControlState{};
+
+	world.RequestSpawn(
+		SpawnType::DebugCube,
+		Vector3(0.0f, 0.0f, 6.0f),
+		Vector3(20.0f, 32.0f, 0.0f));
 
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
@@ -31,12 +40,12 @@ void DebugScene::Enter()
 	RunSystems();
 }
 
-void DebugScene::Exit()
+void BattleScene::Exit()
 {
 	world.Clear();
 }
 
-void DebugScene::RunSystems()
+void BattleScene::RunSystems()
 {
 	if (world.HasActiveCamera())
 	{
@@ -47,7 +56,8 @@ void DebugScene::RunSystems()
 		}
 	}
 
-	TransformSystem::UpdateWorldTransforms(world.GetTransforms());
+	SpawnDestroySystem::Update(world);
+	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())
 	{
@@ -60,7 +70,7 @@ void DebugScene::RunSystems()
 	}
 }
 
-void DebugScene::Draw(Renderer& renderer)
+void BattleScene::Draw(Renderer& renderer)
 {
 	if (!world.HasActiveCamera())
 	{
@@ -69,12 +79,26 @@ void DebugScene::Draw(Renderer& renderer)
 
 	const CameraComponent& camera = world.GetActiveCamera();
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
-	renderer.DrawDebugCube(
-		Matrix::CreateRotationX(0.35f) *
-		Matrix::CreateRotationY(0.55f));
+
+	for (GameObject& object : world.GetGameObjects())
+	{
+		if (object.id == world.GetActiveCameraId())
+		{
+			continue;
+		}
+
+		TransformComponent* transform = world.GetTransform(object.id);
+		if (transform)
+		{
+			renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*transform));
+		}
+	}
+
+	DebugImGuiSystem::DrawSpawnWindow(world);
+	DebugImGuiSystem::DrawWorldInspector(world);
 }
 
-void DebugScene::OnResize(int newWidth, int newHeight)
+void BattleScene::OnResize(int newWidth, int newHeight)
 {
 	if (newWidth <= 0 || newHeight <= 0)
 	{
@@ -92,12 +116,12 @@ void DebugScene::OnResize(int newWidth, int newHeight)
 	}
 }
 
-World& DebugScene::GetWorld()
+World& BattleScene::GetWorld()
 {
 	return world;
 }
 
-const World& DebugScene::GetWorld() const
+const World& BattleScene::GetWorld() const
 {
 	return world;
 }
