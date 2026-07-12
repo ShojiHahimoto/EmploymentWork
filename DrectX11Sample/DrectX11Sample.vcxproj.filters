@@ -72,9 +72,6 @@
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scene\DebugScene.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Scene\SceneManager.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
@@ -116,9 +113,6 @@
     <ClInclude Include="Source\Core\GameObject.h">
       <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\GameObjectId.h">
-      <Filter>ヘッダー ファイル\Core</Filter>
-    </ClInclude>
     <ClInclude Include="Source\System\TransformSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -135,9 +129,6 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\BattleScene.h">
-      <Filter>ヘッダー ファイル\Scene</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Scene\DebugScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\Scene.h">

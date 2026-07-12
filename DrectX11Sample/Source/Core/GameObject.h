@@ -1,10 +1,17 @@
 ﻿#pragma once
 
 #include "Component/Component.h"
-#include "Core/GameObjectId.h"
 
+#include <cstdint>
 #include <memory>
 #include <vector>
+
+// GameObject を直接ポインタで参照しないための識別子。
+using GameObjectId = uint32_t;
+
+// 0 は「存在しない GameObject」を表す予約値。
+// 実際に生成する GameObjectId は 1 以上にする。
+constexpr GameObjectId INVALID_GAME_OBJECT_ID = 0;
 
 struct GameObject
 {

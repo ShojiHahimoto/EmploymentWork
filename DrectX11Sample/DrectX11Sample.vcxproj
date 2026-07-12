@@ -20,7 +20,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
-    <ClCompile Include="Source\Scene\DebugScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\System\Application.cpp" />
     <ClCompile Include="Source\System\CameraSystem.cpp" />
@@ -52,9 +51,7 @@
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
     <ClInclude Include="Source\Core\GameObject.h" />
-    <ClInclude Include="Source\Core\GameObjectId.h" />
     <ClInclude Include="Source\Scene\BattleScene.h" />
-    <ClInclude Include="Source\Scene\DebugScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\System\Application.h" />

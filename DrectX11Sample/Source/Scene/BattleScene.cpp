@@ -26,7 +26,7 @@ void BattleScene::Enter()
 
 	debugCameraControlState = DebugCameraControlState{};
 
-	// 現段階ではバトル用 GameObject 構造の表示確認として、仮の立方体を 1 つ配置する。
+	// デバッグ用キューブ配置
 	debugCubeId = world.CreateTransform();
 	TransformComponent* debugCubeTransform = world.GetTransform(debugCubeId);
 	if (debugCubeTransform)

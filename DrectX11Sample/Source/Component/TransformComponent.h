@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Component/Component.h"
-#include "Core/GameObjectId.h"
+#include "Core/GameObject.h"
 #include <SimpleMath.h>
 #include <vector>
 

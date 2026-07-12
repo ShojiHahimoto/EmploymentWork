@@ -3,7 +3,6 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
-#include "Core/GameObjectId.h"
 
 #include <cassert>
 #include <memory>
