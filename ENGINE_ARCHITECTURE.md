@@ -199,6 +199,21 @@ Debug 系 System
 - フレーム最後に一括反映する
 - Update 中に直接追加・削除してはいけない
 
+現行実装では、World が SpawnRequest / DestroyRequest を保持する。
+
+- System や Debug UI は `World::RequestSpawn` / `World::RequestDestroy` を呼ぶ
+- GameObject 配列の実変更は SpawnDestroySystem だけが行う
+- SpawnDestroySystem は TransformSystem / CameraSystem の直前で実行する
+- System 更新中に発生した生成・削除は、同一フレームの判定処理には参加しない
+- SpawnDestroySystem 反映後に TransformSystem を実行するため、生成されたオブジェクトは同一フレームの描画には反映される
+- 親 GameObject を削除する場合は、TransformComponent の childIds を辿り、子も再帰的に削除する
+- 存在しない GameObject への削除要求や重複した削除要求は無視できる実装にする
+
+生成内容は SpawnType で分岐する。
+
+- `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
+- SpawnRequest は type、position、rotationDegrees を指定できる
+
 ## オブジェクト参照
 
 GameObject 間のポインタ直接参照は禁止する。

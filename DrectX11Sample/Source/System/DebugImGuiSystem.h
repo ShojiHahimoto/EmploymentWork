@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/TransformComponent.h"
+#include "World/World.h"
 #include <Windows.h>
 #include <d3d11.h>
 
@@ -17,6 +18,8 @@ public:
 	static void Render();
 
 	static void DrawTransformEditor(const char* windowName, TransformComponent& transform);
+	static void DrawWorldInspector(World& world);
+	static void DrawSpawnWindow(World& world);
 
 private:
 	static bool initialized;

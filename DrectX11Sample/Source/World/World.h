@@ -9,6 +9,23 @@
 #include <utility>
 #include <vector>
 
+enum class SpawnType
+{
+	DebugCube,
+};
+
+struct SpawnRequest
+{
+	SpawnType type = SpawnType::DebugCube;
+	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector3 rotationDegrees = DirectX::SimpleMath::Vector3::Zero;
+};
+
+struct DestroyRequest
+{
+	GameObjectId targetId = INVALID_GAME_OBJECT_ID;
+};
+
 class World
 {
 public:
@@ -48,11 +65,26 @@ public:
 	const CameraComponent& GetActiveCamera() const;
 	bool HasActiveCamera() const;
 
+	void RequestSpawn(SpawnType type, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees);
+	void RequestDestroy(GameObjectId objectId);
+
+	const std::vector<SpawnRequest>& GetSpawnRequests() const;
+	const std::vector<DestroyRequest>& GetDestroyRequests() const;
+	void ClearSpawnRequests();
+	void ClearDestroyRequests();
+
+	void DestroyGameObjectImmediate(GameObjectId objectId);
+
 private:
 	std::vector<GameObject> gameObjects;
+	std::vector<SpawnRequest> spawnRequests;
+	std::vector<DestroyRequest> destroyRequests;
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;
+
+	void CollectDestroyIdsRecursive(GameObjectId objectId, std::vector<GameObjectId>& destroyIds) const;
+	bool ContainsObjectId(const std::vector<GameObjectId>& objectIds, GameObjectId objectId) const;
 };
 
 template <class T>

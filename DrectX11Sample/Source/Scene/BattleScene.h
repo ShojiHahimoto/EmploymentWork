@@ -22,7 +22,6 @@ public:
 private:
 	World world;
 	DebugCameraControlState debugCameraControlState;
-	GameObjectId debugCubeId = INVALID_GAME_OBJECT_ID;
 	int width;
 	int height;
 };

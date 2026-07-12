@@ -1,5 +1,8 @@
 ﻿#include "System/DebugImGuiSystem.h"
 
+#include "Component/CameraComponent.h"
+#include "Component/StateComponent.h"
+#include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
 
 #if defined(_DEBUG)
@@ -245,5 +248,115 @@ void DebugImGuiSystem::DrawTransformEditor(const char* windowName, TransformComp
 #else
 	(void)windowName;
 	(void)transform;
+#endif
+}
+
+void DebugImGuiSystem::DrawWorldInspector(World& world)
+{
+#if defined(_DEBUG)
+	if (!initialized)
+	{
+		return;
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(20.0f, 190.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(420.0f, 420.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("World Objects"))
+	{
+		for (GameObject& object : world.GetGameObjects())
+		{
+			ImGui::PushID(static_cast<int>(object.id));
+
+			const bool isActiveCamera = object.id == world.GetActiveCameraId();
+			char label[64] = {};
+			sprintf_s(label, "GameObject %u%s", object.id, isActiveCamera ? " [Active Camera]" : "");
+
+			if (ImGui::TreeNode(label))
+			{
+				ImGui::Text("Components:");
+				if (world.HasComponent<TransformComponent>(object.id)) ImGui::BulletText("Transform");
+				if (world.HasComponent<CameraComponent>(object.id)) ImGui::BulletText("Camera");
+				if (world.HasComponent<VelocityComponent>(object.id)) ImGui::BulletText("Velocity");
+				if (world.HasComponent<StateComponent>(object.id)) ImGui::BulletText("State");
+
+				TransformComponent* transform = world.GetTransform(object.id);
+				if (transform)
+				{
+					Vector3 position = TransformSystem::GetLocalPosition(*transform);
+					Vector3 rotation = TransformSystem::GetLocalEulerRotationDegrees(*transform);
+					Vector3 scale = TransformSystem::GetLocalScale(*transform);
+
+					if (ImGui::DragFloat3("Position", &position.x, 0.05f))
+					{
+						TransformSystem::SetLocalPosition(*transform, position);
+					}
+
+					if (ImGui::DragFloat3("Rotation", &rotation.x, 0.5f))
+					{
+						TransformSystem::SetLocalEulerRotationDegrees(*transform, rotation);
+					}
+
+					if (ImGui::DragFloat3("Scale", &scale.x, 0.01f, 0.001f, 100.0f))
+					{
+						TransformSystem::SetLocalScale(*transform, scale);
+					}
+				}
+
+				if (isActiveCamera)
+				{
+					ImGui::BeginDisabled();
+					ImGui::Button("Delete");
+					ImGui::EndDisabled();
+				}
+				else if (ImGui::Button("Delete"))
+				{
+					world.RequestDestroy(object.id);
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+	}
+
+	ImGui::End();
+#else
+	(void)world;
+#endif
+}
+
+void DebugImGuiSystem::DrawSpawnWindow(World& world)
+{
+#if defined(_DEBUG)
+	if (!initialized)
+	{
+		return;
+	}
+
+	static int selectedType = 0;
+	static Vector3 position = Vector3(0.0f, 0.0f, 6.0f);
+	static Vector3 rotation = Vector3::Zero;
+
+	ImGui::SetNextWindowPos(ImVec2(460.0f, 20.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(320.0f, 160.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("Spawn Object"))
+	{
+		const char* spawnTypes[] = { "DebugCube" };
+		ImGui::Combo("Type", &selectedType, spawnTypes, IM_ARRAYSIZE(spawnTypes));
+		ImGui::DragFloat3("Position", &position.x, 0.05f);
+		ImGui::DragFloat3("Rotation", &rotation.x, 0.5f);
+
+		if (ImGui::Button("Spawn"))
+		{
+			world.RequestSpawn(SpawnType::DebugCube, position, rotation);
+		}
+	}
+
+	ImGui::End();
+#else
+	(void)world;
 #endif
 }

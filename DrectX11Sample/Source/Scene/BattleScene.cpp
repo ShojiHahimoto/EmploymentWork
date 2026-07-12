@@ -4,6 +4,7 @@
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Renderer.h"
+#include "System/SpawnDestroySystem.h"
 #include "System/TransformSystem.h"
 
 using namespace DirectX::SimpleMath;
@@ -26,15 +27,10 @@ void BattleScene::Enter()
 
 	debugCameraControlState = DebugCameraControlState{};
 
-	// デバッグ用キューブ配置
-	debugCubeId = world.CreateTransform();
-	TransformComponent* debugCubeTransform = world.GetTransform(debugCubeId);
-	if (debugCubeTransform)
-	{
-		TransformSystem::SetLocalPosition(*debugCubeTransform, Vector3(0.0f, 0.0f, 6.0f));
-		TransformSystem::SetLocalEulerRotationDegrees(*debugCubeTransform, Vector3(20.0f, 32.0f, 0.0f));
-		TransformSystem::SetLocalScale(*debugCubeTransform, Vector3::One);
-	}
+	world.RequestSpawn(
+		SpawnType::DebugCube,
+		Vector3(0.0f, 0.0f, 6.0f),
+		Vector3(20.0f, 32.0f, 0.0f));
 
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
@@ -46,7 +42,6 @@ void BattleScene::Enter()
 
 void BattleScene::Exit()
 {
-	debugCubeId = INVALID_GAME_OBJECT_ID;
 	world.Clear();
 }
 
@@ -61,6 +56,7 @@ void BattleScene::RunSystems()
 		}
 	}
 
+	SpawnDestroySystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())
@@ -84,12 +80,22 @@ void BattleScene::Draw(Renderer& renderer)
 	const CameraComponent& camera = world.GetActiveCamera();
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
 
-	TransformComponent* debugCubeTransform = world.GetTransform(debugCubeId);
-	if (debugCubeTransform)
+	for (GameObject& object : world.GetGameObjects())
 	{
-		renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*debugCubeTransform));
-		DebugImGuiSystem::DrawTransformEditor("Battle Debug Cube Transform", *debugCubeTransform);
+		if (object.id == world.GetActiveCameraId())
+		{
+			continue;
+		}
+
+		TransformComponent* transform = world.GetTransform(object.id);
+		if (transform)
+		{
+			renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*transform));
+		}
 	}
+
+	DebugImGuiSystem::DrawSpawnWindow(world);
+	DebugImGuiSystem::DrawWorldInspector(world);
 }
 
 void BattleScene::OnResize(int newWidth, int newHeight)
