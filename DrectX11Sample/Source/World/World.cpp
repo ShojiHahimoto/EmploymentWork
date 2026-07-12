@@ -4,10 +4,16 @@
 
 GameObjectId World::CreateGameObject()
 {
+	return CreateGameObject("GameObject");
+}
+
+GameObjectId World::CreateGameObject(const std::string& name)
+{
 	const GameObjectId objectId = nextObjectId++;
 
 	GameObject object;
 	object.id = objectId;
+	object.name = name;
 	gameObjects.push_back(std::move(object));
 
 	return objectId;
@@ -15,7 +21,12 @@ GameObjectId World::CreateGameObject()
 
 GameObjectId World::CreateTransform()
 {
-	const GameObjectId objectId = CreateGameObject();
+	return CreateTransform("GameObject");
+}
+
+GameObjectId World::CreateTransform(const std::string& name)
+{
+	const GameObjectId objectId = CreateGameObject(name);
 	AddComponent<TransformComponent>(objectId);
 	return objectId;
 }
@@ -108,10 +119,11 @@ bool World::HasActiveCamera() const
 		&& HasComponent<CameraComponent>(activeCameraId);
 }
 
-void World::RequestSpawn(SpawnType type, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees)
+void World::RequestSpawn(SpawnType type, const std::string& name, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees)
 {
 	SpawnRequest request;
 	request.type = type;
+	request.name = name.empty() ? "GameObject" : name;
 	request.position = position;
 	request.rotationDegrees = rotationDegrees;
 	spawnRequests.push_back(request);

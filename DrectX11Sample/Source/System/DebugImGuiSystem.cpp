@@ -269,8 +269,9 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 			ImGui::PushID(static_cast<int>(object.id));
 
 			const bool isActiveCamera = object.id == world.GetActiveCameraId();
-			char label[64] = {};
-			sprintf_s(label, "GameObject %u%s", object.id, isActiveCamera ? " [Active Camera]" : "");
+			const char* objectName = object.name.empty() ? "GameObject" : object.name.c_str();
+			char label[128] = {};
+			sprintf_s(label, "%s (ID: %u)%s", objectName, object.id, isActiveCamera ? " [Active Camera]" : "");
 
 			if (ImGui::TreeNode(label))
 			{
@@ -336,6 +337,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 	}
 
 	static int selectedType = 0;
+	static char objectName[64] = "DebugCube";
 	static Vector3 position = Vector3(0.0f, 0.0f, 6.0f);
 	static Vector3 rotation = Vector3::Zero;
 
@@ -346,12 +348,13 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 	{
 		const char* spawnTypes[] = { "DebugCube" };
 		ImGui::Combo("Type", &selectedType, spawnTypes, IM_ARRAYSIZE(spawnTypes));
+		ImGui::InputText("Name", objectName, IM_ARRAYSIZE(objectName));
 		ImGui::DragFloat3("Position", &position.x, 0.05f);
 		ImGui::DragFloat3("Rotation", &rotation.x, 0.5f);
 
 		if (ImGui::Button("Spawn"))
 		{
-			world.RequestSpawn(SpawnType::DebugCube, position, rotation);
+			world.RequestSpawn(SpawnType::DebugCube, objectName, position, rotation);
 		}
 	}
 

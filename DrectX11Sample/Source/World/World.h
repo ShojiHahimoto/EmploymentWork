@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -17,6 +18,7 @@ enum class SpawnType
 struct SpawnRequest
 {
 	SpawnType type = SpawnType::DebugCube;
+	std::string name = "GameObject";
 	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 rotationDegrees = DirectX::SimpleMath::Vector3::Zero;
 };
@@ -30,9 +32,11 @@ class World
 {
 public:
 	GameObjectId CreateGameObject();
+	GameObjectId CreateGameObject(const std::string& name);
 
 	// 既存コードとの接続用。GameObject を生成し、TransformComponent を追加する。
 	GameObjectId CreateTransform();
+	GameObjectId CreateTransform(const std::string& name);
 	void Clear();
 
 	std::vector<GameObject>& GetGameObjects();
@@ -65,7 +69,7 @@ public:
 	const CameraComponent& GetActiveCamera() const;
 	bool HasActiveCamera() const;
 
-	void RequestSpawn(SpawnType type, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees);
+	void RequestSpawn(SpawnType type, const std::string& name, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees);
 	void RequestDestroy(GameObjectId objectId);
 
 	const std::vector<SpawnRequest>& GetSpawnRequests() const;

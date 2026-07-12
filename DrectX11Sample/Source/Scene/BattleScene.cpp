@@ -17,7 +17,7 @@ BattleScene::BattleScene(int initialWidth, int initialHeight)
 
 void BattleScene::Enter()
 {
-	GameObjectId cameraId = world.CreateTransform();
+	GameObjectId cameraId = world.CreateTransform("MainCamera");
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
@@ -29,6 +29,7 @@ void BattleScene::Enter()
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,
+		"DebugCube",
 		Vector3(0.0f, 0.0f, 6.0f),
 		Vector3(20.0f, 32.0f, 0.0f));
 
