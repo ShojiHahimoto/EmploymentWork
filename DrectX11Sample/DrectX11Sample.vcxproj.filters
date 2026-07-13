@@ -72,12 +72,6 @@
     <ClCompile Include="Source\System\Game.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\kari_app.cpp">
-      <Filter>ソース ファイル\System</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\System\kariRenderer.cpp">
-      <Filter>ソース ファイル\System</Filter>
-    </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -141,12 +135,6 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\Game.h">
-      <Filter>ヘッダー ファイル\System</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\System\kariapp.h">
-      <Filter>ヘッダー ファイル\System</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\System\kariRenderer.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\TransformComponent.h">

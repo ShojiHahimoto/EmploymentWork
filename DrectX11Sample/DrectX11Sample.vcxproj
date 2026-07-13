@@ -36,12 +36,6 @@
     <ClCompile Include="Source\System\imgui-docking\imgui_draw.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui_tables.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp" />
-    <ClCompile Include="Source\System\kariRenderer.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="Source\System\kari_app.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Source\System\main.cpp" />
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
@@ -78,12 +72,6 @@
     <ClInclude Include="Source\System\imgui-docking\imstb_rectpack.h" />
     <ClInclude Include="Source\System\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
-    <ClInclude Include="Source\System\kariapp.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="Source\System\kariRenderer.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="Source\System\main.h" />
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
