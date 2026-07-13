@@ -163,6 +163,27 @@ Debug 系 System
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - Debug 系 System は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
+## Input 設計
+
+InputSystem は、各デバイスの入力をフレーム単位の Action 状態へ変換する。
+
+- 入力サンプリングは毎フレーム 1 回だけ行う
+- 同一フレーム内のすべての System は、確定済みの同じ入力結果を読む
+- 有効な ActionMap はゲーム全体で 1 つだけ持つ
+- 2 プレイヤー時も ActionMap はプレイヤー単位ではなくゲーム単位で切り替える
+- PlayerInputState は Player ごとに持ち、将来の 2P 対応に備える
+- キーコンフィグは将来 JSON などの外部ファイルから読み込める構造にする
+- 直近で入力されたデバイス種別は Player ごとに保持し、操作説明 UI などで使えるようにする
+- デッドゾーンなどの調整値は InputSettings にまとめ、後から調整できるようにする
+- 入力履歴やコマンド判定は、必要な Scene や Battle 系 System 側で持つ
+- DebugCamera 操作は DebugCameraControlSystem 側に委託し、通常のゲーム入力には含めない
+
+ボタン入力状態の名称は次の意味で統一する。
+
+- `Trigger`: 前フレーム押されておらず、今フレーム押された
+- `Press`: 今フレーム押されている
+- `Release`: 前フレーム押されており、今フレーム離された
+
 ### Collision の種類
 
 格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。

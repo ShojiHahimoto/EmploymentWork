@@ -1,6 +1,7 @@
 ﻿#include "System/Game.h"
 #include "Scene/BattleScene.h"
 #include "Scene/SceneManager.h"
+#include "Input/InputSystem.h"
 #include "System/Application.h"
 #include "System/DebugImGuiSystem.h"
 
@@ -19,6 +20,8 @@ void Game::Init()
 		Renderer::GetDevice(),
 		Renderer::GetDeviceContext());
 
+	Input::InputSystem::Initialize();
+
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RequestChangeScene(
 		std::make_unique<BattleScene>(
@@ -29,6 +32,8 @@ void Game::Init()
 
 void Game::Update()
 {
+	Input::InputSystem::Update();
+
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RunSystems();
 	sceneManager.ApplyPendingSceneChange();
@@ -67,6 +72,7 @@ void Game::OnResize(int width, int height)
 void Game::Uninit()
 {
 	SceneManager::GetInstance().Shutdown();
+	Input::InputSystem::Shutdown();
 	DebugImGuiSystem::Shutdown();
 	rendererInitialized = false;
 

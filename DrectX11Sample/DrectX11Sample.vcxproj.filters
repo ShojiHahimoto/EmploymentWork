@@ -43,8 +43,20 @@
     <Filter Include="ヘッダー ファイル\Resource">
       <UniqueIdentifier>{ffb6eaa4-65b8-4fa3-93d4-57fb57a158bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Input">
+      <UniqueIdentifier>{3b5efca4-60a7-481a-bd66-e1c67b7a077c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Input">
+      <UniqueIdentifier>{fe72f431-66cb-4249-8f07-80feb83fd4d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Input\InputConfigLoader.cpp">
+      <Filter>ソース ファイル\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Input\InputSystem.cpp">
+      <Filter>ソース ファイル\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Scene\BattleScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
@@ -211,6 +223,18 @@
     </ClInclude>
     <ClInclude Include="Source\Resource\ModelResource.h">
       <Filter>ヘッダー ファイル\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputBindings.h">
+      <Filter>ヘッダー ファイル\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputConfigLoader.h">
+      <Filter>ヘッダー ファイル\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputSystem.h">
+      <Filter>ヘッダー ファイル\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Input\InputTypes.h">
+      <Filter>ヘッダー ファイル\Input</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
