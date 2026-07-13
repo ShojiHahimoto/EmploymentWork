@@ -67,6 +67,40 @@
 - World が型付き Component 取得 API を提供し、System が必要な Component を参照する
 - Visual Studio の全構成で `stdcpp20` を指定し、構成差によるビルド差異を避ける
 
+## 関数引数
+
+関数引数は、問題がない場合は `const T&` で渡すことを基本方針にする。
+
+対象例:
+
+- `std::string`
+- `std::vector` などのコンテナ
+- `DirectX::SimpleMath::Vector3`
+- `DirectX::SimpleMath::Quaternion`
+- `DirectX::SimpleMath::Matrix`
+- `CameraComponent`
+- `TransformComponent`
+- `ModelResource`
+- その他、コピーコストがある構造体やクラス
+
+例:
+
+```cpp
+void SetLocalPosition(TransformComponent& transform, const DirectX::SimpleMath::Vector3& position);
+bool LoadModel(const std::string& key, const std::string& path, ID3D11Device* device);
+```
+
+例外:
+
+- `int` / `float` / `bool` / enum / `GameObjectId` など、小さくコピーが安い値
+- 関数内で値を変更して呼び出し元へ反映したい場合の非 const 参照
+- `std::unique_ptr` など、所有権を移動するために値渡しする場合
+- ポインタで所有しない外部リソースを表す場合
+- 値コピーしたほうが意図が明確、または寿命管理が安全な場合
+
+`const` や参照は無理に付けない。
+意図が「読むだけ」でコピー不要な引数は `const T&`、意図が「変更する」なら `T&`、意図が「所有権を受け取る」なら値渡しを使う。
+
 ## Windows.h
 
 `NOMINMAX` は Visual Studio プロジェクトのプリプロセッサ定義に入れる。

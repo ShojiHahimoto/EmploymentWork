@@ -213,7 +213,25 @@ Debug 系 System
 生成内容は SpawnType で分岐する。
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
+- `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
+
+## 3D Model / Resource
+
+3D モデルは GameObject に直接持たせず、Resource と Component を分離する。
+
+- `ModelResource` は FBX などから読み込んだ共有データを持つ
+- `ModelResource` は Mesh、頂点、インデックス、Bone、AnimationClip の受け皿を持つ
+- `ModelComponent` は GameObject が参照する `resourceKey` のみを持つ
+- 同じモデルを複数 GameObject が使う場合でも、モデル本体は共有する
+- FBX と同階層に置いた diffuse texture は Material 情報から読み込み、Mesh ごとに適用する
+- FBX 側に diffuse texture 参照がない場合は、同階層の `*diffuse*.png` を fallback として探す
+- 頂点には将来のスケルタルアニメーション用に bone index / bone weight を持たせる
+- 現段階ではアニメーション再生は行わず、static pose として描画する
+- AnimationClip は bone ごとの position / rotation / scale keyframe を保持できる構造にする
+- ゲーム内で作成するキーフレームアニメーションも、同じ AnimationClip / Channel / Keyframe 構造に保存する
+- AnimationSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource の AnimationClip を参照する
+- 2D UI は ModelComponent ではなく、専用の UI / Sprite 系 Component を追加して表現する
 
 ## オブジェクト参照
 

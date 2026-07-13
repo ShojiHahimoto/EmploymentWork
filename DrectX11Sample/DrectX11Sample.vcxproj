@@ -24,6 +24,7 @@
     <ClCompile Include="Source\System\Application.cpp" />
     <ClCompile Include="Source\System\CameraSystem.cpp" />
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp" />
+    <ClCompile Include="Source\System\Debugger.cpp" />
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
@@ -43,11 +44,13 @@
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
+    <ClCompile Include="Source\Resource\ModelResource.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\ModelComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
@@ -58,6 +61,7 @@
     <ClInclude Include="Source\System\Application.h" />
     <ClInclude Include="Source\System\CameraSystem.h" />
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
+    <ClInclude Include="Source\System\Debugger.h" />
     <ClInclude Include="Source\System\DebugImGuiSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
@@ -78,6 +82,7 @@
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />
+    <ClInclude Include="Source\Resource\ModelResource.h" />
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
@@ -186,14 +191,19 @@
       <PreprocessorDefinitions>NOMINMAX;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;C:\assimp\5.2.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EntryPointSymbol>
       </EntryPointSymbol>
+      <AdditionalLibraryDirectories>C:\assimp\5.2.5\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "C:\assimp\5.2.5\bin\assimp-vc143-mtd.dll" "$(OutDir)assimp-vc143-mtd.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -204,14 +214,19 @@
       <PreprocessorDefinitions>NOMINMAX;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>;$(ProjectDir)Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source;C:\assimp\5.2.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\assimp\5.2.5\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "C:\assimp\5.2.5\bin\assimp-vc143-mtd.dll" "$(OutDir)assimp-vc143-mtd.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -355,6 +355,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 		static constexpr SpawnTypeOption spawnTypeOptions[] =
 		{
 			{ "DebugCube", SpawnType::DebugCube },
+			{ "Debugman", SpawnType::Debugman },
 		};
 
 		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
