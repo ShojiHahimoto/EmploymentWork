@@ -20,6 +20,7 @@ public:
 	static void DrawTransformEditor(const char* windowName, TransformComponent& transform);
 	static void DrawWorldInspector(World& world);
 	static void DrawSpawnWindow(World& world);
+	static bool DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight);
 
 private:
 	static bool initialized;

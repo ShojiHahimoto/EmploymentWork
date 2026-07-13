@@ -43,6 +43,7 @@ public:
 
 	// 親を持たない root から順に、全 Transform の World キャッシュを更新する。
 	static void UpdateWorldTransforms(TransformTable& transforms);
+	static void UpdateWorldTransform(TransformComponent& transform);
 
 private:
 	static void MarkDirtyRecursive(TransformTable& transforms, GameObjectId objectId);

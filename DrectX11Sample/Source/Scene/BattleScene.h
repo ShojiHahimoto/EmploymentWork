@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include "Scene/Scene.h"
+#include "Component/CameraComponent.h"
+#include "Component/TransformComponent.h"
+#include "System/Renderer.h"
 #include "System/DebugCameraControlSystem.h"
 #include "World/World.h"
 
@@ -21,7 +24,22 @@ public:
 
 private:
 	World world;
-	DebugCameraControlState debugCameraControlState;
 	int width;
 	int height;
+
+	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
+
+#if defined(_DEBUG)
+	TransformComponent debugSceneCameraTransform;
+	CameraComponent debugSceneCamera;
+	DebugCameraControlState debugSceneCameraControlState;
+	Renderer::RenderTexture sceneViewRenderTexture;
+	bool sceneViewHovered = false;
+	int sceneViewWidth = 640;
+	int sceneViewHeight = 360;
+
+	void InitializeDebugSceneView();
+	void UpdateDebugSceneViewCamera();
+	void DrawDebugSceneView(Renderer& renderer);
+#endif
 };

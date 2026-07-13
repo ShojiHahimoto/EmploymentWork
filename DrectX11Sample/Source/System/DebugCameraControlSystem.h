@@ -15,4 +15,5 @@ class DebugCameraControlSystem
 {
 public:
 	static void Update(TransformComponent& cameraTransform, DebugCameraControlState& state);
+	static void Update(TransformComponent& cameraTransform, DebugCameraControlState& state, bool inputEnabled);
 };
