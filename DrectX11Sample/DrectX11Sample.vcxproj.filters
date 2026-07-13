@@ -75,6 +75,9 @@
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\Debugger.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -162,6 +165,9 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\DebugCameraControlSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\Debugger.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\DebugImGuiSystem.h">

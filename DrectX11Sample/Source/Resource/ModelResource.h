@@ -24,6 +24,7 @@ struct ModelMesh
 {
 	std::vector<ModelVertex> vertices;
 	std::vector<uint32_t> indices;
+	uint32_t materialIndex = 0;
 	ID3D11Buffer* vertexBuffer = nullptr;
 	ID3D11Buffer* indexBuffer = nullptr;
 
@@ -33,6 +34,19 @@ struct ModelMesh
 	ModelMesh& operator=(const ModelMesh&) = delete;
 	ModelMesh(ModelMesh&& other) noexcept;
 	ModelMesh& operator=(ModelMesh&& other) noexcept;
+};
+
+struct ModelMaterial
+{
+	std::string diffuseTexturePath;
+	ID3D11ShaderResourceView* diffuseTextureView = nullptr;
+
+	~ModelMaterial();
+	ModelMaterial() = default;
+	ModelMaterial(const ModelMaterial&) = delete;
+	ModelMaterial& operator=(const ModelMaterial&) = delete;
+	ModelMaterial(ModelMaterial&& other) noexcept;
+	ModelMaterial& operator=(ModelMaterial&& other) noexcept;
 };
 
 struct ModelBone
@@ -78,11 +92,13 @@ public:
 
 	bool LoadFromFile(ID3D11Device* device, const std::string& path);
 	const std::vector<ModelMesh>& GetMeshes() const;
+	const std::vector<ModelMaterial>& GetMaterials() const;
 	const std::vector<ModelBone>& GetBones() const;
 	const std::vector<ModelAnimationClip>& GetAnimationClips() const;
 
 private:
 	std::vector<ModelMesh> meshes;
+	std::vector<ModelMaterial> materials;
 	std::vector<ModelBone> bones;
 	std::vector<ModelAnimationClip> animationClips;
 };

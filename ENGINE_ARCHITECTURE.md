@@ -224,6 +224,8 @@ Debug 系 System
 - `ModelResource` は Mesh、頂点、インデックス、Bone、AnimationClip の受け皿を持つ
 - `ModelComponent` は GameObject が参照する `resourceKey` のみを持つ
 - 同じモデルを複数 GameObject が使う場合でも、モデル本体は共有する
+- FBX と同階層に置いた diffuse texture は Material 情報から読み込み、Mesh ごとに適用する
+- FBX 側に diffuse texture 参照がない場合は、同階層の `*diffuse*.png` を fallback として探す
 - 頂点には将来のスケルタルアニメーション用に bone index / bone weight を持たせる
 - 現段階ではアニメーション再生は行わず、static pose として描画する
 - AnimationClip は bone ごとの position / rotation / scale keyframe を保持できる構造にする

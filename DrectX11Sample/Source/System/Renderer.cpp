@@ -1,6 +1,7 @@
 ﻿#include "System/Renderer.h"
 #include "System/Application.h"
 #include "Resource/ModelResource.h"
+#include "System/Debugger.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,9 @@ cbuffer TransformBuffer : register(b0)
 {
 	matrix worldViewProjection;
 };
+
+Texture2D diffuseTexture : register(t0);
+SamplerState diffuseSampler : register(s0);
 
 struct VS_INPUT
 {
@@ -43,11 +47,14 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 }
 )";
 
-	const char* ModelShaderSource = R"(
+const char* ModelShaderSource = R"(
 cbuffer TransformBuffer : register(b0)
 {
 	matrix worldViewProjection;
 };
+
+Texture2D diffuseTexture : register(t0);
+SamplerState diffuseSampler : register(s0);
 
 struct VS_INPUT
 {
@@ -62,6 +69,7 @@ struct PS_INPUT
 {
 	float4 position : SV_POSITION;
 	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
 };
 
 PS_INPUT VSMain(VS_INPUT input)
@@ -69,15 +77,25 @@ PS_INPUT VSMain(VS_INPUT input)
 	PS_INPUT output;
 	output.position = mul(float4(input.position, 1.0f), worldViewProjection);
 	output.normal = normalize(input.normal);
+	output.uv = input.uv;
 	return output;
 }
 
 float4 PSMain(PS_INPUT input) : SV_TARGET
 {
 	float light = saturate(dot(normalize(input.normal), normalize(float3(0.3f, 0.8f, -0.5f))));
-	return float4(0.35f + light * 0.55f, 0.38f + light * 0.45f, 0.42f + light * 0.35f, 1.0f);
+	float4 baseColor = diffuseTexture.Sample(diffuseSampler, input.uv);
+	return baseColor * float4(0.35f + light * 0.55f, 0.38f + light * 0.45f, 0.42f + light * 0.35f, 1.0f);
 }
 )";
+
+	struct WhitePixel
+	{
+		uint8_t r = 255;
+		uint8_t g = 255;
+		uint8_t b = 255;
+		uint8_t a = 255;
+	};
 }
 
 D3D_FEATURE_LEVEL Renderer::m_FeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -87,6 +105,7 @@ ID3D11DeviceContext* Renderer::m_pDeviceContext = nullptr;
 IDXGISwapChain* Renderer::m_pSwapChain = nullptr;
 ID3D11RenderTargetView* Renderer::m_pRenderTargetView = nullptr;
 ID3D11DepthStencilView* Renderer::m_pDepthStencilView = nullptr;
+bool Renderer::m_ComInitialized = false;
 
 ID3D11Buffer* Renderer::m_pWorldBuffer = nullptr;
 ID3D11Buffer* Renderer::m_pViewBuffer = nullptr;
@@ -116,9 +135,14 @@ ID3D11VertexShader* Renderer::m_pModelVertexShader = nullptr;
 ID3D11PixelShader* Renderer::m_pModelPixelShader = nullptr;
 ID3D11InputLayout* Renderer::m_pModelInputLayout = nullptr;
 ID3D11Buffer* Renderer::m_pModelConstantBuffer = nullptr;
+ID3D11SamplerState* Renderer::m_pModelSamplerState = nullptr;
+ID3D11ShaderResourceView* Renderer::m_pWhiteTextureView = nullptr;
 
 HRESULT Renderer::Init()
 {
+	HRESULT comHr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	m_ComInitialized = SUCCEEDED(comHr);
+
 	DXGI_SWAP_CHAIN_DESC sd = {};
 
 	sd.BufferCount = 1;
@@ -186,7 +210,14 @@ HRESULT Renderer::Init()
 	hr = CreateDebugCubeResources();
 	if (FAILED(hr)) return hr;
 
-	return CreateModelRenderResources();
+	hr = CreateModelRenderResources();
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model render resources creation failed. hr=", static_cast<long>(hr));
+		return hr;
+	}
+
+	return S_OK;
 }
 
 void Renderer::DrawStart()
@@ -396,11 +427,16 @@ HRESULT Renderer::CreateModelRenderResources()
 	ID3DBlob* pixelShaderBlob = nullptr;
 
 	HRESULT hr = CompileShader(ModelShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob);
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model vertex shader compile failed. hr=", static_cast<long>(hr));
+		return hr;
+	}
 
 	hr = CompileShader(ModelShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob);
 	if (FAILED(hr))
 	{
+		DebugLog("[Renderer] Model pixel shader compile failed. hr=", static_cast<long>(hr));
 		SAFE_RELEASE(vertexShaderBlob);
 		return hr;
 	}
@@ -412,6 +448,7 @@ HRESULT Renderer::CreateModelRenderResources()
 		&m_pModelVertexShader);
 	if (FAILED(hr))
 	{
+		DebugLog("[Renderer] Model vertex shader creation failed. hr=", static_cast<long>(hr));
 		SAFE_RELEASE(vertexShaderBlob);
 		SAFE_RELEASE(pixelShaderBlob);
 		return hr;
@@ -424,6 +461,7 @@ HRESULT Renderer::CreateModelRenderResources()
 		&m_pModelPixelShader);
 	if (FAILED(hr))
 	{
+		DebugLog("[Renderer] Model pixel shader creation failed. hr=", static_cast<long>(hr));
 		SAFE_RELEASE(vertexShaderBlob);
 		SAFE_RELEASE(pixelShaderBlob);
 		return hr;
@@ -448,14 +486,69 @@ HRESULT Renderer::CreateModelRenderResources()
 	SAFE_RELEASE(vertexShaderBlob);
 	SAFE_RELEASE(pixelShaderBlob);
 
-	if (FAILED(hr)) return hr;
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model input layout creation failed. hr=", static_cast<long>(hr));
+		return hr;
+	}
 
 	D3D11_BUFFER_DESC constantBufferDesc = {};
 	constantBufferDesc.ByteWidth = sizeof(DebugCubeConstantBuffer);
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-	return m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pModelConstantBuffer);
+	hr = m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pModelConstantBuffer);
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model constant buffer creation failed. hr=", static_cast<long>(hr));
+		return hr;
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	hr = m_pDevice->CreateSamplerState(&samplerDesc, &m_pModelSamplerState);
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model sampler creation failed. hr=", static_cast<long>(hr));
+		return hr;
+	}
+
+	return CreateWhiteTextureResource();
+}
+
+HRESULT Renderer::CreateWhiteTextureResource()
+{
+	const WhitePixel pixel;
+
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = 1;
+	textureDesc.Height = 1;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+	D3D11_SUBRESOURCE_DATA textureData = {};
+	textureData.pSysMem = &pixel;
+	textureData.SysMemPitch = sizeof(WhitePixel);
+
+	ID3D11Texture2D* texture = nullptr;
+	HRESULT hr = m_pDevice->CreateTexture2D(&textureDesc, &textureData, &texture);
+	if (FAILED(hr)) return hr;
+
+	hr = m_pDevice->CreateShaderResourceView(texture, nullptr, &m_pWhiteTextureView);
+	texture->Release();
+
+	return hr;
 }
 
 HRESULT Renderer::CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob)
@@ -516,11 +609,11 @@ void Renderer::DrawDebugCube(const Matrix& world)
 	m_pDeviceContext->DrawIndexed(36, 0, 0);
 }
 
-void Renderer::DrawModel(const ModelResource& model, const Matrix& world)
+bool Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 {
 	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
 	{
-		return;
+		return false;
 	}
 
 	DebugCubeConstantBuffer constantBuffer = {};
@@ -533,7 +626,11 @@ void Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 	m_pDeviceContext->VSSetShader(m_pModelVertexShader, nullptr, 0);
 	m_pDeviceContext->VSSetConstantBuffers(0, 1, &m_pModelConstantBuffer);
 	m_pDeviceContext->PSSetShader(m_pModelPixelShader, nullptr, 0);
+	m_pDeviceContext->PSSetSamplers(0, 1, &m_pModelSamplerState);
 
+	const std::vector<ModelMaterial>& materials = model.GetMaterials();
+
+	bool drewMesh = false;
 	for (const ModelMesh& mesh : model.GetMeshes())
 	{
 		if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indices.empty())
@@ -545,8 +642,19 @@ void Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 		const UINT offset = 0;
 		m_pDeviceContext->IASetVertexBuffers(0, 1, &mesh.vertexBuffer, &stride, &offset);
 		m_pDeviceContext->IASetIndexBuffer(mesh.indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+		ID3D11ShaderResourceView* textureView = m_pWhiteTextureView;
+		if (mesh.materialIndex < materials.size() && materials[mesh.materialIndex].diffuseTextureView)
+		{
+			textureView = materials[mesh.materialIndex].diffuseTextureView;
+		}
+		m_pDeviceContext->PSSetShaderResources(0, 1, &textureView);
+
 		m_pDeviceContext->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
+		drewMesh = true;
 	}
+
+	return drewMesh;
 }
 
 void Renderer::SetDepthEnable(bool Enable)
@@ -573,6 +681,8 @@ void Renderer::ReleaseDebugCubeResources()
 
 void Renderer::ReleaseModelRenderResources()
 {
+	SAFE_RELEASE(m_pWhiteTextureView);
+	SAFE_RELEASE(m_pModelSamplerState);
 	SAFE_RELEASE(m_pModelConstantBuffer);
 	SAFE_RELEASE(m_pModelInputLayout);
 	SAFE_RELEASE(m_pModelPixelShader);
@@ -602,4 +712,10 @@ void Renderer::Uninit()
 	SAFE_RELEASE(m_pSwapChain);
 	SAFE_RELEASE(m_pDeviceContext);
 	SAFE_RELEASE(m_pDevice);
+
+	if (m_ComInitialized)
+	{
+		CoUninitialize();
+		m_ComInitialized = false;
+	}
 }

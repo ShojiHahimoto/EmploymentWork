@@ -63,6 +63,7 @@ private:
 	static IDXGISwapChain* m_pSwapChain;
 	static ID3D11RenderTargetView* m_pRenderTargetView;
 	static ID3D11DepthStencilView* m_pDepthStencilView;
+	static bool m_ComInitialized;
 
 	static ID3D11Buffer* m_pWorldBuffer;
 	static ID3D11Buffer* m_pViewBuffer;
@@ -95,12 +96,15 @@ private:
 	static ID3D11PixelShader* m_pModelPixelShader;
 	static ID3D11InputLayout* m_pModelInputLayout;
 	static ID3D11Buffer* m_pModelConstantBuffer;
+	static ID3D11SamplerState* m_pModelSamplerState;
+	static ID3D11ShaderResourceView* m_pWhiteTextureView;
 
 	static HRESULT CreateRenderAndDepthResources(int width, int height);
 	static void SetViewport(int width, int height);
 
 	static HRESULT CreateDebugCubeResources();
 	static HRESULT CreateModelRenderResources();
+	static HRESULT CreateWhiteTextureResource();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static void ReleaseDebugCubeResources();
 	static void ReleaseModelRenderResources();
@@ -121,6 +125,6 @@ public:
 		const DirectX::SimpleMath::Matrix& projection);
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
-	static void DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
+	static bool DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
 	static void SetDepthEnable(bool Enable);
 };

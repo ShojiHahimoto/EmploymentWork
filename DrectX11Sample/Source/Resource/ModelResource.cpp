@@ -1,10 +1,14 @@
 ﻿#include "Resource/ModelResource.h"
 
 #include <assimp/Importer.hpp>
+#include "System/Debugger.h"
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
+#include <WICTextureLoader.h>
 
 #include <algorithm>
+#include <cctype>
+#include <filesystem>
 
 using namespace DirectX::SimpleMath;
 
@@ -19,6 +23,20 @@ namespace
 			buffer->Release();
 			buffer = nullptr;
 		}
+	}
+
+	void ReleaseTexture(ID3D11ShaderResourceView*& textureView)
+	{
+		if (textureView)
+		{
+			textureView->Release();
+			textureView = nullptr;
+		}
+	}
+
+	std::wstring ToWideString(const std::string& text)
+	{
+		return std::wstring(text.begin(), text.end());
 	}
 
 	Matrix ConvertAssimpMatrix(const aiMatrix4x4& source)
@@ -116,6 +134,164 @@ namespace
 		return device->CreateBuffer(&desc, &data, buffer);
 	}
 
+	std::filesystem::path ResolveTexturePath(const std::filesystem::path& modelPath, const aiString& texturePath)
+	{
+		std::filesystem::path sourcePath(texturePath.C_Str());
+		if (sourcePath.is_absolute())
+		{
+			return sourcePath;
+		}
+
+		return modelPath.parent_path() / sourcePath.filename();
+	}
+
+	std::vector<std::filesystem::path> FindDiffuseTextures(const std::filesystem::path& modelDirectory)
+	{
+		std::vector<std::filesystem::path> diffuseTextures;
+		if (!std::filesystem::exists(modelDirectory))
+		{
+			return diffuseTextures;
+		}
+
+		for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(modelDirectory))
+		{
+			if (!entry.is_regular_file())
+			{
+				continue;
+			}
+
+			std::string filename = entry.path().filename().string();
+			std::transform(filename.begin(), filename.end(), filename.begin(), [](unsigned char c)
+				{
+					return static_cast<char>(std::tolower(c));
+				});
+
+			if (filename.find("diffuse") != std::string::npos
+				&& (entry.path().extension() == ".png" || entry.path().extension() == ".PNG"))
+			{
+				diffuseTextures.push_back(entry.path());
+			}
+		}
+
+		return diffuseTextures;
+	}
+
+	std::filesystem::path FindFallbackDiffuseTexture(
+		const std::vector<std::filesystem::path>& diffuseTextures,
+		const std::string& materialName)
+	{
+		if (diffuseTextures.empty())
+		{
+			return {};
+		}
+
+		std::string loweredMaterialName = materialName;
+		std::transform(loweredMaterialName.begin(), loweredMaterialName.end(), loweredMaterialName.begin(), [](unsigned char c)
+			{
+				return static_cast<char>(std::tolower(c));
+			});
+
+		for (const std::filesystem::path& texturePath : diffuseTextures)
+		{
+			std::string loweredTextureName = texturePath.filename().string();
+			std::transform(loweredTextureName.begin(), loweredTextureName.end(), loweredTextureName.begin(), [](unsigned char c)
+				{
+					return static_cast<char>(std::tolower(c));
+				});
+
+			if ((loweredMaterialName.find("body") != std::string::npos && loweredTextureName.find("body") != std::string::npos)
+				|| (loweredMaterialName.find("cloth") != std::string::npos && loweredTextureName.find("cloth") != std::string::npos)
+				|| (loweredMaterialName.find("eyelash") != std::string::npos && loweredTextureName.find("eyelash") != std::string::npos))
+			{
+				return texturePath;
+			}
+		}
+
+		return diffuseTextures.front();
+	}
+
+	void LoadDiffuseTexture(
+		ID3D11Device* device,
+		ModelMaterial& material,
+		const std::filesystem::path& texturePath,
+		std::unordered_map<std::string, ID3D11ShaderResourceView*>& textureCache)
+	{
+		if (texturePath.empty())
+		{
+			return;
+		}
+
+		material.diffuseTexturePath = texturePath.string();
+		const auto cachedTexture = textureCache.find(material.diffuseTexturePath);
+		if (cachedTexture != textureCache.end())
+		{
+			material.diffuseTextureView = cachedTexture->second;
+			if (material.diffuseTextureView)
+			{
+				material.diffuseTextureView->AddRef();
+			}
+			return;
+		}
+
+		const std::wstring widePath = ToWideString(material.diffuseTexturePath);
+		const HRESULT hr = DirectX::CreateWICTextureFromFile(
+			device,
+			widePath.c_str(),
+			nullptr,
+			&material.diffuseTextureView);
+
+		if (SUCCEEDED(hr) && material.diffuseTextureView)
+		{
+			textureCache[material.diffuseTexturePath] = material.diffuseTextureView;
+			DebugLog("[Model] Texture loaded: ", material.diffuseTexturePath);
+		}
+		else
+		{
+			DebugLog("[Model] Texture load failed: ", material.diffuseTexturePath, " hr=", static_cast<long>(hr));
+		}
+	}
+
+	void LoadMaterials(
+		ID3D11Device* device,
+		const aiScene& scene,
+		const std::filesystem::path& modelPath,
+		std::vector<ModelMaterial>& materials)
+	{
+		materials.clear();
+		materials.resize(scene.mNumMaterials);
+
+		const std::vector<std::filesystem::path> fallbackDiffuseTextures = FindDiffuseTextures(modelPath.parent_path());
+		std::unordered_map<std::string, ID3D11ShaderResourceView*> textureCache;
+
+		for (unsigned int materialIndex = 0; materialIndex < scene.mNumMaterials; ++materialIndex)
+		{
+			const aiMaterial* sourceMaterial = scene.mMaterials[materialIndex];
+			if (!sourceMaterial)
+			{
+				continue;
+			}
+
+			aiString texturePath;
+			if (sourceMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+			{
+				LoadDiffuseTexture(
+					device,
+					materials[materialIndex],
+					ResolveTexturePath(modelPath, texturePath),
+					textureCache);
+				continue;
+			}
+
+			aiString materialName;
+			sourceMaterial->Get(AI_MATKEY_NAME, materialName);
+			LoadDiffuseTexture(
+				device,
+				materials[materialIndex],
+				FindFallbackDiffuseTexture(fallbackDiffuseTextures, materialName.C_Str()),
+				textureCache);
+		}
+	}
+
 	uint32_t FindOrCreateBoneIndex(
 		const std::string& boneName,
 		std::vector<ModelBone>& bones,
@@ -201,6 +377,7 @@ ModelMesh::~ModelMesh()
 ModelMesh::ModelMesh(ModelMesh&& other) noexcept
 	: vertices(std::move(other.vertices))
 	, indices(std::move(other.indices))
+	, materialIndex(other.materialIndex)
 	, vertexBuffer(other.vertexBuffer)
 	, indexBuffer(other.indexBuffer)
 {
@@ -220,6 +397,7 @@ ModelMesh& ModelMesh::operator=(ModelMesh&& other) noexcept
 
 	vertices = std::move(other.vertices);
 	indices = std::move(other.indices);
+	materialIndex = other.materialIndex;
 	vertexBuffer = other.vertexBuffer;
 	indexBuffer = other.indexBuffer;
 
@@ -229,10 +407,41 @@ ModelMesh& ModelMesh::operator=(ModelMesh&& other) noexcept
 	return *this;
 }
 
+ModelMaterial::~ModelMaterial()
+{
+	ReleaseTexture(diffuseTextureView);
+}
+
+ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
+	: diffuseTexturePath(std::move(other.diffuseTexturePath))
+	, diffuseTextureView(other.diffuseTextureView)
+{
+	other.diffuseTextureView = nullptr;
+}
+
+ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
+{
+	if (this == &other)
+	{
+		return *this;
+	}
+
+	ReleaseTexture(diffuseTextureView);
+
+	diffuseTexturePath = std::move(other.diffuseTexturePath);
+	diffuseTextureView = other.diffuseTextureView;
+	other.diffuseTextureView = nullptr;
+
+	return *this;
+}
+
 bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 {
+	DebugLog("[Model] Load start: ", path);
+
 	if (!device)
 	{
+		DebugLog("[Model] Load failed: device is null");
 		return false;
 	}
 
@@ -243,17 +452,28 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 		| aiProcess_JoinIdenticalVertices
 		| aiProcess_GenSmoothNormals
 		| aiProcess_ConvertToLeftHanded
-		| aiProcess_ImproveCacheLocality
-		| aiProcess_ValidateDataStructure);
+		| aiProcess_ImproveCacheLocality);
 
 	if (!scene || !scene->HasMeshes())
 	{
+		DebugLog("[Model] Load failed: ", importer.GetErrorString());
 		return false;
 	}
 
+	DebugLog(
+		"[Model] Scene loaded. Meshes=",
+		scene->mNumMeshes,
+		" Materials=",
+		scene->mNumMaterials,
+		" Animations=",
+		scene->mNumAnimations);
+
 	meshes.clear();
+	materials.clear();
 	bones.clear();
 	animationClips.clear();
+
+	LoadMaterials(device, *scene, std::filesystem::path(path), materials);
 
 	std::unordered_map<std::string, uint32_t> boneIndexByName;
 	CollectNodeHierarchy(scene->mRootNode, -1, bones, boneIndexByName);
@@ -267,6 +487,7 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 		}
 
 		ModelMesh mesh;
+		mesh.materialIndex = sourceMesh->mMaterialIndex;
 		mesh.vertices.resize(sourceMesh->mNumVertices);
 
 		for (unsigned int vertexIndex = 0; vertexIndex < sourceMesh->mNumVertices; ++vertexIndex)
@@ -345,6 +566,7 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 			D3D11_BIND_VERTEX_BUFFER,
 			&mesh.vertexBuffer)))
 		{
+			DebugLog("[Model] Vertex buffer creation failed. Mesh=", meshIndex);
 			return false;
 		}
 
@@ -355,6 +577,7 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 			D3D11_BIND_INDEX_BUFFER,
 			&mesh.indexBuffer)))
 		{
+			DebugLog("[Model] Index buffer creation failed. Mesh=", meshIndex);
 			return false;
 		}
 
@@ -372,12 +595,29 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 		animationClips.push_back(ConvertAnimationClip(*sourceAnimation, bones, boneIndexByName));
 	}
 
-	return !meshes.empty();
+	const bool loaded = !meshes.empty();
+	DebugLog(
+		"[Model] Load result: ",
+		loaded ? "success" : "failed",
+		" MeshBuffers=",
+		meshes.size(),
+		" Materials=",
+		materials.size(),
+		" Bones=",
+		bones.size(),
+		" Animations=",
+		animationClips.size());
+	return loaded;
 }
 
 const std::vector<ModelMesh>& ModelResource::GetMeshes() const
 {
 	return meshes;
+}
+
+const std::vector<ModelMaterial>& ModelResource::GetMaterials() const
+{
+	return materials;
 }
 
 const std::vector<ModelBone>& ModelResource::GetBones() const
@@ -394,6 +634,7 @@ bool ModelResourceManager::LoadModel(const std::string& key, const std::string& 
 {
 	if (resources.find(key) != resources.end())
 	{
+		DebugLog("[Model] Load skipped. Already loaded: ", key);
 		return true;
 	}
 
@@ -401,13 +642,16 @@ bool ModelResourceManager::LoadModel(const std::string& key, const std::string& 
 	if (!resource->LoadFromFile(device, path))
 	{
 		const std::string solutionRelativePath = "DrectX11Sample/" + path;
+		DebugLog("[Model] Retry load: ", solutionRelativePath);
 		if (!resource->LoadFromFile(device, solutionRelativePath))
 		{
+			DebugLog("[Model] LoadModel failed. Key=", key);
 			return false;
 		}
 	}
 
 	resources.emplace(key, std::move(resource));
+	DebugLog("[Model] LoadModel success. Key=", key);
 	return true;
 }
 

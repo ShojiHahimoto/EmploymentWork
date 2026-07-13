@@ -28,7 +28,7 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 			{
 				TransformSystem::SetLocalPosition(*transform, request.position);
 				TransformSystem::SetLocalEulerRotationDegrees(*transform, request.rotationDegrees);
-				TransformSystem::SetLocalScale(*transform, Vector3(0.02f, 0.02f, 0.02f));
+				TransformSystem::SetLocalScale(*transform, Vector3(0.05f, 0.05f, 0.05f));
 			}
 
 			ModelComponent model;

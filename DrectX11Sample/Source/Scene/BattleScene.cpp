@@ -37,7 +37,7 @@ void BattleScene::Enter()
 	world.RequestSpawn(
 		SpawnType::Debugman,
 		"Debugman",
-		Vector3(0.0f, -1.0f, 8.0f),
+		Vector3(-2.0f, -1.0f, 8.0f),
 		Vector3(0.0f, 180.0f, 0.0f));
 
 	world.RequestSpawn(
@@ -110,8 +110,10 @@ void BattleScene::Draw(Renderer& renderer)
 				const ModelResource* model = ModelResourceManager::GetModel(modelComponent->resourceKey);
 				if (model)
 				{
-					renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform));
-					continue;
+					if (renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform)))
+					{
+						continue;
+					}
 				}
 			}
 
