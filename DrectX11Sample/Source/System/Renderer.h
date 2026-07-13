@@ -46,6 +46,8 @@ struct DebugCubeVertex
 	DirectX::SimpleMath::Color color;
 };
 
+class ModelResource;
+
 class Renderer
 {
 private:
@@ -88,12 +90,20 @@ private:
 	static ID3D11Buffer* m_pDebugCubeIndexBuffer;
 	static ID3D11Buffer* m_pDebugCubeConstantBuffer;
 
+	// FBX などのモデル描画用リソース。頂点には将来のスキニング用データも含める。
+	static ID3D11VertexShader* m_pModelVertexShader;
+	static ID3D11PixelShader* m_pModelPixelShader;
+	static ID3D11InputLayout* m_pModelInputLayout;
+	static ID3D11Buffer* m_pModelConstantBuffer;
+
 	static HRESULT CreateRenderAndDepthResources(int width, int height);
 	static void SetViewport(int width, int height);
 
 	static HRESULT CreateDebugCubeResources();
+	static HRESULT CreateModelRenderResources();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static void ReleaseDebugCubeResources();
+	static void ReleaseModelRenderResources();
 
 public:
 	static HRESULT Init();
@@ -111,5 +121,6 @@ public:
 		const DirectX::SimpleMath::Matrix& projection);
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
+	static void DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
 	static void SetDepthEnable(bool Enable);
 };

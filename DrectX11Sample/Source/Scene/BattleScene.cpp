@@ -1,5 +1,7 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/ModelComponent.h"
+#include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
@@ -26,6 +28,17 @@ void BattleScene::Enter()
 	}
 
 	debugCameraControlState = DebugCameraControlState{};
+
+	ModelResourceManager::LoadModel(
+		"Debugman",
+		"assets/model/Debugman/Akai.fbx",
+		Renderer::GetDevice());
+
+	world.RequestSpawn(
+		SpawnType::Debugman,
+		"Debugman",
+		Vector3(0.0f, -1.0f, 8.0f),
+		Vector3(0.0f, 180.0f, 0.0f));
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,
@@ -91,6 +104,17 @@ void BattleScene::Draw(Renderer& renderer)
 		TransformComponent* transform = world.GetTransform(object.id);
 		if (transform)
 		{
+			const ModelComponent* modelComponent = world.GetComponent<ModelComponent>(object.id);
+			if (modelComponent)
+			{
+				const ModelResource* model = ModelResourceManager::GetModel(modelComponent->resourceKey);
+				if (model)
+				{
+					renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform));
+					continue;
+				}
+			}
+
 			renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*transform));
 		}
 	}

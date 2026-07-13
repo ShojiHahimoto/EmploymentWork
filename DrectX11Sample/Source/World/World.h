@@ -13,6 +13,7 @@
 enum class SpawnType
 {
 	DebugCube,
+	Debugman,
 };
 
 struct SpawnRequest

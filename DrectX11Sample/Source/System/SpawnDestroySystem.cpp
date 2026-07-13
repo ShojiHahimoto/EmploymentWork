@@ -1,5 +1,6 @@
 ﻿#include "System/SpawnDestroySystem.h"
 
+#include "Component/ModelComponent.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -19,6 +20,22 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 	{
 		switch (request.type)
 		{
+		case SpawnType::Debugman:
+		{
+			const GameObjectId objectId = world.CreateTransform(request.name);
+			TransformComponent* transform = world.GetTransform(objectId);
+			if (transform)
+			{
+				TransformSystem::SetLocalPosition(*transform, request.position);
+				TransformSystem::SetLocalEulerRotationDegrees(*transform, request.rotationDegrees);
+				TransformSystem::SetLocalScale(*transform, Vector3(0.02f, 0.02f, 0.02f));
+			}
+
+			ModelComponent model;
+			model.resourceKey = "Debugman";
+			world.AddComponent<ModelComponent>(objectId, model);
+			break;
+		}
 		case SpawnType::DebugCube:
 		default:
 		{

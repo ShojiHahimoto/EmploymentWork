@@ -1,6 +1,8 @@
 ﻿#include "System/Renderer.h"
 #include "System/Application.h"
+#include "Resource/ModelResource.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -40,6 +42,42 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 	return input.color;
 }
 )";
+
+	const char* ModelShaderSource = R"(
+cbuffer TransformBuffer : register(b0)
+{
+	matrix worldViewProjection;
+};
+
+struct VS_INPUT
+{
+	float3 position : POSITION;
+	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
+	uint4 boneIndices : BLENDINDICES;
+	float4 boneWeights : BLENDWEIGHT;
+};
+
+struct PS_INPUT
+{
+	float4 position : SV_POSITION;
+	float3 normal : NORMAL;
+};
+
+PS_INPUT VSMain(VS_INPUT input)
+{
+	PS_INPUT output;
+	output.position = mul(float4(input.position, 1.0f), worldViewProjection);
+	output.normal = normalize(input.normal);
+	return output;
+}
+
+float4 PSMain(PS_INPUT input) : SV_TARGET
+{
+	float light = saturate(dot(normalize(input.normal), normalize(float3(0.3f, 0.8f, -0.5f))));
+	return float4(0.35f + light * 0.55f, 0.38f + light * 0.45f, 0.42f + light * 0.35f, 1.0f);
+}
+)";
 }
 
 D3D_FEATURE_LEVEL Renderer::m_FeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -73,6 +111,11 @@ ID3D11InputLayout* Renderer::m_pDebugCubeInputLayout = nullptr;
 ID3D11Buffer* Renderer::m_pDebugCubeVertexBuffer = nullptr;
 ID3D11Buffer* Renderer::m_pDebugCubeIndexBuffer = nullptr;
 ID3D11Buffer* Renderer::m_pDebugCubeConstantBuffer = nullptr;
+
+ID3D11VertexShader* Renderer::m_pModelVertexShader = nullptr;
+ID3D11PixelShader* Renderer::m_pModelPixelShader = nullptr;
+ID3D11InputLayout* Renderer::m_pModelInputLayout = nullptr;
+ID3D11Buffer* Renderer::m_pModelConstantBuffer = nullptr;
 
 HRESULT Renderer::Init()
 {
@@ -140,7 +183,10 @@ HRESULT Renderer::Init()
 	hr = CreateRenderAndDepthResources(Application::GetWidth(), Application::GetHeight());
 	if (FAILED(hr)) return hr;
 
-	return CreateDebugCubeResources();
+	hr = CreateDebugCubeResources();
+	if (FAILED(hr)) return hr;
+
+	return CreateModelRenderResources();
 }
 
 void Renderer::DrawStart()
@@ -344,6 +390,74 @@ HRESULT Renderer::CreateDebugCubeResources()
 	return m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pDebugCubeConstantBuffer);
 }
 
+HRESULT Renderer::CreateModelRenderResources()
+{
+	ID3DBlob* vertexShaderBlob = nullptr;
+	ID3DBlob* pixelShaderBlob = nullptr;
+
+	HRESULT hr = CompileShader(ModelShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob);
+	if (FAILED(hr)) return hr;
+
+	hr = CompileShader(ModelShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		return hr;
+	}
+
+	hr = m_pDevice->CreateVertexShader(
+		vertexShaderBlob->GetBufferPointer(),
+		vertexShaderBlob->GetBufferSize(),
+		nullptr,
+		&m_pModelVertexShader);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		SAFE_RELEASE(pixelShaderBlob);
+		return hr;
+	}
+
+	hr = m_pDevice->CreatePixelShader(
+		pixelShaderBlob->GetBufferPointer(),
+		pixelShaderBlob->GetBufferSize(),
+		nullptr,
+		&m_pModelPixelShader);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		SAFE_RELEASE(pixelShaderBlob);
+		return hr;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(offsetof(ModelVertex, position)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, static_cast<UINT>(offsetof(ModelVertex, normal)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, static_cast<UINT>(offsetof(ModelVertex, uv)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BLENDINDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, static_cast<UINT>(offsetof(ModelVertex, boneIndices)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BLENDWEIGHT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, static_cast<UINT>(offsetof(ModelVertex, boneWeights)), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+
+	hr = m_pDevice->CreateInputLayout(
+		layout,
+		_countof(layout),
+		vertexShaderBlob->GetBufferPointer(),
+		vertexShaderBlob->GetBufferSize(),
+		&m_pModelInputLayout);
+
+	SAFE_RELEASE(vertexShaderBlob);
+	SAFE_RELEASE(pixelShaderBlob);
+
+	if (FAILED(hr)) return hr;
+
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	constantBufferDesc.ByteWidth = sizeof(DebugCubeConstantBuffer);
+	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	return m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pModelConstantBuffer);
+}
+
 HRESULT Renderer::CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob)
 {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -402,6 +516,39 @@ void Renderer::DrawDebugCube(const Matrix& world)
 	m_pDeviceContext->DrawIndexed(36, 0, 0);
 }
 
+void Renderer::DrawModel(const ModelResource& model, const Matrix& world)
+{
+	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
+	{
+		return;
+	}
+
+	DebugCubeConstantBuffer constantBuffer = {};
+	constantBuffer.worldViewProjection = (world * m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	m_pDeviceContext->UpdateSubresource(m_pModelConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
+
+	m_pDeviceContext->IASetInputLayout(m_pModelInputLayout);
+	m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	m_pDeviceContext->VSSetShader(m_pModelVertexShader, nullptr, 0);
+	m_pDeviceContext->VSSetConstantBuffers(0, 1, &m_pModelConstantBuffer);
+	m_pDeviceContext->PSSetShader(m_pModelPixelShader, nullptr, 0);
+
+	for (const ModelMesh& mesh : model.GetMeshes())
+	{
+		if (!mesh.vertexBuffer || !mesh.indexBuffer || mesh.indices.empty())
+		{
+			continue;
+		}
+
+		const UINT stride = sizeof(ModelVertex);
+		const UINT offset = 0;
+		m_pDeviceContext->IASetVertexBuffers(0, 1, &mesh.vertexBuffer, &stride, &offset);
+		m_pDeviceContext->IASetIndexBuffer(mesh.indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		m_pDeviceContext->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
+	}
+}
+
 void Renderer::SetDepthEnable(bool Enable)
 {
 	if (Enable)
@@ -424,8 +571,18 @@ void Renderer::ReleaseDebugCubeResources()
 	SAFE_RELEASE(m_pDebugCubeVertexShader);
 }
 
+void Renderer::ReleaseModelRenderResources()
+{
+	SAFE_RELEASE(m_pModelConstantBuffer);
+	SAFE_RELEASE(m_pModelInputLayout);
+	SAFE_RELEASE(m_pModelPixelShader);
+	SAFE_RELEASE(m_pModelVertexShader);
+}
+
 void Renderer::Uninit()
 {
+	ModelResourceManager::UnloadAll();
+	ReleaseModelRenderResources();
 	ReleaseDebugCubeResources();
 
 	SAFE_RELEASE(m_pDepthStencilView);

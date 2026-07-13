@@ -43,11 +43,13 @@
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
+    <ClCompile Include="Source\Resource\ModelResource.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\ModelComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
@@ -78,6 +80,7 @@
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />
+    <ClInclude Include="Source\Resource\ModelResource.h" />
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
