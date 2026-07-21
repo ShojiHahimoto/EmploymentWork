@@ -64,12 +64,14 @@ GameObject にロジックを持たせてはいけない。
 
 - GameObject は `GameObjectId` と Component 群だけを持つ
 - GameObject はデバッグ表示や識別用の name を持つ
+- GameObject は大分類用の `GameObjectTag` を持つ
 - GameObject ごとの Component 群は `std::vector<std::unique_ptr<Component>>` として保持する
 - `TransformComponent`、`CameraComponent`、`VelocityComponent`、`StateComponent` などは共通基底 `Component` を継承する
 - `Component` の継承は型管理のためだけに使い、ゲームロジックは持たせない
 - Component の追加、取得、存在確認は World が提供する
 - System は World の GameObject 群を走査し、必要な Component を参照・変更する
 - GameObject 自身に Update やゲームロジックを持たせない
+- Player などの対象判定は、Tag と必要 Component の有無を両方確認する
 
 ## Transform 設計
 
@@ -145,6 +147,7 @@ Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
 
 ```text
 InputSystem
+InputHistorySystem
 PlayerControlSystem
 StateUpdateSystem
 MovementSystem
@@ -157,7 +160,8 @@ DebugSystem
 ```
 
 - InputSystem は、キーボードやコントローラー入力を 1 フレーム分の入力状態に変換する
-- PlayerControlSystem は、入力と入力履歴を見て行動要求を作る
+- InputHistorySystem は、InputSystem の確定済み入力を InputHistoryComponent に保存する
+- PlayerControlSystem は、保存済みの入力履歴と State を見て行動要求を作る
 - StateUpdateSystem は、現在 State、行動要求、フレーム情報を見て今フレームの状態や行動データを更新する
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、位置のめり込み解消を扱う
@@ -167,8 +171,15 @@ DebugSystem
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
-初期の入力確認段階では、PlayerControlSystem / StateUpdateSystem が未実装のため、MovementSystem が入力から VelocityComponent の横速度を直接更新してよい。
-ただし本実装では、入力や状態による行動要求・状態更新を PlayerControlSystem / StateUpdateSystem へ移し、MovementSystem は決定済み Velocity や移動パラメータを位置へ反映する責務へ寄せる。
+PlayerControlSystem は、Player タグと Transform / Velocity / State / InputHistory を持つ GameObject を対象にする。
+現段階では 1P 入力のみを使い、左右入力に応じて Velocity の X 成分を毎フレーム上書きする。
+
+MovementSystem は入力を直接読まない。
+
+- `SetVelocity` は Velocity 全体を上書きする
+- `SetVelocityX/Y/Z` は指定軸だけを上書きする
+- `AddVelocity` は外力や技移動などの加算用に使う
+- `MovementSystem::Update` は確定済み Velocity を Transform に反映する
 
 ## Input 設計
 
@@ -184,6 +195,14 @@ InputSystem は、各デバイスの入力をフレーム単位の Action 状態
 - デッドゾーンなどの調整値は InputSettings にまとめ、後から調整できるようにする
 - 入力履歴やコマンド判定は、必要な Scene や Battle 系 System 側で持つ
 - DebugCamera 操作は DebugCameraControlSystem 側に委託し、通常のゲーム入力には含めない
+
+InputHistoryComponent は、バトル系オブジェクトが入力履歴を保存するためのデータ専用 Component とする。
+
+- 現段階では今フレーム分だけを保存する
+- 将来は ring buffer 化し、数十フレーム分の入力履歴を保持できるように拡張する
+- 入力の取得は InputSystem が担当し、入力履歴への保存は InputHistorySystem が担当する
+- PlayerControlSystem は保存済みの InputHistoryComponent と StateComponent を読み、今フレームの制御結果を決める
+- InputHistoryComponent 自身は判定関数や Update を持たない
 
 ボタン入力状態の名称は次の意味で統一する。
 
@@ -242,6 +261,7 @@ InputSystem は、各デバイスの入力をフレーム単位の Action 状態
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent を持つ GameObject を生成する
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
 
 ## 3D Model / Resource

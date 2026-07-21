@@ -2,7 +2,6 @@
 
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
-#include "Input/InputSystem.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -10,28 +9,32 @@ using namespace DirectX::SimpleMath;
 
 void MovementSystem::Update(World& world)
 {
-	UpdateVelocityFromInput(world);
 	ApplyVelocityToTransform(world);
 }
 
-void MovementSystem::UpdateVelocityFromInput(World& world)
+void MovementSystem::SetVelocity(VelocityComponent& velocity, const Vector3& value)
 {
-	const Input::InputActionState& moveAction =
-		Input::InputSystem::GetActionState(0, Input::InputActionId::Move);
+	velocity.velocity = value;
+}
 
-	const float horizontalInput = moveAction.value.axis.x;
+void MovementSystem::SetVelocityX(VelocityComponent& velocity, float value)
+{
+	velocity.velocity.x = value;
+}
 
-	for (GameObject& object : world.GetGameObjects())
-	{
-		VelocityComponent* velocity = world.GetComponent<VelocityComponent>(object.id);
-		if (!velocity)
-		{
-			continue;
-		}
+void MovementSystem::SetVelocityY(VelocityComponent& velocity, float value)
+{
+	velocity.velocity.y = value;
+}
 
-		// 今回は入力確認用なので、横方向は慣性を持たせず毎フレーム上書きする。
-		velocity->velocity.x = horizontalInput * MoveSpeedPerFrame;
-	}
+void MovementSystem::SetVelocityZ(VelocityComponent& velocity, float value)
+{
+	velocity.velocity.z = value;
+}
+
+void MovementSystem::AddVelocity(VelocityComponent& velocity, const Vector3& value)
+{
+	velocity.velocity += value;
 }
 
 void MovementSystem::ApplyVelocityToTransform(World& world)

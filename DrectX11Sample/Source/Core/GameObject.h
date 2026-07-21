@@ -14,11 +14,21 @@ using GameObjectId = uint32_t;
 // 実際に生成する GameObjectId は 1 以上にする。
 constexpr GameObjectId INVALID_GAME_OBJECT_ID = 0;
 
+enum class GameObjectTag
+{
+	None,
+	Player,
+	Camera,
+	Stage,
+	Debug,
+};
+
 struct GameObject
 {
 	// GameObject は ID と Component 群だけを持つデータコンテナ。
 	// Component の追加、取得、更新判断は World / System 側で行う。
 	GameObjectId id = INVALID_GAME_OBJECT_ID;
 	std::string name;
+	GameObjectTag tag = GameObjectTag::None;
 	std::vector<std::unique_ptr<Component>> components;
 };

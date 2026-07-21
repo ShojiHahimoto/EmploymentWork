@@ -1,18 +1,23 @@
 ﻿#pragma once
 
+#include <SimpleMath.h>
+
+struct VelocityComponent;
 class World;
 
 class MovementSystem
 {
 public:
-	// 入力から Velocity を決め、Velocity を Transform に反映する。
-	// 現段階では VelocityComponent を持つオブジェクトを操作対象にする。
+	// 確定済み Velocity を Transform に反映する。
 	static void Update(World& world);
 
-private:
-	// 固定 60fps 前提の 1 フレームあたり移動量。
-	static constexpr float MoveSpeedPerFrame = 0.08f;
+	// 上書きと加算を分け、操作系と外力系を混ぜずに扱えるようにする。
+	static void SetVelocity(VelocityComponent& velocity, const DirectX::SimpleMath::Vector3& value);
+	static void SetVelocityX(VelocityComponent& velocity, float value);
+	static void SetVelocityY(VelocityComponent& velocity, float value);
+	static void SetVelocityZ(VelocityComponent& velocity, float value);
+	static void AddVelocity(VelocityComponent& velocity, const DirectX::SimpleMath::Vector3& value);
 
-	static void UpdateVelocityFromInput(World& world);
+private:
 	static void ApplyVelocityToTransform(World& world);
 };

@@ -6,7 +6,9 @@
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
+#include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
+#include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/TransformSystem.h"
@@ -34,9 +36,14 @@ void BattleScene::Enter()
 		"assets/model/Debugman/Akai.fbx",
 		Renderer::GetDevice());
 
+	ModelResourceManager::LoadModel(
+		"DebugPlayer",
+		"assets/model/DebugPlayer/man.fbx",
+		Renderer::GetDevice());
+
 	world.RequestSpawn(
-		SpawnType::Debugman,
-		"Debugman",
+		SpawnType::DebugPlayer,
+		"DebugPlayer",
 		Vector3(-2.0f, -1.0f, 8.0f),
 		Vector3(0.0f, 180.0f, 0.0f));
 
@@ -73,6 +80,8 @@ void BattleScene::RunSystems()
 #endif
 
 	SpawnDestroySystem::Update(world);
+	InputHistorySystem::Update(world);
+	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 

@@ -69,10 +69,16 @@
     <ClCompile Include="Source\System\MovementSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\PlayerControlSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\Renderer.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\Game.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\InputHistorySystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
@@ -134,6 +140,9 @@
     <ClInclude Include="Source\System\MovementSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\PlayerControlSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\Renderer.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -143,10 +152,16 @@
     <ClInclude Include="Source\System\Game.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\InputHistorySystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\TransformComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\Component.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\InputHistoryComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\VelocityComponent.h">

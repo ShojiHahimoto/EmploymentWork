@@ -1,6 +1,7 @@
 ﻿#include "System/DebugImGuiSystem.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
@@ -282,6 +283,7 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<CameraComponent>(object.id)) ImGui::BulletText("Camera");
 				if (world.HasComponent<VelocityComponent>(object.id)) ImGui::BulletText("Velocity");
 				if (world.HasComponent<StateComponent>(object.id)) ImGui::BulletText("State");
+				if (world.HasComponent<InputHistoryComponent>(object.id)) ImGui::BulletText("InputHistory");
 
 				TransformComponent* transform = world.GetTransform(object.id);
 				if (transform)
@@ -358,6 +360,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 		{
 			{ "DebugCube", SpawnType::DebugCube },
 			{ "Debugman", SpawnType::Debugman },
+			{ "DebugPlayer", SpawnType::DebugPlayer },
 		};
 
 		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
