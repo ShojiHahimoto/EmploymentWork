@@ -37,6 +37,7 @@
     <ClCompile Include="Source\System\imgui-docking\imgui_tables.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="Source\System\main.cpp" />
+    <ClCompile Include="Source\System\MovementSystem.cpp" />
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
@@ -73,6 +74,7 @@
     <ClInclude Include="Source\System\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
     <ClInclude Include="Source\System\main.h" />
+    <ClInclude Include="Source\System\MovementSystem.h" />
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />

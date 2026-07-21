@@ -141,27 +141,34 @@ Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
 バトル中は同一フレーム内の整合性を優先するため、System の更新順を固定する。
 一方で、管理が複雑になりすぎるほど細かい System 分割は避ける。
 
-当面のバトル基礎では、次の粒度を基準とする。
+当面のバトル基礎では、次の粒度と順序を基準とする。
 
 ```text
 InputSystem
-CharacterControlSystem
-MovementResolveSystem
+PlayerControlSystem
+StateUpdateSystem
+MovementSystem
+EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
 TransformSystem
 CameraSystem
-Debug 系 System
+DebugSystem
 ```
 
 - InputSystem は、キーボードやコントローラー入力を 1 フレーム分の入力状態に変換する
-- CharacterControlSystem は、入力、State、Velocity を見て、歩き、ジャンプ、落下などを決める
-- MovementResolveSystem は、Velocity による移動、仮地面、壁、プレイヤー同士の押し合い、めり込み解消までを扱う
+- PlayerControlSystem は、入力と入力履歴を見て行動要求を作る
+- StateUpdateSystem は、現在 State、行動要求、フレーム情報を見て今フレームの状態や行動データを更新する
+- MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
+- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、位置のめり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
-- Debug 系 System は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
+- DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
+
+初期の入力確認段階では、PlayerControlSystem / StateUpdateSystem が未実装のため、MovementSystem が入力から VelocityComponent の横速度を直接更新してよい。
+ただし本実装では、入力や状態による行動要求・状態更新を PlayerControlSystem / StateUpdateSystem へ移し、MovementSystem は決定済み Velocity や移動パラメータを位置へ反映する責務へ寄せる。
 
 ## Input 設計
 

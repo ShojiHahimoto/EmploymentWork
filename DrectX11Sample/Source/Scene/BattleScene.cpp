@@ -6,6 +6,7 @@
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
+#include "System/MovementSystem.h"
 #include "System/Renderer.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/TransformSystem.h"
@@ -72,6 +73,7 @@ void BattleScene::RunSystems()
 #endif
 
 	SpawnDestroySystem::Update(world);
+	MovementSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())

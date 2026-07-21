@@ -1,6 +1,7 @@
 ﻿#include "System/SpawnDestroySystem.h"
 
 #include "Component/ModelComponent.h"
+#include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -34,6 +35,9 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 			ModelComponent model;
 			model.resourceKey = "Debugman";
 			world.AddComponent<ModelComponent>(objectId, model);
+
+			// 入力確認用に、Debugman を移動対象として扱う。
+			world.AddComponent<VelocityComponent>(objectId);
 			break;
 		}
 		case SpawnType::DebugCube:
