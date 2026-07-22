@@ -108,7 +108,6 @@ namespace Input
 
 		// Gameplay はキャラクター操作用。現状は Player 0 のキーボードだけに割り当てる。
 		addKeyboardAxis2D(InputActionMapId::Gameplay, InputActionId::Move, KeyboardKey::A, KeyboardKey::D, KeyboardKey::S, KeyboardKey::W);
-		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::Jump, KeyboardKey::Space);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::LightAttack, KeyboardKey::J);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::MediumAttack, KeyboardKey::K);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::HeavyAttack, KeyboardKey::L);

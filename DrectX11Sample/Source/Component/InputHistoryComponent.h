@@ -6,8 +6,8 @@
 
 struct InputButtonHistoryState
 {
-	// InputSystem が判定済みの結果を、履歴として保存する。
-	// ここで Trigger / Press / Release を再計算しない。
+	// ボタン相当の入力結果を、履歴として保存する。
+	// 攻撃やガードは InputSystem の結果をコピーし、ジャンプは 7 / 8 / 9 方向から作る。
 	bool trigger = false;
 	bool press = false;
 	bool release = false;
@@ -24,6 +24,7 @@ struct InputHistoryFrame
 	InputButtonHistoryState lightAttack;
 	InputButtonHistoryState mediumAttack;
 	InputButtonHistoryState heavyAttack;
+	// 専用ボタンではなく、direction が 7 / 8 / 9 かどうかから作るジャンプ入力。
 	InputButtonHistoryState jump;
 	InputButtonHistoryState guard;
 };

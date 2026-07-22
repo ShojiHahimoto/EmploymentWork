@@ -44,7 +44,8 @@ namespace Input
 		Gamepad
 	};
 
-	// Actionが返す値の形。移動は Axis2D、攻撃やジャンプはButtonを想定する。
+	// Actionが返す値の形。移動は Axis2D、攻撃やガードはButtonを想定する。
+	// バトル中のジャンプは専用ボタンではなく、Move の 7 / 8 / 9 方向から作る。
 	enum class InputValueType : uint8_t
 	{
 		Button,

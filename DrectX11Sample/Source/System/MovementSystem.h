@@ -2,6 +2,8 @@
 
 #include <SimpleMath.h>
 
+struct StateComponent;
+struct TransformComponent;
 struct VelocityComponent;
 class World;
 
@@ -17,7 +19,14 @@ public:
 	static void SetVelocityY(VelocityComponent& velocity, float value);
 	static void SetVelocityZ(VelocityComponent& velocity, float value);
 	static void AddVelocity(VelocityComponent& velocity, const DirectX::SimpleMath::Vector3& value);
+	static void AddVelocityY(VelocityComponent& velocity, float value);
 
 private:
+	static constexpr float RiseGravityPerFrame = -0.012f;
+	static constexpr float FallGravityPerFrame = -0.020f;
+
+	static void ApplyAirGravity(World& world);
 	static void ApplyVelocityToTransform(World& world);
+	static void ResolveTemporaryGround(World& world);
+	static bool ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state);
 };

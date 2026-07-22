@@ -1,6 +1,7 @@
 ﻿#include "System/StateUpdateSystem.h"
 
 #include "Component/TransformComponent.h"
+#include "Component/VelocityComponent.h"
 #include "World/World.h"
 
 namespace
@@ -10,8 +11,6 @@ namespace
 	constexpr int HitstunDurationFrames = 30;
 }
 
-// Updates PlayerActionState for player objects.
-// This is the only place that confirms the final action and advances actionFrame.
 void StateUpdateSystem::Update(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -25,63 +24,75 @@ void StateUpdateSystem::Update(World& world)
 	}
 }
 
-// Checks required components, then updates one player's action state.
 void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 {
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
+	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
-	if (!world.GetTransform(objectId) || !state || !inputHistory)
+	if (!world.GetTransform(objectId) || !state || !velocity || !inputHistory)
 	{
 		return;
 	}
 
-	const PlayerActionState nextActionState = DecideNextActionState(*state, *inputHistory);
-	ApplyActionState(*state, nextActionState);
+	// Count this frame first. If the action changes below, ApplyActionState resets it to 0.
+	++state->actionFrame;
+
+	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, *inputHistory);
+	ApplyActionState(*state, decision);
 }
 
-// Priority order:
-// 1. hitstun request interrupts everything, including attack startup.
-// 2. locked actions continue until finished or cancelable.
-// 3. neutral input can choose a new action.
-PlayerActionState StateUpdateSystem::DecideNextActionState(
+PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
+	const VelocityComponent& velocity,
 	const InputHistoryComponent& inputHistory)
 {
 	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
 
 	if (state.hitstunRequested)
 	{
-		return PlayerActionState::Hitstun;
+		return { PlayerActionState::Hitstun, true };
 	}
 
 	if (IsLockedAction(state.currentActionState)
 		&& !IsActionFinished(state)
 		&& !CanCancelAction(state))
 	{
-		return state.currentActionState;
+		return { state.currentActionState, false };
 	}
 
-	return DecideNeutralActionState(state, inputFrame);
+	return DecideNeutralAction(state, velocity, inputFrame);
 }
 
-// Chooses an action when the current action can accept new input.
-PlayerActionState StateUpdateSystem::DecideNeutralActionState(
+PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	const StateComponent& state,
+	const VelocityComponent& velocity,
 	const InputHistoryFrame& inputFrame)
 {
 	if (HasAttackTrigger(inputFrame))
 	{
-		return state.isGrounded ? PlayerActionState::GroundAttack : PlayerActionState::AirAttack;
+		return {
+			state.isGrounded ? PlayerActionState::GroundAttack : PlayerActionState::AirAttack,
+			true
+		};
+	}
+
+	if (state.isGrounded && inputFrame.jump.trigger)
+	{
+		return { PlayerActionState::Jump, true };
 	}
 
 	if (!state.isGrounded)
 	{
-		return PlayerActionState::Fall;
+		return {
+			velocity.velocity.y > 0.0f ? PlayerActionState::Jump : PlayerActionState::Fall,
+			false
+		};
 	}
 
-	return HasHorizontalMoveDirection(inputFrame.direction)
-		? PlayerActionState::Walk
-		: PlayerActionState::Idle;
+	return {
+		HasHorizontalMoveDirection(inputFrame.direction) ? PlayerActionState::Walk : PlayerActionState::Idle,
+		false
+	};
 }
 
 bool StateUpdateSystem::HasHorizontalMoveDirection(int direction)
@@ -125,20 +136,14 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 	return state.cancelEnabled;
 }
 
-// Resets actionFrame on action changes.
-// Keeps actionFrame advancing while the same action continues.
-void StateUpdateSystem::ApplyActionState(StateComponent& state, PlayerActionState nextActionState)
+void StateUpdateSystem::ApplyActionState(StateComponent& state, const PlayerActionDecision& decision)
 {
-	if (state.currentActionState != nextActionState)
+	if (state.currentActionState != decision.nextActionState || decision.restartAction)
 	{
-		state.currentActionState = nextActionState;
+		state.currentActionState = decision.nextActionState;
 		state.actionFrame = 0;
-
-		state.hitstunRequested = false;
 		state.cancelEnabled = false;
-		return;
 	}
 
-	++state.actionFrame;
 	state.hitstunRequested = false;
 }

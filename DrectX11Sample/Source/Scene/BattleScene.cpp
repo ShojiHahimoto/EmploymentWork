@@ -28,7 +28,7 @@ void BattleScene::Enter()
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
-		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
+		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 4.0f, -20.0f));
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 

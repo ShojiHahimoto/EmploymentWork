@@ -9,9 +9,9 @@ class World;
 
 struct PlayerControlFrameResult
 {
-	// PlayerActionState に応じた今フレームの挙動結果。
-	// 現段階では歩き / 停止用の横速度だけを扱う。
 	float horizontalVelocity = 0.0f;
+	float verticalVelocity = 0.0f;
+	bool setVerticalVelocity = false;
 };
 
 class PlayerControlSystem
@@ -21,8 +21,8 @@ public:
 	static void Update(World& world);
 
 private:
-	// 固定 60fps 前提の 1 フレームあたり横移動量。
 	static constexpr float MoveSpeedPerFrame = 0.08f;
+	static constexpr float JumpInitialVelocity = 0.32f;
 
 	static void UpdatePlayer(World& world, GameObjectId objectId);
 	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory);
