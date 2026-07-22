@@ -64,12 +64,14 @@ GameObject にロジックを持たせてはいけない。
 
 - GameObject は `GameObjectId` と Component 群だけを持つ
 - GameObject はデバッグ表示や識別用の name を持つ
+- GameObject は大分類用の `GameObjectTag` を持つ
 - GameObject ごとの Component 群は `std::vector<std::unique_ptr<Component>>` として保持する
 - `TransformComponent`、`CameraComponent`、`VelocityComponent`、`StateComponent` などは共通基底 `Component` を継承する
 - `Component` の継承は型管理のためだけに使い、ゲームロジックは持たせない
 - Component の追加、取得、存在確認は World が提供する
 - System は World の GameObject 群を走査し、必要な Component を参照・変更する
 - GameObject 自身に Update やゲームロジックを持たせない
+- Player などの対象判定は、Tag と必要 Component の有無を両方確認する
 
 ## Transform 設計
 
@@ -141,27 +143,90 @@ Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
 バトル中は同一フレーム内の整合性を優先するため、System の更新順を固定する。
 一方で、管理が複雑になりすぎるほど細かい System 分割は避ける。
 
-当面のバトル基礎では、次の粒度を基準とする。
+当面のバトル基礎では、次の粒度と順序を基準とする。
 
 ```text
 InputSystem
-CharacterControlSystem
-MovementResolveSystem
+InputHistorySystem
+StateUpdateSystem
+PlayerControlSystem
+MovementSystem
+EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
 TransformSystem
 CameraSystem
-Debug 系 System
+DebugSystem
 ```
 
 - InputSystem は、キーボードやコントローラー入力を 1 フレーム分の入力状態に変換する
-- CharacterControlSystem は、入力、State、Velocity を見て、歩き、ジャンプ、落下などを決める
-- MovementResolveSystem は、Velocity による移動、仮地面、壁、プレイヤー同士の押し合い、めり込み解消までを扱う
+- InputHistorySystem は、InputSystem の確定済み入力を格闘ゲーム用入力履歴へ変換し、InputHistoryComponent に保存する
+- StateUpdateSystem は、入力履歴、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
+- PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
+- MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
+- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、位置のめり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
-- Debug 系 System は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
+- DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
+
+StateUpdateSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
+現段階では InputHistoryComponent のテンキー方向、ジャンプ、攻撃ボタン、接地状態、Y 速度を見て、`Idle`、`Walk`、`Jump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+ジャンプ入力はテンキー方向の `7 / 8 / 9` を使う。将来は前ジャンプ、垂直ジャンプ、バックジャンプに分けるが、現段階ではすべて同じ垂直ジャンプとして扱う。
+今フレームで被弾要求がある場合は最優先で `Hitstun` に遷移し、攻撃前隙中でも攻撃を中止する。
+攻撃中や被弾中などのキャンセル不可行動は、終了またはキャンセル可能になるまで新しい行動へ変更しない。
+`actionFrame` は `PlayerActionState` に入ってからの経過フレームとして、StateUpdateSystem が更新する。
+`actionFrame` は StateUpdateSystem の処理開始時に 1 進み、`PlayerActionState` が切り替わった場合は 0 に戻る。
+
+PlayerControlSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
+PlayerControlSystem は StateComponent の `currentActionState` や `actionFrame` を更新しない。
+現段階では確定済み `PlayerActionState::Walk` のときに InputHistoryComponent のテンキー方向を使って Velocity の X 成分を毎フレーム上書きし、`PlayerActionState::Jump` の `actionFrame == 0` のときだけ Velocity の Y 成分へジャンプ初速を設定する。
+Velocity はノックバック、技移動、押し出しでも変化するため、Idle / Walk 判定には使わない。
+仮接地判定は MovementSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
+この仮接地判定は、地面や壁の判定を作る段階で EmbedResolveSystem に移す。
+
+MovementSystem は入力を直接読まない。
+
+- `SetVelocity` は Velocity 全体を上書きする
+- `SetVelocityX/Y/Z` は指定軸だけを上書きする
+- `AddVelocity` は外力や技移動などの加算用に使う
+- `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映し、最後に仮接地補正を行う
+- 上昇中と下降中で重力値を分ける
+
+## Input 設計
+
+InputSystem は、各デバイスの入力をフレーム単位の Action 状態へ変換する。
+
+- 入力サンプリングは毎フレーム 1 回だけ行う
+- 同一フレーム内のすべての System は、確定済みの同じ入力結果を読む
+- 有効な ActionMap はゲーム全体で 1 つだけ持つ
+- 2 プレイヤー時も ActionMap はプレイヤー単位ではなくゲーム単位で切り替える
+- PlayerInputState は Player ごとに持ち、将来の 2P 対応に備える
+- キーコンフィグは将来 JSON などの外部ファイルから読み込める構造にする
+- 直近で入力されたデバイス種別は Player ごとに保持し、操作説明 UI などで使えるようにする
+- デッドゾーンなどの調整値は InputSettings にまとめ、後から調整できるようにする
+- 入力履歴やコマンド判定は、必要な Scene や Battle 系 System 側で持つ
+- DebugCamera 操作は DebugCameraControlSystem 側に委託し、通常のゲーム入力には含めない
+
+InputHistoryComponent は、バトル系オブジェクトが入力履歴を保存するためのデータ専用 Component とする。
+
+- 生のキーボード入力や PlayerInputState を丸ごと保存しない
+- `Move` Action はテンキー表記の `1〜9` に変換して保存する
+- 攻撃、ガードなどのボタンは InputSystem が判定済みの `Trigger / Press / Release` を保存する
+- ジャンプは専用ボタンではなく、テンキー方向 `7 / 8 / 9` から `Trigger / Press / Release` を作って保存する
+- 現段階では今フレーム分だけを保存する
+- 将来は ring buffer 化し、数十フレーム分の入力履歴を保持できるように拡張する
+- 入力の取得は InputSystem が担当し、入力履歴への保存は InputHistorySystem が担当する
+- StateUpdateSystem は保存済みの InputHistoryComponent を読み、今フレームの PlayerActionState を決める
+- PlayerControlSystem は確定済みの PlayerActionState を読み、今フレームの行動処理を行う
+- InputHistoryComponent 自身は判定関数や Update を持たない
+
+ボタン入力状態の名称は次の意味で統一する。
+
+- `Trigger`: 前フレーム押されておらず、今フレーム押された
+- `Press`: 今フレーム押されている
+- `Release`: 前フレーム押されており、今フレーム離された
 
 ### Collision の種類
 
@@ -188,8 +253,8 @@ Debug 系 System
 
 - HP などの値は HealthComponent または BattleStatusComponent として保持する
 - ダメージ適用、のけぞり、ヒットストップ、無敵などの結果確定は HitResolveSystem が担当する
-- StateComponent は現在状態と stateFrame を保持する
-- stateFrame は、状態に入ってからの経過フレームとして扱う
+- StateComponent は現在の PlayerActionState と actionFrame を保持する
+- actionFrame は、PlayerActionState に入ってからの経過フレームとして扱う
 
 ## 生成 / 削除
 
@@ -214,6 +279,7 @@ Debug 系 System
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent を持つ GameObject を生成する
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
 
 ## 3D Model / Resource

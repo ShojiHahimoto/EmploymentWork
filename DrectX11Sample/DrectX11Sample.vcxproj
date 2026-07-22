@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
+    <ClCompile Include="Source\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\System\Application.cpp" />
@@ -27,6 +29,7 @@
     <ClCompile Include="Source\System\Debugger.cpp" />
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
+    <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
@@ -34,15 +37,12 @@
     <ClCompile Include="Source\System\imgui-docking\imgui_draw.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui_tables.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp" />
-    <ClCompile Include="Source\System\kariRenderer.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="Source\System\kari_app.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Source\System\main.cpp" />
+    <ClCompile Include="Source\System\MovementSystem.cpp" />
+    <ClCompile Include="Source\System\PlayerControlSystem.cpp" />
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
+    <ClCompile Include="Source\System\StateUpdateSystem.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
     <ClCompile Include="Source\Resource\ModelResource.cpp" />
     <ClCompile Include="Source\World\World.cpp" />
@@ -50,11 +50,16 @@
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
     <ClInclude Include="Source\Core\GameObject.h" />
+    <ClInclude Include="Source\Input\InputBindings.h" />
+    <ClInclude Include="Source\Input\InputConfigLoader.h" />
+    <ClInclude Include="Source\Input\InputSystem.h" />
+    <ClInclude Include="Source\Input\InputTypes.h" />
     <ClInclude Include="Source\Scene\BattleScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
@@ -64,6 +69,7 @@
     <ClInclude Include="Source\System\Debugger.h" />
     <ClInclude Include="Source\System\DebugImGuiSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
+    <ClInclude Include="Source\System\InputHistorySystem.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h" />
     <ClInclude Include="Source\System\imgui-docking\imconfig.h" />
@@ -72,15 +78,12 @@
     <ClInclude Include="Source\System\imgui-docking\imstb_rectpack.h" />
     <ClInclude Include="Source\System\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
-    <ClInclude Include="Source\System\kariapp.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="Source\System\kariRenderer.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="Source\System\main.h" />
+    <ClInclude Include="Source\System\MovementSystem.h" />
+    <ClInclude Include="Source\System\PlayerControlSystem.h" />
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
+    <ClInclude Include="Source\System\StateUpdateSystem.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />
     <ClInclude Include="Source\Resource\ModelResource.h" />
     <ClInclude Include="Source\World\World.h" />

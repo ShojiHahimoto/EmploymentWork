@@ -54,7 +54,17 @@ namespace
 void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, DebugCameraControlState& state)
 {
 #if defined(_DEBUG)
-	if (GetForegroundWindow() != Application::GetWindow() || !IsKeyDown(VK_RBUTTON))
+	Update(cameraTransform, state, GetForegroundWindow() == Application::GetWindow());
+#else
+	(void)cameraTransform;
+	(void)state;
+#endif
+}
+
+void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, DebugCameraControlState& state, bool inputEnabled)
+{
+#if defined(_DEBUG)
+	if (!inputEnabled || !IsKeyDown(VK_RBUTTON))
 	{
 		state.hasPreviousMousePosition = false;
 		return;
@@ -109,5 +119,6 @@ void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, Debug
 #else
 	(void)cameraTransform;
 	(void)state;
+	(void)inputEnabled;
 #endif
 }

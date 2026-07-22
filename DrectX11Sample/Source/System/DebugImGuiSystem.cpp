@@ -1,9 +1,12 @@
 ﻿#include "System/DebugImGuiSystem.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
+
+#include <cstdint>
 
 #if defined(_DEBUG)
 #include "System/imgui-docking/imgui.h"
@@ -280,6 +283,7 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<CameraComponent>(object.id)) ImGui::BulletText("Camera");
 				if (world.HasComponent<VelocityComponent>(object.id)) ImGui::BulletText("Velocity");
 				if (world.HasComponent<StateComponent>(object.id)) ImGui::BulletText("State");
+				if (world.HasComponent<InputHistoryComponent>(object.id)) ImGui::BulletText("InputHistory");
 
 				TransformComponent* transform = world.GetTransform(object.id);
 				if (transform)
@@ -356,6 +360,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 		{
 			{ "DebugCube", SpawnType::DebugCube },
 			{ "Debugman", SpawnType::Debugman },
+			{ "DebugPlayer", SpawnType::DebugPlayer },
 		};
 
 		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
@@ -383,5 +388,55 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 	ImGui::End();
 #else
 	(void)world;
+#endif
+}
+
+bool DebugImGuiSystem::DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight)
+{
+#if defined(_DEBUG)
+	if (!initialized || !sceneTextureView || textureWidth <= 0 || textureHeight <= 0)
+	{
+		return false;
+	}
+
+	bool viewHovered = false;
+
+	ImGui::SetNextWindowPos(ImVec2(800.0f, 20.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(480.0f, 320.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("Scene View"))
+	{
+		const ImVec2 availableSize = ImGui::GetContentRegionAvail();
+		const float textureAspect = static_cast<float>(textureWidth) / static_cast<float>(textureHeight);
+
+		ImVec2 imageSize = availableSize;
+		if (imageSize.x / imageSize.y > textureAspect)
+		{
+			imageSize.x = imageSize.y * textureAspect;
+		}
+		else
+		{
+			imageSize.y = imageSize.x / textureAspect;
+		}
+
+		if (imageSize.x > 1.0f && imageSize.y > 1.0f)
+		{
+			ImGui::Image(
+				static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(sceneTextureView)),
+				imageSize,
+				ImVec2(0.0f, 0.0f),
+				ImVec2(1.0f, 1.0f));
+
+			viewHovered = ImGui::IsItemHovered();
+		}
+	}
+
+	ImGui::End();
+	return viewHovered;
+#else
+	(void)sceneTextureView;
+	(void)textureWidth;
+	(void)textureHeight;
+	return false;
 #endif
 }

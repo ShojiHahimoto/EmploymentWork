@@ -264,6 +264,108 @@ HRESULT Renderer::ResizeWindow(int width, int height)
 	return CreateRenderAndDepthResources(width, height);
 }
 
+HRESULT Renderer::CreateRenderTexture(RenderTexture& renderTexture, int width, int height)
+{
+	if (!m_pDevice || width <= 0 || height <= 0)
+	{
+		return E_INVALIDARG;
+	}
+
+	ReleaseRenderTexture(renderTexture);
+
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = static_cast<UINT>(width);
+	textureDesc.Height = static_cast<UINT>(height);
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	HRESULT hr = m_pDevice->CreateTexture2D(&textureDesc, nullptr, &renderTexture.texture);
+	if (FAILED(hr)) return hr;
+
+	hr = m_pDevice->CreateRenderTargetView(renderTexture.texture, nullptr, &renderTexture.renderTargetView);
+	if (FAILED(hr))
+	{
+		ReleaseRenderTexture(renderTexture);
+		return hr;
+	}
+
+	hr = m_pDevice->CreateShaderResourceView(renderTexture.texture, nullptr, &renderTexture.shaderResourceView);
+	if (FAILED(hr))
+	{
+		ReleaseRenderTexture(renderTexture);
+		return hr;
+	}
+
+	D3D11_TEXTURE2D_DESC depthDesc = {};
+	depthDesc.Width = static_cast<UINT>(width);
+	depthDesc.Height = static_cast<UINT>(height);
+	depthDesc.MipLevels = 1;
+	depthDesc.ArraySize = 1;
+	depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthDesc.SampleDesc.Count = 1;
+	depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+	ID3D11Texture2D* depthBuffer = nullptr;
+	hr = m_pDevice->CreateTexture2D(&depthDesc, nullptr, &depthBuffer);
+	if (FAILED(hr))
+	{
+		ReleaseRenderTexture(renderTexture);
+		return hr;
+	}
+
+	hr = m_pDevice->CreateDepthStencilView(depthBuffer, nullptr, &renderTexture.depthStencilView);
+	depthBuffer->Release();
+	if (FAILED(hr))
+	{
+		ReleaseRenderTexture(renderTexture);
+		return hr;
+	}
+
+	renderTexture.width = width;
+	renderTexture.height = height;
+	return S_OK;
+}
+
+void Renderer::ReleaseRenderTexture(RenderTexture& renderTexture)
+{
+	SAFE_RELEASE(renderTexture.shaderResourceView);
+	SAFE_RELEASE(renderTexture.depthStencilView);
+	SAFE_RELEASE(renderTexture.renderTargetView);
+	SAFE_RELEASE(renderTexture.texture);
+	renderTexture.width = 0;
+	renderTexture.height = 0;
+}
+
+void Renderer::BeginRenderTexture(RenderTexture& renderTexture, const float clearColor[4])
+{
+	if (!renderTexture.renderTargetView || !renderTexture.depthStencilView)
+	{
+		return;
+	}
+
+	ID3D11ShaderResourceView* emptyShaderResourceView = nullptr;
+	m_pDeviceContext->PSSetShaderResources(0, 1, &emptyShaderResourceView);
+
+	m_pDeviceContext->OMSetRenderTargets(1, &renderTexture.renderTargetView, renderTexture.depthStencilView);
+	m_pDeviceContext->ClearRenderTargetView(renderTexture.renderTargetView, clearColor);
+	m_pDeviceContext->ClearDepthStencilView(renderTexture.depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+	m_pDeviceContext->RSSetState(m_pRasterizerSolid);
+	SetViewport(renderTexture.width, renderTexture.height);
+}
+
+void Renderer::RestoreBackBuffer()
+{
+	m_pDeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, m_pDepthStencilView);
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+	m_pDeviceContext->RSSetState(m_pRasterizerSolid);
+	SetViewport(Application::GetWidth(), Application::GetHeight());
+}
+
 HRESULT Renderer::CreateRenderAndDepthResources(int width, int height)
 {
 	ID3D11Texture2D* backBuffer = nullptr;

@@ -50,6 +50,17 @@ class ModelResource;
 
 class Renderer
 {
+public:
+	struct RenderTexture
+	{
+		ID3D11Texture2D* texture = nullptr;
+		ID3D11RenderTargetView* renderTargetView = nullptr;
+		ID3D11DepthStencilView* depthStencilView = nullptr;
+		ID3D11ShaderResourceView* shaderResourceView = nullptr;
+		int width = 0;
+		int height = 0;
+	};
+
 private:
 	struct DebugCubeConstantBuffer
 	{
@@ -119,6 +130,10 @@ public:
 	static ID3D11DeviceContext* GetDeviceContext();
 
 	static HRESULT ResizeWindow(int width, int height);
+	static HRESULT CreateRenderTexture(RenderTexture& renderTexture, int width, int height);
+	static void ReleaseRenderTexture(RenderTexture& renderTexture);
+	static void BeginRenderTexture(RenderTexture& renderTexture, const float clearColor[4]);
+	static void RestoreBackBuffer();
 
 	static void SetViewProjection(
 		const DirectX::SimpleMath::Matrix& view,

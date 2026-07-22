@@ -189,6 +189,12 @@ void TransformSystem::UpdateWorldTransforms(TransformTable& transforms)
 	}
 }
 
+void TransformSystem::UpdateWorldTransform(TransformComponent& transform)
+{
+	ApplyWorldMatrixCache(transform, CreateLocalMatrix(transform));
+	transform.dirty = false;
+}
+
 void TransformSystem::MarkDirtyRecursive(TransformTable& transforms, GameObjectId objectId)
 {
 	TransformComponent* transform = FindTransform(transforms, objectId);
