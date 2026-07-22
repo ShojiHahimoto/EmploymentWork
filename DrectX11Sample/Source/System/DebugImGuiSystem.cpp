@@ -24,6 +24,13 @@ using namespace DirectX::SimpleMath;
 
 bool DebugImGuiSystem::initialized = false;
 
+/// <summary>
+/// Debug ビルド用の ImGui コンテキストと Win32 / DirectX11 バックエンドを初期化する。
+/// </summary>
+/// <param name="windowHandle">ImGui を接続する Win32 ウィンドウハンドル。</param>
+/// <param name="device">ImGui 描画に使う DirectX11 Device。</param>
+/// <param name="deviceContext">ImGui 描画に使う DirectX11 DeviceContext。</param>
+/// <returns>初期化に成功した場合は true。</returns>
 bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
 #if defined(_DEBUG)
@@ -78,6 +85,9 @@ bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11Devic
 #endif
 }
 
+/// <summary>
+/// ImGui の DirectX11 / Win32 バックエンドとコンテキストを破棄する。
+/// </summary>
 void DebugImGuiSystem::Shutdown()
 {
 #if defined(_DEBUG)
@@ -93,11 +103,23 @@ void DebugImGuiSystem::Shutdown()
 #endif
 }
 
+/// <summary>
+/// DebugImGuiSystem が初期化済みか確認する。
+/// </summary>
+/// <returns>初期化済みなら true。</returns>
 bool DebugImGuiSystem::IsInitialized()
 {
 	return initialized;
 }
 
+/// <summary>
+/// Win32 メッセージを ImGui に渡し、ゲーム側で処理を止めるべき入力か判定する。
+/// </summary>
+/// <param name="windowHandle">メッセージを受け取ったウィンドウハンドル。</param>
+/// <param name="message">Win32 メッセージ ID。</param>
+/// <param name="wParam">メッセージの追加情報。</param>
+/// <param name="lParam">メッセージの追加情報。</param>
+/// <returns>ImGui が入力を捕捉し、ゲーム側へ渡さない場合は true。</returns>
 bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 #if defined(_DEBUG)
@@ -165,6 +187,9 @@ bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wPa
 #endif
 }
 
+/// <summary>
+/// ImGui の新しいフレームを開始し、ドッキングスペースを準備する。
+/// </summary>
 void DebugImGuiSystem::BeginFrame()
 {
 #if defined(_DEBUG)
@@ -186,6 +211,9 @@ void DebugImGuiSystem::BeginFrame()
 #endif
 }
 
+/// <summary>
+/// ImGui の DrawData を DirectX11 へ送って描画する。
+/// </summary>
 void DebugImGuiSystem::Render()
 {
 #if defined(_DEBUG)
@@ -207,6 +235,11 @@ void DebugImGuiSystem::Render()
 #endif
 }
 
+/// <summary>
+/// 指定 TransformComponent を編集するデバッグウィンドウを描画する。
+/// </summary>
+/// <param name="windowName">ImGui ウィンドウ名。</param>
+/// <param name="transform">編集対象の TransformComponent。</param>
 void DebugImGuiSystem::DrawTransformEditor(const char* windowName, TransformComponent& transform)
 {
 #if defined(_DEBUG)
@@ -254,6 +287,10 @@ void DebugImGuiSystem::DrawTransformEditor(const char* windowName, TransformComp
 #endif
 }
 
+/// <summary>
+/// World 内の GameObject 一覧と Transform 編集、削除ボタンを表示する。
+/// </summary>
+/// <param name="world">表示・編集対象の World。</param>
 void DebugImGuiSystem::DrawWorldInspector(World& world)
 {
 #if defined(_DEBUG)
@@ -332,6 +369,10 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 #endif
 }
 
+/// <summary>
+/// SpawnType、名前、座標、回転を指定して生成リクエストを出すデバッグウィンドウを描画する。
+/// </summary>
+/// <param name="world">生成リクエストを書き込む World。</param>
 void DebugImGuiSystem::DrawSpawnWindow(World& world)
 {
 #if defined(_DEBUG)
@@ -391,6 +432,13 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 #endif
 }
 
+/// <summary>
+/// RenderTexture を ImGui ウィンドウ内に表示し、SceneView 上にマウスがあるか返す。
+/// </summary>
+/// <param name="sceneTextureView">表示する RenderTexture の ShaderResourceView。</param>
+/// <param name="textureWidth">RenderTexture の幅。</param>
+/// <param name="textureHeight">RenderTexture の高さ。</param>
+/// <returns>SceneView の画像部分がホバーされていれば true。</returns>
 bool DebugImGuiSystem::DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight)
 {
 #if defined(_DEBUG)

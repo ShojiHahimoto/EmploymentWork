@@ -138,6 +138,10 @@ ID3D11Buffer* Renderer::m_pModelConstantBuffer = nullptr;
 ID3D11SamplerState* Renderer::m_pModelSamplerState = nullptr;
 ID3D11ShaderResourceView* Renderer::m_pWhiteTextureView = nullptr;
 
+/// <summary>
+/// DirectX11 の Device、SwapChain、描画リソースを初期化する。
+/// </summary>
+/// <returns>初期化結果の HRESULT。</returns>
 HRESULT Renderer::Init()
 {
 	HRESULT comHr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -220,6 +224,9 @@ HRESULT Renderer::Init()
 	return S_OK;
 }
 
+/// <summary>
+/// バックバッファ描画を開始し、既定のクリア色と深度で画面を初期化する。
+/// </summary>
 void Renderer::DrawStart()
 {
 	float clearColor[4] = { 0.0f, 0.0f, 0.35f, 1.0f };
@@ -232,21 +239,38 @@ void Renderer::DrawStart()
 	m_pDeviceContext->RSSetState(m_pRasterizerSolid);
 }
 
+/// <summary>
+/// バックバッファの描画内容を SwapChain で表示する。
+/// </summary>
 void Renderer::DrawEnd()
 {
 	m_pSwapChain->Present(1, 0);
 }
 
+/// <summary>
+/// Renderer が保持している DirectX11 Device を取得する。
+/// </summary>
+/// <returns>DirectX11 Device ポインタ。</returns>
 ID3D11Device* Renderer::GetDevice()
 {
 	return m_pDevice;
 }
 
+/// <summary>
+/// Renderer が保持している DirectX11 DeviceContext を取得する。
+/// </summary>
+/// <returns>DirectX11 DeviceContext ポインタ。</returns>
 ID3D11DeviceContext* Renderer::GetDeviceContext()
 {
 	return m_pDeviceContext;
 }
 
+/// <summary>
+/// ウィンドウサイズ変更に合わせて SwapChain と深度リソースを作り直す。
+/// </summary>
+/// <param name="width">新しい幅。</param>
+/// <param name="height">新しい高さ。</param>
+/// <returns>リサイズ結果の HRESULT。</returns>
 HRESULT Renderer::ResizeWindow(int width, int height)
 {
 	if (!m_pSwapChain || width <= 0 || height <= 0)
@@ -264,6 +288,13 @@ HRESULT Renderer::ResizeWindow(int width, int height)
 	return CreateRenderAndDepthResources(width, height);
 }
 
+/// <summary>
+/// SceneView などに使うオフスクリーン描画用 RenderTexture を作成する。
+/// </summary>
+/// <param name="renderTexture">作成結果を書き込む RenderTexture。</param>
+/// <param name="width">RenderTexture の幅。</param>
+/// <param name="height">RenderTexture の高さ。</param>
+/// <returns>作成結果の HRESULT。</returns>
 HRESULT Renderer::CreateRenderTexture(RenderTexture& renderTexture, int width, int height)
 {
 	if (!m_pDevice || width <= 0 || height <= 0)
@@ -330,6 +361,10 @@ HRESULT Renderer::CreateRenderTexture(RenderTexture& renderTexture, int width, i
 	return S_OK;
 }
 
+/// <summary>
+/// RenderTexture が保持する DirectX11 リソースを解放する。
+/// </summary>
+/// <param name="renderTexture">解放対象の RenderTexture。</param>
 void Renderer::ReleaseRenderTexture(RenderTexture& renderTexture)
 {
 	SAFE_RELEASE(renderTexture.shaderResourceView);
@@ -340,6 +375,11 @@ void Renderer::ReleaseRenderTexture(RenderTexture& renderTexture)
 	renderTexture.height = 0;
 }
 
+/// <summary>
+/// 指定 RenderTexture を描画先に設定し、指定色でクリアする。
+/// </summary>
+/// <param name="renderTexture">描画先にする RenderTexture。</param>
+/// <param name="clearColor">RenderTexture のクリア色。</param>
 void Renderer::BeginRenderTexture(RenderTexture& renderTexture, const float clearColor[4])
 {
 	if (!renderTexture.renderTargetView || !renderTexture.depthStencilView)
@@ -358,6 +398,9 @@ void Renderer::BeginRenderTexture(RenderTexture& renderTexture, const float clea
 	SetViewport(renderTexture.width, renderTexture.height);
 }
 
+/// <summary>
+/// 描画先をメインのバックバッファへ戻す。
+/// </summary>
 void Renderer::RestoreBackBuffer()
 {
 	m_pDeviceContext->OMSetRenderTargets(1, &m_pRenderTargetView, m_pDepthStencilView);
@@ -366,6 +409,12 @@ void Renderer::RestoreBackBuffer()
 	SetViewport(Application::GetWidth(), Application::GetHeight());
 }
 
+/// <summary>
+/// バックバッファの RenderTargetView と DepthStencilView を作成する。
+/// </summary>
+/// <param name="width">作成する深度バッファの幅。</param>
+/// <param name="height">作成する深度バッファの高さ。</param>
+/// <returns>作成結果の HRESULT。</returns>
 HRESULT Renderer::CreateRenderAndDepthResources(int width, int height)
 {
 	ID3D11Texture2D* backBuffer = nullptr;
@@ -400,6 +449,11 @@ HRESULT Renderer::CreateRenderAndDepthResources(int width, int height)
 	return S_OK;
 }
 
+/// <summary>
+/// DirectX11 の Viewport を指定サイズに設定する。
+/// </summary>
+/// <param name="width">Viewport の幅。</param>
+/// <param name="height">Viewport の高さ。</param>
 void Renderer::SetViewport(int width, int height)
 {
 	D3D11_VIEWPORT vp = {};
@@ -414,6 +468,10 @@ void Renderer::SetViewport(int width, int height)
 	m_pDeviceContext->RSSetViewports(1, &vp);
 }
 
+/// <summary>
+/// デバッグキューブ描画に必要な Buffer、Shader、InputLayout を作成する。
+/// </summary>
+/// <returns>作成結果の HRESULT。</returns>
 HRESULT Renderer::CreateDebugCubeResources()
 {
 	ID3DBlob* vertexShaderBlob = nullptr;
@@ -523,6 +581,10 @@ HRESULT Renderer::CreateDebugCubeResources()
 	return m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pDebugCubeConstantBuffer);
 }
 
+/// <summary>
+/// モデル描画に必要な Shader、InputLayout、ConstantBuffer、Sampler を作成する。
+/// </summary>
+/// <returns>作成結果の HRESULT。</returns>
 HRESULT Renderer::CreateModelRenderResources()
 {
 	ID3DBlob* vertexShaderBlob = nullptr;
@@ -625,6 +687,10 @@ HRESULT Renderer::CreateModelRenderResources()
 	return CreateWhiteTextureResource();
 }
 
+/// <summary>
+/// テクスチャ未設定 Material 用の 1x1 白テクスチャを作成する。
+/// </summary>
+/// <returns>作成結果の HRESULT。</returns>
 HRESULT Renderer::CreateWhiteTextureResource()
 {
 	const WhitePixel pixel;
@@ -653,6 +719,14 @@ HRESULT Renderer::CreateWhiteTextureResource()
 	return hr;
 }
 
+/// <summary>
+/// 文字列で埋め込まれた HLSL ソースをコンパイルする。
+/// </summary>
+/// <param name="source">HLSL ソース文字列。</param>
+/// <param name="entryPoint">コンパイルするエントリポイント名。</param>
+/// <param name="target">vs_5_0 などのコンパイルターゲット。</param>
+/// <param name="blob">コンパイル結果の受け取り先。</param>
+/// <returns>コンパイル結果の HRESULT。</returns>
 HRESULT Renderer::CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob)
 {
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -679,12 +753,21 @@ HRESULT Renderer::CompileShader(const char* source, const char* entryPoint, cons
 	return hr;
 }
 
+/// <summary>
+/// 以降の描画で使う View 行列と Projection 行列を設定する。
+/// </summary>
+/// <param name="view">カメラの View 行列。</param>
+/// <param name="projection">カメラの Projection 行列。</param>
 void Renderer::SetViewProjection(const Matrix& view, const Matrix& projection)
 {
 	m_ViewMatrix = view;
 	m_ProjectionMatrix = projection;
 }
 
+/// <summary>
+/// 指定 World 行列でデバッグキューブを描画する。
+/// </summary>
+/// <param name="world">キューブの World 行列。</param>
 void Renderer::DrawDebugCube(const Matrix& world)
 {
 	if (!m_pDebugCubeVertexBuffer || !m_pDebugCubeIndexBuffer || !m_pDebugCubeConstantBuffer)
@@ -711,6 +794,12 @@ void Renderer::DrawDebugCube(const Matrix& world)
 	m_pDeviceContext->DrawIndexed(36, 0, 0);
 }
 
+/// <summary>
+/// ModelResource の各 Mesh を、Material テクスチャ付きで描画する。
+/// </summary>
+/// <param name="model">描画するモデルリソース。</param>
+/// <param name="world">モデルの World 行列。</param>
+/// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
 bool Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 {
 	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
@@ -759,6 +848,10 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 	return drewMesh;
 }
 
+/// <summary>
+/// 深度テストの有効・無効を切り替える。
+/// </summary>
+/// <param name="Enable">深度テストを有効にするなら true。</param>
 void Renderer::SetDepthEnable(bool Enable)
 {
 	if (Enable)
@@ -771,6 +864,9 @@ void Renderer::SetDepthEnable(bool Enable)
 	}
 }
 
+/// <summary>
+/// デバッグキューブ描画用の DirectX11 リソースを解放する。
+/// </summary>
 void Renderer::ReleaseDebugCubeResources()
 {
 	SAFE_RELEASE(m_pDebugCubeConstantBuffer);
@@ -781,6 +877,9 @@ void Renderer::ReleaseDebugCubeResources()
 	SAFE_RELEASE(m_pDebugCubeVertexShader);
 }
 
+/// <summary>
+/// モデル描画用の DirectX11 リソースを解放する。
+/// </summary>
 void Renderer::ReleaseModelRenderResources()
 {
 	SAFE_RELEASE(m_pWhiteTextureView);
@@ -791,6 +890,9 @@ void Renderer::ReleaseModelRenderResources()
 	SAFE_RELEASE(m_pModelVertexShader);
 }
 
+/// <summary>
+/// Renderer が保持する DirectX11 リソースをすべて解放する。
+/// </summary>
 void Renderer::Uninit()
 {
 	ModelResourceManager::UnloadAll();

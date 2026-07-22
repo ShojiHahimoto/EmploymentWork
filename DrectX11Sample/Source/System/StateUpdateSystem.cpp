@@ -24,6 +24,11 @@ void StateUpdateSystem::Update(World& world)
 	}
 }
 
+/// <summary>
+/// 1体の Player について、入力履歴と現在状態から今フレームの PlayerActionState を確定する。
+/// </summary>
+/// <param name="world">対象 Component を取得する World。</param>
+/// <param name="objectId">状態を更新する Player GameObject の ID。</param>
 void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 {
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
@@ -41,6 +46,13 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	ApplyActionState(*state, decision);
 }
 
+/// <summary>
+/// 被弾、キャンセル不可行動、通常入力の優先順で次に採用する行動を決める。
+/// </summary>
+/// <param name="state">現在の Player 状態。</param>
+/// <param name="velocity">空中上昇・落下の判定に使う VelocityComponent。</param>
+/// <param name="inputHistory">今フレームの入力履歴。</param>
+/// <returns>次の PlayerActionState と、同じ状態を最初からやり直すかどうか。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
@@ -63,6 +75,13 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	return DecideNeutralAction(state, velocity, inputFrame);
 }
 
+/// <summary>
+/// キャンセル不可などの制限がない時に、入力と接地状態から通常行動を選ぶ。
+/// </summary>
+/// <param name="state">接地状態などを確認する StateComponent。</param>
+/// <param name="velocity">空中時の上昇・落下を確認する VelocityComponent。</param>
+/// <param name="inputFrame">今フレームの入力履歴。</param>
+/// <returns>通常状態から採用する PlayerActionState。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
@@ -95,6 +114,11 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	};
 }
 
+/// <summary>
+/// テンキー方向が横移動を含むか判定する。
+/// </summary>
+/// <param name="direction">判定するテンキー方向。</param>
+/// <returns>左または右入力を含んでいれば true。</returns>
 bool StateUpdateSystem::HasHorizontalMoveDirection(int direction)
 {
 	return direction == 1 || direction == 3
@@ -102,6 +126,11 @@ bool StateUpdateSystem::HasHorizontalMoveDirection(int direction)
 		|| direction == 7 || direction == 9;
 }
 
+/// <summary>
+/// 今フレームに攻撃ボタンの Trigger があるか判定する。
+/// </summary>
+/// <param name="inputFrame">判定する入力履歴。</param>
+/// <returns>いずれかの攻撃ボタンが Trigger なら true。</returns>
 bool StateUpdateSystem::HasAttackTrigger(const InputHistoryFrame& inputFrame)
 {
 	return inputFrame.lightAttack.trigger
@@ -109,6 +138,11 @@ bool StateUpdateSystem::HasAttackTrigger(const InputHistoryFrame& inputFrame)
 		|| inputFrame.heavyAttack.trigger;
 }
 
+/// <summary>
+/// 指定 ActionState が、終了またはキャンセルまで他行動へ移れない状態か判定する。
+/// </summary>
+/// <param name="actionState">判定する PlayerActionState。</param>
+/// <returns>キャンセル不可管理が必要な状態なら true。</returns>
 bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 {
 	return actionState == PlayerActionState::GroundAttack
@@ -116,6 +150,11 @@ bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 		|| actionState == PlayerActionState::Hitstun;
 }
 
+/// <summary>
+/// 現在の ActionState が持続時間を終えているか確認する。
+/// </summary>
+/// <param name="state">ActionState と actionFrame を持つ StateComponent。</param>
+/// <returns>行動が終了していれば true。</returns>
 bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 {
 	switch (state.currentActionState)
@@ -131,11 +170,21 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 	}
 }
 
+/// <summary>
+/// 現在の行動をキャンセルして別行動へ移れるか確認する。
+/// </summary>
+/// <param name="state">キャンセル可否を持つ StateComponent。</param>
+/// <returns>キャンセル可能なら true。</returns>
 bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 {
 	return state.cancelEnabled;
 }
 
+/// <summary>
+/// 決定した ActionState を StateComponent に反映し、必要なら actionFrame を 0 に戻す。
+/// </summary>
+/// <param name="state">更新する StateComponent。</param>
+/// <param name="decision">採用する ActionState と再開始フラグ。</param>
 void StateUpdateSystem::ApplyActionState(StateComponent& state, const PlayerActionDecision& decision)
 {
 	if (state.currentActionState != decision.nextActionState || decision.restartAction)

@@ -7,12 +7,26 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
+	/// <summary>
+	/// カメラ設定値が下限を下回らないように丸める。
+	/// </summary>
+	/// <param name="value">丸める値。</param>
+	/// <param name="minValue">許可する最小値。</param>
+	/// <returns>下限以上に補正された値。</returns>
 	float ClampMin(float value, float minValue)
 	{
 		return (value < minValue) ? minValue : value;
 	}
 }
 
+/// <summary>
+/// カメラの透視投影設定を更新する。
+/// </summary>
+/// <param name="camera">設定する CameraComponent。</param>
+/// <param name="fovYDegrees">縦方向の視野角。</param>
+/// <param name="aspectRatio">画面のアスペクト比。</param>
+/// <param name="nearClip">ニアクリップ距離。</param>
+/// <param name="farClip">ファークリップ距離。</param>
 void CameraSystem::SetPerspective(
 	CameraComponent& camera,
 	float fovYDegrees,
@@ -27,12 +41,22 @@ void CameraSystem::SetPerspective(
 	camera.projectionDirty = true;
 }
 
+/// <summary>
+/// カメラのアスペクト比だけを更新し、Projection 行列を再計算対象にする。
+/// </summary>
+/// <param name="camera">設定する CameraComponent。</param>
+/// <param name="aspectRatio">新しいアスペクト比。</param>
 void CameraSystem::SetAspectRatio(CameraComponent& camera, float aspectRatio)
 {
 	camera.aspectRatio = ClampMin(aspectRatio, 0.001f);
 	camera.projectionDirty = true;
 }
 
+/// <summary>
+/// カメラ Transform から View 行列と Projection 行列を更新する。
+/// </summary>
+/// <param name="camera">更新する CameraComponent。</param>
+/// <param name="cameraTransform">カメラ GameObject の TransformComponent。</param>
 void CameraSystem::Update(CameraComponent& camera, const TransformComponent& cameraTransform)
 {
 	camera.viewMatrix = CreateViewMatrix(cameraTransform);
@@ -46,6 +70,11 @@ void CameraSystem::Update(CameraComponent& camera, const TransformComponent& cam
 	camera.viewProjectionMatrix = camera.viewMatrix * camera.projectionMatrix;
 }
 
+/// <summary>
+/// カメラ Transform の World 座標と回転から View 行列を作る。
+/// </summary>
+/// <param name="cameraTransform">カメラ GameObject の TransformComponent。</param>
+/// <returns>左手座標系の View 行列。</returns>
 Matrix CameraSystem::CreateViewMatrix(const TransformComponent& cameraTransform)
 {
 	const Vector3 eye = cameraTransform.worldPosition;
@@ -61,6 +90,11 @@ Matrix CameraSystem::CreateViewMatrix(const TransformComponent& cameraTransform)
 	return view;
 }
 
+/// <summary>
+/// CameraComponent の投影設定から Projection 行列を作る。
+/// </summary>
+/// <param name="camera">投影設定を持つ CameraComponent。</param>
+/// <returns>透視投影の Projection 行列。</returns>
 Matrix CameraSystem::CreateProjectionMatrix(const CameraComponent& camera)
 {
 	const float fovRadians = XMConvertToRadians(camera.fovYDegrees);

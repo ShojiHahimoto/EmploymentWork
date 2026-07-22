@@ -16,12 +16,20 @@
 
 using namespace DirectX::SimpleMath;
 
+/// <summary>
+/// BattleScene を現在の描画サイズで初期化する。
+/// </summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
 BattleScene::BattleScene(int initialWidth, int initialHeight)
 	: width(initialWidth)
 	, height(initialHeight)
 {
 }
 
+/// <summary>
+/// バトル用 World、カメラ、初期モデル、デバッグ用オブジェクトを生成する。
+/// </summary>
 void BattleScene::Enter()
 {
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
@@ -46,7 +54,7 @@ void BattleScene::Enter()
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
 		Vector3(-2.0f, -1.0f, 8.0f),
-		Vector3(0.0f, 180.0f, 0.0f));
+		Vector3(0.0f, 0.0f, 0.0f));
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,
@@ -66,6 +74,9 @@ void BattleScene::Enter()
 	RunSystems();
 }
 
+/// <summary>
+/// BattleScene が保持するデバッグ描画リソースと World を破棄する。
+/// </summary>
 void BattleScene::Exit()
 {
 #if defined(_DEBUG)
@@ -98,6 +109,10 @@ void BattleScene::RunSystems()
 	}
 }
 
+/// <summary>
+/// メインカメラで BattleScene の World を描画し、Debug ビルドでは SceneView と ImGui も描画する。
+/// </summary>
+/// <param name="renderer">描画に使用する Renderer。</param>
 void BattleScene::Draw(Renderer& renderer)
 {
 	if (!world.HasActiveCamera())
@@ -116,6 +131,11 @@ void BattleScene::Draw(Renderer& renderer)
 	DebugImGuiSystem::DrawWorldInspector(world);
 }
 
+/// <summary>
+/// 指定カメラの View / Projection を使って World 内の描画対象を描画する。
+/// </summary>
+/// <param name="renderer">描画に使用する Renderer。</param>
+/// <param name="camera">描画視点として使う CameraComponent。</param>
 void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera)
 {
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
@@ -148,6 +168,11 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 	}
 }
 
+/// <summary>
+/// 画面サイズ変更に合わせて BattleScene のメインカメラのアスペクト比を更新する。
+/// </summary>
+/// <param name="newWidth">新しい幅。</param>
+/// <param name="newHeight">新しい高さ。</param>
 void BattleScene::OnResize(int newWidth, int newHeight)
 {
 	if (newWidth <= 0 || newHeight <= 0)
@@ -166,24 +191,35 @@ void BattleScene::OnResize(int newWidth, int newHeight)
 	}
 }
 
+/// <summary>
+/// BattleScene が保持する World を取得する。
+/// </summary>
+/// <returns>変更可能な World。</returns>
 World& BattleScene::GetWorld()
 {
 	return world;
 }
 
+/// <summary>
+/// BattleScene が保持する World を読み取り専用で取得する。
+/// </summary>
+/// <returns>読み取り専用の World。</returns>
 const World& BattleScene::GetWorld() const
 {
 	return world;
 }
 
 #if defined(_DEBUG)
+/// <summary>
+/// Debug 用 SceneView のカメラ、操作状態、RenderTexture を初期化する。
+/// </summary>
 void BattleScene::InitializeDebugSceneView()
 {
 	debugSceneCameraTransform = TransformComponent{};
 	debugSceneCamera = CameraComponent{};
 	debugSceneCameraControlState = DebugCameraControlState{};
 
-	TransformSystem::SetLocalPosition(debugSceneCameraTransform, Vector3(0.0f, 2.0f, -8.0f));
+	TransformSystem::SetLocalPosition(debugSceneCameraTransform, Vector3(0.0f, 8.0f, -20.0f));
 	TransformSystem::SetLocalEulerRotationDegrees(debugSceneCameraTransform, Vector3(10.0f, 0.0f, 0.0f));
 	TransformSystem::SetLocalScale(debugSceneCameraTransform, Vector3::One);
 	TransformSystem::UpdateWorldTransform(debugSceneCameraTransform);
@@ -199,6 +235,9 @@ void BattleScene::InitializeDebugSceneView()
 	}
 }
 
+/// <summary>
+/// SceneView 上にマウスがある時だけ、Debug 用カメラ操作と行列更新を行う。
+/// </summary>
 void BattleScene::UpdateDebugSceneViewCamera()
 {
 	DebugCameraControlSystem::Update(
@@ -210,6 +249,10 @@ void BattleScene::UpdateDebugSceneViewCamera()
 	CameraSystem::Update(debugSceneCamera, debugSceneCameraTransform);
 }
 
+/// <summary>
+/// Debug 用カメラで World を RenderTexture に描画し、ImGui の SceneView に表示する。
+/// </summary>
+/// <param name="renderer">SceneView 描画に使用する Renderer。</param>
 void BattleScene::DrawDebugSceneView(Renderer& renderer)
 {
 	if (!sceneViewRenderTexture.shaderResourceView)

@@ -19,8 +19,11 @@ void PlayerControlSystem::Update(World& world)
 	}
 }
 
-// 1体の Player に対して、今フレームの行動結果を Velocity に反映する。
-// Transform は存在確認だけ行い、実際の座標更新は後続の MovementSystem に任せる。
+/// <summary>
+/// 1体の Player に対して、今フレームの行動結果を Velocity に反映する。
+/// </summary>
+/// <param name="world">対象 Component を取得する World。</param>
+/// <param name="objectId">行動処理を行う Player GameObject の ID。</param>
 void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 {
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
@@ -35,8 +38,12 @@ void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 	ApplyFrameResult(*velocity, result);
 }
 
-// 現在の PlayerActionState を読み、今フレームに Velocity へ書き込む値だけを作る。
-// 入力から状態を選ぶ処理はここでは行わず、StateUpdateSystem が決めた状態ごとの挙動だけを書く。
+/// <summary>
+/// 現在の PlayerActionState を読み、今フレームに Velocity へ書き込む値だけを作る。
+/// </summary>
+/// <param name="state">StateUpdateSystem が確定した Player の状態。</param>
+/// <param name="inputHistory">行動処理で参照する今フレームの入力履歴。</param>
+/// <returns>Velocity へ反映する今フレームの行動結果。</returns>
 PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	const StateComponent& state,
 	const InputHistoryComponent& inputHistory)
@@ -81,8 +88,11 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	return result;
 }
 
-// テンキー方向から横入力だけを取り出す。
-// 1 / 4 / 7 は左、3 / 6 / 9 は右、2 / 5 / 8 は横入力なしとして扱う。
+/// <summary>
+/// テンキー方向から横入力だけを取り出す。
+/// </summary>
+/// <param name="direction">判定するテンキー方向。</param>
+/// <returns>左なら -1、右なら 1、横入力なしなら 0。</returns>
 float PlayerControlSystem::GetHorizontalInputFromDirection(int direction)
 {
 	if (direction == 1 || direction == 4 || direction == 7)
@@ -98,8 +108,11 @@ float PlayerControlSystem::GetHorizontalInputFromDirection(int direction)
 	return 0.0f;
 }
 
-// 行動処理で作った結果を VelocityComponent へ反映する。
-// X は行動状態に応じて毎フレーム上書きし、Y はジャンプ初速など必要な時だけ上書きする。
+/// <summary>
+/// 行動処理で作った結果を VelocityComponent へ反映する。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="result">今フレームの行動処理結果。</param>
 void PlayerControlSystem::ApplyFrameResult(
 	VelocityComponent& velocity,
 	const PlayerControlFrameResult& result)

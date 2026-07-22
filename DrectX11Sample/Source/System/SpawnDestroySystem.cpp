@@ -15,6 +15,10 @@ void SpawnDestroySystem::Update(World& world)
 	ApplySpawnRequests(world);
 }
 
+/// <summary>
+/// World に蓄積された SpawnRequest を処理し、種類ごとの初期 Component を持つ GameObject を生成する。
+/// </summary>
+/// <param name="world">生成リクエストと GameObject を保持する World。</param>
 void SpawnDestroySystem::ApplySpawnRequests(World& world)
 {
 	const std::vector<SpawnRequest> spawnRequests = world.GetSpawnRequests();
@@ -82,6 +86,10 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 	world.ClearSpawnRequests();
 }
 
+/// <summary>
+/// World に蓄積された DestroyRequest を処理し、対象 GameObject を削除する。
+/// </summary>
+/// <param name="world">削除リクエストと GameObject を保持する World。</param>
 void SpawnDestroySystem::ApplyDestroyRequests(World& world)
 {
 	const std::vector<DestroyRequest> destroyRequests = world.GetDestroyRequests();

@@ -19,11 +19,23 @@ namespace
 	constexpr float MinPitchDegrees = -89.0f;
 	constexpr float MaxPitchDegrees = 89.0f;
 
+	/// <summary>
+	/// 指定仮想キーが現在押されているか確認する。
+	/// </summary>
+	/// <param name="virtualKey">Win32 の仮想キーコード。</param>
+	/// <returns>押されていれば true。</returns>
 	bool IsKeyDown(int virtualKey)
 	{
 		return (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
 	}
 
+	/// <summary>
+	/// 値を指定範囲内に丸める。
+	/// </summary>
+	/// <param name="value">丸める値。</param>
+	/// <param name="minValue">許可する最小値。</param>
+	/// <param name="maxValue">許可する最大値。</param>
+	/// <returns>範囲内に補正された値。</returns>
 	float Clamp(float value, float minValue, float maxValue)
 	{
 		if (value < minValue)
@@ -39,6 +51,12 @@ namespace
 		return value;
 	}
 
+	/// <summary>
+	/// ローカル方向ベクトルを指定 Quaternion で回転し、World 方向へ変換する。
+	/// </summary>
+	/// <param name="direction">回転させるローカル方向。</param>
+	/// <param name="rotation">適用する回転 Quaternion。</param>
+	/// <returns>正規化済みの World 方向。</returns>
 	Vector3 RotateDirection(const Vector3& direction, const Quaternion& rotation)
 	{
 		XMVECTOR rotated = XMVector3Rotate(XMLoadFloat3(&direction), XMLoadFloat4(&rotation));
@@ -51,6 +69,11 @@ namespace
 }
 #endif
 
+/// <summary>
+/// アクティブウィンドウ判定を使って、デバッグカメラのマウス・キーボード操作を更新する。
+/// </summary>
+/// <param name="cameraTransform">操作対象のデバッグカメラ Transform。</param>
+/// <param name="state">前フレームマウス位置や角度を保持する操作状態。</param>
 void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, DebugCameraControlState& state)
 {
 #if defined(_DEBUG)
@@ -61,6 +84,12 @@ void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, Debug
 #endif
 }
 
+/// <summary>
+/// 入力有効フラグが true の時だけ、右クリック中のマウス回転と WASD/QE 移動を適用する。
+/// </summary>
+/// <param name="cameraTransform">操作対象のデバッグカメラ Transform。</param>
+/// <param name="state">前フレームマウス位置や角度を保持する操作状態。</param>
+/// <param name="inputEnabled">このフレームでデバッグカメラ入力を受け取るかどうか。</param>
 void DebugCameraControlSystem::Update(TransformComponent& cameraTransform, DebugCameraControlState& state, bool inputEnabled)
 {
 #if defined(_DEBUG)

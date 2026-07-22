@@ -15,36 +15,70 @@ void MovementSystem::Update(World& world)
 	ResolveTemporaryGround(world);
 }
 
+/// <summary>
+/// VelocityComponent の移動量をまとめて上書きする。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">設定する 1 フレーム分の移動量。</param>
 void MovementSystem::SetVelocity(VelocityComponent& velocity, const Vector3& value)
 {
 	velocity.velocity = value;
 }
 
+/// <summary>
+/// VelocityComponent の X 成分だけを上書きする。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">設定する X 方向の移動量。</param>
 void MovementSystem::SetVelocityX(VelocityComponent& velocity, float value)
 {
 	velocity.velocity.x = value;
 }
 
+/// <summary>
+/// VelocityComponent の Y 成分だけを上書きする。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">設定する Y 方向の移動量。</param>
 void MovementSystem::SetVelocityY(VelocityComponent& velocity, float value)
 {
 	velocity.velocity.y = value;
 }
 
+/// <summary>
+/// VelocityComponent の Z 成分だけを上書きする。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">設定する Z 方向の移動量。</param>
 void MovementSystem::SetVelocityZ(VelocityComponent& velocity, float value)
 {
 	velocity.velocity.z = value;
 }
 
+/// <summary>
+/// VelocityComponent に外力や技移動などの追加移動量を加算する。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">加算する 1 フレーム分の移動量。</param>
 void MovementSystem::AddVelocity(VelocityComponent& velocity, const Vector3& value)
 {
 	velocity.velocity += value;
 }
 
+/// <summary>
+/// VelocityComponent の Y 成分に移動量を加算する。
+/// </summary>
+/// <param name="velocity">変更する VelocityComponent。</param>
+/// <param name="value">加算する Y 方向の移動量。</param>
 void MovementSystem::AddVelocityY(VelocityComponent& velocity, float value)
 {
 	velocity.velocity.y += value;
 }
 
+/// <summary>
+/// 空中またはジャンプ・落下中の Player に重力を加算する。
+/// </summary>
+/// <param name="world">重力対象の Component を取得する World。</param>
 void MovementSystem::ApplyAirGravity(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -70,6 +104,10 @@ void MovementSystem::ApplyAirGravity(World& world)
 	}
 }
 
+/// <summary>
+/// VelocityComponent の移動量を TransformComponent のローカル座標へ反映する。
+/// </summary>
+/// <param name="world">移動対象の Component を取得する World。</param>
 void MovementSystem::ApplyVelocityToTransform(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -88,6 +126,10 @@ void MovementSystem::ApplyVelocityToTransform(World& world)
 	}
 }
 
+/// <summary>
+/// 仮の地面判定として y <= 0 を接地扱いに補正する。
+/// </summary>
+/// <param name="world">接地補正対象の Component を取得する World。</param>
 void MovementSystem::ResolveTemporaryGround(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -114,6 +156,12 @@ void MovementSystem::ResolveTemporaryGround(World& world)
 	}
 }
 
+/// <summary>
+/// 指定 Player に今フレーム重力を適用するべきか判定する。
+/// </summary>
+/// <param name="transform">現在位置を確認する TransformComponent。</param>
+/// <param name="state">接地状態と ActionState を確認する StateComponent。</param>
+/// <returns>重力を加算する必要があれば true。</returns>
 bool MovementSystem::ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state)
 {
 	if (state.currentActionState == PlayerActionState::Jump

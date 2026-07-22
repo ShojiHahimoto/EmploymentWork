@@ -16,6 +16,10 @@ std::unordered_map<std::string, std::unique_ptr<ModelResource>> ModelResourceMan
 
 namespace
 {
+	/// <summary>
+	/// DirectX11 Buffer を解放し、ポインタを nullptr に戻す。
+	/// </summary>
+	/// <param name="buffer">解放する Buffer ポインタ。</param>
 	void ReleaseBuffer(ID3D11Buffer*& buffer)
 	{
 		if (buffer)
@@ -25,6 +29,10 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// ShaderResourceView を解放し、ポインタを nullptr に戻す。
+	/// </summary>
+	/// <param name="textureView">解放する ShaderResourceView ポインタ。</param>
 	void ReleaseTexture(ID3D11ShaderResourceView*& textureView)
 	{
 		if (textureView)
@@ -34,11 +42,21 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// std::string のパス文字列を WIC 読み込み用の std::wstring に変換する。
+	/// </summary>
+	/// <param name="text">変換する文字列。</param>
+	/// <returns>wstring へ変換した文字列。</returns>
 	std::wstring ToWideString(const std::string& text)
 	{
 		return std::wstring(text.begin(), text.end());
 	}
 
+	/// <summary>
+	/// Assimp の行列を SimpleMath の Matrix に変換する。
+	/// </summary>
+	/// <param name="source">変換元の Assimp 行列。</param>
+	/// <returns>SimpleMath の Matrix。</returns>
 	Matrix ConvertAssimpMatrix(const aiMatrix4x4& source)
 	{
 		return Matrix(
@@ -48,16 +66,32 @@ namespace
 			source.a4, source.b4, source.c4, source.d4);
 	}
 
+	/// <summary>
+	/// Assimp の 3D ベクトルを SimpleMath の Vector3 に変換する。
+	/// </summary>
+	/// <param name="source">変換元の Assimp ベクトル。</param>
+	/// <returns>SimpleMath の Vector3。</returns>
 	Vector3 ConvertAssimpVector(const aiVector3D& source)
 	{
 		return Vector3(source.x, source.y, source.z);
 	}
 
+	/// <summary>
+	/// Assimp の Quaternion を SimpleMath の Quaternion に変換する。
+	/// </summary>
+	/// <param name="source">変換元の Assimp Quaternion。</param>
+	/// <returns>SimpleMath の Quaternion。</returns>
 	Quaternion ConvertAssimpQuaternion(const aiQuaternion& source)
 	{
 		return Quaternion(source.x, source.y, source.z, source.w);
 	}
 
+	/// <summary>
+	/// 頂点に最大 4 本までのボーンウェイトを追加する。
+	/// </summary>
+	/// <param name="vertex">ボーン情報を書き込む頂点。</param>
+	/// <param name="boneIndex">追加するボーンのインデックス。</param>
+	/// <param name="weight">追加するウェイト値。</param>
 	void AddBoneWeight(ModelVertex& vertex, uint32_t boneIndex, float weight)
 	{
 		for (int i = 0; i < 4; ++i)
@@ -71,6 +105,10 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// 頂点のボーンウェイト合計が 1 になるように正規化する。
+	/// </summary>
+	/// <param name="vertex">正規化する頂点。</param>
 	void NormalizeBoneWeights(ModelVertex& vertex)
 	{
 		float totalWeight = 0.0f;
@@ -92,6 +130,13 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// Assimp ノード階層を辿り、将来のスケルタルアニメーション用ボーン配列を作る。
+	/// </summary>
+	/// <param name="node">現在処理する Assimp ノード。</param>
+	/// <param name="parentIndex">親ボーンのインデックス。root は -1。</param>
+	/// <param name="bones">生成したボーン情報を蓄積する配列。</param>
+	/// <param name="boneIndexByName">ボーン名からインデックスを引くための表。</param>
 	void CollectNodeHierarchy(
 		const aiNode* node,
 		int parentIndex,
@@ -116,6 +161,15 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// 頂点やインデックス用の DirectX11 Buffer を作成する。
+	/// </summary>
+	/// <param name="device">Buffer を作成する DirectX11 Device。</param>
+	/// <param name="sourceData">Buffer に書き込む初期データ。</param>
+	/// <param name="byteWidth">Buffer のバイトサイズ。</param>
+	/// <param name="bindFlags">D3D11_BIND_VERTEX_BUFFER などの用途フラグ。</param>
+	/// <param name="buffer">作成した Buffer の受け取り先。</param>
+	/// <returns>DirectX API の HRESULT。</returns>
 	HRESULT CreateBuffer(
 		ID3D11Device* device,
 		const void* sourceData,
@@ -134,6 +188,12 @@ namespace
 		return device->CreateBuffer(&desc, &data, buffer);
 	}
 
+	/// <summary>
+	/// モデルファイル基準でテクスチャパスを解決する。
+	/// </summary>
+	/// <param name="modelPath">読み込んでいるモデルファイルのパス。</param>
+	/// <param name="texturePath">Assimp Material が持つテクスチャパス。</param>
+	/// <returns>実際に読み込むテクスチャパス。</returns>
 	std::filesystem::path ResolveTexturePath(const std::filesystem::path& modelPath, const aiString& texturePath)
 	{
 		std::filesystem::path sourcePath(texturePath.C_Str());
@@ -145,6 +205,11 @@ namespace
 		return modelPath.parent_path() / sourcePath.filename();
 	}
 
+	/// <summary>
+	/// モデルと同じディレクトリから diffuse PNG テクスチャ候補を探す。
+	/// </summary>
+	/// <param name="modelDirectory">探索するモデルディレクトリ。</param>
+	/// <returns>見つかった diffuse テクスチャ候補。</returns>
 	std::vector<std::filesystem::path> FindDiffuseTextures(const std::filesystem::path& modelDirectory)
 	{
 		std::vector<std::filesystem::path> diffuseTextures;
@@ -176,6 +241,12 @@ namespace
 		return diffuseTextures;
 	}
 
+	/// <summary>
+	/// Material 名に近い diffuse テクスチャを候補一覧から選ぶ。
+	/// </summary>
+	/// <param name="diffuseTextures">同階層から見つけた diffuse テクスチャ候補。</param>
+	/// <param name="materialName">Material 名。</param>
+	/// <returns>選択したテクスチャパス。候補がなければ空パス。</returns>
 	std::filesystem::path FindFallbackDiffuseTexture(
 		const std::vector<std::filesystem::path>& diffuseTextures,
 		const std::string& materialName)
@@ -210,6 +281,13 @@ namespace
 		return diffuseTextures.front();
 	}
 
+	/// <summary>
+	/// diffuse テクスチャを読み込み、Material に ShaderResourceView を設定する。
+	/// </summary>
+	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
+	/// <param name="material">テクスチャ情報を書き込む Material。</param>
+	/// <param name="texturePath">読み込むテクスチャパス。</param>
+	/// <param name="textureCache">同一テクスチャを共有するためのキャッシュ。</param>
 	void LoadDiffuseTexture(
 		ID3D11Device* device,
 		ModelMaterial& material,
@@ -251,6 +329,13 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// Assimp Scene の Material 情報から、描画用 ModelMaterial 配列を作る。
+	/// </summary>
+	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
+	/// <param name="scene">Material を含む Assimp Scene。</param>
+	/// <param name="modelPath">読み込んでいるモデルファイルのパス。</param>
+	/// <param name="materials">作成した Material を書き込む配列。</param>
 	void LoadMaterials(
 		ID3D11Device* device,
 		const aiScene& scene,
@@ -292,6 +377,13 @@ namespace
 		}
 	}
 
+	/// <summary>
+	/// ボーン名に対応するインデックスを取得し、未登録なら新規ボーンとして追加する。
+	/// </summary>
+	/// <param name="boneName">検索または追加するボーン名。</param>
+	/// <param name="bones">ボーン情報を保持する配列。</param>
+	/// <param name="boneIndexByName">ボーン名からインデックスを引くための表。</param>
+	/// <returns>ボーン名に対応するインデックス。</returns>
 	uint32_t FindOrCreateBoneIndex(
 		const std::string& boneName,
 		std::vector<ModelBone>& bones,
@@ -312,6 +404,13 @@ namespace
 		return boneIndex;
 	}
 
+	/// <summary>
+	/// Assimp の Animation を、エンジン側の ModelAnimationClip に変換する。
+	/// </summary>
+	/// <param name="sourceAnimation">変換元の Assimp Animation。</param>
+	/// <param name="bones">アニメーション対象ボーンを保持する配列。</param>
+	/// <param name="boneIndexByName">ボーン名からインデックスを引くための表。</param>
+	/// <returns>変換した ModelAnimationClip。</returns>
 	ModelAnimationClip ConvertAnimationClip(
 		const aiAnimation& sourceAnimation,
 		std::vector<ModelBone>& bones,
@@ -368,12 +467,19 @@ namespace
 	}
 }
 
+/// <summary>
+/// ModelMesh が保持する DirectX11 Buffer を解放する。
+/// </summary>
 ModelMesh::~ModelMesh()
 {
 	ReleaseBuffer(indexBuffer);
 	ReleaseBuffer(vertexBuffer);
 }
 
+/// <summary>
+/// ModelMesh の所有する Buffer と配列をムーブする。
+/// </summary>
+/// <param name="other">ムーブ元の ModelMesh。</param>
 ModelMesh::ModelMesh(ModelMesh&& other) noexcept
 	: vertices(std::move(other.vertices))
 	, indices(std::move(other.indices))
@@ -385,6 +491,11 @@ ModelMesh::ModelMesh(ModelMesh&& other) noexcept
 	other.indexBuffer = nullptr;
 }
 
+/// <summary>
+/// 既存 Buffer を解放し、別の ModelMesh から描画リソースをムーブ代入する。
+/// </summary>
+/// <param name="other">ムーブ元の ModelMesh。</param>
+/// <returns>ムーブ後の自分自身。</returns>
 ModelMesh& ModelMesh::operator=(ModelMesh&& other) noexcept
 {
 	if (this == &other)
@@ -407,11 +518,18 @@ ModelMesh& ModelMesh::operator=(ModelMesh&& other) noexcept
 	return *this;
 }
 
+/// <summary>
+/// ModelMaterial が保持するテクスチャ View を解放する。
+/// </summary>
 ModelMaterial::~ModelMaterial()
 {
 	ReleaseTexture(diffuseTextureView);
 }
 
+/// <summary>
+/// ModelMaterial のテクスチャ参照をムーブする。
+/// </summary>
+/// <param name="other">ムーブ元の ModelMaterial。</param>
 ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
 	: diffuseTexturePath(std::move(other.diffuseTexturePath))
 	, diffuseTextureView(other.diffuseTextureView)
@@ -419,6 +537,11 @@ ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
 	other.diffuseTextureView = nullptr;
 }
 
+/// <summary>
+/// 既存テクスチャ参照を解放し、別の ModelMaterial からテクスチャ参照をムーブ代入する。
+/// </summary>
+/// <param name="other">ムーブ元の ModelMaterial。</param>
+/// <returns>ムーブ後の自分自身。</returns>
 ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 {
 	if (this == &other)
@@ -435,6 +558,12 @@ ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 	return *this;
 }
 
+/// <summary>
+/// FBX などのモデルファイルを Assimp で読み込み、メッシュ、Material、ボーン、アニメーション情報を作成する。
+/// </summary>
+/// <param name="device">描画 Buffer とテクスチャ作成に使う DirectX11 Device。</param>
+/// <param name="path">読み込むモデルファイルのパス。</param>
+/// <returns>描画可能なメッシュを 1 つ以上読み込めた場合は true。</returns>
 bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 {
 	DebugLog("[Model] Load start: ", path);
@@ -610,26 +739,49 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 	return loaded;
 }
 
+/// <summary>
+/// ModelResource が保持する描画用 Mesh 配列を取得する。
+/// </summary>
+/// <returns>読み取り専用の Mesh 配列。</returns>
 const std::vector<ModelMesh>& ModelResource::GetMeshes() const
 {
 	return meshes;
 }
 
+/// <summary>
+/// ModelResource が保持する Material 配列を取得する。
+/// </summary>
+/// <returns>読み取り専用の Material 配列。</returns>
 const std::vector<ModelMaterial>& ModelResource::GetMaterials() const
 {
 	return materials;
 }
 
+/// <summary>
+/// ModelResource が保持するボーン配列を取得する。
+/// </summary>
+/// <returns>読み取り専用のボーン配列。</returns>
 const std::vector<ModelBone>& ModelResource::GetBones() const
 {
 	return bones;
 }
 
+/// <summary>
+/// ModelResource が保持するアニメーションクリップ配列を取得する。
+/// </summary>
+/// <returns>読み取り専用のアニメーションクリップ配列。</returns>
 const std::vector<ModelAnimationClip>& ModelResource::GetAnimationClips() const
 {
 	return animationClips;
 }
 
+/// <summary>
+/// 指定キーでモデルリソースを読み込み、既に読み込み済みなら再利用する。
+/// </summary>
+/// <param name="key">ResourceManager に登録するモデルキー。</param>
+/// <param name="path">読み込むモデルファイルのパス。</param>
+/// <param name="device">描画 Buffer とテクスチャ作成に使う DirectX11 Device。</param>
+/// <returns>読み込みまたは再利用に成功した場合は true。</returns>
 bool ModelResourceManager::LoadModel(const std::string& key, const std::string& path, ID3D11Device* device)
 {
 	if (resources.find(key) != resources.end())
@@ -655,6 +807,11 @@ bool ModelResourceManager::LoadModel(const std::string& key, const std::string& 
 	return true;
 }
 
+/// <summary>
+/// 登録済みモデルリソースをキーで取得する。
+/// </summary>
+/// <param name="key">取得するモデルキー。</param>
+/// <returns>見つかった ModelResource。存在しない場合は nullptr。</returns>
 const ModelResource* ModelResourceManager::GetModel(const std::string& key)
 {
 	const auto found = resources.find(key);
@@ -666,6 +823,9 @@ const ModelResource* ModelResourceManager::GetModel(const std::string& key)
 	return found->second.get();
 }
 
+/// <summary>
+/// 読み込み済みのモデルリソースをすべて破棄する。
+/// </summary>
 void ModelResourceManager::UnloadAll()
 {
 	resources.clear();
