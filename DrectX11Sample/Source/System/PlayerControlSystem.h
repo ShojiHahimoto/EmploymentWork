@@ -5,21 +5,19 @@
 #include "Component/VelocityComponent.h"
 #include "Core/GameObject.h"
 
-#include <SimpleMath.h>
-
 class World;
 
 struct PlayerControlFrameResult
 {
-	float horizontalInput = 0.0f;
-	ObjectState nextState = ObjectState::Idle;
-	DirectX::SimpleMath::Vector3 velocity = DirectX::SimpleMath::Vector3::Zero;
+	// PlayerActionState に応じた今フレームの挙動結果。
+	// 現段階では歩き / 停止用の横速度だけを扱う。
+	float horizontalVelocity = 0.0f;
 };
 
 class PlayerControlSystem
 {
 public:
-	// Player タグと必要 Component を持つ GameObject に、保存済み入力履歴を反映する。
+	// StateUpdateSystem が確定した PlayerActionState に応じて、行動ごとの処理を行う。
 	static void Update(World& world);
 
 private:
@@ -27,7 +25,7 @@ private:
 	static constexpr float MoveSpeedPerFrame = 0.08f;
 
 	static void UpdatePlayer(World& world, GameObjectId objectId);
-	static PlayerControlFrameResult DecideFrameResult(const StateComponent& state, const InputHistoryComponent& inputHistory);
-	static ObjectState DecideGroundState(float horizontalInput);
-	static void ApplyFrameResult(VelocityComponent& velocity, StateComponent& state, const PlayerControlFrameResult& result);
+	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory);
+	static float GetHorizontalInputFromDirection(int direction);
+	static void ApplyFrameResult(VelocityComponent& velocity, const PlayerControlFrameResult& result);
 };

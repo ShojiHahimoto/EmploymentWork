@@ -4,11 +4,7 @@
 #include "System/MovementSystem.h"
 #include "World/World.h"
 
-#include <cmath>
-#include <cstddef>
-
-using namespace DirectX::SimpleMath;
-
+// Runs action behavior for player objects after StateUpdateSystem has confirmed PlayerActionState.
 void PlayerControlSystem::Update(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -32,59 +28,59 @@ void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 		return;
 	}
 
-	const PlayerControlFrameResult result = DecideFrameResult(*state, *inputHistory);
-	ApplyFrameResult(*velocity, *state, result);
+	const PlayerControlFrameResult result = ExecuteCurrentAction(*state, *inputHistory);
+	ApplyFrameResult(*velocity, result);
 }
 
-PlayerControlFrameResult PlayerControlSystem::DecideFrameResult(
+// Converts the confirmed action into behavior output.
+// Attack and hitstun behavior are placeholders until their dedicated systems exist.
+PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	const StateComponent& state,
 	const InputHistoryComponent& inputHistory)
 {
-	const Input::PlayerInputState& currentInput = inputHistory.frames[inputHistory.latestFrameIndex];
-	const Input::InputActionState& moveAction =
-		currentInput.actions[static_cast<size_t>(Input::InputActionId::Move)];
-
 	PlayerControlFrameResult result;
-	result.horizontalInput = moveAction.value.axis.x;
+	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
 
-	switch (state.currentState)
+	switch (state.currentActionState)
 	{
-	case ObjectState::Jump:
-	case ObjectState::Fall:
-		// 空中制御は未実装。既存の Y 速度を壊さないため、横方向だけここで決める。
-		result.nextState = state.currentState;
-		result.velocity.x = result.horizontalInput * MoveSpeedPerFrame;
+	case PlayerActionState::Walk:
+		result.horizontalVelocity = GetHorizontalInputFromDirection(inputFrame.direction) * MoveSpeedPerFrame;
 		break;
 
-	case ObjectState::Idle:
-	case ObjectState::Walk:
+	case PlayerActionState::Idle:
+	case PlayerActionState::GroundAttack:
+	case PlayerActionState::AirAttack:
+	case PlayerActionState::Hitstun:
+		result.horizontalVelocity = 0.0f;
+		break;
+
+	case PlayerActionState::Jump:
+	case PlayerActionState::Fall:
 	default:
-		result.nextState = DecideGroundState(result.horizontalInput);
-		result.velocity.x = result.horizontalInput * MoveSpeedPerFrame;
 		break;
 	}
 
 	return result;
 }
 
-ObjectState PlayerControlSystem::DecideGroundState(float horizontalInput)
+float PlayerControlSystem::GetHorizontalInputFromDirection(int direction)
 {
-	return std::abs(horizontalInput) > 0.0f ? ObjectState::Walk : ObjectState::Idle;
+	if (direction == 1 || direction == 4 || direction == 7)
+	{
+		return -1.0f;
+	}
+
+	if (direction == 3 || direction == 6 || direction == 9)
+	{
+		return 1.0f;
+	}
+
+	return 0.0f;
 }
 
 void PlayerControlSystem::ApplyFrameResult(
 	VelocityComponent& velocity,
-	StateComponent& state,
 	const PlayerControlFrameResult& result)
 {
-	MovementSystem::SetVelocityX(velocity, result.velocity.x);
-
-	if (state.currentState != result.nextState)
-	{
-		state.currentState = result.nextState;
-		state.stateFrame = 0;
-		return;
-	}
-
-	++state.stateFrame;
+	MovementSystem::SetVelocityX(velocity, result.horizontalVelocity);
 }

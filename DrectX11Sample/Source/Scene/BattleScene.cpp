@@ -11,6 +11,7 @@
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
 #include "System/SpawnDestroySystem.h"
+#include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
 
 using namespace DirectX::SimpleMath;
@@ -81,6 +82,7 @@ void BattleScene::RunSystems()
 
 	SpawnDestroySystem::Update(world);
 	InputHistorySystem::Update(world);
+	StateUpdateSystem::Update(world);
 	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());

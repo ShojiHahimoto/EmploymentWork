@@ -2,18 +2,29 @@
 
 #include "Component/Component.h"
 
-enum class ObjectState
+enum class PlayerActionState
 {
 	Idle,
 	Walk,
 	Jump,
 	Fall,
+	GroundAttack,
+	AirAttack,
+	Hitstun,
 };
 
 struct StateComponent : public Component
 {
-	// 現在の状態と、その状態に入ってからの経過フレーム。
-	// 状態遷移や frame 更新は StateComponent ではなく System が担当する。
-	ObjectState currentState = ObjectState::Idle;
-	int stateFrame = 0;
+	// StateUpdateSystem が確定した、今フレームの最終行動。
+	PlayerActionState currentActionState = PlayerActionState::Idle;
+
+	// currentActionState に入ってからの経過フレーム。
+	// StateUpdateSystem が State 遷移と合わせて更新する。
+	int actionFrame = 0;
+
+	// 接地、被弾、キャンセルなどの判定材料。
+	// 今後 GroundSystem / HitResolveSystem / AttackSystem が更新する想定。
+	bool isGrounded = true;
+	bool hitstunRequested = false;
+	bool cancelEnabled = false;
 };
