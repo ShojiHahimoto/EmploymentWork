@@ -164,16 +164,20 @@ void MovementSystem::ResolveTemporaryGround(World& world)
 /// <returns>重力を加算する必要があれば true。</returns>
 bool MovementSystem::ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state)
 {
-	if (state.currentActionState == PlayerActionState::Jump
+	if (state.currentActionState == PlayerActionState::VerticalJump
+		|| state.currentActionState == PlayerActionState::FrontJump
+		|| state.currentActionState == PlayerActionState::BackJump
 		|| state.currentActionState == PlayerActionState::Fall)
 	{
 		return true;
 	}
 
-	if (!state.isGrounded)
-	{
-		return true;
-	}
+	return false;
 
-	return TransformSystem::GetLocalPosition(transform).y > 0.0f;
+	//if (!state.isGrounded)
+	//{
+	//	return true;
+	//}
+
+	//return TransformSystem::GetLocalPosition(transform).y > 0.0f;
 }

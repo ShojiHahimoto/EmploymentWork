@@ -1,5 +1,6 @@
 ﻿#include "System/PlayerControlSystem.h"
 
+#include "System/Debugger.h"
 #include "Component/TransformComponent.h"
 #include "System/MovementSystem.h"
 #include "World/World.h"
@@ -50,21 +51,48 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 {
 	PlayerControlFrameResult result;
 	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
-
+	DebugLog(int(state.currentActionState));
 	switch (state.currentActionState)
 	{
 	case PlayerActionState::Walk:
 		// 歩き状態の間だけ、テンキー方向の横成分を歩き速度として毎フレーム上書きする。
 		// 7 / 9 は今後ジャンプ方向としても使うため、横成分はここで残しておく。
-		result.horizontalVelocity = GetHorizontalInputFromDirection(inputFrame.direction) * MoveSpeedPerFrame;
+		result.horizontalVelocity = GetHorizontalInputFromDirection(inputFrame.direction) * MoveSpeed;
 		break;
 
-	case PlayerActionState::Jump:
+	case PlayerActionState::VerticalJump:
 		// Jump に入った最初のフレームだけ上方向の初速を設定する。
 		// それ以降の上昇低下や重力は MovementSystem が毎フレーム処理する。
+		result.setHorizontalVelocity = false;
 		if (state.actionFrame == 0)
 		{
 			result.verticalVelocity = JumpInitialVelocity;
+			result.setVerticalVelocity = true;
+		}
+		break;
+
+	case PlayerActionState::FrontJump:
+		// Jump に入った最初のフレームだけ上方向の初速を設定する。
+		// それ以降の上昇低下や重力は MovementSystem が毎フレーム処理する。
+		result.setHorizontalVelocity = false;
+		if (state.actionFrame == 0)
+		{
+			result.verticalVelocity = JumpInitialVelocity;
+			result.horizontalVelocity = JumpMoveSpeed;
+			result.setHorizontalVelocity = true;
+			result.setVerticalVelocity = true;
+		}
+		break;
+
+	case PlayerActionState::BackJump:
+		// Jump に入った最初のフレームだけ上方向の初速を設定する。
+		// それ以降の上昇低下や重力は MovementSystem が毎フレーム処理する。
+		result.setHorizontalVelocity = false;
+		if (state.actionFrame == 0)
+		{
+			result.verticalVelocity = JumpInitialVelocity;
+			result.horizontalVelocity = -JumpMoveSpeed;
+			result.setHorizontalVelocity = true;
 			result.setVerticalVelocity = true;
 		}
 		break;
@@ -82,6 +110,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	default:
 		// 落下中は新しい横速度をここで作らない。
 		// 空中制御を入れる場合は Fall / Jump の扱いを明示して追加する。
+		result.setHorizontalVelocity = false;
 		break;
 	}
 
@@ -117,7 +146,10 @@ void PlayerControlSystem::ApplyFrameResult(
 	VelocityComponent& velocity,
 	const PlayerControlFrameResult& result)
 {
-	MovementSystem::SetVelocityX(velocity, result.horizontalVelocity);
+	if (result.setHorizontalVelocity)
+	{
+		MovementSystem::SetVelocityX(velocity, result.horizontalVelocity);
+	}
 
 	if (result.setVerticalVelocity)
 	{

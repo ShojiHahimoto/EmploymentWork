@@ -6,7 +6,9 @@ enum class PlayerActionState
 {
 	Idle,
 	Walk,
-	Jump,
+	VerticalJump,
+	FrontJump,
+	BackJump,
 	Fall,
 	GroundAttack,
 	AirAttack,

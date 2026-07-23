@@ -10,6 +10,7 @@ class World;
 struct PlayerControlFrameResult
 {
 	float horizontalVelocity = 0.0f;
+	bool setHorizontalVelocity = true;
 	float verticalVelocity = 0.0f;
 	bool setVerticalVelocity = false;
 };
@@ -21,8 +22,9 @@ public:
 	static void Update(World& world);
 
 private:
-	static constexpr float MoveSpeedPerFrame = 0.08f;
+	static constexpr float MoveSpeed = 0.08f;
 	static constexpr float JumpInitialVelocity = 0.32f;
+	static constexpr float JumpMoveSpeed = 0.1f;
 
 	static void UpdatePlayer(World& world, GameObjectId objectId);
 	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory);

@@ -1,5 +1,6 @@
 ﻿#include "System/StateUpdateSystem.h"
 
+#include "System/Debugger.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
 #include "World/World.h"
@@ -73,6 +74,8 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	}
 
 	return DecideNeutralAction(state, velocity, inputFrame);
+
+	
 }
 
 /// <summary>
@@ -95,15 +98,24 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 		};
 	}
 
-	if (state.isGrounded && inputFrame.jump.trigger)
+	// 後からプレイヤーの向きに応じて前ジャンプと後ろジャンプを区別できるようにする
+	if (state.isGrounded && inputFrame.direction == 7)
 	{
-		return { PlayerActionState::Jump, true };
+		return { PlayerActionState::BackJump, true };
+	}
+	if (state.isGrounded && inputFrame.direction == 8)
+	{
+		return { PlayerActionState::VerticalJump, true };
+	}
+	if (state.isGrounded && inputFrame.direction == 9)
+	{
+		return { PlayerActionState::FrontJump, true };
 	}
 
 	if (!state.isGrounded)
 	{
 		return {
-			velocity.velocity.y > 0.0f ? PlayerActionState::Jump : PlayerActionState::Fall,
+			velocity.velocity.y > 0.0f ? /*PlayerActionState::VerticalJump*/ state.currentActionState : PlayerActionState::Fall,
 			false
 		};
 	}
