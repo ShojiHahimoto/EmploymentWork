@@ -1,6 +1,7 @@
 ﻿#include "System/StateUpdateSystem.h"
 
 #include "System/Debugger.h"
+#include "System/TransformSystem.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
 #include "World/World.h"
@@ -32,16 +33,22 @@ void StateUpdateSystem::Update(World& world)
 /// <param name="objectId">状態を更新する Player GameObject の ID。</param>
 void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 {
+	// 必要コンポーネント取得
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
-	if (!world.GetTransform(objectId) || !state || !velocity || !inputHistory)
+	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
+
+	// コンポーネントが足りなければ更新しない
+	if (!world.GetTransform(objectId) || !state || !velocity || !inputHistory || !transform)
 	{
 		return;
 	}
 
 	// Count this frame first. If the action changes below, ApplyActionState resets it to 0.
 	++state->actionFrame;
+
+	ApplyPlayerDirection(*state, *transform);
 
 	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, *inputHistory);
 	ApplyActionState(*state, decision);
@@ -99,7 +106,8 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	}
 
 	// 後からプレイヤーの向きに応じて前ジャンプと後ろジャンプを区別できるようにする
-	if (state.isGrounded && inputFrame.direction == 7)
+	if (state.isGrounded && (inputFrame.direction == 7 && state.facingDirection == FacingDirection::Right
+						  || inputFrame.direction == 9 && state.facingDirection == FacingDirection::Left))
 	{
 		return { PlayerActionState::BackJump, true };
 	}
@@ -107,7 +115,8 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	{
 		return { PlayerActionState::VerticalJump, true };
 	}
-	if (state.isGrounded && inputFrame.direction == 9)
+	if (state.isGrounded && (inputFrame.direction == 9 && state.facingDirection == FacingDirection::Right
+						  || inputFrame.direction == 7 && state.facingDirection == FacingDirection::Left))
 	{
 		return { PlayerActionState::FrontJump, true };
 	}
@@ -207,4 +216,25 @@ void StateUpdateSystem::ApplyActionState(StateComponent& state, const PlayerActi
 	}
 
 	state.hitstunRequested = false;
+}
+
+/// <summary>
+/// ステートコンポーネント内のプレイヤーの向き情報を更新する処理
+/// </summary>
+/// <param name="state">ステートコンポーネント</param>
+/// <param name="transform">向き判定に使うトランスフォームコンポーネント</param>
+void StateUpdateSystem::ApplyPlayerDirection(StateComponent& state, const TransformComponent& transform)
+{
+	if (state.currentActionState == PlayerActionState::Idle || state.currentActionState == PlayerActionState::Walk)
+	{
+		// 仮判定　X座標0を基準にX0方向を向かせる
+		if (TransformSystem::GetLocalPosition(transform).x < 0)
+		{
+			state.facingDirection = FacingDirection::Right;
+		}
+		else
+		{
+			state.facingDirection = FacingDirection::Left;
+		}
+	}
 }

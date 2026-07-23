@@ -15,10 +15,20 @@ enum class PlayerActionState
 	Hitstun,
 };
 
+// 対面方向
+enum class FacingDirection
+{
+	Right,
+	Left
+};
+
 struct StateComponent : public Component
 {
 	// StateUpdateSystem が確定した、今フレームの最終行動。
 	PlayerActionState currentActionState = PlayerActionState::Idle;
+
+	// プレイヤーの対面方向。
+	FacingDirection facingDirection = FacingDirection::Right;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。

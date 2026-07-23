@@ -6,6 +6,7 @@
 
 class World;
 struct VelocityComponent;
+struct TransformComponent;
 
 struct PlayerActionDecision
 {
@@ -32,4 +33,5 @@ private:
 	static bool IsActionFinished(const StateComponent& state);
 	static bool CanCancelAction(const StateComponent& state);
 	static void ApplyActionState(StateComponent& state, const PlayerActionDecision& decision);
+	static void ApplyPlayerDirection(StateComponent& state,const TransformComponent& transform);
 };

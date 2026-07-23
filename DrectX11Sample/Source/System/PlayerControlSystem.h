@@ -6,6 +6,7 @@
 #include "Core/GameObject.h"
 
 class World;
+struct TransformComponent;
 
 struct PlayerControlFrameResult
 {
@@ -24,10 +25,12 @@ public:
 private:
 	static constexpr float MoveSpeed = 0.08f;
 	static constexpr float JumpInitialVelocity = 0.32f;
-	static constexpr float JumpMoveSpeed = 0.1f;
+	static constexpr float FrontJumpMoveSpeed = 0.1f;
+	static constexpr float BackJumpMoveSpeed = -0.05f;
 
 	static void UpdatePlayer(World& world, GameObjectId objectId);
 	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory);
 	static float GetHorizontalInputFromDirection(int direction);
 	static void ApplyFrameResult(VelocityComponent& velocity, const PlayerControlFrameResult& result);
+	static void ApplyPlayerDirection(const StateComponent& state, TransformComponent& transform);
 };

@@ -3,7 +3,10 @@
 #include "System/Debugger.h"
 #include "Component/TransformComponent.h"
 #include "System/MovementSystem.h"
+#include "System/TransformSystem.h"
 #include "World/World.h"
+
+using namespace DirectX::SimpleMath;
 
 // Player タグの GameObject だけを対象に、確定済み ActionState の実行処理を回す。
 // 「どの ActionState になるか」は StateUpdateSystem が先に決めるため、ここでは状態を決定しない。
@@ -27,16 +30,21 @@ void PlayerControlSystem::Update(World& world)
 /// <param name="objectId">行動処理を行う Player GameObject の ID。</param>
 void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 {
+	// 必要コンポーネントを取得
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
-	if (!world.GetTransform(objectId) || !velocity || !state || !inputHistory)
+	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
+
+	// 必要コンポーネントが不足している場合更新しない
+	if (!world.GetTransform(objectId) || !velocity || !state || !inputHistory || !transform)
 	{
 		return;
 	}
 
 	const PlayerControlFrameResult result = ExecuteCurrentAction(*state, *inputHistory);
 	ApplyFrameResult(*velocity, result);
+	ApplyPlayerDirection(*state, *transform);
 }
 
 /// <summary>
@@ -52,6 +60,14 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	PlayerControlFrameResult result;
 	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
 	DebugLog(int(state.currentActionState));
+
+	// プレイヤーの向きによって移動方向を逆転させるための指数
+	int dirIndex = 1;
+	if (state.facingDirection == FacingDirection::Left)
+	{
+		dirIndex = -1;
+	}
+
 	switch (state.currentActionState)
 	{
 	case PlayerActionState::Walk:
@@ -78,7 +94,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		if (state.actionFrame == 0)
 		{
 			result.verticalVelocity = JumpInitialVelocity;
-			result.horizontalVelocity = JumpMoveSpeed;
+			result.horizontalVelocity = FrontJumpMoveSpeed * dirIndex;
 			result.setHorizontalVelocity = true;
 			result.setVerticalVelocity = true;
 		}
@@ -91,7 +107,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		if (state.actionFrame == 0)
 		{
 			result.verticalVelocity = JumpInitialVelocity;
-			result.horizontalVelocity = -JumpMoveSpeed;
+			result.horizontalVelocity = BackJumpMoveSpeed * dirIndex;
 			result.setHorizontalVelocity = true;
 			result.setVerticalVelocity = true;
 		}
@@ -103,7 +119,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	case PlayerActionState::Hitstun:
 		// 現段階の攻撃・被弾は仮挙動として横移動を止める。
 		// 攻撃移動やノックバックを入れる場合は、各 ActionState の処理としてここから分岐を増やす。
-		result.horizontalVelocity = 0.0f;
+		//result.horizontalVelocity = 0.0f;
 		break;
 
 	case PlayerActionState::Fall:
@@ -154,5 +170,17 @@ void PlayerControlSystem::ApplyFrameResult(
 	if (result.setVerticalVelocity)
 	{
 		MovementSystem::SetVelocityY(velocity, result.verticalVelocity);
+	}
+}
+
+void PlayerControlSystem::ApplyPlayerDirection(const StateComponent& state, TransformComponent& transform)
+{
+	if (state.facingDirection == FacingDirection::Right)
+	{
+		TransformSystem::SetLocalEulerRotationDegrees(transform, Vector3(0, -90, 0));
+	}
+	else
+	{
+		TransformSystem::SetLocalEulerRotationDegrees(transform, Vector3(0, 90, 0));
 	}
 }
