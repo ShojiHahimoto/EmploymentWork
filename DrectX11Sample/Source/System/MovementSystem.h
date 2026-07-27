@@ -24,6 +24,5 @@ public:
 private:
 	static void ApplyAirGravity(World& world);
 	static void ApplyVelocityToTransform(World& world);
-	static void ResolveTemporaryGround(World& world);
 	static bool ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state);
 };

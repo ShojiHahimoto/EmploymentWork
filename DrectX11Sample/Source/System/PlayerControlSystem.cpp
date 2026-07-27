@@ -63,7 +63,6 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 {
 	PlayerControlFrameResult result;
 	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
-	DebugLog(int(state.currentActionState));
 
 	// プレイヤーの向きによって移動方向を逆転させるための指数
 	int dirIndex = 1;

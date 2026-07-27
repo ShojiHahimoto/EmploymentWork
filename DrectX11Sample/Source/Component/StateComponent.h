@@ -39,5 +39,7 @@ struct StateComponent : public Component
 	// 今後 GroundSystem / HitResolveSystem / AttackSystem が更新する想定。
 	bool isGrounded = true;
 	bool hitstunRequested = false;
+	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
+	int hitstunDurationFrames = 30;
 	bool cancelEnabled = false;
 };

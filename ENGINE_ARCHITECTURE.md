@@ -164,7 +164,7 @@ DebugSystem
 - StateUpdateSystem は、入力履歴、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
 - PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
-- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、位置のめり込み解消を扱う
+- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
@@ -183,16 +183,32 @@ PlayerControlSystem は、Player タグと Transform / Velocity / InputHistory /
 PlayerControlSystem は StateComponent の `currentActionState` や `actionFrame` を更新しない。
 現段階では確定済み `PlayerActionState::Walk` のときに InputHistoryComponent のテンキー方向を使って Velocity の X 成分を毎フレーム上書きし、`PlayerActionState::Jump` の `actionFrame == 0` のときだけ Velocity の Y 成分へジャンプ初速を設定する。
 Velocity はノックバック、技移動、押し出しでも変化するため、Idle / Walk 判定には使わない。
-仮接地判定は MovementSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
-この仮接地判定は、地面や壁の判定を作る段階で EmbedResolveSystem に移す。
+仮接地判定は EmbedResolveSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
 
 MovementSystem は入力を直接読まない。
 
 - `SetVelocity` は Velocity 全体を上書きする
 - `SetVelocityX/Y/Z` は指定軸だけを上書きする
 - `AddVelocity` は外力や技移動などの加算用に使う
-- `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映し、最後に仮接地補正を行う
+- `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映する
 - 上昇中と下降中で重力値を分ける
+
+EmbedResolveSystem は MovementSystem の後、TransformSystem の前に実行する。
+
+- 仮接地判定、壁補正、プレイヤー同士の PushBox めり込み補正を扱う
+- 現段階の壁は仮実装としてステージ左右端の固定値で扱う
+- 片方だけが相手方向へ歩いてめり込んだ場合、歩いていない側を押す
+- 押される側が壁に到達して押し切れない場合、残りのめり込み量は押した側へ戻す
+- 両方が押し合っている場合、またはどちらが押したか確定できない場合は、互いに離す形で補正する
+
+HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
+
+- HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
+- AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
+- HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun` を確定する
+- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 ## Input 設計
 
@@ -232,7 +248,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。
 
-- 地面、壁、プレイヤー押し合いは MovementResolveSystem で位置を補正する
+- 地面、壁、プレイヤー押し合いは EmbedResolveSystem で位置を補正する
 - 攻撃判定、やられ判定、ガード判定は HitCollisionSystem で収集する
 - ダメージ、State 変更、ヒットストップなどの結果は HitResolveSystem で確定する
 - HitCollisionSystem は結果を直接確定しない
@@ -245,7 +261,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - HitResolveSystem が全体の衝突情報を見て結果を確定する
 - 同一フレーム内の整合性を優先する
 
-地面、壁、プレイヤー押し合いなど、移動結果を補正する接触は MovementResolveSystem の責務とする。
+地面、壁、プレイヤー押し合いなど、移動結果を補正する接触は EmbedResolveSystem の責務とする。
 
 ## ダメージ / バトル状態
 
@@ -295,6 +311,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `currentAttack` は現在実行中の攻撃スロットと、この攻撃が既にヒットしたかを保持する
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
+- 実行確認用の `Attack1` は `debug_punch`、表示名は `デバッグパンチ`、既定入力は `Y` キーとする
 - 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
 - Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
 - Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する

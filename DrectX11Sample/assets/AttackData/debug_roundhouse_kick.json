@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_roundhouse_kick",
   "displayName": "Debug Roundhouse Kick",
+  "hitstunFrames": 30,
   "frame": {
     "startup": 10,
     "active": 5,

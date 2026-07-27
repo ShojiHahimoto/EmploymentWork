@@ -360,6 +360,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 
 	outAttackData.attackDataId = GetString(root, "attackDataId", attackDataId);
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
+	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);

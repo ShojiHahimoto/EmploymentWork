@@ -57,6 +57,7 @@ void World::Clear()
 	gameObjects.clear();
 	spawnRequests.clear();
 	destroyRequests.clear();
+	hitCollisionResults.clear();
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
 }
@@ -254,6 +255,32 @@ void World::ClearSpawnRequests()
 void World::ClearDestroyRequests()
 {
 	destroyRequests.clear();
+}
+
+/// <summary>
+/// HitCollisionSystem が収集した攻撃ヒット結果を追加する。
+/// </summary>
+/// <param name="result">HitResolveSystem で確定処理するヒット結果。</param>
+void World::AddHitCollisionResult(const HitCollisionResult& result)
+{
+	hitCollisionResults.push_back(result);
+}
+
+/// <summary>
+/// 蓄積されている攻撃ヒット結果を取得する。
+/// </summary>
+/// <returns>読み取り専用の攻撃ヒット結果配列。</returns>
+const std::vector<HitCollisionResult>& World::GetHitCollisionResults() const
+{
+	return hitCollisionResults;
+}
+
+/// <summary>
+/// 攻撃ヒット結果をすべて破棄する。
+/// </summary>
+void World::ClearHitCollisionResults()
+{
+	hitCollisionResults.clear();
 }
 
 /// <summary>

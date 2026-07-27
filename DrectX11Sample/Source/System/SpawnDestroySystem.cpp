@@ -69,9 +69,9 @@ namespace
 
 		HitBoxComponent hitBox;
 		hitBox.pushBox.offset = Vector2(-0.15f, 4.5f);
-		hitBox.pushBox.size = Vector2(2.0f, 9.5f);
+		hitBox.pushBox.size = Vector2(2.0f, 2.5f);
 		hitBox.hurtBox.offset = Vector2(-0.15f, 4.5f);
-		hitBox.hurtBox.size = Vector2(1.5f, 9.0f);
+		hitBox.hurtBox.size = Vector2(1.5f, 2.0f);
 		world.AddComponent<HitBoxComponent>(objectId, hitBox);
 	}
 }

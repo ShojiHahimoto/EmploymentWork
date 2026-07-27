@@ -31,7 +31,7 @@ public:
 
 private:
 	static void UpdatePlayerState(World& world, GameObjectId objectId);
-	static PlayerActionDecision DecideNextAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryComponent& inputHistory);
+	static PlayerActionDecision DecideNextAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryFrame& inputFrame);
 	static PlayerActionDecision DecideNeutralAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryFrame& inputFrame);
 	static bool HasHorizontalMoveDirection(int direction);
 	static bool HasAttackTrigger(const InputHistoryFrame& inputFrame);

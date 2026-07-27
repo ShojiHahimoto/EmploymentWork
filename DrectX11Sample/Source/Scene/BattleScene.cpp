@@ -9,6 +9,9 @@
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
+#include "System/EmbedResolveSystem.h"
+#include "System/HitCollisionSystem.h"
+#include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
 #include "System/PlayerControlSystem.h"
@@ -110,6 +113,9 @@ void BattleScene::RunSystems()
 	StateUpdateSystem::Update(world);
 	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);
+	EmbedResolveSystem::Update(world);
+	HitCollisionSystem::Update(world);
+	HitResolveSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())

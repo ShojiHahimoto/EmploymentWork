@@ -21,6 +21,7 @@ namespace Input
 		Q = 'Q',
 		S = 'S',
 		W = 'W',
+		Y = 'Y',
 
 		Down = 0x28,
 		Enter = 0x0D,

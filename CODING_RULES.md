@@ -67,6 +67,15 @@
 
 手動編集やファイル追加後は、必要に応じて `tools/NormalizeTextEncoding.ps1` を使って対象ファイルを UTF-8 BOM 付き + CRLF に統一する。
 
+## デバッグログ
+
+日本語を含むログは `DebugLog` を使う。
+
+- JSON から読み込んだ文字列は UTF-8 として扱う
+- `DebugLog` は UTF-8 文字列を wide 文字列へ変換してからコンソールと Visual Studio の出力ウィンドウへ出す
+- 日本語ログを `std::cout` や `OutputDebugStringA` へ直接出さない
+- 文字化けが出た場合は、対象 JSON / C++ ファイルが UTF-8 BOM 付き + CRLF で保存されているか確認する
+
 ## C++ 言語標準
 
 このプロジェクトは C++20 を使用する。

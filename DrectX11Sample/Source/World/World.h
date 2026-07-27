@@ -31,6 +31,17 @@ struct DestroyRequest
 	GameObjectId targetId = INVALID_GAME_OBJECT_ID;
 };
 
+struct HitCollisionResult
+{
+	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
+	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
+	std::string attackSlotId;
+	std::string attackDataId;
+	std::string attackDisplayName;
+	int hitstunFrames = 30;
+	int hitboxIndex = -1;
+};
+
 class World
 {
 public:
@@ -80,12 +91,17 @@ public:
 	void ClearSpawnRequests();
 	void ClearDestroyRequests();
 
+	void AddHitCollisionResult(const HitCollisionResult& result);
+	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
+	void ClearHitCollisionResults();
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
 	std::vector<GameObject> gameObjects;
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
+	std::vector<HitCollisionResult> hitCollisionResults;
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;

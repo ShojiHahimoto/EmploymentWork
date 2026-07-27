@@ -11,7 +11,6 @@ namespace
 {
 	constexpr int GroundAttackDurationFrames = 24;
 	constexpr int AirAttackDurationFrames = 24;
-	constexpr int HitstunDurationFrames = 30;
 }
 
 void StateUpdateSystem::Update(World& world)
@@ -41,8 +40,8 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
 
-	// コンポーネントが足りなければ更新しない
-	if (!world.GetTransform(objectId) || !state || !velocity || !inputHistory || !transform)
+	// 入力を持たないデバッグ用 2P や CPU も、被弾や落下などの状態更新は必要なので入力履歴は任意にする。
+	if (!state || !velocity || !transform)
 	{
 		return;
 	}
@@ -52,7 +51,12 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 
 	ApplyPlayerDirection(*state, *transform);
 
-	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, *inputHistory);
+	InputHistoryFrame neutralInputFrame;
+	const InputHistoryFrame& inputFrame = inputHistory
+		? inputHistory->frames[inputHistory->latestFrameIndex]
+		: neutralInputFrame;
+
+	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame);
 	ApplyActionState(*state, hitBox, decision);
 }
 
@@ -61,15 +65,13 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 /// </summary>
 /// <param name="state">現在の Player 状態。</param>
 /// <param name="velocity">空中上昇・落下の判定に使う VelocityComponent。</param>
-/// <param name="inputHistory">今フレームの入力履歴。</param>
+/// <param name="inputFrame">今フレームの入力履歴。</param>
 /// <returns>次の PlayerActionState と、同じ状態を最初からやり直すかどうか。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
-	const InputHistoryComponent& inputHistory)
+	const InputHistoryFrame& inputFrame)
 {
-	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
-
 	if (state.hitstunRequested)
 	{
 		return { PlayerActionState::Hitstun, true };
@@ -233,7 +235,7 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 	case PlayerActionState::AirAttack:
 		return state.actionFrame >= AirAttackDurationFrames;
 	case PlayerActionState::Hitstun:
-		return state.actionFrame >= HitstunDurationFrames;
+		return state.actionFrame >= state.hitstunDurationFrames;
 	default:
 		return true;
 	}

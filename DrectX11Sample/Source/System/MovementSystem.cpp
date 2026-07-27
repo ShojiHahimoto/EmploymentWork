@@ -13,7 +13,6 @@ void MovementSystem::Update(World& world)
 {
 	ApplyAirGravity(world);
 	ApplyVelocityToTransform(world);
-	ResolveTemporaryGround(world);
 }
 
 /// <summary>
@@ -125,36 +124,6 @@ void MovementSystem::ApplyVelocityToTransform(World& world)
 		TransformSystem::SetLocalPosition(
 			*transform,
 			TransformSystem::GetLocalPosition(*transform) + velocity->velocity);
-	}
-}
-
-/// <summary>
-/// 仮の地面判定として y <= 0 を接地扱いに補正する。
-/// </summary>
-/// <param name="world">接地補正対象の Component を取得する World。</param>
-void MovementSystem::ResolveTemporaryGround(World& world)
-{
-	for (GameObject& object : world.GetGameObjects())
-	{
-		TransformComponent* transform = world.GetTransform(object.id);
-		StateComponent* state = world.GetComponent<StateComponent>(object.id);
-		VelocityComponent* velocity = world.GetComponent<VelocityComponent>(object.id);
-		if (!transform || !state || !velocity)
-		{
-			continue;
-		}
-
-		Vector3 position = TransformSystem::GetLocalPosition(*transform);
-		if (position.y <= 0.0f)
-		{
-			position.y = 0.0f;
-			TransformSystem::SetLocalPosition(*transform, position);
-			SetVelocityY(*velocity, 0.0f);
-			state->isGrounded = true;
-			continue;
-		}
-
-		state->isGrounded = false;
 	}
 }
 
