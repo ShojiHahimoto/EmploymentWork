@@ -279,8 +279,26 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
-- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent、HitBoxComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer2` は Player タグを持ち、DebugPlayer と同じバトル用 Component を持つが、現段階では InputHistoryComponent を持たせない
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
+
+## HitBox / Battle Collision
+
+格闘ゲーム用の判定は 2D AABB を基準にする。
+
+- 判定は見た目の 3D Model とは分離し、X / Y 平面上の 2D 矩形として扱う
+- Component 数を増やしすぎないため、Player は `HitBoxComponent` 1 つを持つ
+- `HitBoxComponent` の内部で `pushBox`、`hurtBox`、`currentAttack` を分ける
+- `pushBox` はプレイヤー同士、壁、押し合い、めり込み解消に使う
+- `hurtBox` は攻撃を受ける側の被弾判定に使う
+- `currentAttack` は現在実行中の攻撃スロットと、この攻撃が既にヒットしたかを保持する
+- 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
+- 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
+- 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
+- Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
+- Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
+- HitBox の可視化は ImGui から一括で表示/非表示を切り替えられるようにする
 
 ## CharacterData / AttackData
 

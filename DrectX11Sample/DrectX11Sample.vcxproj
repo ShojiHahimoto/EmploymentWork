@@ -54,6 +54,7 @@
     <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
     <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\HitBoxComponent.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />

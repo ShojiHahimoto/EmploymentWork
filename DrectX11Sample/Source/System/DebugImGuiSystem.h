@@ -20,8 +20,11 @@ public:
 	static void DrawTransformEditor(const char* windowName, TransformComponent& transform);
 	static void DrawWorldInspector(World& world);
 	static void DrawSpawnWindow(World& world);
+	static void DrawHitBoxDebugWindow();
+	static bool ShouldDrawHitBoxes();
 	static bool DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight);
 
 private:
 	static bool initialized;
+	static bool drawHitBoxes;
 };

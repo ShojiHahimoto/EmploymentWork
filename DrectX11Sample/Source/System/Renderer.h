@@ -46,6 +46,11 @@ struct DebugCubeVertex
 	DirectX::SimpleMath::Color color;
 };
 
+struct DebugBoxVertex
+{
+	DirectX::SimpleMath::Vector3 position;
+};
+
 class ModelResource;
 
 class Renderer
@@ -65,6 +70,12 @@ private:
 	struct DebugCubeConstantBuffer
 	{
 		DirectX::SimpleMath::Matrix worldViewProjection;
+	};
+
+	struct DebugBoxConstantBuffer
+	{
+		DirectX::SimpleMath::Matrix worldViewProjection;
+		DirectX::SimpleMath::Color color;
 	};
 
 	static D3D_FEATURE_LEVEL m_FeatureLevel;
@@ -102,6 +113,14 @@ private:
 	static ID3D11Buffer* m_pDebugCubeIndexBuffer;
 	static ID3D11Buffer* m_pDebugCubeConstantBuffer;
 
+	// Debug ビルドの PushBox / HurtBox / AttackBox 表示用の単色透明 AABB 描画リソース。
+	static ID3D11VertexShader* m_pDebugBoxVertexShader;
+	static ID3D11PixelShader* m_pDebugBoxPixelShader;
+	static ID3D11InputLayout* m_pDebugBoxInputLayout;
+	static ID3D11Buffer* m_pDebugBoxVertexBuffer;
+	static ID3D11Buffer* m_pDebugBoxIndexBuffer;
+	static ID3D11Buffer* m_pDebugBoxConstantBuffer;
+
 	// FBX などのモデル描画用リソース。頂点には将来のスキニング用データも含める。
 	static ID3D11VertexShader* m_pModelVertexShader;
 	static ID3D11PixelShader* m_pModelPixelShader;
@@ -114,10 +133,12 @@ private:
 	static void SetViewport(int width, int height);
 
 	static HRESULT CreateDebugCubeResources();
+	static HRESULT CreateDebugBoxResources();
 	static HRESULT CreateModelRenderResources();
 	static HRESULT CreateWhiteTextureResource();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static void ReleaseDebugCubeResources();
+	static void ReleaseDebugBoxResources();
 	static void ReleaseModelRenderResources();
 
 public:
@@ -140,6 +161,7 @@ public:
 		const DirectX::SimpleMath::Matrix& projection);
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
+	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
 	static bool DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
 	static void SetDepthEnable(bool Enable);
 };

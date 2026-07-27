@@ -2,6 +2,7 @@
 
 #include "System/Debugger.h"
 #include "System/TransformSystem.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
 #include "World/World.h"
@@ -38,6 +39,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
 	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
+	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
 
 	// コンポーネントが足りなければ更新しない
 	if (!world.GetTransform(objectId) || !state || !velocity || !inputHistory || !transform)
@@ -51,7 +53,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	ApplyPlayerDirection(*state, *transform);
 
 	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, *inputHistory);
-	ApplyActionState(*state, decision);
+	ApplyActionState(*state, hitBox, decision);
 }
 
 /// <summary>
@@ -101,7 +103,8 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	{
 		return {
 			state.isGrounded ? PlayerActionState::GroundAttack : PlayerActionState::AirAttack,
-			true
+			true,
+			SelectAttackSlotId(inputFrame)
 		};
 	}
 
@@ -151,6 +154,8 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	{
 		return { PlayerActionState::Idle, false };
 	}
+
+	return { PlayerActionState::Idle, false };
 }
 
 /// <summary>
@@ -175,6 +180,31 @@ bool StateUpdateSystem::HasAttackTrigger(const InputHistoryFrame& inputFrame)
 	return inputFrame.lightAttack.trigger
 		|| inputFrame.mediumAttack.trigger
 		|| inputFrame.heavyAttack.trigger;
+}
+
+/// <summary>
+/// 攻撃入力から実行する技スロット ID を選ぶ。
+/// </summary>
+/// <param name="inputFrame">判定する入力履歴。</param>
+/// <returns>入力に対応する slotId。未入力の場合は空文字。</returns>
+std::string StateUpdateSystem::SelectAttackSlotId(const InputHistoryFrame& inputFrame)
+{
+	if (inputFrame.lightAttack.trigger)
+	{
+		return "Attack1";
+	}
+
+	if (inputFrame.mediumAttack.trigger)
+	{
+		return "Attack2";
+	}
+
+	if (inputFrame.heavyAttack.trigger)
+	{
+		return "Attack3";
+	}
+
+	return "";
 }
 
 /// <summary>
@@ -224,13 +254,28 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 /// </summary>
 /// <param name="state">更新する StateComponent。</param>
 /// <param name="decision">採用する ActionState と再開始フラグ。</param>
-void StateUpdateSystem::ApplyActionState(StateComponent& state, const PlayerActionDecision& decision)
+void StateUpdateSystem::ApplyActionState(StateComponent& state, HitBoxComponent* hitBox, const PlayerActionDecision& decision)
 {
 	if (state.currentActionState != decision.nextActionState || decision.restartAction)
 	{
 		state.currentActionState = decision.nextActionState;
 		state.actionFrame = 0;
 		state.cancelEnabled = false;
+
+		if (hitBox)
+		{
+			if (state.currentActionState == PlayerActionState::GroundAttack
+				|| state.currentActionState == PlayerActionState::AirAttack)
+			{
+				hitBox->currentAttack.slotId = decision.attackSlotId.empty() ? "Attack1" : decision.attackSlotId;
+				hitBox->currentAttack.hasHit = false;
+			}
+			else
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
+		}
 	}
 
 	state.hitstunRequested = false;

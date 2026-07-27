@@ -47,6 +47,36 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 }
 )";
 
+	const char* DebugBoxShaderSource = R"(
+cbuffer TransformBuffer : register(b0)
+{
+	matrix worldViewProjection;
+	float4 debugColor;
+};
+
+struct VS_INPUT
+{
+	float3 position : POSITION;
+};
+
+struct PS_INPUT
+{
+	float4 position : SV_POSITION;
+};
+
+PS_INPUT VSMain(VS_INPUT input)
+{
+	PS_INPUT output;
+	output.position = mul(float4(input.position, 1.0f), worldViewProjection);
+	return output;
+}
+
+float4 PSMain(PS_INPUT input) : SV_TARGET
+{
+	return debugColor;
+}
+)";
+
 const char* ModelShaderSource = R"(
 cbuffer TransformBuffer : register(b0)
 {
@@ -131,6 +161,13 @@ ID3D11Buffer* Renderer::m_pDebugCubeVertexBuffer = nullptr;
 ID3D11Buffer* Renderer::m_pDebugCubeIndexBuffer = nullptr;
 ID3D11Buffer* Renderer::m_pDebugCubeConstantBuffer = nullptr;
 
+ID3D11VertexShader* Renderer::m_pDebugBoxVertexShader = nullptr;
+ID3D11PixelShader* Renderer::m_pDebugBoxPixelShader = nullptr;
+ID3D11InputLayout* Renderer::m_pDebugBoxInputLayout = nullptr;
+ID3D11Buffer* Renderer::m_pDebugBoxVertexBuffer = nullptr;
+ID3D11Buffer* Renderer::m_pDebugBoxIndexBuffer = nullptr;
+ID3D11Buffer* Renderer::m_pDebugBoxConstantBuffer = nullptr;
+
 ID3D11VertexShader* Renderer::m_pModelVertexShader = nullptr;
 ID3D11PixelShader* Renderer::m_pModelPixelShader = nullptr;
 ID3D11InputLayout* Renderer::m_pModelInputLayout = nullptr;
@@ -212,6 +249,9 @@ HRESULT Renderer::Init()
 	if (FAILED(hr)) return hr;
 
 	hr = CreateDebugCubeResources();
+	if (FAILED(hr)) return hr;
+
+	hr = CreateDebugBoxResources();
 	if (FAILED(hr)) return hr;
 
 	hr = CreateModelRenderResources();
@@ -582,6 +622,118 @@ HRESULT Renderer::CreateDebugCubeResources()
 }
 
 /// <summary>
+/// HitBox デバッグ描画に必要な単色 AABB 用 Buffer、Shader、InputLayout を作成する。
+/// </summary>
+/// <returns>作成結果の HRESULT。</returns>
+HRESULT Renderer::CreateDebugBoxResources()
+{
+	ID3DBlob* vertexShaderBlob = nullptr;
+	ID3DBlob* pixelShaderBlob = nullptr;
+
+	HRESULT hr = CompileShader(DebugBoxShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob);
+	if (FAILED(hr)) return hr;
+
+	hr = CompileShader(DebugBoxShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		return hr;
+	}
+
+	hr = m_pDevice->CreateVertexShader(
+		vertexShaderBlob->GetBufferPointer(),
+		vertexShaderBlob->GetBufferSize(),
+		nullptr,
+		&m_pDebugBoxVertexShader);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		SAFE_RELEASE(pixelShaderBlob);
+		return hr;
+	}
+
+	hr = m_pDevice->CreatePixelShader(
+		pixelShaderBlob->GetBufferPointer(),
+		pixelShaderBlob->GetBufferSize(),
+		nullptr,
+		&m_pDebugBoxPixelShader);
+	if (FAILED(hr))
+	{
+		SAFE_RELEASE(vertexShaderBlob);
+		SAFE_RELEASE(pixelShaderBlob);
+		return hr;
+	}
+
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+
+	hr = m_pDevice->CreateInputLayout(
+		layout,
+		_countof(layout),
+		vertexShaderBlob->GetBufferPointer(),
+		vertexShaderBlob->GetBufferSize(),
+		&m_pDebugBoxInputLayout);
+
+	SAFE_RELEASE(vertexShaderBlob);
+	SAFE_RELEASE(pixelShaderBlob);
+
+	if (FAILED(hr)) return hr;
+
+	const DebugBoxVertex vertices[] =
+	{
+		{ Vector3(-1.0f, -1.0f, -1.0f) },
+		{ Vector3(-1.0f,  1.0f, -1.0f) },
+		{ Vector3( 1.0f,  1.0f, -1.0f) },
+		{ Vector3( 1.0f, -1.0f, -1.0f) },
+		{ Vector3(-1.0f, -1.0f,  1.0f) },
+		{ Vector3(-1.0f,  1.0f,  1.0f) },
+		{ Vector3( 1.0f,  1.0f,  1.0f) },
+		{ Vector3( 1.0f, -1.0f,  1.0f) },
+	};
+
+	const uint16_t indices[] =
+	{
+		0, 1, 2, 0, 2, 3,
+		4, 6, 5, 4, 7, 6,
+		4, 5, 1, 4, 1, 0,
+		3, 2, 6, 3, 6, 7,
+		1, 5, 6, 1, 6, 2,
+		4, 0, 3, 4, 3, 7,
+	};
+
+	D3D11_BUFFER_DESC vertexBufferDesc = {};
+	vertexBufferDesc.ByteWidth = sizeof(vertices);
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA vertexData = {};
+	vertexData.pSysMem = vertices;
+
+	hr = m_pDevice->CreateBuffer(&vertexBufferDesc, &vertexData, &m_pDebugBoxVertexBuffer);
+	if (FAILED(hr)) return hr;
+
+	D3D11_BUFFER_DESC indexBufferDesc = {};
+	indexBufferDesc.ByteWidth = sizeof(indices);
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA indexData = {};
+	indexData.pSysMem = indices;
+
+	hr = m_pDevice->CreateBuffer(&indexBufferDesc, &indexData, &m_pDebugBoxIndexBuffer);
+	if (FAILED(hr)) return hr;
+
+	D3D11_BUFFER_DESC constantBufferDesc = {};
+	constantBufferDesc.ByteWidth = sizeof(DebugBoxConstantBuffer);
+	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	return m_pDevice->CreateBuffer(&constantBufferDesc, nullptr, &m_pDebugBoxConstantBuffer);
+}
+
+/// <summary>
 /// モデル描画に必要な Shader、InputLayout、ConstantBuffer、Sampler を作成する。
 /// </summary>
 /// <returns>作成結果の HRESULT。</returns>
@@ -795,6 +947,45 @@ void Renderer::DrawDebugCube(const Matrix& world)
 }
 
 /// <summary>
+/// 指定 World 行列と色で、HitBox デバッグ用の透明 AABB を描画する。
+/// </summary>
+/// <param name="world">AABB の World 行列。</param>
+/// <param name="color">描画色。alpha で透過度を指定する。</param>
+void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
+{
+	if (!m_pDebugBoxVertexBuffer || !m_pDebugBoxIndexBuffer || !m_pDebugBoxConstantBuffer)
+	{
+		return;
+	}
+
+	DebugBoxConstantBuffer constantBuffer = {};
+	constantBuffer.worldViewProjection = (world * m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	constantBuffer.color = color;
+	m_pDeviceContext->UpdateSubresource(m_pDebugBoxConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
+
+	const UINT stride = sizeof(DebugBoxVertex);
+	const UINT offset = 0;
+	const float blendFactor[4] = {};
+
+	m_pDeviceContext->IASetInputLayout(m_pDebugBoxInputLayout);
+	m_pDeviceContext->IASetVertexBuffers(0, 1, &m_pDebugBoxVertexBuffer, &stride, &offset);
+	m_pDeviceContext->IASetIndexBuffer(m_pDebugBoxIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
+	m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	m_pDeviceContext->VSSetShader(m_pDebugBoxVertexShader, nullptr, 0);
+	m_pDeviceContext->VSSetConstantBuffers(0, 1, &m_pDebugBoxConstantBuffer);
+	m_pDeviceContext->PSSetShader(m_pDebugBoxPixelShader, nullptr, 0);
+	m_pDeviceContext->PSSetConstantBuffers(0, 1, &m_pDebugBoxConstantBuffer);
+
+	// 判定可視化はデバッグ用の上描きなので、深度を切って半透明合成する。
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pDeviceContext->OMSetBlendState(m_BlendState[BS_ALPHABLEND], blendFactor, 0xffffffff);
+	m_pDeviceContext->DrawIndexed(36, 0, 0);
+	m_pDeviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
 /// ModelResource の各 Mesh を、Material テクスチャ付きで描画する。
 /// </summary>
 /// <param name="model">描画するモデルリソース。</param>
@@ -878,6 +1069,19 @@ void Renderer::ReleaseDebugCubeResources()
 }
 
 /// <summary>
+/// HitBox デバッグ描画用の DirectX11 リソースを解放する。
+/// </summary>
+void Renderer::ReleaseDebugBoxResources()
+{
+	SAFE_RELEASE(m_pDebugBoxConstantBuffer);
+	SAFE_RELEASE(m_pDebugBoxIndexBuffer);
+	SAFE_RELEASE(m_pDebugBoxVertexBuffer);
+	SAFE_RELEASE(m_pDebugBoxInputLayout);
+	SAFE_RELEASE(m_pDebugBoxPixelShader);
+	SAFE_RELEASE(m_pDebugBoxVertexShader);
+}
+
+/// <summary>
 /// モデル描画用の DirectX11 リソースを解放する。
 /// </summary>
 void Renderer::ReleaseModelRenderResources()
@@ -897,6 +1101,7 @@ void Renderer::Uninit()
 {
 	ModelResourceManager::UnloadAll();
 	ReleaseModelRenderResources();
+	ReleaseDebugBoxResources();
 	ReleaseDebugCubeResources();
 
 	SAFE_RELEASE(m_pDepthStencilView);

@@ -2,6 +2,7 @@
 
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
@@ -11,6 +12,69 @@
 #include "World/World.h"
 
 using namespace DirectX::SimpleMath;
+
+namespace
+{
+	/// <summary>
+	/// デバッグ用 Player が共通して持つ Component を追加する。
+	/// </summary>
+	/// <param name="world">Component を追加する World。</param>
+	/// <param name="objectId">初期化対象の Player GameObject ID。</param>
+	/// <param name="request">Spawn 時の位置と回転を持つリクエスト。</param>
+	/// <param name="modelKey">描画に使う ModelResource のキー。</param>
+	/// <param name="initialFacingDirection">初期の対面方向。</param>
+	void InitializeDebugPlayer(
+		World& world,
+		GameObjectId objectId,
+		const SpawnRequest& request,
+		const std::string& modelKey,
+		FacingDirection initialFacingDirection)
+	{
+		if (GameObject* object = world.GetGameObject(objectId))
+		{
+			object->tag = GameObjectTag::Player;
+		}
+
+		TransformComponent* transform = world.GetTransform(objectId);
+		if (transform)
+		{
+			TransformSystem::SetLocalPosition(*transform, request.position);
+			TransformSystem::SetLocalEulerRotationDegrees(
+				*transform,
+				initialFacingDirection == FacingDirection::Right
+					? Vector3(0.0f, -90.0f, 0.0f)
+					: Vector3(0.0f, 90.0f, 0.0f));
+			TransformSystem::SetLocalScale(*transform, Vector3(0.05f, 0.05f, 0.05f));
+		}
+
+		ModelComponent model;
+		model.resourceKey = modelKey;
+		world.AddComponent<ModelComponent>(objectId, model);
+		world.AddComponent<VelocityComponent>(objectId);
+
+		StateComponent state;
+		state.facingDirection = initialFacingDirection;
+		world.AddComponent<StateComponent>(objectId, state);
+
+		CharacterData characterData;
+		CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
+
+		CharacterParameterComponent characterParameter;
+		characterParameter.parameter = characterData.parameter;
+		world.AddComponent<CharacterParameterComponent>(objectId, characterParameter);
+
+		CharacterAttackDataComponent characterAttackData;
+		characterAttackData.attacks = characterData.attacks;
+		world.AddComponent<CharacterAttackDataComponent>(objectId, characterAttackData);
+
+		HitBoxComponent hitBox;
+		hitBox.pushBox.offset = Vector2(-0.15f, 4.5f);
+		hitBox.pushBox.size = Vector2(2.0f, 9.5f);
+		hitBox.hurtBox.offset = Vector2(-0.15f, 4.5f);
+		hitBox.hurtBox.size = Vector2(1.5f, 9.0f);
+		world.AddComponent<HitBoxComponent>(objectId, hitBox);
+	}
+}
 
 void SpawnDestroySystem::Update(World& world)
 {
@@ -49,36 +113,14 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 		case SpawnType::DebugPlayer:
 		{
 			const GameObjectId objectId = world.CreateTransform(request.name);
-			if (GameObject* object = world.GetGameObject(objectId))
-			{
-				object->tag = GameObjectTag::Player;
-			}
-
-			TransformComponent* transform = world.GetTransform(objectId);
-			if (transform)
-			{
-				TransformSystem::SetLocalPosition(*transform, request.position);
-				TransformSystem::SetLocalEulerRotationDegrees(*transform, request.rotationDegrees);
-				TransformSystem::SetLocalScale(*transform, Vector3(0.05f, 0.05f, 0.05f));
-			}
-
-			ModelComponent model;
-			model.resourceKey = "DebugPlayer";
-			world.AddComponent<ModelComponent>(objectId, model);
-			world.AddComponent<VelocityComponent>(objectId);
-			world.AddComponent<StateComponent>(objectId);
+			InitializeDebugPlayer(world, objectId, request, "DebugPlayer", FacingDirection::Right);
 			world.AddComponent<InputHistoryComponent>(objectId);
-
-			CharacterData characterData;
-			CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
-
-			CharacterParameterComponent characterParameter;
-			characterParameter.parameter = characterData.parameter;
-			world.AddComponent<CharacterParameterComponent>(objectId, characterParameter);
-
-			CharacterAttackDataComponent characterAttackData;
-			characterAttackData.attacks = characterData.attacks;
-			world.AddComponent<CharacterAttackDataComponent>(objectId, characterAttackData);
+			break;
+		}
+		case SpawnType::DebugPlayer2:
+		{
+			const GameObjectId objectId = world.CreateTransform(request.name);
+			InitializeDebugPlayer(world, objectId, request, "DebugPlayer2", FacingDirection::Left);
 			break;
 		}
 		case SpawnType::DebugCube:

@@ -179,6 +179,9 @@
     <ClInclude Include="Source\Component\Component.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\HitBoxComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\InputHistoryComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>

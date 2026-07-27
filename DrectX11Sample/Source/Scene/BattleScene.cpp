@@ -1,6 +1,9 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/StateComponent.h"
 #include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
@@ -50,10 +53,21 @@ void BattleScene::Enter()
 		"assets/model/DebugPlayer/man.fbx",
 		Renderer::GetDevice());
 
+	ModelResourceManager::LoadModel(
+		"DebugPlayer2",
+		"assets/model/DebugPlayer2/woman.fbx",
+		Renderer::GetDevice());
+
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
-		Vector3(-2.0f, -1.0f, 8.0f),
+		Vector3(-2.0f, 0.0f, 8.0f),
+		Vector3(0.0f, 0.0f, 0.0f));
+
+	world.RequestSpawn(
+		SpawnType::DebugPlayer2,
+		"DebugPlayer2",
+		Vector3(2.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f));
 
 	world.RequestSpawn(
@@ -107,6 +121,7 @@ void BattleScene::RunSystems()
 			CameraSystem::Update(camera, *cameraTransform);
 		}
 	}
+
 }
 
 /// <summary>
@@ -125,10 +140,15 @@ void BattleScene::Draw(Renderer& renderer)
 
 #if defined(_DEBUG)
 	DrawDebugSceneView(renderer);
+	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
+	DrawDebugHitBoxes(renderer);
 #endif
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
+#if defined(_DEBUG)
+	DebugImGuiSystem::DrawHitBoxDebugWindow();
+#endif
 }
 
 /// <summary>
@@ -270,5 +290,106 @@ void BattleScene::DrawDebugSceneView(Renderer& renderer)
 		sceneViewRenderTexture.shaderResourceView,
 		sceneViewRenderTexture.width,
 		sceneViewRenderTexture.height);
+}
+
+/// <summary>
+/// Debug 表示が有効な時だけ、Player の PushBox / HurtBox / AttackBox を半透明 AABB で描画する。
+/// </summary>
+/// <param name="renderer">HitBox 描画に使用する Renderer。</param>
+void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
+{
+	if (!DebugImGuiSystem::ShouldDrawHitBoxes())
+	{
+		return;
+	}
+
+	constexpr float DebugBoxDepth = 0.08f;
+	const Color pushBoxColor(1.0f, 1.0f, 1.0f, 0.28f);
+	const Color hurtBoxColor(0.0f, 1.0f, 0.2f, 0.28f);
+	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.32f);
+
+	auto drawRect = [&renderer](const Vector3& basePosition, const HitBoxRect2D& rect, FacingDirection facingDirection, const Color& color)
+	{
+		if (!rect.enabled || rect.size.x <= 0.0f || rect.size.y <= 0.0f)
+		{
+			return;
+		}
+
+		const float facingSign = facingDirection == FacingDirection::Right ? 1.0f : -1.0f;
+		const Vector3 center(
+			basePosition.x + rect.offset.x * facingSign,
+			basePosition.y + rect.offset.y,
+			basePosition.z);
+
+		const Matrix boxWorld =
+			Matrix::CreateScale(rect.size.x * 0.5f, rect.size.y * 0.5f, DebugBoxDepth * 0.5f)
+			* Matrix::CreateTranslation(center);
+		renderer.DrawDebugBox(boxWorld, color);
+	};
+
+	auto findAssignedAttack = [](const CharacterAttackDataComponent& attackData, const std::string& slotId) -> const CharacterAssignedAttackData*
+	{
+		for (const CharacterAssignedAttackData& assignedAttack : attackData.attacks)
+		{
+			if (assignedAttack.slotId == slotId)
+			{
+				return &assignedAttack;
+			}
+		}
+
+		return nullptr;
+	};
+
+	for (GameObject& object : world.GetGameObjects())
+	{
+		if (object.tag != GameObjectTag::Player)
+		{
+			continue;
+		}
+
+		const TransformComponent* transform = world.GetTransform(object.id);
+		const StateComponent* state = world.GetComponent<StateComponent>(object.id);
+		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+		if (!transform || !state || !hitBox)
+		{
+			continue;
+		}
+
+		const Vector3 basePosition = TransformSystem::GetWorldPosition(*transform);
+		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, hurtBoxColor);
+		drawRect(basePosition, hitBox->pushBox, state->facingDirection, pushBoxColor);
+
+		const bool isAttackState = state->currentActionState == PlayerActionState::GroundAttack
+			|| state->currentActionState == PlayerActionState::AirAttack;
+		if (!isAttackState || hitBox->currentAttack.slotId.empty())
+		{
+			continue;
+		}
+
+		const CharacterAttackDataComponent* characterAttackData = world.GetComponent<CharacterAttackDataComponent>(object.id);
+		if (!characterAttackData)
+		{
+			continue;
+		}
+
+		const CharacterAssignedAttackData* assignedAttack = findAssignedAttack(*characterAttackData, hitBox->currentAttack.slotId);
+		if (!assignedAttack)
+		{
+			continue;
+		}
+
+		for (const AttackHitboxData& attackHitbox : assignedAttack->attack.hitboxes)
+		{
+			if (state->actionFrame < attackHitbox.startFrame || state->actionFrame > attackHitbox.endFrame)
+			{
+				continue;
+			}
+
+			HitBoxRect2D attackRect;
+			attackRect.offset = attackHitbox.offset;
+			attackRect.size = attackHitbox.size;
+			drawRect(basePosition, attackRect, state->facingDirection, attackBoxColor);
+		}
+	}
 }
 #endif

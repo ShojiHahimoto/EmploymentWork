@@ -3,6 +3,7 @@
 #include "Component/CameraComponent.h"
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
@@ -25,6 +26,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 using namespace DirectX::SimpleMath;
 
 bool DebugImGuiSystem::initialized = false;
+bool DebugImGuiSystem::drawHitBoxes = true;
 
 /// <summary>
 /// Debug ビルド用の ImGui コンテキストと Win32 / DirectX11 バックエンドを初期化する。
@@ -325,6 +327,20 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<InputHistoryComponent>(object.id)) ImGui::BulletText("InputHistory");
 				if (world.HasComponent<CharacterParameterComponent>(object.id)) ImGui::BulletText("CharacterParameter");
 				if (world.HasComponent<CharacterAttackDataComponent>(object.id)) ImGui::BulletText("CharacterAttackData");
+				if (world.HasComponent<HitBoxComponent>(object.id)) ImGui::BulletText("HitBox");
+
+				HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+				if (hitBox && ImGui::TreeNode("HitBox Settings"))
+				{
+					ImGui::Checkbox("PushBox Enabled", &hitBox->pushBox.enabled);
+					ImGui::DragFloat2("PushBox Position Offset X / Y", &hitBox->pushBox.offset.x, 0.01f);
+					ImGui::DragFloat2("PushBox Width / Height", &hitBox->pushBox.size.x, 0.01f, 0.0f, 10.0f);
+					ImGui::Separator();
+					ImGui::Checkbox("HurtBox Enabled", &hitBox->hurtBox.enabled);
+					ImGui::DragFloat2("HurtBox Position Offset X / Y", &hitBox->hurtBox.offset.x, 0.01f);
+					ImGui::DragFloat2("HurtBox Width / Height", &hitBox->hurtBox.size.x, 0.01f, 0.0f, 10.0f);
+					ImGui::TreePop();
+				}
 
 				TransformComponent* transform = world.GetTransform(object.id);
 				if (transform)
@@ -406,6 +422,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 			{ "DebugCube", SpawnType::DebugCube },
 			{ "Debugman", SpawnType::Debugman },
 			{ "DebugPlayer", SpawnType::DebugPlayer },
+			{ "DebugPlayer2", SpawnType::DebugPlayer2 },
 		};
 
 		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
@@ -433,6 +450,52 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 	ImGui::End();
 #else
 	(void)world;
+#endif
+}
+
+/// <summary>
+/// HitBox デバッグ描画の一括表示切り替えウィンドウを描画する。
+/// </summary>
+void DebugImGuiSystem::DrawHitBoxDebugWindow()
+{
+#if defined(_DEBUG)
+	if (!initialized)
+	{
+		return;
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(460.0f, 190.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(260.0f, 130.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("HitBox Debug"))
+	{
+		ImGui::Checkbox("Show HitBoxes", &drawHitBoxes);
+		ImGui::Separator();
+		ImGui::Text("PushBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("PushBoxColor", ImVec4(1.0f, 1.0f, 1.0f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("HurtBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("HurtBoxColor", ImVec4(0.0f, 1.0f, 0.2f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("AttackBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("AttackBoxColor", ImVec4(1.0f, 0.0f, 0.0f, 0.32f), ImGuiColorEditFlags_NoTooltip);
+	}
+
+	ImGui::End();
+#endif
+}
+
+/// <summary>
+/// HitBox デバッグ描画が有効か確認する。
+/// </summary>
+/// <returns>Debug ビルドで表示が有効なら true。</returns>
+bool DebugImGuiSystem::ShouldDrawHitBoxes()
+{
+#if defined(_DEBUG)
+	return initialized && drawHitBoxes;
+#else
+	return false;
 #endif
 }
 
