@@ -279,8 +279,25 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
-- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent を持つ GameObject を生成する
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
+
+## CharacterData / AttackData
+
+キャラクターと技は、保存場所と責務を分ける。
+
+- CharacterData は `assets/CharacterData/<CharacterId>/Parameter.json` と `AttackList.json` で管理する
+- AttackData は `assets/AttackData/<AttackDataId>.json` に技 1 つ単位で保存する
+- AttackData は特定キャラクターのフォルダ内に置かない
+- Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
+- `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
+- `AttackList.json` は、`Attack1`、`Attack2` などの slotId と、使用する AttackData ID の対応だけを持つ
+- 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
+- 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
+- `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する
+- `CharacterAttackDataComponent` は、slotId と読み込み済み AttackData の組み合わせを保持する
+- 将来の技調整モードでは、メモリ上の AttackData / CharacterData を編集し、保存時に JSON へ書き戻す
+- JSON の項目追加時は、未指定項目にデフォルト値を使えるようにし、既存データの読み込みを壊さない
 
 ## 3D Model / Resource
 

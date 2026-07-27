@@ -1,9 +1,12 @@
 ﻿#include "System/SpawnDestroySystem.h"
 
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/CharacterParameterComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
+#include "Data/CharacterDataLoader.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -65,6 +68,17 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 			world.AddComponent<VelocityComponent>(objectId);
 			world.AddComponent<StateComponent>(objectId);
 			world.AddComponent<InputHistoryComponent>(objectId);
+
+			CharacterData characterData;
+			CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
+
+			CharacterParameterComponent characterParameter;
+			characterParameter.parameter = characterData.parameter;
+			world.AddComponent<CharacterParameterComponent>(objectId, characterParameter);
+
+			CharacterAttackDataComponent characterAttackData;
+			characterAttackData.attacks = characterData.attacks;
+			world.AddComponent<CharacterAttackDataComponent>(objectId, characterAttackData);
 			break;
 		}
 		case SpawnType::DebugCube:

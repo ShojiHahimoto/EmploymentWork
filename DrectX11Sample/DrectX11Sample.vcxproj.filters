@@ -49,6 +49,12 @@
     <Filter Include="ヘッダー ファイル\Input">
       <UniqueIdentifier>{fe72f431-66cb-4249-8f07-80feb83fd4d4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Data">
+      <UniqueIdentifier>{3cb9b78d-9a52-4d1c-a532-0fd565bd2955}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Data">
+      <UniqueIdentifier>{74a53e3b-e332-46be-889d-acac457d5feb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Input\InputConfigLoader.cpp">
@@ -56,6 +62,12 @@
     </ClCompile>
     <ClCompile Include="Source\Input\InputSystem.cpp">
       <Filter>ソース ファイル\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\CharacterDataLoader.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\JsonValue.cpp">
+      <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
@@ -188,6 +200,12 @@
     <ClInclude Include="Source\Component\CameraComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\CharacterAttackDataComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\CharacterParameterComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\CameraSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -250,6 +268,18 @@
     </ClInclude>
     <ClInclude Include="Source\Input\InputTypes.h">
       <Filter>ヘッダー ファイル\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\AttackData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\CharacterData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\CharacterDataLoader.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\JsonValue.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

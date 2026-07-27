@@ -22,9 +22,6 @@ public:
 	static void AddVelocityY(VelocityComponent& velocity, float value);
 
 private:
-	static constexpr float RiseGravityPerFrame = -0.012f;
-	static constexpr float FallGravityPerFrame = -0.020f;
-
 	static void ApplyAirGravity(World& world);
 	static void ApplyVelocityToTransform(World& world);
 	static void ResolveTemporaryGround(World& world);

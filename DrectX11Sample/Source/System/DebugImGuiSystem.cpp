@@ -1,6 +1,8 @@
 ﻿#include "System/DebugImGuiSystem.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/CharacterParameterComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
@@ -321,6 +323,8 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<VelocityComponent>(object.id)) ImGui::BulletText("Velocity");
 				if (world.HasComponent<StateComponent>(object.id)) ImGui::BulletText("State");
 				if (world.HasComponent<InputHistoryComponent>(object.id)) ImGui::BulletText("InputHistory");
+				if (world.HasComponent<CharacterParameterComponent>(object.id)) ImGui::BulletText("CharacterParameter");
+				if (world.HasComponent<CharacterAttackDataComponent>(object.id)) ImGui::BulletText("CharacterAttackData");
 
 				TransformComponent* transform = world.GetTransform(object.id);
 				if (transform)

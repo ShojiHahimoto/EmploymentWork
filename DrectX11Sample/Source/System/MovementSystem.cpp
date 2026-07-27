@@ -1,5 +1,6 @@
 ﻿#include "System/MovementSystem.h"
 
+#include "Component/CharacterParameterComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
@@ -84,9 +85,10 @@ void MovementSystem::ApplyAirGravity(World& world)
 	for (GameObject& object : world.GetGameObjects())
 	{
 		TransformComponent* transform = world.GetTransform(object.id);
+		CharacterParameterComponent* characterParameter = world.GetComponent<CharacterParameterComponent>(object.id);
 		StateComponent* state = world.GetComponent<StateComponent>(object.id);
 		VelocityComponent* velocity = world.GetComponent<VelocityComponent>(object.id);
-		if (!transform || !state || !velocity)
+		if (!transform || !characterParameter || !state || !velocity)
 		{
 			continue;
 		}
@@ -98,8 +100,8 @@ void MovementSystem::ApplyAirGravity(World& world)
 
 		state->isGrounded = false;
 		const float gravity = velocity->velocity.y > 0.0f
-			? RiseGravityPerFrame
-			: FallGravityPerFrame;
+			? characterParameter->parameter.riseGravityPerFrame
+			: characterParameter->parameter.fallGravityPerFrame;
 		AddVelocityY(*velocity, gravity);
 	}
 }

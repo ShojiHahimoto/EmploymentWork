@@ -129,10 +129,28 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 		};
 	}
 
-	return {
-		HasHorizontalMoveDirection(inputFrame.direction) ? PlayerActionState::Walk : PlayerActionState::Idle,
-		false
-	};
+	//return {
+	//	HasHorizontalMoveDirection(inputFrame.direction) ? PlayerActionState::FrontWalk : PlayerActionState::Idle,
+	//	false
+	//};
+
+	if (HasHorizontalMoveDirection(inputFrame.direction))
+	{
+		if (inputFrame.direction == 4 && state.facingDirection == FacingDirection::Left ||
+			inputFrame.direction == 6 && state.facingDirection == FacingDirection::Right)
+		{
+			return { PlayerActionState::FrontWalk, false };
+		}
+		else if (inputFrame.direction == 4 && state.facingDirection == FacingDirection::Right ||
+			inputFrame.direction == 6 && state.facingDirection == FacingDirection::Left)
+		{
+			return { PlayerActionState::BackWalk, false };
+		}
+	}
+	else
+	{
+		return { PlayerActionState::Idle, false };
+	}
 }
 
 /// <summary>
@@ -225,7 +243,7 @@ void StateUpdateSystem::ApplyActionState(StateComponent& state, const PlayerActi
 /// <param name="transform">向き判定に使うトランスフォームコンポーネント</param>
 void StateUpdateSystem::ApplyPlayerDirection(StateComponent& state, const TransformComponent& transform)
 {
-	if (state.currentActionState == PlayerActionState::Idle || state.currentActionState == PlayerActionState::Walk)
+	if (state.currentActionState == PlayerActionState::Idle || state.currentActionState == PlayerActionState::FrontWalk)
 	{
 		// 仮判定　X座標0を基準にX0方向を向かせる
 		if (TransformSystem::GetLocalPosition(transform).x < 0)

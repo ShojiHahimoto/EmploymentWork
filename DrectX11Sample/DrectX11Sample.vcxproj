@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
     <ClCompile Include="Source\Input\InputSystem.cpp" />
+    <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
+    <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\System\Application.cpp" />
@@ -49,6 +51,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
+    <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
+    <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
@@ -56,6 +60,10 @@
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
     <ClInclude Include="Source\Core\GameObject.h" />
+    <ClInclude Include="Source\Data\AttackData.h" />
+    <ClInclude Include="Source\Data\CharacterData.h" />
+    <ClInclude Include="Source\Data\CharacterDataLoader.h" />
+    <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
     <ClInclude Include="Source\Input\InputSystem.h" />
@@ -89,6 +97,8 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
+    <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

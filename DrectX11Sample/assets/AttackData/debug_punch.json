@@ -1,0 +1,33 @@
+﻿{
+  "attackDataId": "debug_punch",
+  "displayName": "Debug Punch",
+  "frame": {
+    "startup": 5,
+    "active": 3,
+    "recovery": 10
+  },
+  "cancelWindows": [
+    {
+      "startFrame": 8,
+      "endFrame": 12,
+      "cancelTypes": [
+        "Normal",
+        "Special"
+      ]
+    }
+  ],
+  "hitboxes": [
+    {
+      "startFrame": 5,
+      "endFrame": 8,
+      "offset": {
+        "x": 0.8,
+        "y": 1.0
+      },
+      "size": {
+        "x": 0.5,
+        "y": 0.4
+      }
+    }
+  ]
+}

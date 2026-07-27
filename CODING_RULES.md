@@ -16,6 +16,7 @@
 - `.vcxproj`
 - `.filters`
 - `.config`
+- `.json`
 - `.md`
 
 理由:

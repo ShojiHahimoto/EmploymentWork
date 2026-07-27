@@ -1,0 +1,32 @@
+﻿{
+  "attackDataId": "debug_front_kick",
+  "displayName": "Debug Front Kick",
+  "frame": {
+    "startup": 7,
+    "active": 4,
+    "recovery": 14
+  },
+  "cancelWindows": [
+    {
+      "startFrame": 11,
+      "endFrame": 16,
+      "cancelTypes": [
+        "Special"
+      ]
+    }
+  ],
+  "hitboxes": [
+    {
+      "startFrame": 7,
+      "endFrame": 11,
+      "offset": {
+        "x": 1.0,
+        "y": 0.9
+      },
+      "size": {
+        "x": 0.6,
+        "y": 0.35
+      }
+    }
+  ]
+}
