@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "debug_punch",
+  "displayName": "デバッグパンチ",
+  "hitstunFrames": 30,
+  "frame": {
+    "startup": 5,
+    "active": 3,
+    "recovery": 10
+  },
+  "cancelWindows": [
+    {
+      "startFrame": 8,
+      "endFrame": 12,
+      "cancelTypes": [
+        "Normal",
+        "Special"
+      ]
+    }
+  ],
+  "hitboxes": [
+    {
+      "startFrame": 3,
+      "endFrame": 14,
+      "offset": {
+        "x": 2.8,
+        "y": 4.5
+      },
+      "size": {
+        "x": 2.5,
+        "y": 2.0
+      }
+    }
+  ]
+}

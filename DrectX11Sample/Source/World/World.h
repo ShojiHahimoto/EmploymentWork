@@ -4,6 +4,7 @@
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
 
+#include <array>
 #include <cassert>
 #include <memory>
 #include <string>
@@ -15,6 +16,7 @@ enum class SpawnType
 	DebugCube,
 	Debugman,
 	DebugPlayer,
+	DebugPlayer2,
 };
 
 struct SpawnRequest
@@ -30,9 +32,22 @@ struct DestroyRequest
 	GameObjectId targetId = INVALID_GAME_OBJECT_ID;
 };
 
+struct HitCollisionResult
+{
+	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
+	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
+	std::string attackSlotId;
+	std::string attackDataId;
+	std::string attackDisplayName;
+	int hitstunFrames = 30;
+	int hitboxIndex = -1;
+};
+
 class World
 {
 public:
+	static constexpr int BattlePlayerCount = 2;
+
 	GameObjectId CreateGameObject();
 	GameObjectId CreateGameObject(const std::string& name);
 
@@ -79,12 +94,22 @@ public:
 	void ClearSpawnRequests();
 	void ClearDestroyRequests();
 
+	void AddHitCollisionResult(const HitCollisionResult& result);
+	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
+	void ClearHitCollisionResults();
+
+	void SetBattlePlayerId(int playerIndex, GameObjectId objectId);
+	GameObjectId GetBattlePlayerId(int playerIndex) const;
+	GameObjectId GetOpponentBattlePlayerId(GameObjectId objectId) const;
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
 	std::vector<GameObject> gameObjects;
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
+	std::vector<HitCollisionResult> hitCollisionResults;
+	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;
@@ -93,6 +118,11 @@ private:
 	bool ContainsObjectId(const std::vector<GameObjectId>& objectIds, GameObjectId objectId) const;
 };
 
+/// <summary>
+/// 指定 GameObject に Component を追加し、既に同じ型があれば既存 Component を返す。
+/// </summary>
+/// <param name="objectId">Component を追加する GameObject の ID。</param>
+/// <returns>追加または取得した Component。</returns>
 template <class T>
 T& World::AddComponent(GameObjectId objectId)
 {
@@ -111,6 +141,12 @@ T& World::AddComponent(GameObjectId objectId)
 	return *dynamic_cast<T*>(object->components.back().get());
 }
 
+/// <summary>
+/// 指定 GameObject に初期値付きで Component を追加し、既に同じ型があれば値を上書きする。
+/// </summary>
+/// <param name="objectId">Component を追加する GameObject の ID。</param>
+/// <param name="componentValue">追加または上書きする Component の値。</param>
+/// <returns>追加または更新した Component。</returns>
 template <class T>
 T& World::AddComponent(GameObjectId objectId, const T& componentValue)
 {
@@ -130,6 +166,11 @@ T& World::AddComponent(GameObjectId objectId, const T& componentValue)
 	return *dynamic_cast<T*>(object->components.back().get());
 }
 
+/// <summary>
+/// 指定 GameObject から指定型の Component を取得する。
+/// </summary>
+/// <param name="objectId">Component を取得する GameObject の ID。</param>
+/// <returns>見つかった Component。存在しない場合は nullptr。</returns>
 template <class T>
 T* World::GetComponent(GameObjectId objectId)
 {
@@ -150,6 +191,11 @@ T* World::GetComponent(GameObjectId objectId)
 	return nullptr;
 }
 
+/// <summary>
+/// 指定 GameObject から指定型の Component を読み取り専用で取得する。
+/// </summary>
+/// <param name="objectId">Component を取得する GameObject の ID。</param>
+/// <returns>見つかった Component。存在しない場合は nullptr。</returns>
 template <class T>
 const T* World::GetComponent(GameObjectId objectId) const
 {
@@ -170,6 +216,11 @@ const T* World::GetComponent(GameObjectId objectId) const
 	return nullptr;
 }
 
+/// <summary>
+/// 指定 GameObject が指定型の Component を持っているか確認する。
+/// </summary>
+/// <param name="objectId">確認する GameObject の ID。</param>
+/// <returns>Component が存在すれば true。</returns>
 template <class T>
 bool World::HasComponent(GameObjectId objectId) const
 {

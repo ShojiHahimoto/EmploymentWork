@@ -1,11 +1,17 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/StateComponent.h"
 #include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
+#include "System/EmbedResolveSystem.h"
+#include "System/HitCollisionSystem.h"
+#include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
 #include "System/PlayerControlSystem.h"
@@ -16,12 +22,20 @@
 
 using namespace DirectX::SimpleMath;
 
+/// <summary>
+/// BattleScene を現在の描画サイズで初期化する。
+/// </summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
 BattleScene::BattleScene(int initialWidth, int initialHeight)
 	: width(initialWidth)
 	, height(initialHeight)
 {
 }
 
+/// <summary>
+/// バトル用 World、カメラ、初期モデル、デバッグ用オブジェクトを生成する。
+/// </summary>
 void BattleScene::Enter()
 {
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
@@ -42,11 +56,22 @@ void BattleScene::Enter()
 		"assets/model/DebugPlayer/man.fbx",
 		Renderer::GetDevice());
 
+	ModelResourceManager::LoadModel(
+		"DebugPlayer2",
+		"assets/model/DebugPlayer2/woman.fbx",
+		Renderer::GetDevice());
+
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
-		Vector3(-2.0f, -1.0f, 8.0f),
-		Vector3(0.0f, 180.0f, 0.0f));
+		Vector3(-2.0f, 0.0f, 8.0f),
+		Vector3(0.0f, 0.0f, 0.0f));
+
+	world.RequestSpawn(
+		SpawnType::DebugPlayer2,
+		"DebugPlayer2",
+		Vector3(2.0f, 0.0f, 8.0f),
+		Vector3(0.0f, 0.0f, 0.0f));
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,
@@ -66,6 +91,9 @@ void BattleScene::Enter()
 	RunSystems();
 }
 
+/// <summary>
+/// BattleScene が保持するデバッグ描画リソースと World を破棄する。
+/// </summary>
 void BattleScene::Exit()
 {
 #if defined(_DEBUG)
@@ -85,6 +113,9 @@ void BattleScene::RunSystems()
 	StateUpdateSystem::Update(world);
 	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);
+	EmbedResolveSystem::Update(world);
+	HitCollisionSystem::Update(world);
+	HitResolveSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())
@@ -96,8 +127,13 @@ void BattleScene::RunSystems()
 			CameraSystem::Update(camera, *cameraTransform);
 		}
 	}
+
 }
 
+/// <summary>
+/// メインカメラで BattleScene の World を描画し、Debug ビルドでは SceneView と ImGui も描画する。
+/// </summary>
+/// <param name="renderer">描画に使用する Renderer。</param>
 void BattleScene::Draw(Renderer& renderer)
 {
 	if (!world.HasActiveCamera())
@@ -110,12 +146,22 @@ void BattleScene::Draw(Renderer& renderer)
 
 #if defined(_DEBUG)
 	DrawDebugSceneView(renderer);
+	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
+	DrawDebugHitBoxes(renderer);
 #endif
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
+#if defined(_DEBUG)
+	DebugImGuiSystem::DrawHitBoxDebugWindow();
+#endif
 }
 
+/// <summary>
+/// 指定カメラの View / Projection を使って World 内の描画対象を描画する。
+/// </summary>
+/// <param name="renderer">描画に使用する Renderer。</param>
+/// <param name="camera">描画視点として使う CameraComponent。</param>
 void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera)
 {
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
@@ -148,6 +194,11 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 	}
 }
 
+/// <summary>
+/// 画面サイズ変更に合わせて BattleScene のメインカメラのアスペクト比を更新する。
+/// </summary>
+/// <param name="newWidth">新しい幅。</param>
+/// <param name="newHeight">新しい高さ。</param>
 void BattleScene::OnResize(int newWidth, int newHeight)
 {
 	if (newWidth <= 0 || newHeight <= 0)
@@ -166,24 +217,35 @@ void BattleScene::OnResize(int newWidth, int newHeight)
 	}
 }
 
+/// <summary>
+/// BattleScene が保持する World を取得する。
+/// </summary>
+/// <returns>変更可能な World。</returns>
 World& BattleScene::GetWorld()
 {
 	return world;
 }
 
+/// <summary>
+/// BattleScene が保持する World を読み取り専用で取得する。
+/// </summary>
+/// <returns>読み取り専用の World。</returns>
 const World& BattleScene::GetWorld() const
 {
 	return world;
 }
 
 #if defined(_DEBUG)
+/// <summary>
+/// Debug 用 SceneView のカメラ、操作状態、RenderTexture を初期化する。
+/// </summary>
 void BattleScene::InitializeDebugSceneView()
 {
 	debugSceneCameraTransform = TransformComponent{};
 	debugSceneCamera = CameraComponent{};
 	debugSceneCameraControlState = DebugCameraControlState{};
 
-	TransformSystem::SetLocalPosition(debugSceneCameraTransform, Vector3(0.0f, 2.0f, -8.0f));
+	TransformSystem::SetLocalPosition(debugSceneCameraTransform, Vector3(0.0f, 8.0f, -20.0f));
 	TransformSystem::SetLocalEulerRotationDegrees(debugSceneCameraTransform, Vector3(10.0f, 0.0f, 0.0f));
 	TransformSystem::SetLocalScale(debugSceneCameraTransform, Vector3::One);
 	TransformSystem::UpdateWorldTransform(debugSceneCameraTransform);
@@ -199,6 +261,9 @@ void BattleScene::InitializeDebugSceneView()
 	}
 }
 
+/// <summary>
+/// SceneView 上にマウスがある時だけ、Debug 用カメラ操作と行列更新を行う。
+/// </summary>
 void BattleScene::UpdateDebugSceneViewCamera()
 {
 	DebugCameraControlSystem::Update(
@@ -210,6 +275,10 @@ void BattleScene::UpdateDebugSceneViewCamera()
 	CameraSystem::Update(debugSceneCamera, debugSceneCameraTransform);
 }
 
+/// <summary>
+/// Debug 用カメラで World を RenderTexture に描画し、ImGui の SceneView に表示する。
+/// </summary>
+/// <param name="renderer">SceneView 描画に使用する Renderer。</param>
 void BattleScene::DrawDebugSceneView(Renderer& renderer)
 {
 	if (!sceneViewRenderTexture.shaderResourceView)
@@ -227,5 +296,106 @@ void BattleScene::DrawDebugSceneView(Renderer& renderer)
 		sceneViewRenderTexture.shaderResourceView,
 		sceneViewRenderTexture.width,
 		sceneViewRenderTexture.height);
+}
+
+/// <summary>
+/// Debug 表示が有効な時だけ、Player の PushBox / HurtBox / AttackBox を半透明 AABB で描画する。
+/// </summary>
+/// <param name="renderer">HitBox 描画に使用する Renderer。</param>
+void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
+{
+	if (!DebugImGuiSystem::ShouldDrawHitBoxes())
+	{
+		return;
+	}
+
+	constexpr float DebugBoxDepth = 0.08f;
+	const Color pushBoxColor(1.0f, 1.0f, 1.0f, 0.28f);
+	const Color hurtBoxColor(0.0f, 1.0f, 0.2f, 0.28f);
+	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.32f);
+
+	auto drawRect = [&renderer](const Vector3& basePosition, const HitBoxRect2D& rect, FacingDirection facingDirection, const Color& color)
+	{
+		if (!rect.enabled || rect.size.x <= 0.0f || rect.size.y <= 0.0f)
+		{
+			return;
+		}
+
+		const float facingSign = facingDirection == FacingDirection::Right ? 1.0f : -1.0f;
+		const Vector3 center(
+			basePosition.x + rect.offset.x * facingSign,
+			basePosition.y + rect.offset.y,
+			basePosition.z);
+
+		const Matrix boxWorld =
+			Matrix::CreateScale(rect.size.x * 0.5f, rect.size.y * 0.5f, DebugBoxDepth * 0.5f)
+			* Matrix::CreateTranslation(center);
+		renderer.DrawDebugBox(boxWorld, color);
+	};
+
+	auto findAssignedAttack = [](const CharacterAttackDataComponent& attackData, const std::string& slotId) -> const CharacterAssignedAttackData*
+	{
+		for (const CharacterAssignedAttackData& assignedAttack : attackData.attacks)
+		{
+			if (assignedAttack.slotId == slotId)
+			{
+				return &assignedAttack;
+			}
+		}
+
+		return nullptr;
+	};
+
+	for (GameObject& object : world.GetGameObjects())
+	{
+		if (object.tag != GameObjectTag::Player)
+		{
+			continue;
+		}
+
+		const TransformComponent* transform = world.GetTransform(object.id);
+		const StateComponent* state = world.GetComponent<StateComponent>(object.id);
+		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+		if (!transform || !state || !hitBox)
+		{
+			continue;
+		}
+
+		const Vector3 basePosition = TransformSystem::GetWorldPosition(*transform);
+		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, hurtBoxColor);
+		drawRect(basePosition, hitBox->pushBox, state->facingDirection, pushBoxColor);
+
+		const bool isAttackState = state->currentActionState == PlayerActionState::GroundAttack
+			|| state->currentActionState == PlayerActionState::AirAttack;
+		if (!isAttackState || hitBox->currentAttack.slotId.empty())
+		{
+			continue;
+		}
+
+		const CharacterAttackDataComponent* characterAttackData = world.GetComponent<CharacterAttackDataComponent>(object.id);
+		if (!characterAttackData)
+		{
+			continue;
+		}
+
+		const CharacterAssignedAttackData* assignedAttack = findAssignedAttack(*characterAttackData, hitBox->currentAttack.slotId);
+		if (!assignedAttack)
+		{
+			continue;
+		}
+
+		for (const AttackHitboxData& attackHitbox : assignedAttack->attack.hitboxes)
+		{
+			if (state->actionFrame < attackHitbox.startFrame || state->actionFrame > attackHitbox.endFrame)
+			{
+				continue;
+			}
+
+			HitBoxRect2D attackRect;
+			attackRect.offset = attackHitbox.offset;
+			attackRect.size = attackHitbox.size;
+			drawRect(basePosition, attackRect, state->facingDirection, attackBoxColor);
+		}
+	}
 }
 #endif

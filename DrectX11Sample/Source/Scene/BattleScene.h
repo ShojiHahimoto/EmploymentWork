@@ -41,5 +41,6 @@ private:
 	void InitializeDebugSceneView();
 	void UpdateDebugSceneViewCamera();
 	void DrawDebugSceneView(Renderer& renderer);
+	void DrawDebugHitBoxes(Renderer& renderer);
 #endif
 };

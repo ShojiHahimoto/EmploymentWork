@@ -1,15 +1,17 @@
 ﻿#pragma once
 
-#include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
+#include "Data/CharacterData.h"
 #include "Core/GameObject.h"
 
 class World;
+struct TransformComponent;
 
 struct PlayerControlFrameResult
 {
 	float horizontalVelocity = 0.0f;
+	bool setHorizontalVelocity = true;
 	float verticalVelocity = 0.0f;
 	bool setVerticalVelocity = false;
 };
@@ -21,11 +23,9 @@ public:
 	static void Update(World& world);
 
 private:
-	static constexpr float MoveSpeedPerFrame = 0.08f;
-	static constexpr float JumpInitialVelocity = 0.32f;
-
 	static void UpdatePlayer(World& world, GameObjectId objectId);
-	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory);
+	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const CharacterParameterData& parameter);
 	static float GetHorizontalInputFromDirection(int direction);
 	static void ApplyFrameResult(VelocityComponent& velocity, const PlayerControlFrameResult& result);
+	static void ApplyPlayerDirection(const StateComponent& state, TransformComponent& transform);
 };

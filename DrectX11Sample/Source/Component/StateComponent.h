@@ -5,18 +5,31 @@
 enum class PlayerActionState
 {
 	Idle,
-	Walk,
-	Jump,
+	FrontWalk,
+	BackWalk,
+	VerticalJump,
+	FrontJump,
+	BackJump,
 	Fall,
 	GroundAttack,
 	AirAttack,
 	Hitstun,
 };
 
+// 対面方向
+enum class FacingDirection
+{
+	Right,
+	Left
+};
+
 struct StateComponent : public Component
 {
 	// StateUpdateSystem が確定した、今フレームの最終行動。
 	PlayerActionState currentActionState = PlayerActionState::Idle;
+
+	// プレイヤーの対面方向。
+	FacingDirection facingDirection = FacingDirection::Right;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。
@@ -26,5 +39,7 @@ struct StateComponent : public Component
 	// 今後 GroundSystem / HitResolveSystem / AttackSystem が更新する想定。
 	bool isGrounded = true;
 	bool hitstunRequested = false;
+	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
+	int hitstunDurationFrames = 30;
 	bool cancelEnabled = false;
 };

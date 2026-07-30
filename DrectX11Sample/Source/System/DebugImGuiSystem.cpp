@@ -1,6 +1,9 @@
 ﻿#include "System/DebugImGuiSystem.h"
 
 #include "Component/CameraComponent.h"
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/CharacterParameterComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
@@ -23,7 +26,15 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 using namespace DirectX::SimpleMath;
 
 bool DebugImGuiSystem::initialized = false;
+bool DebugImGuiSystem::drawHitBoxes = true;
 
+/// <summary>
+/// Debug ビルド用の ImGui コンテキストと Win32 / DirectX11 バックエンドを初期化する。
+/// </summary>
+/// <param name="windowHandle">ImGui を接続する Win32 ウィンドウハンドル。</param>
+/// <param name="device">ImGui 描画に使う DirectX11 Device。</param>
+/// <param name="deviceContext">ImGui 描画に使う DirectX11 DeviceContext。</param>
+/// <returns>初期化に成功した場合は true。</returns>
 bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11DeviceContext* deviceContext)
 {
 #if defined(_DEBUG)
@@ -78,6 +89,9 @@ bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11Devic
 #endif
 }
 
+/// <summary>
+/// ImGui の DirectX11 / Win32 バックエンドとコンテキストを破棄する。
+/// </summary>
 void DebugImGuiSystem::Shutdown()
 {
 #if defined(_DEBUG)
@@ -93,11 +107,23 @@ void DebugImGuiSystem::Shutdown()
 #endif
 }
 
+/// <summary>
+/// DebugImGuiSystem が初期化済みか確認する。
+/// </summary>
+/// <returns>初期化済みなら true。</returns>
 bool DebugImGuiSystem::IsInitialized()
 {
 	return initialized;
 }
 
+/// <summary>
+/// Win32 メッセージを ImGui に渡し、ゲーム側で処理を止めるべき入力か判定する。
+/// </summary>
+/// <param name="windowHandle">メッセージを受け取ったウィンドウハンドル。</param>
+/// <param name="message">Win32 メッセージ ID。</param>
+/// <param name="wParam">メッセージの追加情報。</param>
+/// <param name="lParam">メッセージの追加情報。</param>
+/// <returns>ImGui が入力を捕捉し、ゲーム側へ渡さない場合は true。</returns>
 bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 #if defined(_DEBUG)
@@ -165,6 +191,9 @@ bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wPa
 #endif
 }
 
+/// <summary>
+/// ImGui の新しいフレームを開始し、ドッキングスペースを準備する。
+/// </summary>
 void DebugImGuiSystem::BeginFrame()
 {
 #if defined(_DEBUG)
@@ -186,6 +215,9 @@ void DebugImGuiSystem::BeginFrame()
 #endif
 }
 
+/// <summary>
+/// ImGui の DrawData を DirectX11 へ送って描画する。
+/// </summary>
 void DebugImGuiSystem::Render()
 {
 #if defined(_DEBUG)
@@ -207,6 +239,11 @@ void DebugImGuiSystem::Render()
 #endif
 }
 
+/// <summary>
+/// 指定 TransformComponent を編集するデバッグウィンドウを描画する。
+/// </summary>
+/// <param name="windowName">ImGui ウィンドウ名。</param>
+/// <param name="transform">編集対象の TransformComponent。</param>
 void DebugImGuiSystem::DrawTransformEditor(const char* windowName, TransformComponent& transform)
 {
 #if defined(_DEBUG)
@@ -254,6 +291,10 @@ void DebugImGuiSystem::DrawTransformEditor(const char* windowName, TransformComp
 #endif
 }
 
+/// <summary>
+/// World 内の GameObject 一覧と Transform 編集、削除ボタンを表示する。
+/// </summary>
+/// <param name="world">表示・編集対象の World。</param>
 void DebugImGuiSystem::DrawWorldInspector(World& world)
 {
 #if defined(_DEBUG)
@@ -284,6 +325,22 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<VelocityComponent>(object.id)) ImGui::BulletText("Velocity");
 				if (world.HasComponent<StateComponent>(object.id)) ImGui::BulletText("State");
 				if (world.HasComponent<InputHistoryComponent>(object.id)) ImGui::BulletText("InputHistory");
+				if (world.HasComponent<CharacterParameterComponent>(object.id)) ImGui::BulletText("CharacterParameter");
+				if (world.HasComponent<CharacterAttackDataComponent>(object.id)) ImGui::BulletText("CharacterAttackData");
+				if (world.HasComponent<HitBoxComponent>(object.id)) ImGui::BulletText("HitBox");
+
+				HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+				if (hitBox && ImGui::TreeNode("HitBox Settings"))
+				{
+					ImGui::Checkbox("PushBox Enabled", &hitBox->pushBox.enabled);
+					ImGui::DragFloat2("PushBox Position Offset X / Y", &hitBox->pushBox.offset.x, 0.01f);
+					ImGui::DragFloat2("PushBox Width / Height", &hitBox->pushBox.size.x, 0.01f, 0.0f, 10.0f);
+					ImGui::Separator();
+					ImGui::Checkbox("HurtBox Enabled", &hitBox->hurtBox.enabled);
+					ImGui::DragFloat2("HurtBox Position Offset X / Y", &hitBox->hurtBox.offset.x, 0.01f);
+					ImGui::DragFloat2("HurtBox Width / Height", &hitBox->hurtBox.size.x, 0.01f, 0.0f, 10.0f);
+					ImGui::TreePop();
+				}
 
 				TransformComponent* transform = world.GetTransform(object.id);
 				if (transform)
@@ -332,6 +389,10 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 #endif
 }
 
+/// <summary>
+/// SpawnType、名前、座標、回転を指定して生成リクエストを出すデバッグウィンドウを描画する。
+/// </summary>
+/// <param name="world">生成リクエストを書き込む World。</param>
 void DebugImGuiSystem::DrawSpawnWindow(World& world)
 {
 #if defined(_DEBUG)
@@ -361,6 +422,7 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 			{ "DebugCube", SpawnType::DebugCube },
 			{ "Debugman", SpawnType::Debugman },
 			{ "DebugPlayer", SpawnType::DebugPlayer },
+			{ "DebugPlayer2", SpawnType::DebugPlayer2 },
 		};
 
 		const char* spawnTypeLabels[IM_ARRAYSIZE(spawnTypeOptions)] = {};
@@ -391,6 +453,59 @@ void DebugImGuiSystem::DrawSpawnWindow(World& world)
 #endif
 }
 
+/// <summary>
+/// HitBox デバッグ描画の一括表示切り替えウィンドウを描画する。
+/// </summary>
+void DebugImGuiSystem::DrawHitBoxDebugWindow()
+{
+#if defined(_DEBUG)
+	if (!initialized)
+	{
+		return;
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(460.0f, 190.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(260.0f, 130.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("HitBox Debug"))
+	{
+		ImGui::Checkbox("Show HitBoxes", &drawHitBoxes);
+		ImGui::Separator();
+		ImGui::Text("PushBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("PushBoxColor", ImVec4(1.0f, 1.0f, 1.0f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("HurtBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("HurtBoxColor", ImVec4(0.0f, 1.0f, 0.2f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("AttackBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("AttackBoxColor", ImVec4(1.0f, 0.0f, 0.0f, 0.32f), ImGuiColorEditFlags_NoTooltip);
+	}
+
+	ImGui::End();
+#endif
+}
+
+/// <summary>
+/// HitBox デバッグ描画が有効か確認する。
+/// </summary>
+/// <returns>Debug ビルドで表示が有効なら true。</returns>
+bool DebugImGuiSystem::ShouldDrawHitBoxes()
+{
+#if defined(_DEBUG)
+	return initialized && drawHitBoxes;
+#else
+	return false;
+#endif
+}
+
+/// <summary>
+/// RenderTexture を ImGui ウィンドウ内に表示し、SceneView 上にマウスがあるか返す。
+/// </summary>
+/// <param name="sceneTextureView">表示する RenderTexture の ShaderResourceView。</param>
+/// <param name="textureWidth">RenderTexture の幅。</param>
+/// <param name="textureHeight">RenderTexture の高さ。</param>
+/// <returns>SceneView の画像部分がホバーされていれば true。</returns>
 bool DebugImGuiSystem::DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight)
 {
 #if defined(_DEBUG)

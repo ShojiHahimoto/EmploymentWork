@@ -1,0 +1,33 @@
+﻿{
+  "attackDataId": "debug_roundhouse_kick",
+  "displayName": "Debug Roundhouse Kick",
+  "hitstunFrames": 30,
+  "frame": {
+    "startup": 10,
+    "active": 5,
+    "recovery": 18
+  },
+  "cancelWindows": [
+    {
+      "startFrame": 15,
+      "endFrame": 20,
+      "cancelTypes": [
+        "Special"
+      ]
+    }
+  ],
+  "hitboxes": [
+    {
+      "startFrame": 10,
+      "endFrame": 15,
+      "offset": {
+        "x": 1.1,
+        "y": 1.1
+      },
+      "size": {
+        "x": 0.7,
+        "y": 0.45
+      }
+    }
+  ]
+}

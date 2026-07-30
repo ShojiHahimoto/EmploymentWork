@@ -65,11 +65,17 @@ namespace Input
 		// 1 つの Binding を読み、対応する Action に反映する。
 		static void ApplyBinding(const InputBinding& binding);
 
+		// 1 フレーム分の XInput 状態をキャッシュする。
+		static void UpdateGamepadStates();
+
 		// previousValue と value から Trigger / Press / Release を確定する。
 		static void FinalizeActionStates();
 
 		static bool IsValidPlayerIndex(int playerIndex);
 		static bool IsKeyboardKeyDown(KeyboardKey key);
+		static bool IsValidGamepadIndex(int gamepadIndex);
+		static bool IsGamepadButtonDown(int gamepadIndex, GamepadButton button);
+		static DirectX::SimpleMath::Vector2 GetGamepadAxis2D(const GamepadAxis2DBinding& binding);
 
 		// 同じ Action に複数 Binding がある場合、入力値を 1 つの ActionState に合成する。
 		static void MergeActionValue(PlayerInputState& player, const InputBinding& binding, const InputValue& value, InputDeviceType deviceType);

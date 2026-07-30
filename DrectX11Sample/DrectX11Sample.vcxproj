@@ -21,6 +21,8 @@
   <ItemGroup>
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
     <ClCompile Include="Source\Input\InputSystem.cpp" />
+    <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
+    <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
     <ClCompile Include="Source\System\Application.cpp" />
@@ -28,7 +30,10 @@
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp" />
     <ClCompile Include="Source\System\Debugger.cpp" />
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp" />
+    <ClCompile Include="Source\System\EmbedResolveSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
+    <ClCompile Include="Source\System\HitCollisionSystem.cpp" />
+    <ClCompile Include="Source\System\HitResolveSystem.cpp" />
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
@@ -49,13 +54,20 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\CameraComponent.h" />
+    <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
+    <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\HitBoxComponent.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
     <ClInclude Include="Source\Core\GameObject.h" />
+    <ClInclude Include="Source\Data\AttackData.h" />
+    <ClInclude Include="Source\Data\CharacterData.h" />
+    <ClInclude Include="Source\Data\CharacterDataLoader.h" />
+    <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
     <ClInclude Include="Source\Input\InputSystem.h" />
@@ -68,7 +80,10 @@
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
     <ClInclude Include="Source\System\Debugger.h" />
     <ClInclude Include="Source\System\DebugImGuiSystem.h" />
+    <ClInclude Include="Source\System\EmbedResolveSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
+    <ClInclude Include="Source\System\HitCollisionSystem.h" />
+    <ClInclude Include="Source\System\HitResolveSystem.h" />
     <ClInclude Include="Source\System\InputHistorySystem.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h" />
@@ -89,6 +104,8 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
+    <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

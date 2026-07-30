@@ -45,6 +45,8 @@ World は全 GameObject を保持し、生成・削除キューを管理する�
 - Update 中に GameObject 配列を直接変更してはいけない
 - 生成・削除はフレーム終端でまとめて反映する
 - World は GameObject 群に対する唯一の管理単位とする
+- バトル中に相手 Player を頻繁に参照するため、World はバトル用 Player 2 体の GameObjectId を保持する
+- Player 同士の関係はポインタではなく GameObjectId で表現し、System が必要なタイミングで World から Component を取得する
 
 ## GameObject
 
@@ -164,35 +166,54 @@ DebugSystem
 - StateUpdateSystem は、入力履歴、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
 - PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
-- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、位置のめり込み解消を扱う
+- EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
-StateUpdateSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
-現段階では InputHistoryComponent のテンキー方向、ジャンプ、攻撃ボタン、接地状態、Y 速度を見て、`Idle`、`Walk`、`Jump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
-ジャンプ入力はテンキー方向の `7 / 8 / 9` を使う。将来は前ジャンプ、垂直ジャンプ、バックジャンプに分けるが、現段階ではすべて同じ垂直ジャンプとして扱う。
+StateUpdateSystem は、Player タグと Transform / Velocity / State を持つ GameObject を対象にする。
+InputHistoryComponent がある場合はテンキー方向、ジャンプ、攻撃ボタンを読み、ない場合は中立入力として扱う。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
+自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
+ジャンプ入力はテンキー方向の `7 / 8 / 9` を使い、向きに応じてバックジャンプ、垂直ジャンプ、前ジャンプへ分ける。
 今フレームで被弾要求がある場合は最優先で `Hitstun` に遷移し、攻撃前隙中でも攻撃を中止する。
 攻撃中や被弾中などのキャンセル不可行動は、終了またはキャンセル可能になるまで新しい行動へ変更しない。
 `actionFrame` は `PlayerActionState` に入ってからの経過フレームとして、StateUpdateSystem が更新する。
 `actionFrame` は StateUpdateSystem の処理開始時に 1 進み、`PlayerActionState` が切り替わった場合は 0 に戻る。
 
-PlayerControlSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
+PlayerControlSystem は、Player タグと Transform / Velocity / State / CharacterParameter を持つ GameObject を対象にする。
 PlayerControlSystem は StateComponent の `currentActionState` や `actionFrame` を更新しない。
-現段階では確定済み `PlayerActionState::Walk` のときに InputHistoryComponent のテンキー方向を使って Velocity の X 成分を毎フレーム上書きし、`PlayerActionState::Jump` の `actionFrame == 0` のときだけ Velocity の Y 成分へジャンプ初速を設定する。
+現段階では確定済み `PlayerActionState::FrontWalk / BackWalk` のときに向きとキャラクターパラメータから Velocity の X 成分を毎フレーム上書きし、各 Jump の `actionFrame == 0` のときだけ Velocity へジャンプ初速を設定する。
 Velocity はノックバック、技移動、押し出しでも変化するため、Idle / Walk 判定には使わない。
-仮接地判定は MovementSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
-この仮接地判定は、地面や壁の判定を作る段階で EmbedResolveSystem に移す。
+仮接地判定は EmbedResolveSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
 
 MovementSystem は入力を直接読まない。
 
 - `SetVelocity` は Velocity 全体を上書きする
 - `SetVelocityX/Y/Z` は指定軸だけを上書きする
 - `AddVelocity` は外力や技移動などの加算用に使う
-- `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映し、最後に仮接地補正を行う
+- `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映する
 - 上昇中と下降中で重力値を分ける
+
+EmbedResolveSystem は MovementSystem の後、TransformSystem の前に実行する。
+
+- 仮接地判定、壁補正、プレイヤー同士の PushBox めり込み補正を扱う
+- 現段階の壁は仮実装としてステージ左右端の固定値で扱う
+- 片方だけが相手方向へ歩いてめり込んだ場合、歩いていない側を押す
+- 押される側が壁に到達して押し切れない場合、残りのめり込み量は押した側へ戻す
+- 両方が押し合っている場合、またはどちらが押したか確定できない場合は、互いに離す形で補正する
+
+HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
+
+- HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
+- AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
+- HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun` を確定する
+- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 ## Input 設計
 
@@ -202,7 +223,12 @@ InputSystem は、各デバイスの入力をフレーム単位の Action 状態
 - 同一フレーム内のすべての System は、確定済みの同じ入力結果を読む
 - 有効な ActionMap はゲーム全体で 1 つだけ持つ
 - 2 プレイヤー時も ActionMap はプレイヤー単位ではなくゲーム単位で切り替える
-- PlayerInputState は Player ごとに持ち、将来の 2P 対応に備える
+- PlayerInputState は Player ごとに持つ
+- InputBinding は actionMap、action、deviceType、playerIndex、具体デバイス入力を持ち、どのデバイスをどの Player へ渡すかを Binding 側で決める
+- 現段階の既定 Binding は `Player 0 = Keyboard`、`Player 1 = Gamepad 0`
+- Gamepad の Move は左スティックと十字キーの両方から受け取る
+- 十字キーとキーボードの上下左右は、左右同時または上下同時なら打ち消し、斜め入力は長さ 1 以下に正規化する
+- スティックは radial dead zone を通した後、InputHistorySystem が角度からテンキー方向へ丸める
 - キーコンフィグは将来 JSON などの外部ファイルから読み込める構造にする
 - 直近で入力されたデバイス種別は Player ごとに保持し、操作説明 UI などで使えるようにする
 - デッドゾーンなどの調整値は InputSettings にまとめ、後から調整できるようにする
@@ -213,6 +239,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - 生のキーボード入力や PlayerInputState を丸ごと保存しない
 - `Move` Action はテンキー表記の `1〜9` に変換して保存する
+- InputHistorySystem は World の BattlePlayerId の順番と InputSystem の PlayerInputState 番号を対応させて保存する
 - 攻撃、ガードなどのボタンは InputSystem が判定済みの `Trigger / Press / Release` を保存する
 - ジャンプは専用ボタンではなく、テンキー方向 `7 / 8 / 9` から `Trigger / Press / Release` を作って保存する
 - 現段階では今フレーム分だけを保存する
@@ -232,7 +259,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。
 
-- 地面、壁、プレイヤー押し合いは MovementResolveSystem で位置を補正する
+- 地面、壁、プレイヤー押し合いは EmbedResolveSystem で位置を補正する
 - 攻撃判定、やられ判定、ガード判定は HitCollisionSystem で収集する
 - ダメージ、State 変更、ヒットストップなどの結果は HitResolveSystem で確定する
 - HitCollisionSystem は結果を直接確定しない
@@ -245,7 +272,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - HitResolveSystem が全体の衝突情報を見て結果を確定する
 - 同一フレーム内の整合性を優先する
 
-地面、壁、プレイヤー押し合いなど、移動結果を補正する接触は MovementResolveSystem の責務とする。
+地面、壁、プレイヤー押し合いなど、移動結果を補正する接触は EmbedResolveSystem の責務とする。
 
 ## ダメージ / バトル状態
 
@@ -279,8 +306,44 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
-- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent、HitBoxComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer2` は Player タグを持ち、DebugPlayer と同じバトル用 Component を持つ
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
+
+## HitBox / Battle Collision
+
+格闘ゲーム用の判定は 2D AABB を基準にする。
+
+- 判定は見た目の 3D Model とは分離し、X / Y 平面上の 2D 矩形として扱う
+- Component 数を増やしすぎないため、Player は `HitBoxComponent` 1 つを持つ
+- `HitBoxComponent` の内部で `pushBox`、`hurtBox`、`currentAttack` を分ける
+- `pushBox` はプレイヤー同士、壁、押し合い、めり込み解消に使う
+- `hurtBox` は攻撃を受ける側の被弾判定に使う
+- `currentAttack` は現在実行中の攻撃スロットと、この攻撃が既にヒットしたかを保持する
+- 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
+- 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
+- 実行確認用の `Attack1` は `debug_punch`、表示名は `デバッグパンチ`、既定入力は `Y` キーとする
+- 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
+- Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
+- Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
+- HitBox の可視化は ImGui から一括で表示/非表示を切り替えられるようにする
+
+## CharacterData / AttackData
+
+キャラクターと技は、保存場所と責務を分ける。
+
+- CharacterData は `assets/CharacterData/<CharacterId>/Parameter.json` と `AttackList.json` で管理する
+- AttackData は `assets/AttackData/<AttackDataId>.json` に技 1 つ単位で保存する
+- AttackData は特定キャラクターのフォルダ内に置かない
+- Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
+- `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
+- `AttackList.json` は、`Attack1`、`Attack2` などの slotId と、使用する AttackData ID の対応だけを持つ
+- 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
+- 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
+- `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する
+- `CharacterAttackDataComponent` は、slotId と読み込み済み AttackData の組み合わせを保持する
+- 将来の技調整モードでは、メモリ上の AttackData / CharacterData を編集し、保存時に JSON へ書き戻す
+- JSON の項目追加時は、未指定項目にデフォルト値を使えるようにし、既存データの読み込みを壊さない
 
 ## 3D Model / Resource
 

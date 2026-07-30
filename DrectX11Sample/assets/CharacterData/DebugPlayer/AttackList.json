@@ -1,0 +1,17 @@
+﻿{
+  "characterId": "DebugPlayer",
+  "attackSlots": [
+    {
+      "slotId": "Attack1",
+      "attackDataId": "debug_punch"
+    },
+    {
+      "slotId": "Attack2",
+      "attackDataId": "debug_front_kick"
+    },
+    {
+      "slotId": "Attack3",
+      "attackDataId": "debug_roundhouse_kick"
+    }
+  ]
+}
