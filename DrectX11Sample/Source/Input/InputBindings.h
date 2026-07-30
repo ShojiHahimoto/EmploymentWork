@@ -32,8 +32,39 @@ namespace Input
 		Up = 0x26
 	};
 
+	// XInput のボタンをプロジェクト内の Binding 用に表す。
+	// JSON 化する時は KeyboardKey と同じく、文字列との相互変換を追加する。
+	enum class GamepadButton : uint16_t
+	{
+		None = 0,
+
+		DPadUp,
+		DPadDown,
+		DPadLeft,
+		DPadRight,
+		Start,
+		Back,
+		LeftThumb,
+		RightThumb,
+		LeftShoulder,
+		RightShoulder,
+		A,
+		B,
+		X,
+		Y
+	};
+
+	// 2D Axis として読むゲームパッド入力。
+	// DPad は上下左右ボタンから Axis2D を作り、Stick はアナログ値を使う。
+	enum class GamepadAxis2DSource : uint8_t
+	{
+		LeftStick,
+		RightStick,
+		DPad
+	};
+
 	// Binding がどの入力デバイスを読むかを表す。
-	// Gamepad は今回未実装だが、Binding 構造を崩さず追加できるように残す。
+	// 実際にどの Player へ渡すかは InputBinding::playerIndex で決める。
 	enum class BindingDeviceType : uint8_t
 	{
 		Keyboard,
@@ -49,11 +80,29 @@ namespace Input
 	struct KeyboardAxis2DBinding
 	{
 		// 2D 入力を作る 4 方向キー。
-		// 同時押し時は InputSystem 側で正規化して長さ 1 以下に収める。
+		// 左右や上下を同時に押すと打ち消し、斜めは InputSystem 側で長さ 1 以下に収める。
 		KeyboardKey negativeX = KeyboardKey::None;
 		KeyboardKey positiveX = KeyboardKey::None;
 		KeyboardKey negativeY = KeyboardKey::None;
 		KeyboardKey positiveY = KeyboardKey::None;
+	};
+
+	struct GamepadButtonBinding
+	{
+		// XInput のコントローラー番号。0 が最初に認識されたゲームパッド。
+		int gamepadIndex = 0;
+
+		// Button Action で見る単一ボタン。
+		GamepadButton button = GamepadButton::None;
+	};
+
+	struct GamepadAxis2DBinding
+	{
+		// XInput のコントローラー番号。1P/2P の割り当て変更時はここを書き換える。
+		int gamepadIndex = 0;
+
+		// 左スティック、右スティック、十字キーのどれから Axis2D を作るか。
+		GamepadAxis2DSource source = GamepadAxis2DSource::LeftStick;
 	};
 
 	struct InputBinding
@@ -67,7 +116,7 @@ namespace Input
 		// Button / Axis など、Action 値の型。
 		InputValueType valueType = InputValueType::Button;
 
-		// 入力元デバイス。今回は Keyboard のみ処理する。
+		// 入力元デバイス。
 		BindingDeviceType deviceType = BindingDeviceType::Keyboard;
 
 		// どの PlayerInputState に反映するか。
@@ -76,6 +125,8 @@ namespace Input
 		// deviceType / valueType に応じて使う具体 Binding。
 		KeyboardButtonBinding keyboardButton;
 		KeyboardAxis2DBinding keyboardAxis2D;
+		GamepadButtonBinding gamepadButton;
+		GamepadAxis2DBinding gamepadAxis2D;
 	};
 
 	struct InputSettings
@@ -83,7 +134,7 @@ namespace Input
 		// scalar / axis を「入力あり」とみなすしきい値。
 		float buttonThreshold = 0.5f;
 
-		// ゲームパッド追加時のスティックしきい値。今回は保持のみ。
+		// ゲームパッドのスティックを無入力扱いにする中央付近のしきい値。
 		float axisDeadZone = 0.25f;
 	};
 

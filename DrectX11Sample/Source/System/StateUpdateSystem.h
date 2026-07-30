@@ -40,5 +40,5 @@ private:
 	static bool IsActionFinished(const StateComponent& state);
 	static bool CanCancelAction(const StateComponent& state);
 	static void ApplyActionState(StateComponent& state, HitBoxComponent* hitBox, const PlayerActionDecision& decision);
-	static void ApplyPlayerDirection(StateComponent& state,const TransformComponent& transform);
+	static void ApplyPlayerDirection(World& world, GameObjectId objectId, StateComponent& state, const TransformComponent& transform);
 };

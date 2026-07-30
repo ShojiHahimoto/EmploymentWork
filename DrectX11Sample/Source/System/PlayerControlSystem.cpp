@@ -34,17 +34,16 @@ void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 	// 必要コンポーネントを取得
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
-	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
 	CharacterParameterComponent* characterParameter = world.GetComponent<CharacterParameterComponent>(objectId);
 	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
 
 	// 必要コンポーネントが不足している場合更新しない
-	if (!world.GetTransform(objectId) || !velocity || !state || !inputHistory || !characterParameter || !transform)
+	if (!world.GetTransform(objectId) || !velocity || !state || !characterParameter || !transform)
 	{
 		return;
 	}
 
-	const PlayerControlFrameResult result = ExecuteCurrentAction(*state, *inputHistory, characterParameter->parameter);
+	const PlayerControlFrameResult result = ExecuteCurrentAction(*state, characterParameter->parameter);
 	ApplyFrameResult(*velocity, result);
 	ApplyPlayerDirection(*state, *transform);
 }
@@ -53,16 +52,13 @@ void PlayerControlSystem::UpdatePlayer(World& world, GameObjectId objectId)
 /// 現在の PlayerActionState を読み、今フレームに Velocity へ書き込む値だけを作る。
 /// </summary>
 /// <param name="state">StateUpdateSystem が確定した Player の状態。</param>
-/// <param name="inputHistory">行動処理で参照する今フレームの入力履歴。</param>
 /// <param name="parameter">キャラクターごとの移動・ジャンプ調整値。</param>
 /// <returns>Velocity へ反映する今フレームの行動結果。</returns>
 PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	const StateComponent& state,
-	const InputHistoryComponent& inputHistory,
 	const CharacterParameterData& parameter)
 {
 	PlayerControlFrameResult result;
-	const InputHistoryFrame& inputFrame = inputHistory.frames[inputHistory.latestFrameIndex];
 
 	// プレイヤーの向きによって移動方向を逆転させるための指数
 	int dirIndex = 1;
@@ -122,9 +118,12 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		}
 		break;
 
+	case PlayerActionState::AirAttack:
+		result.setHorizontalVelocity = false;
+		break;
+
 	case PlayerActionState::Idle:
 	case PlayerActionState::GroundAttack:
-	case PlayerActionState::AirAttack:
 	case PlayerActionState::Hitstun:
 		// 現段階の攻撃・被弾は仮挙動として横移動を止める。
 		// 攻撃移動やノックバックを入れる場合は、各 ActionState の処理としてここから分岐を増やす。

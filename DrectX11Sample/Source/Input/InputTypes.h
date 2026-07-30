@@ -99,10 +99,10 @@ namespace Input
 		// 最後に有効入力を出したデバイス。入力が無いフレームでも保持する。
 		InputDeviceType lastUsedDeviceType = InputDeviceType::None;
 
-		// 現状は Player 0 のみ true。将来のキー割り当て変更で使う。
+		// キーボード入力をこの Player に許可するか。既定では Player 0 のみ true。
 		bool keyboardAssigned = false;
 
-		// XInput 等を追加する時のゲームパッド番号。未割り当ては -1。
+		// 代表ゲームパッド番号。実際の入力割り当ては InputBinding 側の gamepadIndex を優先する。
 		int gamepadIndex = -1;
 	};
 }

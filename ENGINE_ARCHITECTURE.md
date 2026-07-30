@@ -45,6 +45,8 @@ World は全 GameObject を保持し、生成・削除キューを管理する�
 - Update 中に GameObject 配列を直接変更してはいけない
 - 生成・削除はフレーム終端でまとめて反映する
 - World は GameObject 群に対する唯一の管理単位とする
+- バトル中に相手 Player を頻繁に参照するため、World はバトル用 Player 2 体の GameObjectId を保持する
+- Player 同士の関係はポインタではなく GameObjectId で表現し、System が必要なタイミングで World から Component を取得する
 
 ## GameObject
 
@@ -171,17 +173,20 @@ DebugSystem
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
-StateUpdateSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
-現段階では InputHistoryComponent のテンキー方向、ジャンプ、攻撃ボタン、接地状態、Y 速度を見て、`Idle`、`Walk`、`Jump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
-ジャンプ入力はテンキー方向の `7 / 8 / 9` を使う。将来は前ジャンプ、垂直ジャンプ、バックジャンプに分けるが、現段階ではすべて同じ垂直ジャンプとして扱う。
+StateUpdateSystem は、Player タグと Transform / Velocity / State を持つ GameObject を対象にする。
+InputHistoryComponent がある場合はテンキー方向、ジャンプ、攻撃ボタンを読み、ない場合は中立入力として扱う。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
+自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
+ジャンプ入力はテンキー方向の `7 / 8 / 9` を使い、向きに応じてバックジャンプ、垂直ジャンプ、前ジャンプへ分ける。
 今フレームで被弾要求がある場合は最優先で `Hitstun` に遷移し、攻撃前隙中でも攻撃を中止する。
 攻撃中や被弾中などのキャンセル不可行動は、終了またはキャンセル可能になるまで新しい行動へ変更しない。
 `actionFrame` は `PlayerActionState` に入ってからの経過フレームとして、StateUpdateSystem が更新する。
 `actionFrame` は StateUpdateSystem の処理開始時に 1 進み、`PlayerActionState` が切り替わった場合は 0 に戻る。
 
-PlayerControlSystem は、Player タグと Transform / Velocity / InputHistory / State を持つ GameObject を対象にする。
+PlayerControlSystem は、Player タグと Transform / Velocity / State / CharacterParameter を持つ GameObject を対象にする。
 PlayerControlSystem は StateComponent の `currentActionState` や `actionFrame` を更新しない。
-現段階では確定済み `PlayerActionState::Walk` のときに InputHistoryComponent のテンキー方向を使って Velocity の X 成分を毎フレーム上書きし、`PlayerActionState::Jump` の `actionFrame == 0` のときだけ Velocity の Y 成分へジャンプ初速を設定する。
+現段階では確定済み `PlayerActionState::FrontWalk / BackWalk` のときに向きとキャラクターパラメータから Velocity の X 成分を毎フレーム上書きし、各 Jump の `actionFrame == 0` のときだけ Velocity へジャンプ初速を設定する。
 Velocity はノックバック、技移動、押し出しでも変化するため、Idle / Walk 判定には使わない。
 仮接地判定は EmbedResolveSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
 
@@ -218,7 +223,12 @@ InputSystem は、各デバイスの入力をフレーム単位の Action 状態
 - 同一フレーム内のすべての System は、確定済みの同じ入力結果を読む
 - 有効な ActionMap はゲーム全体で 1 つだけ持つ
 - 2 プレイヤー時も ActionMap はプレイヤー単位ではなくゲーム単位で切り替える
-- PlayerInputState は Player ごとに持ち、将来の 2P 対応に備える
+- PlayerInputState は Player ごとに持つ
+- InputBinding は actionMap、action、deviceType、playerIndex、具体デバイス入力を持ち、どのデバイスをどの Player へ渡すかを Binding 側で決める
+- 現段階の既定 Binding は `Player 0 = Keyboard`、`Player 1 = Gamepad 0`
+- Gamepad の Move は左スティックと十字キーの両方から受け取る
+- 十字キーとキーボードの上下左右は、左右同時または上下同時なら打ち消し、斜め入力は長さ 1 以下に正規化する
+- スティックは radial dead zone を通した後、InputHistorySystem が角度からテンキー方向へ丸める
 - キーコンフィグは将来 JSON などの外部ファイルから読み込める構造にする
 - 直近で入力されたデバイス種別は Player ごとに保持し、操作説明 UI などで使えるようにする
 - デッドゾーンなどの調整値は InputSettings にまとめ、後から調整できるようにする
@@ -229,6 +239,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - 生のキーボード入力や PlayerInputState を丸ごと保存しない
 - `Move` Action はテンキー表記の `1〜9` に変換して保存する
+- InputHistorySystem は World の BattlePlayerId の順番と InputSystem の PlayerInputState 番号を対応させて保存する
 - 攻撃、ガードなどのボタンは InputSystem が判定済みの `Trigger / Press / Release` を保存する
 - ジャンプは専用ボタンではなく、テンキー方向 `7 / 8 / 9` から `Trigger / Press / Release` を作って保存する
 - 現段階では今フレーム分だけを保存する
@@ -296,7 +307,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
 - `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent、HitBoxComponent を持つ GameObject を生成する
-- `SpawnType::DebugPlayer2` は Player タグを持ち、DebugPlayer と同じバトル用 Component を持つが、現段階では InputHistoryComponent を持たせない
+- `SpawnType::DebugPlayer2` は Player タグを持ち、DebugPlayer と同じバトル用 Component を持つ
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
 
 ## HitBox / Battle Collision

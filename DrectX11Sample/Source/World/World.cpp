@@ -58,6 +58,7 @@ void World::Clear()
 	spawnRequests.clear();
 	destroyRequests.clear();
 	hitCollisionResults.clear();
+	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
 }
@@ -284,6 +285,61 @@ void World::ClearHitCollisionResults()
 }
 
 /// <summary>
+/// バトル用 Player の GameObject ID を指定スロットへ登録する。
+/// </summary>
+/// <param name="playerIndex">登録する Player 番号。現段階では 0 / 1 を使う。</param>
+/// <param name="objectId">登録する Player GameObject ID。</param>
+void World::SetBattlePlayerId(int playerIndex, GameObjectId objectId)
+{
+	if (playerIndex < 0 || playerIndex >= BattlePlayerCount)
+	{
+		return;
+	}
+
+	battlePlayerIds[static_cast<size_t>(playerIndex)] = objectId;
+}
+
+/// <summary>
+/// 指定スロットのバトル用 Player GameObject ID を取得する。
+/// </summary>
+/// <param name="playerIndex">取得する Player 番号。</param>
+/// <returns>登録済み Player GameObject ID。未登録の場合は INVALID_GAME_OBJECT_ID。</returns>
+GameObjectId World::GetBattlePlayerId(int playerIndex) const
+{
+	if (playerIndex < 0 || playerIndex >= BattlePlayerCount)
+	{
+		return INVALID_GAME_OBJECT_ID;
+	}
+
+	return battlePlayerIds[static_cast<size_t>(playerIndex)];
+}
+
+/// <summary>
+/// 指定 Player の相手側 Player GameObject ID を取得する。
+/// </summary>
+/// <param name="objectId">自分側の Player GameObject ID。</param>
+/// <returns>相手側 Player GameObject ID。見つからない場合は INVALID_GAME_OBJECT_ID。</returns>
+GameObjectId World::GetOpponentBattlePlayerId(GameObjectId objectId) const
+{
+	if (objectId == INVALID_GAME_OBJECT_ID)
+	{
+		return INVALID_GAME_OBJECT_ID;
+	}
+
+	if (battlePlayerIds[0] == objectId)
+	{
+		return battlePlayerIds[1];
+	}
+
+	if (battlePlayerIds[1] == objectId)
+	{
+		return battlePlayerIds[0];
+	}
+
+	return INVALID_GAME_OBJECT_ID;
+}
+
+/// <summary>
 /// 指定 GameObject とその子孫を、リクエストを介さず即時削除する。
 /// </summary>
 /// <param name="objectId">削除対象の GameObject ID。</param>
@@ -304,6 +360,14 @@ void World::DestroyGameObjectImmediate(GameObjectId objectId)
 	if (ContainsObjectId(destroyIds, activeCameraId))
 	{
 		activeCameraId = INVALID_GAME_OBJECT_ID;
+	}
+
+	for (GameObjectId& battlePlayerId : battlePlayerIds)
+	{
+		if (ContainsObjectId(destroyIds, battlePlayerId))
+		{
+			battlePlayerId = INVALID_GAME_OBJECT_ID;
+		}
 	}
 
 	for (GameObject& object : gameObjects)

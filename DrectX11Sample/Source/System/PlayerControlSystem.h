@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "Data/CharacterData.h"
@@ -25,7 +24,7 @@ public:
 
 private:
 	static void UpdatePlayer(World& world, GameObjectId objectId);
-	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const InputHistoryComponent& inputHistory, const CharacterParameterData& parameter);
+	static PlayerControlFrameResult ExecuteCurrentAction(const StateComponent& state, const CharacterParameterData& parameter);
 	static float GetHorizontalInputFromDirection(int direction);
 	static void ApplyFrameResult(VelocityComponent& velocity, const PlayerControlFrameResult& result);
 	static void ApplyPlayerDirection(const StateComponent& state, TransformComponent& transform);

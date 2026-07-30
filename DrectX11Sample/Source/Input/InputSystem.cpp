@@ -1,14 +1,111 @@
 ﻿#include "Input/InputSystem.h"
 
 #include <Windows.h>
+#include <Xinput.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+
+#pragma comment(lib, "xinput.lib")
 
 using namespace DirectX::SimpleMath;
 
 namespace Input
 {
+	namespace
+	{
+		constexpr int MaxXInputGamepads = 4;
+
+		std::array<XINPUT_STATE, MaxXInputGamepads> cachedGamepadStates = {};
+		std::array<bool, MaxXInputGamepads> cachedGamepadConnected = {};
+
+		/// <summary>
+		/// プロジェクト内の GamepadButton を XInput のボタンビットへ変換する。
+		/// </summary>
+		/// <param name="button">変換するゲームパッドボタン。</param>
+		/// <returns>XInput の wButtons と比較するビット。None は 0。</returns>
+		WORD ToXInputButton(GamepadButton button)
+		{
+			switch (button)
+			{
+			case GamepadButton::DPadUp: return XINPUT_GAMEPAD_DPAD_UP;
+			case GamepadButton::DPadDown: return XINPUT_GAMEPAD_DPAD_DOWN;
+			case GamepadButton::DPadLeft: return XINPUT_GAMEPAD_DPAD_LEFT;
+			case GamepadButton::DPadRight: return XINPUT_GAMEPAD_DPAD_RIGHT;
+			case GamepadButton::Start: return XINPUT_GAMEPAD_START;
+			case GamepadButton::Back: return XINPUT_GAMEPAD_BACK;
+			case GamepadButton::LeftThumb: return XINPUT_GAMEPAD_LEFT_THUMB;
+			case GamepadButton::RightThumb: return XINPUT_GAMEPAD_RIGHT_THUMB;
+			case GamepadButton::LeftShoulder: return XINPUT_GAMEPAD_LEFT_SHOULDER;
+			case GamepadButton::RightShoulder: return XINPUT_GAMEPAD_RIGHT_SHOULDER;
+			case GamepadButton::A: return XINPUT_GAMEPAD_A;
+			case GamepadButton::B: return XINPUT_GAMEPAD_B;
+			case GamepadButton::X: return XINPUT_GAMEPAD_X;
+			case GamepadButton::Y: return XINPUT_GAMEPAD_Y;
+			case GamepadButton::None:
+			default:
+				return 0;
+			}
+		}
+
+		/// <summary>
+		/// XInput の SHORT スティック値を -1.0〜1.0 に正規化する。
+		/// </summary>
+		/// <param name="value">XInput から取得したスティック値。</param>
+		/// <returns>正規化済みの軸入力。</returns>
+		float NormalizeThumbValue(SHORT value)
+		{
+			if (value < 0)
+			{
+				return static_cast<float>(value) / 32768.0f;
+			}
+
+			return static_cast<float>(value) / 32767.0f;
+		}
+
+		/// <summary>
+		/// スティックの中央付近を無入力にし、外側の値を滑らかに 0〜1 へ再配置する。
+		/// </summary>
+		/// <param name="axis">正規化済みの生スティック入力。</param>
+		/// <param name="deadZone">無入力扱いにする中心半径。</param>
+		/// <returns>デッドゾーン適用後のスティック入力。</returns>
+		Vector2 ApplyRadialDeadZone(const Vector2& axis, float deadZone)
+		{
+			const float length = axis.Length();
+			if (length <= deadZone)
+			{
+				return Vector2::Zero;
+			}
+
+			const float safeRange = std::max(1.0f - deadZone, 0.001f);
+			const float normalizedLength = std::clamp((length - deadZone) / safeRange, 0.0f, 1.0f);
+			const Vector2 direction = axis / length;
+			return direction * normalizedLength;
+		}
+
+		/// <summary>
+		/// XInput の十字キー状態から Axis2D を作る。
+		/// </summary>
+		/// <param name="gamepad">XInput から取得した Gamepad 状態。</param>
+		/// <returns>左右・上下同時押しは打ち消し、斜めは長さ 1 に収めた Axis2D。</returns>
+		Vector2 BuildDPadAxis(const XINPUT_GAMEPAD& gamepad)
+		{
+			Vector2 axis = Vector2::Zero;
+			if ((gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) != 0) axis.x -= 1.0f;
+			if ((gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) != 0) axis.x += 1.0f;
+			if ((gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) != 0) axis.y -= 1.0f;
+			if ((gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) != 0) axis.y += 1.0f;
+
+			if (axis.LengthSquared() > 1.0f)
+			{
+				axis.Normalize();
+			}
+
+			return axis;
+		}
+	}
+
 	// InputSystem は static なフレーム入力状態を持つ。
 	// Scene / System はここから同一フレーム内で同じ結果を読む。
 	InputActionMapId InputSystem::currentActionMap = InputActionMapId::Gameplay;
@@ -78,48 +175,88 @@ namespace Input
 	}
 
 	/// <summary>
-	/// 初期状態で使うキーボード Binding を作る。
+	/// 初期状態で使うキーボード / ゲームパッド Binding を作る。
 	/// </summary>
 	/// <returns>Gameplay と UI の既定 Binding 配列。</returns>
 	std::vector<InputBinding> CreateDefaultInputBindings()
 	{
 		std::vector<InputBinding> defaultBindings;
 
-		// Button Action 用の Binding を 1 件追加する小さな補助。
+		// Button Action 用のキーボード Binding を 1 件追加する小さな補助。
 		auto addKeyboardButton = [&defaultBindings](
 			InputActionMapId actionMap,
 			InputActionId action,
-			KeyboardKey key)
+			KeyboardKey key,
+			int playerIndex = 0)
 			{
 				InputBinding binding;
 				binding.actionMap = actionMap;
 				binding.action = action;
 				binding.valueType = InputValueType::Button;
 				binding.deviceType = BindingDeviceType::Keyboard;
-				binding.playerIndex = 0;
+				binding.playerIndex = playerIndex;
 				binding.keyboardButton.key = key;
 				defaultBindings.push_back(binding);
 			};
 
-		// WASD や矢印キーなど、4 キーから Axis2D Action を作る Binding を追加する。
+		// WASD や矢印キーなど、4 キーから Axis2D Action を作るキーボード Binding を追加する。
 		auto addKeyboardAxis2D = [&defaultBindings](
 			InputActionMapId actionMap,
 			InputActionId action,
 			KeyboardKey negativeX,
 			KeyboardKey positiveX,
 			KeyboardKey negativeY,
-			KeyboardKey positiveY)
+			KeyboardKey positiveY,
+			int playerIndex = 0)
 			{
 				InputBinding binding;
 				binding.actionMap = actionMap;
 				binding.action = action;
 				binding.valueType = InputValueType::Axis2D;
 				binding.deviceType = BindingDeviceType::Keyboard;
-				binding.playerIndex = 0;
+				binding.playerIndex = playerIndex;
 				binding.keyboardAxis2D.negativeX = negativeX;
 				binding.keyboardAxis2D.positiveX = positiveX;
 				binding.keyboardAxis2D.negativeY = negativeY;
 				binding.keyboardAxis2D.positiveY = positiveY;
+				defaultBindings.push_back(binding);
+			};
+
+		// Button Action 用のゲームパッド Binding を 1 件追加する小さな補助。
+		auto addGamepadButton = [&defaultBindings](
+			InputActionMapId actionMap,
+			InputActionId action,
+			int playerIndex,
+			int gamepadIndex,
+			GamepadButton button)
+			{
+				InputBinding binding;
+				binding.actionMap = actionMap;
+				binding.action = action;
+				binding.valueType = InputValueType::Button;
+				binding.deviceType = BindingDeviceType::Gamepad;
+				binding.playerIndex = playerIndex;
+				binding.gamepadButton.gamepadIndex = gamepadIndex;
+				binding.gamepadButton.button = button;
+				defaultBindings.push_back(binding);
+			};
+
+		// スティックや十字キーから Axis2D Action を作るゲームパッド Binding を追加する。
+		auto addGamepadAxis2D = [&defaultBindings](
+			InputActionMapId actionMap,
+			InputActionId action,
+			int playerIndex,
+			int gamepadIndex,
+			GamepadAxis2DSource source)
+			{
+				InputBinding binding;
+				binding.actionMap = actionMap;
+				binding.action = action;
+				binding.valueType = InputValueType::Axis2D;
+				binding.deviceType = BindingDeviceType::Gamepad;
+				binding.playerIndex = playerIndex;
+				binding.gamepadAxis2D.gamepadIndex = gamepadIndex;
+				binding.gamepadAxis2D.source = source;
 				defaultBindings.push_back(binding);
 			};
 
@@ -130,6 +267,18 @@ namespace Input
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::HeavyAttack, KeyboardKey::L);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::Guard, KeyboardKey::I);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::Pause, KeyboardKey::Escape);
+
+		// 仮の 2P 操作。ゲームパッド 0 が接続されていれば Player 1 に入力が入る。
+		// 将来は JSON の Binding 差し替えで 1P/2P とデバイス番号を自由に変更する。
+		constexpr int Player2Index = 1;
+		constexpr int DefaultGamepadIndex = 0;
+		addGamepadAxis2D(InputActionMapId::Gameplay, InputActionId::Move, Player2Index, DefaultGamepadIndex, GamepadAxis2DSource::LeftStick);
+		addGamepadAxis2D(InputActionMapId::Gameplay, InputActionId::Move, Player2Index, DefaultGamepadIndex, GamepadAxis2DSource::DPad);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::LightAttack, Player2Index, DefaultGamepadIndex, GamepadButton::X);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::MediumAttack, Player2Index, DefaultGamepadIndex, GamepadButton::Y);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::HeavyAttack, Player2Index, DefaultGamepadIndex, GamepadButton::B);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::Guard, Player2Index, DefaultGamepadIndex, GamepadButton::LeftShoulder);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::Pause, Player2Index, DefaultGamepadIndex, GamepadButton::Start);
 
 		// UI はメニュー操作用。Gameplay と同時には有効にしない。
 		addKeyboardAxis2D(InputActionMapId::UI, InputActionId::Move, KeyboardKey::Left, KeyboardKey::Right, KeyboardKey::Down, KeyboardKey::Up);
@@ -155,6 +304,7 @@ namespace Input
 		}
 
 		players[0].keyboardAssigned = true;
+		players[1].gamepadIndex = 0;
 	}
 
 	/// <summary>
@@ -164,6 +314,7 @@ namespace Input
 	{
 		UpdatePreviousValues();
 		ClearCurrentValues();
+		UpdateGamepadStates();
 
 		for (const InputBinding& binding : bindings)
 		{
@@ -351,39 +502,72 @@ namespace Input
 		}
 
 		PlayerInputState& player = players[binding.playerIndex];
-		if (binding.deviceType == BindingDeviceType::Keyboard && !player.keyboardAssigned)
-		{
-			return;
-		}
-
-		if (binding.deviceType != BindingDeviceType::Keyboard)
-		{
-			return;
-		}
-
 		InputValue value;
-		if (binding.valueType == InputValueType::Button)
-		{
-			value = InputValue::Button(IsKeyboardKeyDown(binding.keyboardButton.key));
-		}
-		else if (binding.valueType == InputValueType::Axis2D)
-		{
-			// 4 方向キーから 2D 軸を作る。斜め入力は長さ 1 に正規化する。
-			Vector2 axis = Vector2::Zero;
-			if (IsKeyboardKeyDown(binding.keyboardAxis2D.negativeX)) axis.x -= 1.0f;
-			if (IsKeyboardKeyDown(binding.keyboardAxis2D.positiveX)) axis.x += 1.0f;
-			if (IsKeyboardKeyDown(binding.keyboardAxis2D.negativeY)) axis.y -= 1.0f;
-			if (IsKeyboardKeyDown(binding.keyboardAxis2D.positiveY)) axis.y += 1.0f;
+		InputDeviceType deviceType = InputDeviceType::None;
 
-			if (axis.LengthSquared() > 1.0f)
+		if (binding.deviceType == BindingDeviceType::Keyboard)
+		{
+			if (!player.keyboardAssigned)
 			{
-				axis.Normalize();
+				return;
 			}
 
-			value = InputValue::Axis2D(axis);
+			if (binding.valueType == InputValueType::Button)
+			{
+				value = InputValue::Button(IsKeyboardKeyDown(binding.keyboardButton.key));
+			}
+			else if (binding.valueType == InputValueType::Axis2D)
+			{
+				// 4 方向キーから 2D 軸を作る。斜め入力は長さ 1 に正規化する。
+				Vector2 axis = Vector2::Zero;
+				if (IsKeyboardKeyDown(binding.keyboardAxis2D.negativeX)) axis.x -= 1.0f;
+				if (IsKeyboardKeyDown(binding.keyboardAxis2D.positiveX)) axis.x += 1.0f;
+				if (IsKeyboardKeyDown(binding.keyboardAxis2D.negativeY)) axis.y -= 1.0f;
+				if (IsKeyboardKeyDown(binding.keyboardAxis2D.positiveY)) axis.y += 1.0f;
+
+				if (axis.LengthSquared() > 1.0f)
+				{
+					axis.Normalize();
+				}
+
+				value = InputValue::Axis2D(axis);
+			}
+
+			deviceType = InputDeviceType::Keyboard;
+		}
+		else if (binding.deviceType == BindingDeviceType::Gamepad)
+		{
+			if (binding.valueType == InputValueType::Button)
+			{
+				value = InputValue::Button(IsGamepadButtonDown(binding.gamepadButton.gamepadIndex, binding.gamepadButton.button));
+			}
+			else if (binding.valueType == InputValueType::Axis2D)
+			{
+				value = InputValue::Axis2D(GetGamepadAxis2D(binding.gamepadAxis2D));
+			}
+
+			deviceType = InputDeviceType::Gamepad;
+		}
+		else
+		{
+			return;
 		}
 
-		MergeActionValue(player, binding, value, InputDeviceType::Keyboard);
+		MergeActionValue(player, binding, value, deviceType);
+	}
+
+	/// <summary>
+	/// XInput のゲームパッド接続状態と入力値を、今フレーム用にまとめて取得する。
+	/// </summary>
+	void InputSystem::UpdateGamepadStates()
+	{
+		for (int gamepadIndex = 0; gamepadIndex < MaxXInputGamepads; ++gamepadIndex)
+		{
+			XINPUT_STATE state = {};
+			const DWORD result = XInputGetState(static_cast<DWORD>(gamepadIndex), &state);
+			cachedGamepadConnected[gamepadIndex] = result == ERROR_SUCCESS;
+			cachedGamepadStates[gamepadIndex] = cachedGamepadConnected[gamepadIndex] ? state : XINPUT_STATE{};
+		}
 	}
 
 	/// <summary>
@@ -434,6 +618,64 @@ namespace Input
 		}
 
 		return (GetAsyncKeyState(static_cast<int>(key)) & 0x8000) != 0;
+	}
+
+	/// <summary>
+	/// XInput のゲームパッド番号が管理範囲内か確認する。
+	/// </summary>
+	/// <param name="gamepadIndex">確認するゲームパッド番号。</param>
+	/// <returns>範囲内なら true。</returns>
+	bool InputSystem::IsValidGamepadIndex(int gamepadIndex)
+	{
+		return gamepadIndex >= 0 && gamepadIndex < MaxXInputGamepads;
+	}
+
+	/// <summary>
+	/// 指定ゲームパッドの指定ボタンが押されているか確認する。
+	/// </summary>
+	/// <param name="gamepadIndex">XInput のゲームパッド番号。</param>
+	/// <param name="button">確認するボタン。</param>
+	/// <returns>接続されていてボタンが押されていれば true。</returns>
+	bool InputSystem::IsGamepadButtonDown(int gamepadIndex, GamepadButton button)
+	{
+		if (!IsValidGamepadIndex(gamepadIndex) || !cachedGamepadConnected[gamepadIndex])
+		{
+			return false;
+		}
+
+		const WORD xinputButton = ToXInputButton(button);
+		if (xinputButton == 0)
+		{
+			return false;
+		}
+
+		return (cachedGamepadStates[gamepadIndex].Gamepad.wButtons & xinputButton) != 0;
+	}
+
+	/// <summary>
+	/// 指定ゲームパッド Binding から Axis2D 入力を取得する。
+	/// </summary>
+	/// <param name="binding">ゲームパッド番号と Axis 入力元を持つ Binding。</param>
+	/// <returns>接続されていれば Axis2D、未接続なら Zero。</returns>
+	Vector2 InputSystem::GetGamepadAxis2D(const GamepadAxis2DBinding& binding)
+	{
+		if (!IsValidGamepadIndex(binding.gamepadIndex) || !cachedGamepadConnected[binding.gamepadIndex])
+		{
+			return Vector2::Zero;
+		}
+
+		const XINPUT_GAMEPAD& gamepad = cachedGamepadStates[binding.gamepadIndex].Gamepad;
+		if (binding.source == GamepadAxis2DSource::DPad)
+		{
+			return BuildDPadAxis(gamepad);
+		}
+
+		const bool useRightStick = binding.source == GamepadAxis2DSource::RightStick;
+		const SHORT rawX = useRightStick ? gamepad.sThumbRX : gamepad.sThumbLX;
+		const SHORT rawY = useRightStick ? gamepad.sThumbRY : gamepad.sThumbLY;
+		const Vector2 rawAxis(NormalizeThumbValue(rawX), NormalizeThumbValue(rawY));
+
+		return ApplyRadialDeadZone(rawAxis, settings.axisDeadZone);
 	}
 
 	/// <summary>

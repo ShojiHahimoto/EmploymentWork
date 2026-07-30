@@ -73,6 +73,8 @@ namespace
 		hitBox.hurtBox.offset = Vector2(-0.15f, 4.5f);
 		hitBox.hurtBox.size = Vector2(1.5f, 2.0f);
 		world.AddComponent<HitBoxComponent>(objectId, hitBox);
+
+		world.AddComponent<InputHistoryComponent>(objectId);
 	}
 }
 
@@ -114,13 +116,14 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 		{
 			const GameObjectId objectId = world.CreateTransform(request.name);
 			InitializeDebugPlayer(world, objectId, request, "DebugPlayer", FacingDirection::Right);
-			world.AddComponent<InputHistoryComponent>(objectId);
+			world.SetBattlePlayerId(0, objectId);
 			break;
 		}
 		case SpawnType::DebugPlayer2:
 		{
 			const GameObjectId objectId = world.CreateTransform(request.name);
 			InitializeDebugPlayer(world, objectId, request, "DebugPlayer2", FacingDirection::Left);
+			world.SetBattlePlayerId(1, objectId);
 			break;
 		}
 		case SpawnType::DebugCube:

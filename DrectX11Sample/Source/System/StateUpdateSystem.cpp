@@ -49,7 +49,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	// Count this frame first. If the action changes below, ApplyActionState resets it to 0.
 	++state->actionFrame;
 
-	ApplyPlayerDirection(*state, *transform);
+	ApplyPlayerDirection(world, objectId, *state, *transform);
 
 	InputHistoryFrame neutralInputFrame;
 	const InputHistoryFrame& inputFrame = inputHistory
@@ -284,20 +284,36 @@ void StateUpdateSystem::ApplyActionState(StateComponent& state, HitBoxComponent*
 }
 
 /// <summary>
-/// ステートコンポーネント内のプレイヤーの向き情報を更新する処理
+/// 相手 Player との X 座標関係から、ステートコンポーネント内のプレイヤー向きを更新する。
 /// </summary>
-/// <param name="state">ステートコンポーネント</param>
-/// <param name="transform">向き判定に使うトランスフォームコンポーネント</param>
-void StateUpdateSystem::ApplyPlayerDirection(StateComponent& state, const TransformComponent& transform)
+/// <param name="world">相手 Player の Transform を取得する World。</param>
+/// <param name="objectId">向きを更新する Player GameObject ID。</param>
+/// <param name="state">向き情報を書き込む StateComponent。</param>
+/// <param name="transform">自分の X 座標を確認する TransformComponent。</param>
+void StateUpdateSystem::ApplyPlayerDirection(
+	World& world,
+	GameObjectId objectId,
+	StateComponent& state,
+	const TransformComponent& transform)
 {
-	if (state.currentActionState == PlayerActionState::Idle || state.currentActionState == PlayerActionState::FrontWalk)
+	if (state.currentActionState == PlayerActionState::Idle
+		|| state.currentActionState == PlayerActionState::FrontWalk
+		|| state.currentActionState == PlayerActionState::BackWalk)
 	{
-		// 仮判定　X座標0を基準にX0方向を向かせる
-		if (TransformSystem::GetLocalPosition(transform).x < 0)
+		const GameObjectId opponentId = world.GetOpponentBattlePlayerId(objectId);
+		const TransformComponent* opponentTransform = world.GetTransform(opponentId);
+		if (!opponentTransform)
+		{
+			return;
+		}
+
+		const float selfX = TransformSystem::GetLocalPosition(transform).x;
+		const float opponentX = TransformSystem::GetLocalPosition(*opponentTransform).x;
+		if (selfX < opponentX)
 		{
 			state.facingDirection = FacingDirection::Right;
 		}
-		else
+		else if (selfX > opponentX)
 		{
 			state.facingDirection = FacingDirection::Left;
 		}

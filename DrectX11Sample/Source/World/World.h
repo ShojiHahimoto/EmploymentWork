@@ -4,6 +4,7 @@
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
 
+#include <array>
 #include <cassert>
 #include <memory>
 #include <string>
@@ -45,6 +46,8 @@ struct HitCollisionResult
 class World
 {
 public:
+	static constexpr int BattlePlayerCount = 2;
+
 	GameObjectId CreateGameObject();
 	GameObjectId CreateGameObject(const std::string& name);
 
@@ -95,6 +98,10 @@ public:
 	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
 	void ClearHitCollisionResults();
 
+	void SetBattlePlayerId(int playerIndex, GameObjectId objectId);
+	GameObjectId GetBattlePlayerId(int playerIndex) const;
+	GameObjectId GetOpponentBattlePlayerId(GameObjectId objectId) const;
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
@@ -102,6 +109,7 @@ private:
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
 	std::vector<HitCollisionResult> hitCollisionResults;
+	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;

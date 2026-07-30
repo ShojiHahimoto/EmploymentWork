@@ -138,7 +138,8 @@ bool MovementSystem::ShouldApplyGravity(const TransformComponent& transform, con
 	if (state.currentActionState == PlayerActionState::VerticalJump
 		|| state.currentActionState == PlayerActionState::FrontJump
 		|| state.currentActionState == PlayerActionState::BackJump
-		|| state.currentActionState == PlayerActionState::Fall)
+		|| state.currentActionState == PlayerActionState::Fall
+		|| state.currentActionState == PlayerActionState::AirAttack)
 	{
 		return true;
 	}

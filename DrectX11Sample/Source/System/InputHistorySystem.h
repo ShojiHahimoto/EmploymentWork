@@ -13,7 +13,7 @@ public:
 	static void Update(World& world);
 
 private:
-	static void UpdateInputHistory(World& world, GameObjectId objectId);
+	static void UpdateInputHistory(World& world, GameObjectId objectId, int playerIndex);
 	static InputHistoryFrame BuildHistoryFrame(const Input::PlayerInputState& inputState);
 	static int ConvertMoveAxisToDirection(const DirectX::SimpleMath::Vector2& moveAxis);
 	static InputButtonHistoryState BuildJumpDirectionState(int currentDirection, int previousDirection);
