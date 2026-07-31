@@ -19,6 +19,14 @@ enum class SpawnType
 	DebugPlayer2,
 };
 
+enum class BattleResult
+{
+	None,
+	Player1Win,
+	Player2Win,
+	Draw,
+};
+
 struct SpawnRequest
 {
 	SpawnType type = SpawnType::DebugCube;
@@ -39,6 +47,7 @@ struct HitCollisionResult
 	std::string attackSlotId;
 	std::string attackDataId;
 	std::string attackDisplayName;
+	int damage = 10;
 	int hitstunFrames = 30;
 	int hitboxIndex = -1;
 };
@@ -102,6 +111,11 @@ public:
 	GameObjectId GetBattlePlayerId(int playerIndex) const;
 	GameObjectId GetOpponentBattlePlayerId(GameObjectId objectId) const;
 
+	void SetBattleResult(BattleResult result);
+	BattleResult GetBattleResult() const;
+	bool HasBattleResult() const;
+	void ClearBattleResult();
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
@@ -110,6 +124,7 @@ private:
 	std::vector<DestroyRequest> destroyRequests;
 	std::vector<HitCollisionResult> hitCollisionResults;
 	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
+	BattleResult battleResult = BattleResult::None;
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;

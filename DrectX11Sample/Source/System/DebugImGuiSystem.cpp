@@ -4,6 +4,7 @@
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
 #include "Component/HitBoxComponent.h"
+#include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
@@ -328,6 +329,10 @@ void DebugImGuiSystem::DrawWorldInspector(World& world)
 				if (world.HasComponent<CharacterParameterComponent>(object.id)) ImGui::BulletText("CharacterParameter");
 				if (world.HasComponent<CharacterAttackDataComponent>(object.id)) ImGui::BulletText("CharacterAttackData");
 				if (world.HasComponent<HitBoxComponent>(object.id)) ImGui::BulletText("HitBox");
+				if (const HealthComponent* health = world.GetComponent<HealthComponent>(object.id))
+				{
+					ImGui::BulletText("Health: %d / %d", health->currentHp, health->maxHp);
+				}
 
 				HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
 				if (hitBox && ImGui::TreeNode("HitBox Settings"))

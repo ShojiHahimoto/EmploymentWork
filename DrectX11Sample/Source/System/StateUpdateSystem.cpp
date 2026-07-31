@@ -77,6 +77,14 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 		return { PlayerActionState::Hitstun, true };
 	}
 
+	if (state.currentActionState == PlayerActionState::AirAttack)
+	{
+		if (state.isGrounded)
+		{
+			return { PlayerActionState::Idle, false };
+		}
+	}
+
 	if (IsLockedAction(state.currentActionState)
 		&& !IsActionFinished(state)
 		&& !CanCancelAction(state))

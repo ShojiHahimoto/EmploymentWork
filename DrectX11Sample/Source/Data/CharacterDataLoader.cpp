@@ -168,6 +168,7 @@ namespace
 		parameter.backJumpHorizontalVelocity = GetFloat(source, "backJumpHorizontalVelocity", parameter.backJumpHorizontalVelocity);
 		parameter.riseGravityPerFrame = GetFloat(source, "riseGravityPerFrame", parameter.riseGravityPerFrame);
 		parameter.fallGravityPerFrame = GetFloat(source, "fallGravityPerFrame", parameter.fallGravityPerFrame);
+		parameter.maxHp = GetInt(source, "maxHp", parameter.maxHp);
 	}
 
 	/// <summary>
@@ -360,6 +361,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 
 	outAttackData.attackDataId = GetString(root, "attackDataId", attackDataId);
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
+	outAttackData.damage = GetInt(root, "damage", outAttackData.damage);
 	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);

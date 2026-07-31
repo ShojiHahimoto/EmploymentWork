@@ -173,6 +173,7 @@ namespace
 			result.attackSlotId = assignedAttack.slotId;
 			result.attackDataId = assignedAttack.attack.attackDataId;
 			result.attackDisplayName = assignedAttack.attack.displayName;
+			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.hitboxIndex = static_cast<int>(hitboxIndex);
 			world.AddHitCollisionResult(result);

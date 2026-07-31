@@ -6,8 +6,10 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <SimpleMath.h>
+#include <SpriteBatch.h>
 #include <io.h>
 #include <locale.h>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -128,6 +130,7 @@ private:
 	static ID3D11Buffer* m_pModelConstantBuffer;
 	static ID3D11SamplerState* m_pModelSamplerState;
 	static ID3D11ShaderResourceView* m_pWhiteTextureView;
+	static std::unique_ptr<DirectX::SpriteBatch> m_pSpriteBatch;
 
 	static HRESULT CreateRenderAndDepthResources(int width, int height);
 	static void SetViewport(int width, int height);
@@ -163,5 +166,8 @@ public:
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
 	static bool DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
+	static HRESULT LoadTextureFromFile(const std::string& path, ID3D11ShaderResourceView** textureView);
+	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
+	static void DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height);
 	static void SetDepthEnable(bool Enable);
 };

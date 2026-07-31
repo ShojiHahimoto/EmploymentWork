@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_punch",
   "displayName": "デバッグパンチ",
+  "damage": 50,
   "hitstunFrames": 30,
   "frame": {
     "startup": 5,

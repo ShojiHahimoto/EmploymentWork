@@ -59,6 +59,7 @@ void World::Clear()
 	destroyRequests.clear();
 	hitCollisionResults.clear();
 	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
+	battleResult = BattleResult::None;
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
 }
@@ -337,6 +338,41 @@ GameObjectId World::GetOpponentBattlePlayerId(GameObjectId objectId) const
 	}
 
 	return INVALID_GAME_OBJECT_ID;
+}
+
+/// <summary>
+/// BattleScene の勝敗結果を World に記録する。
+/// </summary>
+/// <param name="result">確定した勝敗結果。</param>
+void World::SetBattleResult(BattleResult result)
+{
+	battleResult = result;
+}
+
+/// <summary>
+/// 現在記録されている BattleScene の勝敗結果を取得する。
+/// </summary>
+/// <returns>勝敗結果。未決着の場合は BattleResult::None。</returns>
+BattleResult World::GetBattleResult() const
+{
+	return battleResult;
+}
+
+/// <summary>
+/// BattleScene の勝敗結果が確定しているか確認する。
+/// </summary>
+/// <returns>勝敗結果が None 以外なら true。</returns>
+bool World::HasBattleResult() const
+{
+	return battleResult != BattleResult::None;
+}
+
+/// <summary>
+/// BattleScene の勝敗結果を未決着状態へ戻す。
+/// </summary>
+void World::ClearBattleResult()
+{
+	battleResult = BattleResult::None;
 }
 
 /// <summary>

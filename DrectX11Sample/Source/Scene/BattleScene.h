@@ -28,6 +28,7 @@ private:
 	int height;
 
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
+	void RequestResultSceneIfBattleFinished();
 
 #if defined(_DEBUG)
 	TransformComponent debugSceneCameraTransform;

@@ -1,5 +1,6 @@
 ﻿#include "System/HitResolveSystem.h"
 
+#include "Component/HealthComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
@@ -48,6 +49,8 @@ void HitResolveSystem::Update(World& world)
 			result.attackSlotId,
 			" attack=",
 			result.attackDisplayName.empty() ? result.attackDataId : result.attackDisplayName,
+			" damage=",
+			result.damage,
 			" hitstunFrames=",
 			result.hitstunFrames,
 			" hitbox=",
@@ -61,9 +64,11 @@ void HitResolveSystem::Update(World& world)
 
 	for (const HitCollisionResult& result : results)
 	{
+		ApplyDamage(world, result.defenderId, result.damage);
 		ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 	}
 
+	ResolveBattleResult(world);
 	world.ClearHitCollisionResults();
 }
 
@@ -81,6 +86,40 @@ void HitResolveSystem::MarkAttackAsHit(World& world, GameObjectId attackerId)
 	}
 
 	hitBox->currentAttack.hasHit = true;
+}
+
+/// <summary>
+/// 防御側 HP を攻撃力分だけ減算し、0 未満にならないように丸める。
+/// </summary>
+/// <param name="world">防御側 HealthComponent を取得する World。</param>
+/// <param name="defenderId">防御側 GameObject ID。</param>
+/// <param name="damage">減算する攻撃力。</param>
+void HitResolveSystem::ApplyDamage(World& world, GameObjectId defenderId, int damage)
+{
+	if (damage <= 0)
+	{
+		return;
+	}
+
+	HealthComponent* health = world.GetComponent<HealthComponent>(defenderId);
+	if (!health)
+	{
+		return;
+	}
+
+	health->currentHp -= damage;
+	if (health->currentHp < 0)
+	{
+		health->currentHp = 0;
+	}
+
+	DebugLog(
+		"[Health] ",
+		GetObjectNameOrUnknown(world, defenderId),
+		" HP=",
+		health->currentHp,
+		"/",
+		health->maxHp);
 }
 
 /// <summary>
@@ -106,5 +145,41 @@ void HitResolveSystem::ApplyHitstun(World& world, GameObjectId defenderId, int h
 	{
 		hitBox->currentAttack.slotId.clear();
 		hitBox->currentAttack.hasHit = false;
+	}
+}
+
+/// <summary>
+/// 両プレイヤーの HP を確認し、0 以下のプレイヤーがいれば勝敗結果を World に記録する。
+/// </summary>
+/// <param name="world">バトル用 Player ID と HealthComponent を保持する World。</param>
+void HitResolveSystem::ResolveBattleResult(World& world)
+{
+	if (world.HasBattleResult())
+	{
+		return;
+	}
+
+	const GameObjectId player1Id = world.GetBattlePlayerId(0);
+	const GameObjectId player2Id = world.GetBattlePlayerId(1);
+	const HealthComponent* player1Health = world.GetComponent<HealthComponent>(player1Id);
+	const HealthComponent* player2Health = world.GetComponent<HealthComponent>(player2Id);
+	if (!player1Health || !player2Health)
+	{
+		return;
+	}
+
+	const bool player1Defeated = player1Health->currentHp <= 0;
+	const bool player2Defeated = player2Health->currentHp <= 0;
+	if (player1Defeated && player2Defeated)
+	{
+		world.SetBattleResult(BattleResult::Draw);
+	}
+	else if (player1Defeated)
+	{
+		world.SetBattleResult(BattleResult::Player2Win);
+	}
+	else if (player2Defeated)
+	{
+		world.SetBattleResult(BattleResult::Player1Win);
 	}
 }

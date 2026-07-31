@@ -53,6 +53,8 @@ struct AttackData
 	std::string attackDataId;
 	// 調整画面やデバッグ表示で使う表示名。
 	std::string displayName;
+	// ヒット時に相手 HP から減算する攻撃力。
+	int damage = 10;
 	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
 	int hitstunFrames = 30;
 	AttackFrameData frame;

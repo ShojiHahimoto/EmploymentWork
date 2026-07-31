@@ -4,7 +4,10 @@
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
+#include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
+#include "Scene/ResultScene.h"
+#include "Scene/SceneManager.h"
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
@@ -19,6 +22,8 @@
 #include "System/SpawnDestroySystem.h"
 #include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
+
+#include <memory>
 
 using namespace DirectX::SimpleMath;
 
@@ -38,6 +43,8 @@ BattleScene::BattleScene(int initialWidth, int initialHeight)
 /// </summary>
 void BattleScene::Enter()
 {
+	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
+
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
@@ -128,6 +135,7 @@ void BattleScene::RunSystems()
 		}
 	}
 
+	RequestResultSceneIfBattleFinished();
 }
 
 /// <summary>
@@ -233,6 +241,23 @@ World& BattleScene::GetWorld()
 const World& BattleScene::GetWorld() const
 {
 	return world;
+}
+
+/// <summary>
+/// World に勝敗結果が記録されていれば、ResultScene への切り替えを予約する。
+/// </summary>
+void BattleScene::RequestResultSceneIfBattleFinished()
+{
+	if (!world.HasBattleResult())
+	{
+		return;
+	}
+
+	const BattleResult result = world.GetBattleResult();
+	DebugLog("[BattleScene] Battle finished. Result=", static_cast<int>(result));
+
+	SceneManager::GetInstance().RequestChangeScene(
+		std::make_unique<ResultScene>(width, height, result));
 }
 
 #if defined(_DEBUG)

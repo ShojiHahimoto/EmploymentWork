@@ -72,6 +72,12 @@
     <ClCompile Include="Source\Scene\BattleScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Scene\ResultScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\TitleScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\Application.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -191,6 +197,9 @@
     <ClInclude Include="Source\Component\HitBoxComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\HealthComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\InputHistoryComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
@@ -242,10 +251,16 @@
     <ClInclude Include="Source\Scene\BattleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\ResultScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\Scene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\SceneManager.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\TitleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\World\World.h">
@@ -304,6 +319,15 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\AttackData\debug_punch.json">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="assets\texture\result_kari.png">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="assets\texture\title_kari.png">
+      <Filter>リソース ファイル</Filter>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
 </Project>

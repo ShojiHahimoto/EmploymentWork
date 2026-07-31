@@ -3,6 +3,7 @@
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
 #include "Component/HitBoxComponent.h"
+#include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
@@ -62,6 +63,11 @@ namespace
 		CharacterParameterComponent characterParameter;
 		characterParameter.parameter = characterData.parameter;
 		world.AddComponent<CharacterParameterComponent>(objectId, characterParameter);
+
+		HealthComponent health;
+		health.maxHp = characterData.parameter.maxHp > 0 ? characterData.parameter.maxHp : 1;
+		health.currentHp = health.maxHp;
+		world.AddComponent<HealthComponent>(objectId, health);
 
 		CharacterAttackDataComponent characterAttackData;
 		characterAttackData.attacks = characterData.attacks;

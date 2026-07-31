@@ -22,6 +22,7 @@ struct CharacterParameterData
 	float backJumpHorizontalVelocity = -0.05f;
 	float riseGravityPerFrame = -0.012f;
 	float fallGravityPerFrame = -0.020f;
+	int maxHp = 100;
 };
 
 /// <summary>

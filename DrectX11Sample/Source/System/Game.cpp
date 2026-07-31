@@ -1,6 +1,6 @@
 ﻿#include "System/Game.h"
-#include "Scene/BattleScene.h"
 #include "Scene/SceneManager.h"
+#include "Scene/TitleScene.h"
 #include "Input/InputSystem.h"
 #include "System/Application.h"
 #include "System/DebugImGuiSystem.h"
@@ -24,7 +24,7 @@ void Game::Init()
 
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RequestChangeScene(
-		std::make_unique<BattleScene>(
+		std::make_unique<TitleScene>(
 			static_cast<int>(Application::GetWidth()),
 			static_cast<int>(Application::GetHeight())));
 	sceneManager.ApplyPendingSceneChange();
