@@ -4,10 +4,10 @@
   "parameters": {
     "forwardWalkSpeed": 0.08,
     "backwardWalkSpeed": 0.06,
-    "jumpInitialVelocity": 0.32,
+    "jumpInitialVelocity": 0.52,
     "frontJumpHorizontalVelocity": 0.10,
     "backJumpHorizontalVelocity": -0.05,
-    "riseGravityPerFrame": -0.012,
+    "riseGravityPerFrame": -0.022,
     "fallGravityPerFrame": -0.020,
     "maxHp": 100
   }

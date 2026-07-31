@@ -1,7 +1,8 @@
 ﻿{
   "attackDataId": "debug_front_kick",
   "displayName": "Debug Front Kick",
-  "hitstunFrames": 30,
+  "damage": 30,
+  "hitstunFrames": 20,
   "frame": {
     "startup": 7,
     "active": 4,
@@ -25,8 +26,8 @@
         "y": 0.9
       },
       "size": {
-        "x": 0.6,
-        "y": 0.35
+        "x": 2.6,
+        "y": 2.35
       }
     }
   ]
