@@ -98,17 +98,29 @@ namespace
 	}
 
 	/// <summary>
-	/// 指定 AttackHitboxData が現在の actionFrame で有効か確認する。
+	/// 技全体の frame 設定から、現在フレームが攻撃判定の持続中か確認する。
 	/// </summary>
-	/// <param name="hitbox">有効フレームを確認する攻撃判定データ。</param>
-	/// <param name="actionFrame">現在の攻撃ステート経過フレーム。</param>
-	/// <returns>有効フレーム内で、サイズが正なら true。</returns>
-	bool IsAttackHitboxActive(const AttackHitboxData& hitbox, int actionFrame)
+	/// <param name="frame">技の発生、持続、後隙フレーム。</param>
+	/// <param name="actionFrame">攻撃ボタンを押したフレームを 0 とする経過フレーム。</param>
+	/// <returns>startup 以上、startup + active 未満なら true。</returns>
+	bool IsAttackActive(const AttackFrameData& frame, int actionFrame)
 	{
-		return hitbox.size.x > 0.0f
-			&& hitbox.size.y > 0.0f
-			&& actionFrame >= hitbox.startFrame
-			&& actionFrame <= hitbox.endFrame;
+		const int activeStartFrame = std::max(0, frame.startup);
+		const int activeFrameCount = std::max(0, frame.active);
+		const int activeEndFrame = activeStartFrame + activeFrameCount;
+		return activeFrameCount > 0
+			&& actionFrame >= activeStartFrame
+			&& actionFrame < activeEndFrame;
+	}
+
+	/// <summary>
+	/// 攻撃判定の矩形が有効な大きさを持っているか確認する。
+	/// </summary>
+	/// <param name="hitbox">確認する攻撃判定形状。</param>
+	/// <returns>横幅と高さが正なら true。</returns>
+	bool IsAttackHitboxShapeValid(const AttackHitboxData& hitbox)
+	{
+		return hitbox.size.x > 0.0f && hitbox.size.y > 0.0f;
 	}
 
 	/// <summary>
@@ -148,10 +160,15 @@ namespace
 			defenderHitBox->hurtBox.offset,
 			defenderHitBox->hurtBox.size);
 
+		if (!IsAttackActive(assignedAttack.attack.frame, attackerState->actionFrame))
+		{
+			return false;
+		}
+
 		for (size_t hitboxIndex = 0; hitboxIndex < assignedAttack.attack.hitboxes.size(); ++hitboxIndex)
 		{
 			const AttackHitboxData& attackHitbox = assignedAttack.attack.hitboxes[hitboxIndex];
-			if (!IsAttackHitboxActive(attackHitbox, attackerState->actionFrame))
+			if (!IsAttackHitboxShapeValid(attackHitbox))
 			{
 				continue;
 			}

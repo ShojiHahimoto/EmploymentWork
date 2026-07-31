@@ -7,6 +7,7 @@
 #include <string>
 
 class World;
+struct CharacterAttackDataComponent;
 struct HitBoxComponent;
 struct VelocityComponent;
 struct TransformComponent;
@@ -31,13 +32,19 @@ public:
 
 private:
 	static void UpdatePlayerState(World& world, GameObjectId objectId);
-	static PlayerActionDecision DecideNextAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryFrame& inputFrame);
+	static PlayerActionDecision DecideNextAction(
+		const StateComponent& state,
+		const VelocityComponent& velocity,
+		const InputHistoryFrame& inputFrame,
+		const CharacterAttackDataComponent* attackData,
+		const HitBoxComponent* hitBox);
 	static PlayerActionDecision DecideNeutralAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryFrame& inputFrame);
 	static bool HasHorizontalMoveDirection(int direction);
 	static bool HasAttackTrigger(const InputHistoryFrame& inputFrame);
 	static std::string SelectAttackSlotId(const InputHistoryFrame& inputFrame);
 	static bool IsLockedAction(PlayerActionState actionState);
-	static bool IsActionFinished(const StateComponent& state);
+	static bool IsActionFinished(const StateComponent& state, const CharacterAttackDataComponent* attackData, const HitBoxComponent* hitBox);
+	static int GetCurrentAttackTotalFrames(const CharacterAttackDataComponent* attackData, const HitBoxComponent* hitBox);
 	static bool CanCancelAction(const StateComponent& state);
 	static void ApplyActionState(StateComponent& state, HitBoxComponent* hitBox, const PlayerActionDecision& decision);
 	static void ApplyPlayerDirection(World& world, GameObjectId objectId, StateComponent& state, const TransformComponent& transform);

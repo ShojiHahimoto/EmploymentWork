@@ -19,8 +19,6 @@
   ],
   "hitboxes": [
     {
-      "startFrame": 7,
-      "endFrame": 11,
       "offset": {
         "x": 1.0,
         "y": 0.9

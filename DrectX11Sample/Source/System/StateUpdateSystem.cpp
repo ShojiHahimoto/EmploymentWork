@@ -1,17 +1,14 @@
 ﻿#include "System/StateUpdateSystem.h"
 
-#include "System/Debugger.h"
-#include "System/TransformSystem.h"
+#include "Component/CharacterAttackDataComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
+#include "System/Debugger.h"
+#include "System/TransformSystem.h"
 #include "World/World.h"
 
-namespace
-{
-	constexpr int GroundAttackDurationFrames = 24;
-	constexpr int AirAttackDurationFrames = 24;
-}
+#include <algorithm>
 
 void StateUpdateSystem::Update(World& world)
 {
@@ -39,6 +36,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
 	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
+	CharacterAttackDataComponent* attackData = world.GetComponent<CharacterAttackDataComponent>(objectId);
 
 	// 入力を持たないデバッグ用 2P や CPU も、被弾や落下などの状態更新は必要なので入力履歴は任意にする。
 	if (!state || !velocity || !transform)
@@ -56,7 +54,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 		? inputHistory->frames[inputHistory->latestFrameIndex]
 		: neutralInputFrame;
 
-	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame);
+	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame, attackData, hitBox);
 	ApplyActionState(*state, hitBox, decision);
 }
 
@@ -66,11 +64,15 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 /// <param name="state">現在の Player 状態。</param>
 /// <param name="velocity">空中上昇・落下の判定に使う VelocityComponent。</param>
 /// <param name="inputFrame">今フレームの入力履歴。</param>
+/// <param name="attackData">現在攻撃中の技フレーム情報を参照する Component。</param>
+/// <param name="hitBox">現在攻撃中の slotId を参照する Component。</param>
 /// <returns>次の PlayerActionState と、同じ状態を最初からやり直すかどうか。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
-	const InputHistoryFrame& inputFrame)
+	const InputHistoryFrame& inputFrame,
+	const CharacterAttackDataComponent* attackData,
+	const HitBoxComponent* hitBox)
 {
 	if (state.hitstunRequested)
 	{
@@ -86,7 +88,7 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	}
 
 	if (IsLockedAction(state.currentActionState)
-		&& !IsActionFinished(state)
+		&& !IsActionFinished(state, attackData, hitBox)
 		&& !CanCancelAction(state))
 	{
 		return { state.currentActionState, false };
@@ -233,20 +235,55 @@ bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 /// 現在の ActionState が持続時間を終えているか確認する。
 /// </summary>
 /// <param name="state">ActionState と actionFrame を持つ StateComponent。</param>
+/// <param name="attackData">攻撃中の技データを持つ Component。</param>
+/// <param name="hitBox">現在実行中の攻撃 slotId を持つ Component。</param>
 /// <returns>行動が終了していれば true。</returns>
-bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
+bool StateUpdateSystem::IsActionFinished(
+	const StateComponent& state,
+	const CharacterAttackDataComponent* attackData,
+	const HitBoxComponent* hitBox)
 {
 	switch (state.currentActionState)
 	{
 	case PlayerActionState::GroundAttack:
-		return state.actionFrame >= GroundAttackDurationFrames;
 	case PlayerActionState::AirAttack:
-		return state.actionFrame >= AirAttackDurationFrames;
+		return state.actionFrame >= GetCurrentAttackTotalFrames(attackData, hitBox);
 	case PlayerActionState::Hitstun:
 		return state.actionFrame >= state.hitstunDurationFrames;
 	default:
 		return true;
 	}
+}
+
+/// <summary>
+/// 現在実行中の攻撃スロットから、攻撃全体の総フレーム数を取得する。
+/// </summary>
+/// <param name="attackData">キャラクターに割り当てられた技データ。</param>
+/// <param name="hitBox">現在実行中の攻撃 slotId。</param>
+/// <returns>startup + active + recovery。取得できない場合は 0。</returns>
+int StateUpdateSystem::GetCurrentAttackTotalFrames(
+	const CharacterAttackDataComponent* attackData,
+	const HitBoxComponent* hitBox)
+{
+	if (!attackData || !hitBox || hitBox->currentAttack.slotId.empty())
+	{
+		return 0;
+	}
+
+	for (const CharacterAssignedAttackData& assignedAttack : attackData->attacks)
+	{
+		if (assignedAttack.slotId != hitBox->currentAttack.slotId)
+		{
+			continue;
+		}
+
+		const AttackFrameData& frame = assignedAttack.attack.frame;
+		return std::max(0, frame.startup)
+			+ std::max(0, frame.active)
+			+ std::max(0, frame.recovery);
+	}
+
+	return 0;
 }
 
 /// <summary>
@@ -306,7 +343,10 @@ void StateUpdateSystem::ApplyPlayerDirection(
 {
 	if (state.currentActionState == PlayerActionState::Idle
 		|| state.currentActionState == PlayerActionState::FrontWalk
-		|| state.currentActionState == PlayerActionState::BackWalk)
+		|| state.currentActionState == PlayerActionState::BackWalk
+		|| ((state.currentActionState == PlayerActionState::VerticalJump
+			|| state.currentActionState == PlayerActionState::FrontJump
+			|| state.currentActionState == PlayerActionState::BackJump) && state.actionFrame == 1))
 	{
 		const GameObjectId opponentId = world.GetOpponentBattlePlayerId(objectId);
 		const TransformComponent* opponentTransform = world.GetTransform(opponentId);

@@ -2,13 +2,38 @@
   "characterId": "DebugPlayer",
   "displayName": "デバッグプレイヤー",
   "parameters": {
-    "forwardWalkSpeed": 0.08,
-    "backwardWalkSpeed": 0.06,
-    "jumpInitialVelocity": 0.52,
-    "frontJumpHorizontalVelocity": 0.10,
-    "backJumpHorizontalVelocity": -0.05,
-    "riseGravityPerFrame": -0.022,
-    "fallGravityPerFrame": -0.020,
-    "maxHp": 100
+    "forwardWalkSpeed": 0.12,
+    "backwardWalkSpeed": 0.08,
+    "jumpInitialVelocity": 1.02,
+    "frontJumpHorizontalVelocity": 0.15,
+    "backJumpHorizontalVelocity": -0.15,
+    "riseGravityPerFrame": -0.045,
+    "fallGravityPerFrame": -0.040,
+    "maxHp": 100,
+    "modelScale": {
+      "x": 0.05,
+      "y": 0.05,
+      "z": 0.05
+    },
+    "pushBox": {
+      "offset": {
+        "x": -0.15,
+        "y": 4.5
+      },
+      "size": {
+        "x": 2.0,
+        "y": 8.5
+      }
+    },
+    "hurtBox": {
+      "offset": {
+        "x": -0.15,
+        "y": 4.5
+      },
+      "size": {
+        "x": 1.5,
+        "y": 8.0
+      }
+    }
   }
 }

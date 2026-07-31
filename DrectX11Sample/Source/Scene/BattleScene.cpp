@@ -23,6 +23,7 @@
 #include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
 
+#include <algorithm>
 #include <memory>
 
 using namespace DirectX::SimpleMath;
@@ -49,7 +50,7 @@ void BattleScene::Enter()
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
-		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 4.0f, -20.0f));
+		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 5.0f, -30.0f));
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
@@ -371,6 +372,16 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 		return nullptr;
 	};
 
+	auto isAttackActive = [](const AttackFrameData& frame, int actionFrame)
+	{
+		const int activeStartFrame = std::max(0, frame.startup);
+		const int activeFrameCount = std::max(0, frame.active);
+		const int activeEndFrame = activeStartFrame + activeFrameCount;
+		return activeFrameCount > 0
+			&& actionFrame >= activeStartFrame
+			&& actionFrame < activeEndFrame;
+	};
+
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.tag != GameObjectTag::Player)
@@ -409,9 +420,14 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 			continue;
 		}
 
+		if (!isAttackActive(assignedAttack->attack.frame, state->actionFrame))
+		{
+			continue;
+		}
+
 		for (const AttackHitboxData& attackHitbox : assignedAttack->attack.hitboxes)
 		{
-			if (state->actionFrame < attackHitbox.startFrame || state->actionFrame > attackHitbox.endFrame)
+			if (attackHitbox.size.x <= 0.0f || attackHitbox.size.y <= 0.0f)
 			{
 				continue;
 			}

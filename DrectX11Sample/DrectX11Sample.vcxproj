@@ -109,11 +109,11 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\AttackData\debug_front_kick.json" />
     <None Include="assets\AttackData\debug_punch.json" />
+    <None Include="assets\AttackData\debug_roundhouse_kick.json" />
     <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
     <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
-    <None Include="assets\texture\result_kari.png" />
-    <None Include="assets\texture\title_kari.png" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
