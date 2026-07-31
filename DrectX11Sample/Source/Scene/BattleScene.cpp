@@ -1,6 +1,8 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/BattleTimerComponent.h"
 #include "Component/CharacterAttackDataComponent.h"
+#include "Component/HealthGaugeComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
@@ -8,6 +10,8 @@
 #include "Resource/ModelResource.h"
 #include "Scene/ResultScene.h"
 #include "Scene/SceneManager.h"
+#include "System/BattleHUDSystem.h"
+#include "System/BattleResultSystem.h"
 #include "System/CameraSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
@@ -50,7 +54,7 @@ void BattleScene::Enter()
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
-		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 5.0f, -30.0f));
+		TransformSystem::SetLocalPosition(*cameraTransform, Vector3(0.0f, 8.0f, -20.0f));
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
@@ -87,6 +91,8 @@ void BattleScene::Enter()
 		Vector3(0.0f, 0.0f, 6.0f),
 		Vector3(20.0f, 32.0f, 0.0f));
 
+	InitializeBattleHUD();
+
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	CameraSystem::SetPerspective(camera, 45.0f, aspectRatio, 0.1f, 1000.0f);
@@ -96,7 +102,7 @@ void BattleScene::Enter()
 	InitializeDebugSceneView();
 #endif
 
-	RunSystems();
+	RunInitialWorldSetup();
 }
 
 /// <summary>
@@ -107,6 +113,7 @@ void BattleScene::Exit()
 #if defined(_DEBUG)
 	Renderer::ReleaseRenderTexture(sceneViewRenderTexture);
 #endif
+	Renderer::ReleaseTexture(hudNumberTexture);
 	world.Clear();
 }
 
@@ -124,6 +131,8 @@ void BattleScene::RunSystems()
 	EmbedResolveSystem::Update(world);
 	HitCollisionSystem::Update(world);
 	HitResolveSystem::Update(world);
+	BattleResultSystem::Update(world);
+	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())
@@ -159,6 +168,8 @@ void BattleScene::Draw(Renderer& renderer)
 	DrawDebugHitBoxes(renderer);
 #endif
 
+	DrawBattleHUD();
+
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
 #if defined(_DEBUG)
@@ -178,6 +189,11 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.id == world.GetActiveCameraId())
+		{
+			continue;
+		}
+
+		if (object.tag == GameObjectTag::UI)
 		{
 			continue;
 		}
@@ -204,6 +220,71 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 }
 
 /// <summary>
+/// BattleScene 内で使う仮 HUD 用 GameObject と数字テクスチャを初期化する。
+/// </summary>
+void BattleScene::InitializeBattleHUD()
+{
+	GameObjectId timerId = world.CreateTransform("BattleTimer");
+	if (GameObject* timerObject = world.GetGameObject(timerId))
+	{
+		timerObject->tag = GameObjectTag::UI;
+	}
+	world.AddComponent<BattleTimerComponent>(timerId);
+
+	GameObjectId player1GaugeId = world.CreateTransform("Player1HealthGauge");
+	if (GameObject* player1GaugeObject = world.GetGameObject(player1GaugeId))
+	{
+		player1GaugeObject->tag = GameObjectTag::UI;
+	}
+	HealthGaugeComponent player1Gauge;
+	player1Gauge.targetPlayerIndex = 0;
+	world.AddComponent<HealthGaugeComponent>(player1GaugeId, player1Gauge);
+
+	GameObjectId player2GaugeId = world.CreateTransform("Player2HealthGauge");
+	if (GameObject* player2GaugeObject = world.GetGameObject(player2GaugeId))
+	{
+		player2GaugeObject->tag = GameObjectTag::UI;
+	}
+	HealthGaugeComponent player2Gauge;
+	player2Gauge.targetPlayerIndex = 1;
+	world.AddComponent<HealthGaugeComponent>(player2GaugeId, player2Gauge);
+
+	const HRESULT hr = Renderer::LoadTextureFromFile("assets/texture/number.png", &hudNumberTexture);
+	if (FAILED(hr))
+	{
+		DebugLog("[BattleHUD] Number texture load failed. hr=", static_cast<long>(hr));
+	}
+}
+
+/// <summary>
+/// Enter 直後に必要な生成反映とキャッシュ更新だけを実行する。
+/// </summary>
+void BattleScene::RunInitialWorldSetup()
+{
+	SpawnDestroySystem::Update(world);
+	BattleHUDSystem::Update(world, width, height);
+	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+
+	if (world.HasActiveCamera())
+	{
+		CameraComponent& camera = world.GetActiveCamera();
+		TransformComponent* cameraTransform = world.GetTransform(world.GetActiveCameraId());
+		if (cameraTransform)
+		{
+			CameraSystem::Update(camera, *cameraTransform);
+		}
+	}
+}
+
+/// <summary>
+/// BattleScene の HPバーとタイマーをゲームビューに重ねて描画する。
+/// </summary>
+void BattleScene::DrawBattleHUD()
+{
+	BattleHUDSystem::Draw(world, width, height, hudNumberTexture);
+}
+
+/// <summary>
 /// 画面サイズ変更に合わせて BattleScene のメインカメラのアスペクト比を更新する。
 /// </summary>
 /// <param name="newWidth">新しい幅。</param>
@@ -222,7 +303,15 @@ void BattleScene::OnResize(int newWidth, int newHeight)
 	{
 		const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 		CameraSystem::SetAspectRatio(world.GetActiveCamera(), aspectRatio);
-		RunSystems();
+
+		BattleHUDSystem::Update(world, width, height);
+		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+
+		TransformComponent* cameraTransform = world.GetTransform(world.GetActiveCameraId());
+		if (cameraTransform)
+		{
+			CameraSystem::Update(world.GetActiveCamera(), *cameraTransform);
+		}
 	}
 }
 

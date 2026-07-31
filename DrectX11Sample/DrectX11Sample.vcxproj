@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\System\BattleHUDSystem.cpp" />
+    <ClCompile Include="Source\System\BattleResultSystem.cpp" />
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
     <ClCompile Include="Source\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
@@ -55,11 +57,13 @@
     <ClCompile Include="Source\World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Component\BattleTimerComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
     <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
     <ClInclude Include="Source\Component\HitBoxComponent.h" />
+    <ClInclude Include="Source\Component\HealthGaugeComponent.h" />
     <ClInclude Include="Source\Component\HealthComponent.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
@@ -81,6 +85,8 @@
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\TitleScene.h" />
     <ClInclude Include="Source\System\Application.h" />
+    <ClInclude Include="Source\System\BattleHUDSystem.h" />
+    <ClInclude Include="Source\System\BattleResultSystem.h" />
     <ClInclude Include="Source\System\CameraSystem.h" />
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
     <ClInclude Include="Source\System\Debugger.h" />
@@ -114,6 +120,9 @@
     <None Include="assets\AttackData\debug_roundhouse_kick.json" />
     <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
     <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
+    <None Include="assets\texture\number.png" />
+    <None Include="assets\texture\result_kari.png" />
+    <None Include="assets\texture\title_kari.png" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

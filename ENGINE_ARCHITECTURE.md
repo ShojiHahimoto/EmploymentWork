@@ -156,6 +156,8 @@ MovementSystem
 EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
+BattleResultSystem
+BattleHUDSystem
 TransformSystem
 CameraSystem
 DebugSystem
@@ -169,6 +171,8 @@ DebugSystem
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
+- BattleResultSystem は、KO とラウンドタイマーのタイムアップを確認し、勝敗結果を確定する
+- BattleHUDSystem は、HPバーやラウンドタイマーなどの対戦 HUD 表示状態を更新し、ゲームビューへ描画する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
@@ -214,6 +218,15 @@ HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別�
 - HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun` を確定する
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
+
+BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。
+ラウンドタイマーは 60fps 固定の残りフレーム数として保持し、0 になったら残り HP が高い Player を勝者にする。
+HP が同値なら Draw とする。
+
+BattleHUDSystem は Player の HealthComponent と StateComponent を読み、HPバー表示用 Component を更新する。
+HPバーは現在 HP に即追従するバーと、ヒットスタン中だけ古い長さを維持するダメージバーに分ける。
+2D HUD は既存 Renderer の SpriteBatch 描画を使い、TransformComponent の localPosition.xy を画面左上座標、localScale.xy をピクセルサイズとして扱う。
+UI GameObject は `GameObjectTag::UI` を付け、3Dモデル描画やデバッグキューブ描画の対象から除外する。
 
 ## Input 設計
 
@@ -280,6 +293,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - HP などの値は HealthComponent または BattleStatusComponent として保持する
 - ダメージ適用、のけぞり、ヒットストップ、無敵などの結果確定は HitResolveSystem が担当する
+- KO、タイムアップ、残り HP 比較による勝敗確定は BattleResultSystem が担当する
 - StateComponent は現在の PlayerActionState と actionFrame を保持する
 - actionFrame は、PlayerActionState に入ってからの経過フレームとして扱う
 
@@ -360,7 +374,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AnimationClip は bone ごとの position / rotation / scale keyframe を保持できる構造にする
 - ゲーム内で作成するキーフレームアニメーションも、同じ AnimationClip / Channel / Keyframe 構造に保存する
 - AnimationSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource の AnimationClip を参照する
-- 2D UI は ModelComponent ではなく、専用の UI / Sprite 系 Component を追加して表現する
+- 2D UI は ModelComponent ではなく、UI タグと用途別 Component を追加して表現する
+- 現段階の HUD は通常の TransformComponent を使い、画面座標用の Transform として扱う
 
 ## オブジェクト参照
 

@@ -68,7 +68,6 @@ void HitResolveSystem::Update(World& world)
 		ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 	}
 
-	ResolveBattleResult(world);
 	world.ClearHitCollisionResults();
 }
 
@@ -145,41 +144,5 @@ void HitResolveSystem::ApplyHitstun(World& world, GameObjectId defenderId, int h
 	{
 		hitBox->currentAttack.slotId.clear();
 		hitBox->currentAttack.hasHit = false;
-	}
-}
-
-/// <summary>
-/// 両プレイヤーの HP を確認し、0 以下のプレイヤーがいれば勝敗結果を World に記録する。
-/// </summary>
-/// <param name="world">バトル用 Player ID と HealthComponent を保持する World。</param>
-void HitResolveSystem::ResolveBattleResult(World& world)
-{
-	if (world.HasBattleResult())
-	{
-		return;
-	}
-
-	const GameObjectId player1Id = world.GetBattlePlayerId(0);
-	const GameObjectId player2Id = world.GetBattlePlayerId(1);
-	const HealthComponent* player1Health = world.GetComponent<HealthComponent>(player1Id);
-	const HealthComponent* player2Health = world.GetComponent<HealthComponent>(player2Id);
-	if (!player1Health || !player2Health)
-	{
-		return;
-	}
-
-	const bool player1Defeated = player1Health->currentHp <= 0;
-	const bool player2Defeated = player2Health->currentHp <= 0;
-	if (player1Defeated && player2Defeated)
-	{
-		world.SetBattleResult(BattleResult::Draw);
-	}
-	else if (player1Defeated)
-	{
-		world.SetBattleResult(BattleResult::Player2Win);
-	}
-	else if (player2Defeated)
-	{
-		world.SetBattleResult(BattleResult::Player1Win);
 	}
 }

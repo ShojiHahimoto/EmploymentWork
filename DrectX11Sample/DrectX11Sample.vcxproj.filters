@@ -57,6 +57,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\System\BattleHUDSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\BattleResultSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Input\InputConfigLoader.cpp">
       <Filter>ソース ファイル\Input</Filter>
     </ClCompile>
@@ -161,7 +167,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Component\BattleTimerComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\Application.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\BattleHUDSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\BattleResultSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\main.h">
@@ -195,6 +210,9 @@
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\HitBoxComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\HealthGaugeComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\HealthComponent.h">
@@ -326,6 +344,9 @@
       <Filter>リソース ファイル</Filter>
     </None>
     <None Include="assets\texture\title_kari.png">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="assets\texture\number.png">
       <Filter>リソース ファイル</Filter>
     </None>
     <None Include="packages.config" />

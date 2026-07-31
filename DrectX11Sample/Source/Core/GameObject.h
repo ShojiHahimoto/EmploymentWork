@@ -20,6 +20,7 @@ enum class GameObjectTag
 	Player,
 	Camera,
 	Stage,
+	UI,
 	Debug,
 };
 
