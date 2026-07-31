@@ -3,6 +3,7 @@
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
 #include "Component/HitBoxComponent.h"
+#include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
@@ -35,6 +36,9 @@ namespace
 			object->tag = GameObjectTag::Player;
 		}
 
+		CharacterData characterData;
+		CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
+
 		TransformComponent* transform = world.GetTransform(objectId);
 		if (transform)
 		{
@@ -44,7 +48,7 @@ namespace
 				initialFacingDirection == FacingDirection::Right
 					? Vector3(0.0f, -90.0f, 0.0f)
 					: Vector3(0.0f, 90.0f, 0.0f));
-			TransformSystem::SetLocalScale(*transform, Vector3(0.05f, 0.05f, 0.05f));
+			TransformSystem::SetLocalScale(*transform, characterData.parameter.modelScale);
 		}
 
 		ModelComponent model;
@@ -56,22 +60,24 @@ namespace
 		state.facingDirection = initialFacingDirection;
 		world.AddComponent<StateComponent>(objectId, state);
 
-		CharacterData characterData;
-		CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
-
 		CharacterParameterComponent characterParameter;
 		characterParameter.parameter = characterData.parameter;
 		world.AddComponent<CharacterParameterComponent>(objectId, characterParameter);
+
+		HealthComponent health;
+		health.maxHp = characterData.parameter.maxHp > 0 ? characterData.parameter.maxHp : 1;
+		health.currentHp = health.maxHp;
+		world.AddComponent<HealthComponent>(objectId, health);
 
 		CharacterAttackDataComponent characterAttackData;
 		characterAttackData.attacks = characterData.attacks;
 		world.AddComponent<CharacterAttackDataComponent>(objectId, characterAttackData);
 
 		HitBoxComponent hitBox;
-		hitBox.pushBox.offset = Vector2(-0.15f, 4.5f);
-		hitBox.pushBox.size = Vector2(2.0f, 2.5f);
-		hitBox.hurtBox.offset = Vector2(-0.15f, 4.5f);
-		hitBox.hurtBox.size = Vector2(1.5f, 2.0f);
+		hitBox.pushBox.offset = characterData.parameter.pushBox.offset;
+		hitBox.pushBox.size = characterData.parameter.pushBox.size;
+		hitBox.hurtBox.offset = characterData.parameter.hurtBox.offset;
+		hitBox.hurtBox.size = characterData.parameter.hurtBox.size;
 		world.AddComponent<HitBoxComponent>(objectId, hitBox);
 
 		world.AddComponent<InputHistoryComponent>(objectId);

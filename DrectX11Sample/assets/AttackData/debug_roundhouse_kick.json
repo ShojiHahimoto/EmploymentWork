@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_roundhouse_kick",
   "displayName": "Debug Roundhouse Kick",
+  "damage": 50,
   "hitstunFrames": 30,
   "frame": {
     "startup": 10,
@@ -18,15 +19,13 @@
   ],
   "hitboxes": [
     {
-      "startFrame": 10,
-      "endFrame": 15,
       "offset": {
         "x": 1.1,
-        "y": 1.1
+        "y": 2.1
       },
       "size": {
-        "x": 0.7,
-        "y": 0.45
+        "x": 3.7,
+        "y": 3.45
       }
     }
   ]

@@ -1,7 +1,8 @@
 ﻿{
   "attackDataId": "debug_punch",
   "displayName": "デバッグパンチ",
-  "hitstunFrames": 30,
+  "damage": 20,
+  "hitstunFrames": 10,
   "frame": {
     "startup": 5,
     "active": 3,
@@ -19,8 +20,6 @@
   ],
   "hitboxes": [
     {
-      "startFrame": 3,
-      "endFrame": 14,
       "offset": {
         "x": 2.8,
         "y": 4.5

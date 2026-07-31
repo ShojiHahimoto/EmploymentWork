@@ -1,5 +1,6 @@
 ﻿#include "System/HitResolveSystem.h"
 
+#include "Component/HealthComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
@@ -48,6 +49,8 @@ void HitResolveSystem::Update(World& world)
 			result.attackSlotId,
 			" attack=",
 			result.attackDisplayName.empty() ? result.attackDataId : result.attackDisplayName,
+			" damage=",
+			result.damage,
 			" hitstunFrames=",
 			result.hitstunFrames,
 			" hitbox=",
@@ -61,6 +64,7 @@ void HitResolveSystem::Update(World& world)
 
 	for (const HitCollisionResult& result : results)
 	{
+		ApplyDamage(world, result.defenderId, result.damage);
 		ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 	}
 
@@ -81,6 +85,40 @@ void HitResolveSystem::MarkAttackAsHit(World& world, GameObjectId attackerId)
 	}
 
 	hitBox->currentAttack.hasHit = true;
+}
+
+/// <summary>
+/// 防御側 HP を攻撃力分だけ減算し、0 未満にならないように丸める。
+/// </summary>
+/// <param name="world">防御側 HealthComponent を取得する World。</param>
+/// <param name="defenderId">防御側 GameObject ID。</param>
+/// <param name="damage">減算する攻撃力。</param>
+void HitResolveSystem::ApplyDamage(World& world, GameObjectId defenderId, int damage)
+{
+	if (damage <= 0)
+	{
+		return;
+	}
+
+	HealthComponent* health = world.GetComponent<HealthComponent>(defenderId);
+	if (!health)
+	{
+		return;
+	}
+
+	health->currentHp -= damage;
+	if (health->currentHp < 0)
+	{
+		health->currentHp = 0;
+	}
+
+	DebugLog(
+		"[Health] ",
+		GetObjectNameOrUnknown(world, defenderId),
+		" HP=",
+		health->currentHp,
+		"/",
+		health->maxHp);
 }
 
 /// <summary>

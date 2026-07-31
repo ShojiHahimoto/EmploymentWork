@@ -26,8 +26,13 @@ private:
 	World world;
 	int width;
 	int height;
+	ID3D11ShaderResourceView* hudNumberTexture = nullptr;
 
+	void InitializeBattleHUD();
+	void RunInitialWorldSetup();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
+	void DrawBattleHUD();
+	void RequestResultSceneIfBattleFinished();
 
 #if defined(_DEBUG)
 	TransformComponent debugSceneCameraTransform;

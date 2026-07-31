@@ -3,6 +3,8 @@
 #include "Resource/ModelResource.h"
 #include "System/Debugger.h"
 
+#include <WICTextureLoader.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -174,6 +176,7 @@ ID3D11InputLayout* Renderer::m_pModelInputLayout = nullptr;
 ID3D11Buffer* Renderer::m_pModelConstantBuffer = nullptr;
 ID3D11SamplerState* Renderer::m_pModelSamplerState = nullptr;
 ID3D11ShaderResourceView* Renderer::m_pWhiteTextureView = nullptr;
+std::unique_ptr<SpriteBatch> Renderer::m_pSpriteBatch;
 
 /// <summary>
 /// DirectX11 の Device、SwapChain、描画リソースを初期化する。
@@ -260,6 +263,8 @@ HRESULT Renderer::Init()
 		DebugLog("[Renderer] Model render resources creation failed. hr=", static_cast<long>(hr));
 		return hr;
 	}
+
+	m_pSpriteBatch = std::make_unique<SpriteBatch>(m_pDeviceContext);
 
 	return S_OK;
 }
@@ -1040,6 +1045,151 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world)
 }
 
 /// <summary>
+/// WIC 対応画像ファイルを DirectX11 の ShaderResourceView として読み込む。
+/// </summary>
+/// <param name="path">読み込む画像ファイルパス。</param>
+/// <param name="textureView">読み込み結果の ShaderResourceView 受け取り先。</param>
+/// <returns>読み込み結果の HRESULT。</returns>
+HRESULT Renderer::LoadTextureFromFile(const std::string& path, ID3D11ShaderResourceView** textureView)
+{
+	if (!m_pDevice || !textureView)
+	{
+		return E_INVALIDARG;
+	}
+
+	if (*textureView)
+	{
+		(*textureView)->Release();
+		*textureView = nullptr;
+	}
+
+	const std::wstring widePath(path.begin(), path.end());
+	return DirectX::CreateWICTextureFromFile(
+		m_pDevice,
+		widePath.c_str(),
+		nullptr,
+		textureView);
+}
+
+/// <summary>
+/// Renderer 経由で読み込んだ ShaderResourceView を解放する。
+/// </summary>
+/// <param name="textureView">解放する ShaderResourceView。</param>
+void Renderer::ReleaseTexture(ID3D11ShaderResourceView*& textureView)
+{
+	SAFE_RELEASE(textureView);
+}
+
+/// <summary>
+/// Texture2D の ShaderResourceView から元画像サイズを取得する。
+/// </summary>
+/// <param name="textureView">サイズを取得する ShaderResourceView。</param>
+/// <param name="width">取得した幅の書き込み先。</param>
+/// <param name="height">取得した高さの書き込み先。</param>
+/// <returns>Texture2D のサイズを取得できた場合は true。</returns>
+bool Renderer::GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height)
+{
+	width = 0;
+	height = 0;
+
+	if (!textureView)
+	{
+		return false;
+	}
+
+	ID3D11Resource* resource = nullptr;
+	textureView->GetResource(&resource);
+	if (!resource)
+	{
+		return false;
+	}
+
+	ID3D11Texture2D* texture = nullptr;
+	const HRESULT hr = resource->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
+	resource->Release();
+	if (FAILED(hr) || !texture)
+	{
+		return false;
+	}
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	texture->GetDesc(&desc);
+	texture->Release();
+
+	width = static_cast<int>(desc.Width);
+	height = static_cast<int>(desc.Height);
+	return width > 0 && height > 0;
+}
+
+/// <summary>
+/// 画面座標の 2D 矩形を単色で描画する。
+/// </summary>
+/// <param name="destination">描画先の画面座標 RECT。</param>
+/// <param name="color">矩形色。alpha で透過度を指定する。</param>
+void Renderer::DrawScreenRect(const RECT& destination, const Color& color)
+{
+	if (!m_pWhiteTextureView || !m_pSpriteBatch)
+	{
+		return;
+	}
+
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pSpriteBatch->Begin();
+	m_pSpriteBatch->Draw(m_pWhiteTextureView, destination, color);
+	m_pSpriteBatch->End();
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
+/// テクスチャの指定領域を画面座標の 2D 矩形へ描画する。
+/// </summary>
+/// <param name="textureView">描画する ShaderResourceView。</param>
+/// <param name="destination">描画先の画面座標 RECT。</param>
+/// <param name="source">切り出すテクスチャ領域。</param>
+/// <param name="color">乗算する描画色。</param>
+void Renderer::DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const Color& color)
+{
+	if (!textureView || !m_pSpriteBatch)
+	{
+		return;
+	}
+
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pSpriteBatch->Begin();
+	m_pSpriteBatch->Draw(textureView, destination, &source, color);
+	m_pSpriteBatch->End();
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
+/// 指定テクスチャをバックバッファ全体に描画する。
+/// </summary>
+/// <param name="textureView">描画する ShaderResourceView。</param>
+/// <param name="width">描画先の幅。</param>
+/// <param name="height">描画先の高さ。</param>
+void Renderer::DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height)
+{
+	if (!textureView || !m_pSpriteBatch || width <= 0 || height <= 0)
+	{
+		return;
+	}
+
+	const RECT destination =
+	{
+		0,
+		0,
+		static_cast<LONG>(width),
+		static_cast<LONG>(height)
+	};
+
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pSpriteBatch->Begin();
+	m_pSpriteBatch->Draw(textureView, destination, Colors::White);
+	m_pSpriteBatch->End();
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
 /// 深度テストの有効・無効を切り替える。
 /// </summary>
 /// <param name="Enable">深度テストを有効にするなら true。</param>
@@ -1100,6 +1250,7 @@ void Renderer::ReleaseModelRenderResources()
 void Renderer::Uninit()
 {
 	ModelResourceManager::UnloadAll();
+	m_pSpriteBatch.reset();
 	ReleaseModelRenderResources();
 	ReleaseDebugBoxResources();
 	ReleaseDebugCubeResources();

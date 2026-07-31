@@ -135,11 +135,12 @@ void MovementSystem::ApplyVelocityToTransform(World& world)
 /// <returns>重力を加算する必要があれば true。</returns>
 bool MovementSystem::ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state)
 {
-	if (state.currentActionState == PlayerActionState::VerticalJump
-		|| state.currentActionState == PlayerActionState::FrontJump
-		|| state.currentActionState == PlayerActionState::BackJump
-		|| state.currentActionState == PlayerActionState::Fall
-		|| state.currentActionState == PlayerActionState::AirAttack)
+	//if (state.currentActionState == PlayerActionState::VerticalJump
+	//	|| state.currentActionState == PlayerActionState::FrontJump
+	//	|| state.currentActionState == PlayerActionState::BackJump
+	//	|| state.currentActionState == PlayerActionState::Fall
+	//	|| state.currentActionState == PlayerActionState::AirAttack)
+	if(!state.isGrounded)
 	{
 		return true;
 	}

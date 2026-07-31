@@ -1,17 +1,14 @@
 ﻿#include "System/StateUpdateSystem.h"
 
-#include "System/Debugger.h"
-#include "System/TransformSystem.h"
+#include "Component/CharacterAttackDataComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
+#include "System/Debugger.h"
+#include "System/TransformSystem.h"
 #include "World/World.h"
 
-namespace
-{
-	constexpr int GroundAttackDurationFrames = 24;
-	constexpr int AirAttackDurationFrames = 24;
-}
+#include <algorithm>
 
 void StateUpdateSystem::Update(World& world)
 {
@@ -39,6 +36,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
 	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
+	CharacterAttackDataComponent* attackData = world.GetComponent<CharacterAttackDataComponent>(objectId);
 
 	// 入力を持たないデバッグ用 2P や CPU も、被弾や落下などの状態更新は必要なので入力履歴は任意にする。
 	if (!state || !velocity || !transform)
@@ -57,7 +55,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 		: neutralInputFrame;
 
 	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame);
-	ApplyActionState(*state, hitBox, decision);
+	ApplyActionState(*state, hitBox, attackData, decision);
 }
 
 /// <summary>
@@ -75,6 +73,14 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	if (state.hitstunRequested)
 	{
 		return { PlayerActionState::Hitstun, true };
+	}
+
+	if (state.currentActionState == PlayerActionState::AirAttack)
+	{
+		if (state.isGrounded)
+		{
+			return { PlayerActionState::Idle, false };
+		}
 	}
 
 	if (IsLockedAction(state.currentActionState)
@@ -231,14 +237,44 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 	switch (state.currentActionState)
 	{
 	case PlayerActionState::GroundAttack:
-		return state.actionFrame >= GroundAttackDurationFrames;
 	case PlayerActionState::AirAttack:
-		return state.actionFrame >= AirAttackDurationFrames;
+		return state.actionDurationFrames <= 0 || state.actionFrame >= state.actionDurationFrames;
 	case PlayerActionState::Hitstun:
 		return state.actionFrame >= state.hitstunDurationFrames;
 	default:
 		return true;
 	}
+}
+
+/// <summary>
+/// 指定攻撃スロットから、攻撃全体の総フレーム数を計算する。
+/// </summary>
+/// <param name="attackData">キャラクターに割り当てられた技データ。</param>
+/// <param name="attackSlotId">実行する攻撃 slotId。</param>
+/// <returns>startup + active + recovery。取得できない場合は 0。</returns>
+int StateUpdateSystem::CalculateAttackTotalFrames(
+	const CharacterAttackDataComponent* attackData,
+	const std::string& attackSlotId)
+{
+	if (!attackData || attackSlotId.empty())
+	{
+		return 0;
+	}
+
+	for (const CharacterAssignedAttackData& assignedAttack : attackData->attacks)
+	{
+		if (assignedAttack.slotId != attackSlotId)
+		{
+			continue;
+		}
+
+		const AttackFrameData& frame = assignedAttack.attack.frame;
+		return std::max(0, frame.startup)
+			+ std::max(0, frame.active)
+			+ std::max(0, frame.recovery);
+	}
+
+	return 0;
 }
 
 /// <summary>
@@ -255,13 +291,20 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 /// 決定した ActionState を StateComponent に反映し、必要なら actionFrame を 0 に戻す。
 /// </summary>
 /// <param name="state">更新する StateComponent。</param>
+/// <param name="hitBox">攻撃開始時に currentAttack を更新する HitBoxComponent。</param>
+/// <param name="attackData">攻撃開始時に合計フレームを取得する CharacterAttackDataComponent。</param>
 /// <param name="decision">採用する ActionState と再開始フラグ。</param>
-void StateUpdateSystem::ApplyActionState(StateComponent& state, HitBoxComponent* hitBox, const PlayerActionDecision& decision)
+void StateUpdateSystem::ApplyActionState(
+	StateComponent& state,
+	HitBoxComponent* hitBox,
+	const CharacterAttackDataComponent* attackData,
+	const PlayerActionDecision& decision)
 {
 	if (state.currentActionState != decision.nextActionState || decision.restartAction)
 	{
 		state.currentActionState = decision.nextActionState;
 		state.actionFrame = 0;
+		state.actionDurationFrames = 0;
 		state.cancelEnabled = false;
 
 		if (hitBox)
@@ -269,8 +312,10 @@ void StateUpdateSystem::ApplyActionState(StateComponent& state, HitBoxComponent*
 			if (state.currentActionState == PlayerActionState::GroundAttack
 				|| state.currentActionState == PlayerActionState::AirAttack)
 			{
-				hitBox->currentAttack.slotId = decision.attackSlotId.empty() ? "Attack1" : decision.attackSlotId;
+				const std::string attackSlotId = decision.attackSlotId.empty() ? "Attack1" : decision.attackSlotId;
+				hitBox->currentAttack.slotId = attackSlotId;
 				hitBox->currentAttack.hasHit = false;
+				state.actionDurationFrames = CalculateAttackTotalFrames(attackData, attackSlotId);
 			}
 			else
 			{
@@ -298,7 +343,10 @@ void StateUpdateSystem::ApplyPlayerDirection(
 {
 	if (state.currentActionState == PlayerActionState::Idle
 		|| state.currentActionState == PlayerActionState::FrontWalk
-		|| state.currentActionState == PlayerActionState::BackWalk)
+		|| state.currentActionState == PlayerActionState::BackWalk
+		|| ((state.currentActionState == PlayerActionState::VerticalJump
+			|| state.currentActionState == PlayerActionState::FrontJump
+			|| state.currentActionState == PlayerActionState::BackJump) && state.actionFrame == 1))
 	{
 		const GameObjectId opponentId = world.GetOpponentBattlePlayerId(objectId);
 		const TransformComponent* opponentTransform = world.GetTransform(opponentId);

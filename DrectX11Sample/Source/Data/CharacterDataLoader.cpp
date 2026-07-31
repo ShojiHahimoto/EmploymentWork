@@ -128,6 +128,40 @@ namespace
 	}
 
 	/// <summary>
+	/// x / y / z を持つ JSON Object から Vector3 を作る。
+	/// </summary>
+	/// <param name="object">x / y / z を含む JSON Object。</param>
+	/// <param name="defaultValue">不足時に使う既定値。</param>
+	/// <returns>読み込んだ Vector3。</returns>
+	DirectX::SimpleMath::Vector3 GetVector3(const JsonValue& object, const DirectX::SimpleMath::Vector3& defaultValue)
+	{
+		return DirectX::SimpleMath::Vector3(
+			GetFloat(object, "x", defaultValue.x),
+			GetFloat(object, "y", defaultValue.y),
+			GetFloat(object, "z", defaultValue.z));
+	}
+
+	/// <summary>
+	/// offset / size を持つ JSON Object から、キャラクターの判定初期値を読み込む。
+	/// </summary>
+	/// <param name="object">box 設定を持つ JSON Object。</param>
+	/// <param name="box">読み込み結果を書き込む box パラメータ。</param>
+	void LoadCharacterBoxFromJson(const JsonValue& object, CharacterBoxParameterData& box)
+	{
+		const JsonValue* offset = object.Find("offset");
+		if (offset && offset->IsObject())
+		{
+			box.offset = GetVector2(*offset, box.offset);
+		}
+
+		const JsonValue* size = object.Find("size");
+		if (size && size->IsObject())
+		{
+			box.size = GetVector2(*size, box.size);
+		}
+	}
+
+	/// <summary>
 	/// 文字列で保存されたキャンセル種別を enum に変換する。
 	/// </summary>
 	/// <param name="text">JSON に保存されているキャンセル種別名。</param>
@@ -168,6 +202,25 @@ namespace
 		parameter.backJumpHorizontalVelocity = GetFloat(source, "backJumpHorizontalVelocity", parameter.backJumpHorizontalVelocity);
 		parameter.riseGravityPerFrame = GetFloat(source, "riseGravityPerFrame", parameter.riseGravityPerFrame);
 		parameter.fallGravityPerFrame = GetFloat(source, "fallGravityPerFrame", parameter.fallGravityPerFrame);
+		parameter.maxHp = GetInt(source, "maxHp", parameter.maxHp);
+
+		const JsonValue* modelScale = source.Find("modelScale");
+		if (modelScale && modelScale->IsObject())
+		{
+			parameter.modelScale = GetVector3(*modelScale, parameter.modelScale);
+		}
+
+		const JsonValue* pushBox = source.Find("pushBox");
+		if (pushBox && pushBox->IsObject())
+		{
+			LoadCharacterBoxFromJson(*pushBox, parameter.pushBox);
+		}
+
+		const JsonValue* hurtBox = source.Find("hurtBox");
+		if (hurtBox && hurtBox->IsObject())
+		{
+			LoadCharacterBoxFromJson(*hurtBox, parameter.hurtBox);
+		}
 	}
 
 	/// <summary>
@@ -257,7 +310,7 @@ namespace
 	}
 
 	/// <summary>
-	/// AttackData JSON から当たり判定の発生タイミングと形状を読み込む。
+	/// AttackData JSON から当たり判定の形状を読み込む。
 	/// </summary>
 	/// <param name="root">AttackData JSON の root Object。</param>
 	/// <param name="outHitboxes">読み込んだ当たり判定情報の書き込み先。</param>
@@ -278,8 +331,6 @@ namespace
 			}
 
 			AttackHitboxData hitbox;
-			hitbox.startFrame = GetInt(hitboxValue, "startFrame", hitbox.startFrame);
-			hitbox.endFrame = GetInt(hitboxValue, "endFrame", hitbox.endFrame);
 
 			const JsonValue* offset = hitboxValue.Find("offset");
 			if (offset && offset->IsObject())
@@ -360,6 +411,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 
 	outAttackData.attackDataId = GetString(root, "attackDataId", attackDataId);
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
+	outAttackData.damage = GetInt(root, "damage", outAttackData.damage);
 	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);

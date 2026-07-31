@@ -35,6 +35,10 @@ struct StateComponent : public Component
 	// StateUpdateSystem が State 遷移と合わせて更新する。
 	int actionFrame = 0;
 
+	// 現在の ActionState を何フレーム維持するか。
+	// 攻撃開始時は StateUpdateSystem が AttackData から計算して保存する。
+	int actionDurationFrames = 0;
+
 	// 接地、被弾、キャンセルなどの判定材料。
 	// 今後 GroundSystem / HitResolveSystem / AttackSystem が更新する想定。
 	bool isGrounded = true;

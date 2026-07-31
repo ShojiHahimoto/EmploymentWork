@@ -34,12 +34,11 @@ struct AttackCancelWindowData
 };
 
 /// <summary>
-/// 技が生成する 2D 当たり判定のタイミングと形状を保持する。
+/// 技が生成する 2D 当たり判定の形状を保持する。
+/// 発生タイミングは AttackData::frame の startup / active を正とする。
 /// </summary>
 struct AttackHitboxData
 {
-	int startFrame = 0;
-	int endFrame = 0;
 	DirectX::SimpleMath::Vector2 offset = DirectX::SimpleMath::Vector2::Zero;
 	DirectX::SimpleMath::Vector2 size = DirectX::SimpleMath::Vector2::Zero;
 };
@@ -53,6 +52,8 @@ struct AttackData
 	std::string attackDataId;
 	// 調整画面やデバッグ表示で使う表示名。
 	std::string displayName;
+	// ヒット時に相手 HP から減算する攻撃力。
+	int damage = 10;
 	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
 	int hitstunFrames = 30;
 	AttackFrameData frame;
