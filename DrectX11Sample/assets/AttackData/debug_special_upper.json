@@ -1,0 +1,24 @@
+﻿{
+  "attackDataId": "debug_special_upper",
+  "displayName": "DebugSpecialUpper",
+  "damage": 50,
+  "hitstunFrames": 28,
+  "frame": {
+    "startup": 6,
+    "active": 4,
+    "recovery": 20
+  },
+  "cancelWindows": [],
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.6,
+        "y": 5.6
+      },
+      "size": {
+        "x": 2.4,
+        "y": 3.4
+      }
+    }
+  ]
+}

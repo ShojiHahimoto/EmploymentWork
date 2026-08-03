@@ -60,11 +60,18 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 {
 	PlayerControlFrameResult result;
 
-	// プレイヤーの向きによって移動方向を逆転させるための指数
+	// プレイヤーの現在向きによって、歩きなどの地上行動方向を決めるための符号。
 	int dirIndex = 1;
 	if (state.facingDirection == FacingDirection::Left)
 	{
 		dirIndex = -1;
+	}
+
+	// ジャンプの横速度は、実ジャンプ開始時の向きではなくジャンプ入力時の向きを基準に固定する。
+	int actionStartDirIndex = 1;
+	if (state.actionStartFacingDirection == FacingDirection::Left)
+	{
+		actionStartDirIndex = -1;
 	}
 
 	switch (state.currentActionState)
@@ -79,6 +86,16 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		// 歩き状態の間だけ、テンキー方向の横成分を歩き速度として毎フレーム上書きする。
 		// 7 / 9 は今後ジャンプ方向としても使うため、横成分はここで残しておく。
 		result.horizontalVelocity = -dirIndex * parameter.backwardWalkSpeed;
+		break;
+
+	case PlayerActionState::VerticalJumpStartup:
+	case PlayerActionState::FrontJumpStartup:
+	case PlayerActionState::BackJumpStartup:
+		// ジャンプ移行中はまだ地上行動として扱う。
+		// この間に攻撃へ上書きできるよう、実ジャンプの初速は入れず足元も滑らせない。
+		result.horizontalVelocity = 0.0f;
+		result.verticalVelocity = 0.0f;
+		result.setVerticalVelocity = true;
 		break;
 
 	case PlayerActionState::VerticalJump:
@@ -99,7 +116,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		if (state.actionFrame == 0)
 		{
 			result.verticalVelocity = parameter.jumpInitialVelocity;
-			result.horizontalVelocity = parameter.frontJumpHorizontalVelocity * dirIndex;
+			result.horizontalVelocity = parameter.frontJumpHorizontalVelocity * actionStartDirIndex;
 			result.setHorizontalVelocity = true;
 			result.setVerticalVelocity = true;
 		}
@@ -112,7 +129,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		if (state.actionFrame == 0)
 		{
 			result.verticalVelocity = parameter.jumpInitialVelocity;
-			result.horizontalVelocity = parameter.backJumpHorizontalVelocity * dirIndex;
+			result.horizontalVelocity = parameter.backJumpHorizontalVelocity * actionStartDirIndex;
 			result.setHorizontalVelocity = true;
 			result.setVerticalVelocity = true;
 		}

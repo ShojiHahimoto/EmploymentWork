@@ -63,6 +63,9 @@
     <ClCompile Include="Source\System\BattleResultSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\CommandInputSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Input\InputConfigLoader.cpp">
       <Filter>ソース ファイル\Input</Filter>
     </ClCompile>
@@ -91,6 +94,9 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\MovementSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\PlayerFacingSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\PlayerControlSystem.cpp">
@@ -179,10 +185,16 @@
     <ClInclude Include="Source\System\BattleResultSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\CommandInputSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\main.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\MovementSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\PlayerFacingSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\PlayerControlSystem.h">
@@ -243,6 +255,9 @@
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\CharacterParameterComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\CommandBufferComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\CameraSystem.h">
@@ -338,6 +353,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\AttackData\debug_punch.json">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_special_attack.json">
+      <Filter>リソース ファイル</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_special_upper.json">
       <Filter>リソース ファイル</Filter>
     </None>
     <None Include="assets\texture\result_kari.png">

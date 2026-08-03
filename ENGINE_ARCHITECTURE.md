@@ -149,7 +149,9 @@ Input -> State -> Movement -> Collision -> HitResolve -> Spawn/Destroy
 
 ```text
 InputSystem
+PlayerFacingSystem
 InputHistorySystem
+CommandInputSystem
 StateUpdateSystem
 PlayerControlSystem
 MovementSystem
@@ -164,8 +166,10 @@ DebugSystem
 ```
 
 - InputSystem は、キーボードやコントローラー入力を 1 フレーム分の入力状態に変換する
+- PlayerFacingSystem は、入力履歴を保存する前に相手との位置関係から `facingDirection` を更新する
 - InputHistorySystem は、InputSystem の確定済み入力を格闘ゲーム用入力履歴へ変換し、InputHistoryComponent に保存する
-- StateUpdateSystem は、入力履歴、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
+- CommandInputSystem は、InputHistoryComponent を過去フレームまで遡ってコマンド成立を確認し、CommandBufferComponent に保存する
+- StateUpdateSystem は、入力履歴、コマンド候補、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
 - PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
@@ -177,12 +181,19 @@ DebugSystem
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
-StateUpdateSystem は、Player タグと Transform / Velocity / State を持つ GameObject を対象にする。
-InputHistoryComponent がある場合はテンキー方向、ジャンプ、攻撃ボタンを読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
+InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
+空中にいる間は対面方向を更新しない。
+着地直後は、前フレームの Jump / Fall State が残っていても `isGrounded=true` なら相手方向へ振り向いてよい。
+`StateComponent::actionStartFacingDirection` は現在の `PlayerActionState` に入った瞬間の向きを保存し、ジャンプ横速度など行動開始時の向きに固定したい処理で使う。
 ジャンプ入力はテンキー方向の `7 / 8 / 9` を使い、向きに応じてバックジャンプ、垂直ジャンプ、前ジャンプへ分ける。
+ジャンプ入力直後は 4F のジャンプ移行 State に入り、`actionFrame 0〜3` はまだ地上行動として扱う。
+ジャンプ移行中に攻撃候補が成立した場合、地上攻撃でジャンプ移行を上書きする。
+ジャンプ移行 State が `actionFrame 4` に到達したフレームで、対応する実ジャンプ State に遷移する。
+ジャンプ移行から実ジャンプへ遷移するときは `actionStartFacingDirection` を引き継ぎ、めくりや着地前後の振り向きでジャンプ横方向が反転しないようにする。
 今フレームで被弾要求がある場合は最優先で `Hitstun` に遷移し、攻撃前隙中でも攻撃を中止する。
 攻撃中や被弾中などのキャンセル不可行動は、終了またはキャンセル可能になるまで新しい行動へ変更しない。
 `actionFrame` は `PlayerActionState` に入ってからの経過フレームとして、StateUpdateSystem が更新する。
@@ -191,6 +202,8 @@ Player の向きは、World に登録された相手 Player の Transform と自
 PlayerControlSystem は、Player タグと Transform / Velocity / State / CharacterParameter を持つ GameObject を対象にする。
 PlayerControlSystem は StateComponent の `currentActionState` や `actionFrame` を更新しない。
 現段階では確定済み `PlayerActionState::FrontWalk / BackWalk` のときに向きとキャラクターパラメータから Velocity の X 成分を毎フレーム上書きし、各 Jump の `actionFrame == 0` のときだけ Velocity へジャンプ初速を設定する。
+ジャンプ移行中は実ジャンプの初速を入れず、Velocity の X/Y を 0 にして地上で滑らないようにする。
+実ジャンプの横速度は現在の `facingDirection` ではなく、`actionStartFacingDirection` を基準に設定する。
 Velocity はノックバック、技移動、押し出しでも変化するため、Idle / Walk 判定には使わない。
 仮接地判定は EmbedResolveSystem 内に置き、`Transform.y <= 0` を接地として `y = 0`、`Velocity.y = 0`、`isGrounded = true` に補正する。
 
@@ -254,11 +267,21 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `Move` Action はテンキー表記の `1〜9` に変換して保存する
 - InputHistorySystem は World の BattlePlayerId の順番と InputSystem の PlayerInputState 番号を対応させて保存する
 - 攻撃、ガードなどのボタンは InputSystem が判定済みの `Trigger / Press / Release` を保存する
+- 攻撃ボタンは `AttackA`、`AttackB`、`AttackX`、`AttackY` の 4 種とする
+- キーボード既定割り当ては `AttackA=H`、`AttackB=J`、`AttackX=Y`、`AttackY=U`
+- ゲームパッド既定割り当ては `AttackA=A`、`AttackB=B`、`AttackX=X`、`AttackY=Y`
 - ジャンプは専用ボタンではなく、テンキー方向 `7 / 8 / 9` から `Trigger / Press / Release` を作って保存する
-- 現段階では今フレーム分だけを保存する
-- 将来は ring buffer 化し、数十フレーム分の入力履歴を保持できるように拡張する
+- InputHistoryComponent は過去 30F の ring buffer を持ち、各フレームのテンキー方向、攻撃ボタン mask、入力時点の `facingDirection` を保存する
+- 波動コマンドなどの方向コマンドは、各 InputHistoryFrame に保存された `facingDirection` を基準に相対方向へ変換して判定する
+- コマンド方向判定は可変長のステップ列で扱い、`236`、`41236`、`236236` など長さの違うコマンドを同じ処理で判定する
+- 簡易入力では、テンキー方向を上下左右の成分として扱い、必要成分を含む入力ならそのステップを満たしたものとする
+- 同じ方向を押し続けたフレームは 1 ステップ分として扱い、斜め 1 回だけで複数ステップが成立しないようにする
+- コマンド候補の優先度は、長いコマンド、昇竜、波動、通常攻撃の順に高くする
+- 通常攻撃同士の同時入力は `AttackA > AttackB > AttackX > AttackY` の優先度で扱う
+- CommandBufferComponent は成立済みコマンド候補を保持し、StateUpdateSystem が行動可能なタイミングで消費する
+- コマンド先行入力の有効期限は技ごとではなく、CommandInputSystem の共通猶予フレームで一括管理する
 - 入力の取得は InputSystem が担当し、入力履歴への保存は InputHistorySystem が担当する
-- StateUpdateSystem は保存済みの InputHistoryComponent を読み、今フレームの PlayerActionState を決める
+- StateUpdateSystem は保存済みの InputHistoryComponent と CommandBufferComponent を読み、今フレームの PlayerActionState を決める
 - PlayerControlSystem は確定済みの PlayerActionState を読み、今フレームの行動処理を行う
 - InputHistoryComponent 自身は判定関数や Update を持たない
 
@@ -320,7 +343,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 - `SpawnType::DebugCube` は TransformComponent を持つ GameObject を生成する
 - `SpawnType::Debugman` は TransformComponent と ModelComponent を持つ GameObject を生成する
-- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CharacterParameterComponent、CharacterAttackDataComponent、HitBoxComponent を持つ GameObject を生成する
+- `SpawnType::DebugPlayer` は Player タグを持ち、TransformComponent、ModelComponent、VelocityComponent、StateComponent、InputHistoryComponent、CommandBufferComponent、CharacterParameterComponent、CharacterAttackDataComponent、HitBoxComponent を持つ GameObject を生成する
 - `SpawnType::DebugPlayer2` は Player タグを持ち、DebugPlayer と同じバトル用 Component を持つ
 - SpawnRequest は type、name、position、rotationDegrees を指定できる
 
@@ -336,7 +359,9 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `currentAttack` は現在実行中の攻撃スロットと、この攻撃が既にヒットしたかを保持する
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
-- 実行確認用の `Attack1` は `debug_punch`、表示名は `デバッグパンチ`、既定入力は `Y` キーとする
+- 通常攻撃の確認用 slotId は `AttackA`、`AttackB`、`AttackX`、`AttackY` とする
+- 波動コマンド 236 + `AttackA` は `SpecialAttack` slot を実行し、現段階の確認用 AttackData は `debug_special_attack` とする
+- 昇竜コマンド + `AttackB` は `SpecialUpper` slot を実行し、現段階の確認用 AttackData は `debug_special_upper` とする
 - 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
 - Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
 - Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
@@ -351,7 +376,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は特定キャラクターのフォルダ内に置かない
 - Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
 - `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
-- `AttackList.json` は、`Attack1`、`Attack2` などの slotId と、使用する AttackData ID の対応だけを持つ
+- `AttackList.json` は、`AttackA`、`AttackB`、`AttackX`、`AttackY`、`SpecialAttack`、`SpecialUpper` などの slotId と、使用する AttackData ID の対応だけを持つ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する

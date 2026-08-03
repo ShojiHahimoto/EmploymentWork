@@ -1,8 +1,18 @@
 ﻿#pragma once
 
 #include "Component/Component.h"
+#include "Component/StateComponent.h"
 
 #include <array>
+#include <cstdint>
+
+namespace InputHistoryAttackMask
+{
+	constexpr uint32_t AttackA = 1u << 0;
+	constexpr uint32_t AttackB = 1u << 1;
+	constexpr uint32_t AttackX = 1u << 2;
+	constexpr uint32_t AttackY = 1u << 3;
+}
 
 struct InputButtonHistoryState
 {
@@ -15,26 +25,45 @@ struct InputButtonHistoryState
 
 struct InputHistoryFrame
 {
+	// この履歴が何フレーム目に作られたかを表す通し番号。
+	// コマンドバッファの有効期限や入力表示の経過フレーム計算に使う。
+	int frameNumber = 0;
+
 	// テンキー表記の方向入力。未入力は 5。
 	// 7 8 9
 	// 4 5 6
 	// 1 2 3
 	int direction = 5;
 
-	InputButtonHistoryState lightAttack;
-	InputButtonHistoryState mediumAttack;
-	InputButtonHistoryState heavyAttack;
+	// コマンド判定は入力された瞬間の向きで相対方向へ変換するため、履歴側にも向きを残す。
+	FacingDirection facingDirection = FacingDirection::Right;
+
+	InputButtonHistoryState attackA;
+	InputButtonHistoryState attackB;
+	InputButtonHistoryState attackX;
+	InputButtonHistoryState attackY;
+
+	// 攻撃ボタン群をまとめて扱うためのビットマスク。
+	// 個別状態は UI 表示や細かい判定用、mask はコマンド検索用に使う。
+	uint32_t attackTriggerMask = 0;
+	uint32_t attackPressMask = 0;
+	uint32_t attackReleaseMask = 0;
+
 	// 専用ボタンではなく、direction が 7 / 8 / 9 かどうかから作るジャンプ入力。
 	InputButtonHistoryState jump;
 	InputButtonHistoryState guard;
+
+	// 入力表示用。現段階では「方向と攻撃 Press の組み合わせ」が前フレームと同じかを保存する。
+	bool sameAsPrevious = false;
 };
 
 struct InputHistoryComponent : public Component
 {
-	// 現段階では今フレーム分だけを保存する。
-	// 将来は HistoryFrameCount を増やし、ring buffer として数十フレーム分を保持する。
-	static constexpr int HistoryFrameCount = 1;
+	// コマンド入力を過去 30F まで遡れるよう、ring buffer として履歴を保持する。
+	static constexpr int HistoryFrameCount = 30;
 
 	std::array<InputHistoryFrame, HistoryFrameCount> frames = {};
-	int latestFrameIndex = 0;
+	int latestFrameIndex = -1;
+	int storedFrameCount = 0;
+	int nextFrameNumber = 0;
 };

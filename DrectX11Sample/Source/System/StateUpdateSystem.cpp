@@ -1,14 +1,17 @@
 ﻿#include "System/StateUpdateSystem.h"
 
 #include "Component/CharacterAttackDataComponent.h"
+#include "Component/CommandBufferComponent.h"
 #include "Component/HitBoxComponent.h"
-#include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
-#include "System/Debugger.h"
-#include "System/TransformSystem.h"
 #include "World/World.h"
 
 #include <algorithm>
+
+namespace
+{
+	constexpr int JumpStartupFrames = 4;
+}
 
 void StateUpdateSystem::Update(World& world)
 {
@@ -30,32 +33,32 @@ void StateUpdateSystem::Update(World& world)
 /// <param name="objectId">状態を更新する Player GameObject の ID。</param>
 void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 {
-	// 必要コンポーネント取得
 	StateComponent* state = world.GetComponent<StateComponent>(objectId);
 	VelocityComponent* velocity = world.GetComponent<VelocityComponent>(objectId);
 	InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
-	TransformComponent* transform = world.GetComponent<TransformComponent>(objectId);
+	CommandBufferComponent* commandBuffer = world.GetComponent<CommandBufferComponent>(objectId);
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
 	CharacterAttackDataComponent* attackData = world.GetComponent<CharacterAttackDataComponent>(objectId);
 
-	// 入力を持たないデバッグ用 2P や CPU も、被弾や落下などの状態更新は必要なので入力履歴は任意にする。
-	if (!state || !velocity || !transform)
+	// 入力を持たない CPU やデバッグ対象でも、被弾や落下などの状態更新は必要なので入力履歴は任意にする。
+	if (!state || !velocity)
 	{
 		return;
 	}
 
-	// Count this frame first. If the action changes below, ApplyActionState resets it to 0.
+	// このフレームをカウントしてから判定する。下で状態遷移した場合は ApplyActionState が 0 に戻す。
 	++state->actionFrame;
 
-	ApplyPlayerDirection(world, objectId, *state, *transform);
-
 	InputHistoryFrame neutralInputFrame;
-	const InputHistoryFrame& inputFrame = inputHistory
+	const bool hasInputHistory = inputHistory
+		&& inputHistory->latestFrameIndex >= 0
+		&& inputHistory->storedFrameCount > 0;
+	const InputHistoryFrame& inputFrame = hasInputHistory
 		? inputHistory->frames[inputHistory->latestFrameIndex]
 		: neutralInputFrame;
 
-	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame);
-	ApplyActionState(*state, hitBox, attackData, decision);
+	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame, commandBuffer);
+	ApplyActionState(*state, hitBox, attackData, commandBuffer, decision);
 }
 
 /// <summary>
@@ -64,11 +67,13 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 /// <param name="state">現在の Player 状態。</param>
 /// <param name="velocity">空中上昇・落下の判定に使う VelocityComponent。</param>
 /// <param name="inputFrame">今フレームの入力履歴。</param>
+/// <param name="commandBuffer">入力履歴から成立済みのコマンド候補。</param>
 /// <returns>次の PlayerActionState と、同じ状態を最初からやり直すかどうか。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
-	const InputHistoryFrame& inputFrame)
+	const InputHistoryFrame& inputFrame,
+	const CommandBufferComponent* commandBuffer)
 {
 	if (state.hitstunRequested)
 	{
@@ -83,6 +88,11 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 		}
 	}
 
+	if (IsJumpStartupAction(state.currentActionState))
+	{
+		return DecideJumpStartupAction(state, inputFrame, commandBuffer);
+	}
+
 	if (IsLockedAction(state.currentActionState)
 		&& !IsActionFinished(state)
 		&& !CanCancelAction(state))
@@ -90,9 +100,61 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 		return { state.currentActionState, false };
 	}
 
-	return DecideNeutralAction(state, velocity, inputFrame);
+	return DecideNeutralAction(state, velocity, inputFrame, commandBuffer);
+}
 
-	
+/// <summary>
+/// CommandBufferComponent から攻撃候補を選び、地上/空中の攻撃 ActionState へ変換する。
+/// </summary>
+/// <param name="state">接地状態を持つ StateComponent。</param>
+/// <param name="inputFrame">現在フレーム番号を持つ入力履歴。</param>
+/// <param name="commandBuffer">攻撃入力から作られた先行入力候補。</param>
+/// <returns>攻撃候補があれば攻撃 Decision。なければ Idle の空 Decision。</returns>
+PlayerActionDecision StateUpdateSystem::DecideBufferedAttack(
+	const StateComponent& state,
+	const InputHistoryFrame& inputFrame,
+	const CommandBufferComponent* commandBuffer)
+{
+	std::string bufferedAttackSlotId;
+	int commandAcceptedFrame = -1;
+	if (!TrySelectBufferedAttack(commandBuffer, inputFrame.frameNumber, bufferedAttackSlotId, commandAcceptedFrame))
+	{
+		return {};
+	}
+
+	return {
+		state.isGrounded ? PlayerActionState::GroundAttack : PlayerActionState::AirAttack,
+		true,
+		bufferedAttackSlotId,
+		true,
+		commandAcceptedFrame
+	};
+}
+
+/// <summary>
+/// ジャンプ移行中の状態を処理し、攻撃入力があれば地上攻撃で上書きする。
+/// </summary>
+/// <param name="state">現在の JumpStartup 状態と actionFrame を持つ StateComponent。</param>
+/// <param name="inputFrame">今フレームの入力履歴。</param>
+/// <param name="commandBuffer">先行入力として保存された攻撃候補。</param>
+/// <returns>攻撃、実ジャンプ、または JumpStartup 継続の Decision。</returns>
+PlayerActionDecision StateUpdateSystem::DecideJumpStartupAction(
+	const StateComponent& state,
+	const InputHistoryFrame& inputFrame,
+	const CommandBufferComponent* commandBuffer)
+{
+	PlayerActionDecision attackDecision = DecideBufferedAttack(state, inputFrame, commandBuffer);
+	if (attackDecision.consumeCommand)
+	{
+		return attackDecision;
+	}
+
+	if (IsActionFinished(state))
+	{
+		return { ConvertJumpStartupToJump(state.currentActionState), true };
+	}
+
+	return { state.currentActionState, false };
 }
 
 /// <summary>
@@ -101,66 +163,57 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 /// <param name="state">接地状態などを確認する StateComponent。</param>
 /// <param name="velocity">空中時の上昇・落下を確認する VelocityComponent。</param>
 /// <param name="inputFrame">今フレームの入力履歴。</param>
+/// <param name="commandBuffer">攻撃入力から作られた先行入力候補。</param>
 /// <returns>通常状態から採用する PlayerActionState。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
-	const InputHistoryFrame& inputFrame)
+	const InputHistoryFrame& inputFrame,
+	const CommandBufferComponent* commandBuffer)
 {
-	if (HasAttackTrigger(inputFrame))
+	PlayerActionDecision attackDecision = DecideBufferedAttack(state, inputFrame, commandBuffer);
+	if (attackDecision.consumeCommand)
 	{
-		return {
-			state.isGrounded ? PlayerActionState::GroundAttack : PlayerActionState::AirAttack,
-			true,
-			SelectAttackSlotId(inputFrame)
-		};
+		return attackDecision;
 	}
 
-	// 後からプレイヤーの向きに応じて前ジャンプと後ろジャンプを区別できるようにする
-	if (state.isGrounded && (inputFrame.direction == 7 && state.facingDirection == FacingDirection::Right
-						  || inputFrame.direction == 9 && state.facingDirection == FacingDirection::Left))
+	if (state.isGrounded
+		&& ((inputFrame.direction == 7 && state.facingDirection == FacingDirection::Right)
+			|| (inputFrame.direction == 9 && state.facingDirection == FacingDirection::Left)))
 	{
-		return { PlayerActionState::BackJump, true };
+		return { PlayerActionState::BackJumpStartup, true };
 	}
 	if (state.isGrounded && inputFrame.direction == 8)
 	{
-		return { PlayerActionState::VerticalJump, true };
+		return { PlayerActionState::VerticalJumpStartup, true };
 	}
-	if (state.isGrounded && (inputFrame.direction == 9 && state.facingDirection == FacingDirection::Right
-						  || inputFrame.direction == 7 && state.facingDirection == FacingDirection::Left))
+	if (state.isGrounded
+		&& ((inputFrame.direction == 9 && state.facingDirection == FacingDirection::Right)
+			|| (inputFrame.direction == 7 && state.facingDirection == FacingDirection::Left)))
 	{
-		return { PlayerActionState::FrontJump, true };
+		return { PlayerActionState::FrontJumpStartup, true };
 	}
 
 	if (!state.isGrounded)
 	{
 		return {
-			velocity.velocity.y > 0.0f ? /*PlayerActionState::VerticalJump*/ state.currentActionState : PlayerActionState::Fall,
+			velocity.velocity.y > 0.0f ? state.currentActionState : PlayerActionState::Fall,
 			false
 		};
 	}
 
-	//return {
-	//	HasHorizontalMoveDirection(inputFrame.direction) ? PlayerActionState::FrontWalk : PlayerActionState::Idle,
-	//	false
-	//};
-
 	if (HasHorizontalMoveDirection(inputFrame.direction))
 	{
-		if (inputFrame.direction == 4 && state.facingDirection == FacingDirection::Left ||
-			inputFrame.direction == 6 && state.facingDirection == FacingDirection::Right)
+		if ((inputFrame.direction == 4 && state.facingDirection == FacingDirection::Left)
+			|| (inputFrame.direction == 6 && state.facingDirection == FacingDirection::Right))
 		{
 			return { PlayerActionState::FrontWalk, false };
 		}
-		else if (inputFrame.direction == 4 && state.facingDirection == FacingDirection::Right ||
-			inputFrame.direction == 6 && state.facingDirection == FacingDirection::Left)
+		if ((inputFrame.direction == 4 && state.facingDirection == FacingDirection::Right)
+			|| (inputFrame.direction == 6 && state.facingDirection == FacingDirection::Left))
 		{
 			return { PlayerActionState::BackWalk, false };
 		}
-	}
-	else
-	{
-		return { PlayerActionState::Idle, false };
 	}
 
 	return { PlayerActionState::Idle, false };
@@ -179,40 +232,83 @@ bool StateUpdateSystem::HasHorizontalMoveDirection(int direction)
 }
 
 /// <summary>
-/// 今フレームに攻撃ボタンの Trigger があるか判定する。
+/// 指定 ActionState がジャンプ移行フレーム中か判定する。
 /// </summary>
-/// <param name="inputFrame">判定する入力履歴。</param>
-/// <returns>いずれかの攻撃ボタンが Trigger なら true。</returns>
-bool StateUpdateSystem::HasAttackTrigger(const InputHistoryFrame& inputFrame)
+/// <param name="actionState">判定する PlayerActionState。</param>
+/// <returns>いずれかの JumpStartup 状態なら true。</returns>
+bool StateUpdateSystem::IsJumpStartupAction(PlayerActionState actionState)
 {
-	return inputFrame.lightAttack.trigger
-		|| inputFrame.mediumAttack.trigger
-		|| inputFrame.heavyAttack.trigger;
+	return actionState == PlayerActionState::VerticalJumpStartup
+		|| actionState == PlayerActionState::FrontJumpStartup
+		|| actionState == PlayerActionState::BackJumpStartup;
 }
 
 /// <summary>
-/// 攻撃入力から実行する技スロット ID を選ぶ。
+/// ジャンプ移行 ActionState を、対応する実ジャンプ ActionState に変換する。
 /// </summary>
-/// <param name="inputFrame">判定する入力履歴。</param>
-/// <returns>入力に対応する slotId。未入力の場合は空文字。</returns>
-std::string StateUpdateSystem::SelectAttackSlotId(const InputHistoryFrame& inputFrame)
+/// <param name="actionState">変換元の JumpStartup 状態。</param>
+/// <returns>対応する Jump 状態。JumpStartup 以外の場合は Fall。</returns>
+PlayerActionState StateUpdateSystem::ConvertJumpStartupToJump(PlayerActionState actionState)
 {
-	if (inputFrame.lightAttack.trigger)
+	switch (actionState)
 	{
-		return "Attack1";
+	case PlayerActionState::VerticalJumpStartup:
+		return PlayerActionState::VerticalJump;
+	case PlayerActionState::FrontJumpStartup:
+		return PlayerActionState::FrontJump;
+	case PlayerActionState::BackJumpStartup:
+		return PlayerActionState::BackJump;
+	default:
+		return PlayerActionState::Fall;
+	}
+}
+
+/// <summary>
+/// CommandBufferComponent 内の有効な攻撃候補から、新しいものを優先して 1 つ選ぶ。
+/// </summary>
+/// <param name="commandBuffer">検索対象の先行入力候補。</param>
+/// <param name="currentFrameNumber">今フレームの入力履歴番号。</param>
+/// <param name="outAttackSlotId">選ばれた攻撃スロット ID の書き込み先。</param>
+/// <param name="outCommandAcceptedFrame">選ばれたコマンド成立フレームの書き込み先。</param>
+/// <returns>実行できる攻撃候補があれば true。</returns>
+bool StateUpdateSystem::TrySelectBufferedAttack(
+	const CommandBufferComponent* commandBuffer,
+	int currentFrameNumber,
+	std::string& outAttackSlotId,
+	int& outCommandAcceptedFrame)
+{
+	if (!commandBuffer)
+	{
+		return false;
 	}
 
-	if (inputFrame.mediumAttack.trigger)
+	const BufferedCommandInput* bestCommand = nullptr;
+	for (const BufferedCommandInput& command : commandBuffer->commands)
 	{
-		return "Attack2";
+		if (!command.valid
+			|| command.attackSlotId.empty()
+			|| command.bufferExpireFrame < currentFrameNumber)
+		{
+			continue;
+		}
+
+		if (!bestCommand
+			|| command.commandAcceptedFrame > bestCommand->commandAcceptedFrame
+			|| (command.commandAcceptedFrame == bestCommand->commandAcceptedFrame
+				&& command.priority > bestCommand->priority))
+		{
+			bestCommand = &command;
+		}
 	}
 
-	if (inputFrame.heavyAttack.trigger)
+	if (!bestCommand)
 	{
-		return "Attack3";
+		return false;
 	}
 
-	return "";
+	outAttackSlotId = bestCommand->attackSlotId;
+	outCommandAcceptedFrame = bestCommand->commandAcceptedFrame;
+	return true;
 }
 
 /// <summary>
@@ -236,6 +332,10 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 {
 	switch (state.currentActionState)
 	{
+	case PlayerActionState::VerticalJumpStartup:
+	case PlayerActionState::FrontJumpStartup:
+	case PlayerActionState::BackJumpStartup:
+		return state.actionFrame >= JumpStartupFrames;
 	case PlayerActionState::GroundAttack:
 	case PlayerActionState::AirAttack:
 		return state.actionDurationFrames <= 0 || state.actionFrame >= state.actionDurationFrames;
@@ -293,35 +393,50 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 /// <param name="state">更新する StateComponent。</param>
 /// <param name="hitBox">攻撃開始時に currentAttack を更新する HitBoxComponent。</param>
 /// <param name="attackData">攻撃開始時に合計フレームを取得する CharacterAttackDataComponent。</param>
+/// <param name="commandBuffer">採用済みコマンドを消費する CommandBufferComponent。</param>
 /// <param name="decision">採用する ActionState と再開始フラグ。</param>
 void StateUpdateSystem::ApplyActionState(
 	StateComponent& state,
 	HitBoxComponent* hitBox,
 	const CharacterAttackDataComponent* attackData,
+	CommandBufferComponent* commandBuffer,
 	const PlayerActionDecision& decision)
 {
-	if (state.currentActionState != decision.nextActionState || decision.restartAction)
+	const bool actionChanged = state.currentActionState != decision.nextActionState || decision.restartAction;
+	if (actionChanged)
 	{
+		const PlayerActionState previousActionState = state.currentActionState;
+		const FacingDirection previousActionStartFacingDirection = state.actionStartFacingDirection;
+		const bool isJumpStartupToJump = IsJumpStartupAction(previousActionState)
+			&& ConvertJumpStartupToJump(previousActionState) == decision.nextActionState;
+
 		state.currentActionState = decision.nextActionState;
+		state.actionStartFacingDirection = isJumpStartupToJump
+			? previousActionStartFacingDirection
+			: state.facingDirection;
 		state.actionFrame = 0;
 		state.actionDurationFrames = 0;
 		state.cancelEnabled = false;
 
-		if (hitBox)
+		const bool isAttackState = state.currentActionState == PlayerActionState::GroundAttack
+			|| state.currentActionState == PlayerActionState::AirAttack;
+		if (isAttackState)
 		{
-			if (state.currentActionState == PlayerActionState::GroundAttack
-				|| state.currentActionState == PlayerActionState::AirAttack)
+			const std::string attackSlotId = decision.attackSlotId.empty() ? "AttackA" : decision.attackSlotId;
+			state.actionDurationFrames = CalculateAttackTotalFrames(attackData, attackSlotId);
+
+			if (hitBox)
 			{
-				const std::string attackSlotId = decision.attackSlotId.empty() ? "Attack1" : decision.attackSlotId;
 				hitBox->currentAttack.slotId = attackSlotId;
 				hitBox->currentAttack.hasHit = false;
-				state.actionDurationFrames = CalculateAttackTotalFrames(attackData, attackSlotId);
 			}
-			else
-			{
-				hitBox->currentAttack.slotId.clear();
-				hitBox->currentAttack.hasHit = false;
-			}
+
+			ConsumeBufferedCommand(commandBuffer, decision);
+		}
+		else if (hitBox)
+		{
+			hitBox->currentAttack.slotId.clear();
+			hitBox->currentAttack.hasHit = false;
 		}
 	}
 
@@ -329,41 +444,27 @@ void StateUpdateSystem::ApplyActionState(
 }
 
 /// <summary>
-/// 相手 Player との X 座標関係から、ステートコンポーネント内のプレイヤー向きを更新する。
+/// 採用したコマンド候補を CommandBufferComponent から消す。
 /// </summary>
-/// <param name="world">相手 Player の Transform を取得する World。</param>
-/// <param name="objectId">向きを更新する Player GameObject ID。</param>
-/// <param name="state">向き情報を書き込む StateComponent。</param>
-/// <param name="transform">自分の X 座標を確認する TransformComponent。</param>
-void StateUpdateSystem::ApplyPlayerDirection(
-	World& world,
-	GameObjectId objectId,
-	StateComponent& state,
-	const TransformComponent& transform)
+/// <param name="commandBuffer">消費対象の CommandBufferComponent。</param>
+/// <param name="decision">採用した攻撃スロットと成立フレームを持つ決定情報。</param>
+void StateUpdateSystem::ConsumeBufferedCommand(
+	CommandBufferComponent* commandBuffer,
+	const PlayerActionDecision& decision)
 {
-	if (state.currentActionState == PlayerActionState::Idle
-		|| state.currentActionState == PlayerActionState::FrontWalk
-		|| state.currentActionState == PlayerActionState::BackWalk
-		|| ((state.currentActionState == PlayerActionState::VerticalJump
-			|| state.currentActionState == PlayerActionState::FrontJump
-			|| state.currentActionState == PlayerActionState::BackJump) && state.actionFrame == 1))
+	if (!commandBuffer || !decision.consumeCommand)
 	{
-		const GameObjectId opponentId = world.GetOpponentBattlePlayerId(objectId);
-		const TransformComponent* opponentTransform = world.GetTransform(opponentId);
-		if (!opponentTransform)
-		{
-			return;
-		}
+		return;
+	}
 
-		const float selfX = TransformSystem::GetLocalPosition(transform).x;
-		const float opponentX = TransformSystem::GetLocalPosition(*opponentTransform).x;
-		if (selfX < opponentX)
+	for (BufferedCommandInput& command : commandBuffer->commands)
+	{
+		if (command.valid
+			&& command.attackSlotId == decision.attackSlotId
+			&& command.commandAcceptedFrame == decision.commandAcceptedFrame)
 		{
-			state.facingDirection = FacingDirection::Right;
-		}
-		else if (selfX > opponentX)
-		{
-			state.facingDirection = FacingDirection::Left;
+			command = BufferedCommandInput{};
+			return;
 		}
 	}
 }

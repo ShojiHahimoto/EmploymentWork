@@ -13,6 +13,7 @@
 #include "System/BattleHUDSystem.h"
 #include "System/BattleResultSystem.h"
 #include "System/CameraSystem.h"
+#include "System/CommandInputSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
@@ -21,6 +22,7 @@
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
+#include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
 #include "System/SpawnDestroySystem.h"
@@ -124,7 +126,9 @@ void BattleScene::RunSystems()
 #endif
 
 	SpawnDestroySystem::Update(world);
+	PlayerFacingSystem::Update(world);
 	InputHistorySystem::Update(world);
+	CommandInputSystem::Update(world);
 	StateUpdateSystem::Update(world);
 	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);

@@ -1,8 +1,10 @@
 ﻿#include "System/InputHistorySystem.h"
 
+#include "Component/StateComponent.h"
 #include "Input/InputSystem.h"
 #include "World/World.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cmath>
 
@@ -43,18 +45,48 @@ void InputHistorySystem::UpdateInputHistory(World& world, GameObjectId objectId,
 	// World が保持する BattlePlayerId の順番と、InputSystem の PlayerInputState 番号を対応させる。
 	// 1P/2P の入力デバイス割り当てを変えても、ここより後ろの State / Control 側は同じ入力履歴だけを見る。
 	const Input::PlayerInputState& inputState = Input::InputSystem::GetPlayerInputState(playerIndex);
-	inputHistory->latestFrameIndex = 0;
-	inputHistory->frames[inputHistory->latestFrameIndex] = BuildHistoryFrame(inputState);
+	const StateComponent* state = world.GetComponent<StateComponent>(objectId);
+	const FacingDirection facingDirection = state ? state->facingDirection : FacingDirection::Right;
+
+	const InputHistoryFrame* previousFrame = nullptr;
+	if (inputHistory->latestFrameIndex >= 0 && inputHistory->storedFrameCount > 0)
+	{
+		previousFrame = &inputHistory->frames[inputHistory->latestFrameIndex];
+	}
+
+	const int writeIndex = inputHistory->latestFrameIndex < 0
+		? 0
+		: (inputHistory->latestFrameIndex + 1) % InputHistoryComponent::HistoryFrameCount;
+
+	inputHistory->frames[writeIndex] = BuildHistoryFrame(
+		inputState,
+		facingDirection,
+		inputHistory->nextFrameNumber,
+		previousFrame);
+	inputHistory->latestFrameIndex = writeIndex;
+	inputHistory->storedFrameCount = std::min(
+		inputHistory->storedFrameCount + 1,
+		InputHistoryComponent::HistoryFrameCount);
+	++inputHistory->nextFrameNumber;
 }
 
 /// <summary>
 /// InputSystem の PlayerInputState を、格闘ゲーム用の InputHistoryFrame に変換する。
 /// </summary>
 /// <param name="inputState">InputSystem が今フレーム確定した 1 Player 分の入力状態。</param>
+/// <param name="facingDirection">この入力が発生した時点のプレイヤー向き。</param>
+/// <param name="frameNumber">履歴に保存する通しフレーム番号。</param>
+/// <param name="previousFrame">前回保存した入力履歴。存在しない場合は nullptr。</param>
 /// <returns>テンキー方向、攻撃、ジャンプ、ガードをまとめた今フレームの入力履歴。</returns>
-InputHistoryFrame InputHistorySystem::BuildHistoryFrame(const Input::PlayerInputState& inputState)
+InputHistoryFrame InputHistorySystem::BuildHistoryFrame(
+	const Input::PlayerInputState& inputState,
+	FacingDirection facingDirection,
+	int frameNumber,
+	const InputHistoryFrame* previousFrame)
 {
 	InputHistoryFrame frame;
+	frame.frameNumber = frameNumber;
+	frame.facingDirection = facingDirection;
 
 	const Input::InputActionState& move =
 		inputState.actions[static_cast<size_t>(Input::InputActionId::Move)];
@@ -62,14 +94,22 @@ InputHistoryFrame InputHistorySystem::BuildHistoryFrame(const Input::PlayerInput
 	frame.direction = ConvertMoveAxisToDirection(move.value.axis);
 	const int previousDirection = ConvertMoveAxisToDirection(move.previousValue.axis);
 
-	frame.lightAttack = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::LightAttack)]);
-	frame.mediumAttack = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::MediumAttack)]);
-	frame.heavyAttack = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::HeavyAttack)]);
+	frame.attackA = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::AttackA)]);
+	frame.attackB = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::AttackB)]);
+	frame.attackX = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::AttackX)]);
+	frame.attackY = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::AttackY)]);
+	frame.attackTriggerMask = BuildAttackMask(frame.attackA, frame.attackB, frame.attackX, frame.attackY, &InputButtonHistoryState::trigger);
+	frame.attackPressMask = BuildAttackMask(frame.attackA, frame.attackB, frame.attackX, frame.attackY, &InputButtonHistoryState::press);
+	frame.attackReleaseMask = BuildAttackMask(frame.attackA, frame.attackB, frame.attackX, frame.attackY, &InputButtonHistoryState::release);
+
 	// バトル操作では 7 / 8 / 9 方向をジャンプ入力として扱う。
 	// 今後、前ジャンプ・垂直ジャンプ・バックジャンプに分ける場合も、
 	// direction には 7 / 8 / 9 の区別を残したまま jump の Trigger / Press / Release を参照できる。
 	frame.jump = BuildJumpDirectionState(frame.direction, previousDirection);
 	frame.guard = CopyButtonState(inputState.actions[static_cast<size_t>(Input::InputActionId::Guard)]);
+	frame.sameAsPrevious = previousFrame
+		&& frame.direction == previousFrame->direction
+		&& frame.attackPressMask == previousFrame->attackPressMask;
 
 	return frame;
 }
@@ -147,4 +187,41 @@ InputButtonHistoryState InputHistorySystem::CopyButtonState(const Input::InputAc
 	button.press = actionState.press;
 	button.release = actionState.release;
 	return button;
+}
+
+/// <summary>
+/// 4 種の攻撃ボタン状態から、指定された状態だけをまとめたビットマスクを作る。
+/// </summary>
+/// <param name="attackA">AttackA の入力状態。</param>
+/// <param name="attackB">AttackB の入力状態。</param>
+/// <param name="attackX">AttackX の入力状態。</param>
+/// <param name="attackY">AttackY の入力状態。</param>
+/// <param name="stateMember">trigger / press / release のどれを mask 化するか。</param>
+/// <returns>入力中の攻撃ボタンを表すビットマスク。</returns>
+uint32_t InputHistorySystem::BuildAttackMask(
+	const InputButtonHistoryState& attackA,
+	const InputButtonHistoryState& attackB,
+	const InputButtonHistoryState& attackX,
+	const InputButtonHistoryState& attackY,
+	bool InputButtonHistoryState::* stateMember)
+{
+	uint32_t mask = 0;
+	if (attackA.*stateMember)
+	{
+		mask |= InputHistoryAttackMask::AttackA;
+	}
+	if (attackB.*stateMember)
+	{
+		mask |= InputHistoryAttackMask::AttackB;
+	}
+	if (attackX.*stateMember)
+	{
+		mask |= InputHistoryAttackMask::AttackX;
+	}
+	if (attackY.*stateMember)
+	{
+		mask |= InputHistoryAttackMask::AttackY;
+	}
+
+	return mask;
 }

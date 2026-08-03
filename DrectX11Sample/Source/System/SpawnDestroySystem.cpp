@@ -2,6 +2,7 @@
 
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
+#include "Component/CommandBufferComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
@@ -81,6 +82,7 @@ namespace
 		world.AddComponent<HitBoxComponent>(objectId, hitBox);
 
 		world.AddComponent<InputHistoryComponent>(objectId);
+		world.AddComponent<CommandBufferComponent>(objectId);
 	}
 }
 

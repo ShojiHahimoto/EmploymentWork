@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp" />
     <ClCompile Include="Source\System\BattleResultSystem.cpp" />
+    <ClCompile Include="Source\System\CommandInputSystem.cpp" />
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
     <ClCompile Include="Source\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
@@ -48,6 +49,7 @@
     <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp" />
     <ClCompile Include="Source\System\main.cpp" />
     <ClCompile Include="Source\System\MovementSystem.cpp" />
+    <ClCompile Include="Source\System\PlayerFacingSystem.cpp" />
     <ClCompile Include="Source\System\PlayerControlSystem.cpp" />
     <ClCompile Include="Source\System\Renderer.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
@@ -61,6 +63,7 @@
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
     <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
+    <ClInclude Include="Source\Component\CommandBufferComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
     <ClInclude Include="Source\Component\HitBoxComponent.h" />
     <ClInclude Include="Source\Component\HealthGaugeComponent.h" />
@@ -88,6 +91,7 @@
     <ClInclude Include="Source\System\BattleHUDSystem.h" />
     <ClInclude Include="Source\System\BattleResultSystem.h" />
     <ClInclude Include="Source\System\CameraSystem.h" />
+    <ClInclude Include="Source\System\CommandInputSystem.h" />
     <ClInclude Include="Source\System\DebugCameraControlSystem.h" />
     <ClInclude Include="Source\System\Debugger.h" />
     <ClInclude Include="Source\System\DebugImGuiSystem.h" />
@@ -106,6 +110,7 @@
     <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
     <ClInclude Include="Source\System\main.h" />
     <ClInclude Include="Source\System\MovementSystem.h" />
+    <ClInclude Include="Source\System\PlayerFacingSystem.h" />
     <ClInclude Include="Source\System\PlayerControlSystem.h" />
     <ClInclude Include="Source\System\Renderer.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
@@ -118,6 +123,8 @@
     <None Include="assets\AttackData\debug_front_kick.json" />
     <None Include="assets\AttackData\debug_punch.json" />
     <None Include="assets\AttackData\debug_roundhouse_kick.json" />
+    <None Include="assets\AttackData\debug_special_attack.json" />
+    <None Include="assets\AttackData\debug_special_upper.json" />
     <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
     <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
     <None Include="assets\texture\number.png" />
