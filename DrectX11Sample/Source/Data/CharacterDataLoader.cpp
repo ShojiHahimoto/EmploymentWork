@@ -184,6 +184,110 @@ namespace
 	}
 
 	/// <summary>
+	/// JSON の attackKind 文字列を AttackKind に変換する。
+	/// </summary>
+	/// <param name="text">JSON に保存されている攻撃種別。</param>
+	/// <returns>対応する AttackKind。不明な場合は Unknown。</returns>
+	AttackKind ParseAttackKind(const std::string& text)
+	{
+		if (text == "Normal")
+		{
+			return AttackKind::Normal;
+		}
+		if (text == "Special")
+		{
+			return AttackKind::Special;
+		}
+		return AttackKind::Unknown;
+	}
+
+	/// <summary>
+	/// JSON の commandId 文字列を AttackCommandId に変換する。
+	/// </summary>
+	/// <param name="text">JSON に保存されているコマンド名。</param>
+	/// <returns>対応する AttackCommandId。不明な場合は Unknown。</returns>
+	AttackCommandId ParseAttackCommandId(const std::string& text)
+	{
+		if (text == "None" || text.empty())
+		{
+			return AttackCommandId::None;
+		}
+		if (text == "Hadouken" || text == "Hadoken")
+		{
+			return AttackCommandId::Hadouken;
+		}
+		if (text == "Shoryuu" || text == "Shoryu")
+		{
+			return AttackCommandId::Shoryuu;
+		}
+		if (text == "Yoga")
+		{
+			return AttackCommandId::Yoga;
+		}
+		if (text == "ReverseYoga")
+		{
+			return AttackCommandId::ReverseYoga;
+		}
+		if (text == "FullRotate")
+		{
+			return AttackCommandId::FullRotate;
+		}
+		return AttackCommandId::Unknown;
+	}
+
+	/// <summary>
+	/// JSON の usableState 文字列を AttackUsableState に変換する。
+	/// </summary>
+	/// <param name="text">JSON に保存されている発動可能状態。</param>
+	/// <returns>対応する AttackUsableState。不明な場合は Unknown。</returns>
+	AttackUsableState ParseAttackUsableState(const std::string& text)
+	{
+		if (text == "Ground")
+		{
+			return AttackUsableState::Ground;
+		}
+		if (text == "Air")
+		{
+			return AttackUsableState::Air;
+		}
+		if (text == "Both")
+		{
+			return AttackUsableState::Both;
+		}
+		return AttackUsableState::Unknown;
+	}
+
+	/// <summary>
+	/// JSON の button 文字列を AttackButtonId に変換する。
+	/// </summary>
+	/// <param name="text">AttackA / AttackB / AttackX / AttackY などの文字列。</param>
+	/// <returns>対応する AttackButtonId。不明な場合は Unknown。</returns>
+	AttackButtonId ParseAttackButtonId(const std::string& text)
+	{
+		if (text.empty() || text == "None")
+		{
+			return AttackButtonId::None;
+		}
+		if (text == "AttackA" || text == "A" || text == "NormalA" || text == "SpecialA")
+		{
+			return AttackButtonId::AttackA;
+		}
+		if (text == "AttackB" || text == "B" || text == "NormalB" || text == "SpecialB")
+		{
+			return AttackButtonId::AttackB;
+		}
+		if (text == "AttackX" || text == "X" || text == "NormalX" || text == "SpecialX")
+		{
+			return AttackButtonId::AttackX;
+		}
+		if (text == "AttackY" || text == "Y" || text == "NormalY" || text == "SpecialY")
+		{
+			return AttackButtonId::AttackY;
+		}
+		return AttackButtonId::Unknown;
+	}
+
+	/// <summary>
 	/// Parameter.json の JSON Object から CharacterParameterData を読み込む。
 	/// </summary>
 	/// <param name="root">Parameter.json の root Object。</param>
@@ -224,14 +328,19 @@ namespace
 	}
 
 	/// <summary>
-	/// AttackList.json から技スロットと AttackData ID の対応を読み込む。
+	/// AttackList.json の指定配列から技スロットと AttackData ID の対応を読み込む。
 	/// </summary>
 	/// <param name="root">AttackList.json の root Object。</param>
-	/// <param name="outSlots">読み込んだスロット情報の書き込み先。</param>
-	void LoadAttackSlotsFromJson(const JsonValue& root, std::vector<CharacterAttackSlotData>& outSlots)
+	/// <param name="arrayKey">読み込む配列キー。</param>
+	/// <param name="slotType">配列内のスロット種別。</param>
+	/// <param name="outSlots">読み込んだスロット情報の追加先。</param>
+	void AppendAttackSlotsFromJsonArray(
+		const JsonValue& root,
+		const std::string& arrayKey,
+		AttackSlotType slotType,
+		std::vector<CharacterAttackSlotData>& outSlots)
 	{
-		outSlots.clear();
-		const JsonValue* attackSlots = root.Find("attackSlots");
+		const JsonValue* attackSlots = root.Find(arrayKey);
 		if (!attackSlots || !attackSlots->IsArray())
 		{
 			return;
@@ -247,10 +356,33 @@ namespace
 			CharacterAttackSlotData slot;
 			slot.slotId = GetString(slotValue, "slotId", "");
 			slot.attackDataId = GetString(slotValue, "attackDataId", "");
-			if (!slot.slotId.empty() && !slot.attackDataId.empty())
+			slot.slotType = slotType;
+			slot.button = ParseAttackButtonId(GetString(slotValue, "button", slot.slotId));
+			if (!slot.slotId.empty()
+				&& !slot.attackDataId.empty()
+				&& slot.button != AttackButtonId::None
+				&& slot.button != AttackButtonId::Unknown)
 			{
 				outSlots.push_back(slot);
 			}
+		}
+	}
+
+	/// <summary>
+	/// AttackList.json から通常攻撃スロットと必殺技スロットを読み込む。
+	/// </summary>
+	/// <param name="root">AttackList.json の root Object。</param>
+	/// <param name="outSlots">読み込んだスロット情報の書き込み先。</param>
+	void LoadAttackSlotsFromJson(const JsonValue& root, std::vector<CharacterAttackSlotData>& outSlots)
+	{
+		outSlots.clear();
+		AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, outSlots);
+		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, outSlots);
+
+		// 旧形式互換。attackSlots しかない場合は通常攻撃スロットとして扱う。
+		if (outSlots.empty())
+		{
+			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, outSlots);
 		}
 	}
 
@@ -387,6 +519,8 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 
 		CharacterAssignedAttackData assignedAttack;
 		assignedAttack.slotId = slot.slotId;
+		assignedAttack.slotType = slot.slotType;
+		assignedAttack.button = slot.button;
 		assignedAttack.attack = attackData;
 		outCharacterData.attacks.push_back(assignedAttack);
 	}
@@ -413,6 +547,9 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
 	outAttackData.damage = GetInt(root, "damage", outAttackData.damage);
 	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
+	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
+	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
+	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);

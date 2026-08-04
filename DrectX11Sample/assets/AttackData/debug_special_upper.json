@@ -1,6 +1,9 @@
 ﻿{
   "attackDataId": "debug_special_upper",
-  "displayName": "DebugSpecialUpper",
+  "displayName": "デバッグスペシャルアッパー",
+  "attackKind": "Special",
+  "commandId": "Shoryuu",
+  "usableState": "Ground",
   "damage": 50,
   "hitstunFrames": 28,
   "frame": {

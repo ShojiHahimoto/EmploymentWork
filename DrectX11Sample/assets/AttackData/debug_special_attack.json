@@ -1,6 +1,9 @@
 ﻿{
   "attackDataId": "debug_special_attack",
   "displayName": "デバッグスペシャルアタック",
+  "attackKind": "Special",
+  "commandId": "Hadoken",
+  "usableState": "Ground",
   "damage": 45,
   "hitstunFrames": 25,
   "frame": {

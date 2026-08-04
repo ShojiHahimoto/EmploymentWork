@@ -3,6 +3,7 @@
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
+#include "Data/AttackData.h"
 
 #include <string>
 
@@ -59,9 +60,11 @@ private:
 	static PlayerActionState ConvertJumpStartupToJump(PlayerActionState actionState);
 	static bool TrySelectBufferedAttack(
 		const CommandBufferComponent* commandBuffer,
+		const StateComponent& state,
 		int currentFrameNumber,
 		std::string& outAttackSlotId,
 		int& outCommandAcceptedFrame);
+	static bool IsBufferedAttackUsableInCurrentState(AttackUsableState usableState, const StateComponent& state);
 	static bool IsLockedAction(PlayerActionState actionState);
 	static bool IsActionFinished(const StateComponent& state);
 	static int CalculateAttackTotalFrames(const CharacterAttackDataComponent* attackData, const std::string& attackSlotId);

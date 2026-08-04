@@ -1,6 +1,8 @@
 ﻿#include "System/CommandInputSystem.h"
 
+#include "Component/CharacterAttackDataComponent.h"
 #include "Component/CommandBufferComponent.h"
+#include "Component/StateComponent.h"
 #include "World/World.h"
 
 namespace
@@ -9,28 +11,47 @@ namespace
 	constexpr int NormalAttackXPriority = 102;
 	constexpr int NormalAttackBPriority = 103;
 	constexpr int NormalAttackAPriority = 104;
-	constexpr int HadokenPriority = 200;
-	constexpr int ShoryuPriority = 300;
+	constexpr int HadoukenPriority = 200;
+	constexpr int ShoryuuPriority = 300;
+	constexpr int YogaPriority = 400;
+	constexpr int FullRotatePriority = 500;
 
 	constexpr int DirectionUp = 1 << 0;
 	constexpr int DirectionDown = 1 << 1;
 	constexpr int DirectionBack = 1 << 2;
 	constexpr int DirectionForward = 1 << 3;
+	constexpr int FullRotateRequiredDirectionCount = 4;
 
-	constexpr CommandDirectionStep HadokenCommand[] =
+	constexpr CommandDirectionStep HadoukenCommand[] =
 	{
 		{ 2, CommandDirectionMatchMode::ContainsComponents },
 		{ 3, CommandDirectionMatchMode::ContainsComponents },
 		{ 6, CommandDirectionMatchMode::ContainsComponents },
 	};
 
-	// 簡易昇竜は「前成分 -> 下成分 -> 前成分」を見る。
-	// 623 だけでなく 636 や 323 なども成立し、同じ方向の押しっぱなしだけでは成立しない。
-	constexpr CommandDirectionStep ShoryuCommand[] =
+	constexpr CommandDirectionStep ShoryuuCommand[] =
 	{
 		{ 6, CommandDirectionMatchMode::ContainsComponents },
 		{ 2, CommandDirectionMatchMode::ContainsComponents },
 		{ 6, CommandDirectionMatchMode::ContainsComponents },
+	};
+
+	constexpr CommandDirectionStep YogaCommand[] =
+	{
+		{ 4, CommandDirectionMatchMode::ContainsComponents },
+		{ 1, CommandDirectionMatchMode::ContainsComponents },
+		{ 2, CommandDirectionMatchMode::ContainsComponents },
+		{ 3, CommandDirectionMatchMode::ContainsComponents },
+		{ 6, CommandDirectionMatchMode::ContainsComponents },
+	};
+
+	constexpr CommandDirectionStep ReverseYogaCommand[] =
+	{
+		{ 6, CommandDirectionMatchMode::ContainsComponents },
+		{ 3, CommandDirectionMatchMode::ContainsComponents },
+		{ 2, CommandDirectionMatchMode::ContainsComponents },
+		{ 1, CommandDirectionMatchMode::ContainsComponents },
+		{ 4, CommandDirectionMatchMode::ContainsComponents },
 	};
 
 	/// <summary>
@@ -68,14 +89,20 @@ void CommandInputSystem::UpdatePlayerCommandBuffer(World& world, GameObjectId ob
 {
 	CommandBufferComponent* commandBuffer = world.GetComponent<CommandBufferComponent>(objectId);
 	const InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(objectId);
-	if (!commandBuffer || !inputHistory || inputHistory->latestFrameIndex < 0)
+	const CharacterAttackDataComponent* characterAttackData = world.GetComponent<CharacterAttackDataComponent>(objectId);
+	const StateComponent* state = world.GetComponent<StateComponent>(objectId);
+	if (!commandBuffer
+		|| !inputHistory
+		|| !characterAttackData
+		|| !state
+		|| inputHistory->latestFrameIndex < 0)
 	{
 		return;
 	}
 
 	const InputHistoryFrame& latestFrame = inputHistory->frames[inputHistory->latestFrameIndex];
 	RemoveExpiredCommands(*commandBuffer, latestFrame.frameNumber);
-	RegisterCommandsFromLatestInput(*commandBuffer, *inputHistory);
+	RegisterCommandsFromLatestInput(*commandBuffer, *inputHistory, *characterAttackData, *state);
 }
 
 /// <summary>
@@ -95,13 +122,17 @@ void CommandInputSystem::RemoveExpiredCommands(CommandBufferComponent& commandBu
 }
 
 /// <summary>
-/// 今フレームの攻撃 Trigger を起点に、通常攻撃とコマンド技の候補を登録する。
+/// 今フレームの攻撃 Trigger を起点に、キャラクターに割り当てられた通常攻撃と必殺技候補を登録する。
 /// </summary>
 /// <param name="commandBuffer">成立したコマンドを書き込む Component。</param>
 /// <param name="inputHistory">過去 30F 分の入力履歴。</param>
+/// <param name="characterAttackData">キャラクターに割り当てられた技一覧。</param>
+/// <param name="state">地上/空中の発動条件を確認する StateComponent。</param>
 void CommandInputSystem::RegisterCommandsFromLatestInput(
 	CommandBufferComponent& commandBuffer,
-	const InputHistoryComponent& inputHistory)
+	const InputHistoryComponent& inputHistory,
+	const CharacterAttackDataComponent& characterAttackData,
+	const StateComponent& state)
 {
 	const InputHistoryFrame* latestFrame = GetHistoryFrameFromLatest(inputHistory, 0);
 	if (!latestFrame || latestFrame->attackTriggerMask == 0)
@@ -110,35 +141,39 @@ void CommandInputSystem::RegisterCommandsFromLatestInput(
 	}
 
 	const int commandAcceptedFrame = latestFrame->frameNumber;
-
-	if (HasButton(latestFrame->attackTriggerMask, InputHistoryAttackMask::AttackA))
+	for (const CharacterAssignedAttackData& assignedAttack : characterAttackData.attacks)
 	{
-		if (MatchHadokenCommand(inputHistory))
+		const uint32_t buttonMask = GetAttackButtonMask(assignedAttack.button);
+		if (buttonMask == 0 || !HasButton(latestFrame->attackTriggerMask, buttonMask))
 		{
-			AddBufferedCommand(commandBuffer, "SpecialAttack", commandAcceptedFrame, HadokenPriority);
+			continue;
 		}
 
-		AddBufferedCommand(commandBuffer, "AttackA", commandAcceptedFrame, NormalAttackAPriority);
-	}
-
-	if (HasButton(latestFrame->attackTriggerMask, InputHistoryAttackMask::AttackB))
-	{
-		if (MatchShoryuCommand(inputHistory))
+		if (assignedAttack.slotType == AttackSlotType::Normal)
 		{
-			AddBufferedCommand(commandBuffer, "SpecialUpper", commandAcceptedFrame, ShoryuPriority);
+			AddBufferedCommand(
+				commandBuffer,
+				assignedAttack.slotId,
+				commandAcceptedFrame,
+				GetNormalAttackPriority(assignedAttack.button),
+				AttackUsableState::Both);
+			continue;
 		}
 
-		AddBufferedCommand(commandBuffer, "AttackB", commandAcceptedFrame, NormalAttackBPriority);
-	}
+		if (assignedAttack.slotType != AttackSlotType::Special
+			|| assignedAttack.attack.attackKind != AttackKind::Special
+			|| !IsAttackUsableInState(assignedAttack.attack.usableState, state)
+			|| !MatchCommand(inputHistory, assignedAttack.attack.commandId))
+		{
+			continue;
+		}
 
-	if (HasButton(latestFrame->attackTriggerMask, InputHistoryAttackMask::AttackX))
-	{
-		AddBufferedCommand(commandBuffer, "AttackX", commandAcceptedFrame, NormalAttackXPriority);
-	}
-
-	if (HasButton(latestFrame->attackTriggerMask, InputHistoryAttackMask::AttackY))
-	{
-		AddBufferedCommand(commandBuffer, "AttackY", commandAcceptedFrame, NormalAttackYPriority);
+		AddBufferedCommand(
+			commandBuffer,
+			assignedAttack.slotId,
+			commandAcceptedFrame,
+			GetCommandPriority(assignedAttack.attack.commandId),
+			assignedAttack.attack.usableState);
 	}
 }
 
@@ -149,11 +184,13 @@ void CommandInputSystem::RegisterCommandsFromLatestInput(
 /// <param name="attackSlotId">実行する攻撃スロット ID。</param>
 /// <param name="commandAcceptedFrame">コマンドが成立したフレーム番号。</param>
 /// <param name="priority">同一フレーム候補の優先度。</param>
+/// <param name="usableState">候補技が実行可能な状態。</param>
 void CommandInputSystem::AddBufferedCommand(
 	CommandBufferComponent& commandBuffer,
 	const std::string& attackSlotId,
 	int commandAcceptedFrame,
-	int priority)
+	int priority,
+	AttackUsableState usableState)
 {
 	for (BufferedCommandInput& command : commandBuffer.commands)
 	{
@@ -163,6 +200,7 @@ void CommandInputSystem::AddBufferedCommand(
 			command.commandAcceptedFrame = commandAcceptedFrame;
 			command.bufferExpireFrame = commandAcceptedFrame + CommandBufferFrames;
 			command.priority = priority;
+			command.usableState = usableState;
 			command.valid = true;
 			return;
 		}
@@ -185,27 +223,68 @@ void CommandInputSystem::AddBufferedCommand(
 	command.commandAcceptedFrame = commandAcceptedFrame;
 	command.bufferExpireFrame = commandAcceptedFrame + CommandBufferFrames;
 	command.priority = priority;
+	command.usableState = usableState;
 	command.valid = true;
 }
 
 /// <summary>
-/// 波動コマンド 236 が、入力者の向きを基準に成立しているか確認する。
+/// 指定されたプリセットコマンドが入力履歴上で成立しているか確認する。
 /// </summary>
 /// <param name="inputHistory">検索対象の入力履歴。</param>
-/// <returns>過去履歴から 236 が見つかれば true。</returns>
-bool CommandInputSystem::MatchHadokenCommand(const InputHistoryComponent& inputHistory)
+/// <param name="commandId">確認するコマンド種別。</param>
+/// <returns>コマンドが成立していれば true。</returns>
+bool CommandInputSystem::MatchCommand(const InputHistoryComponent& inputHistory, AttackCommandId commandId)
 {
-	return MatchDirectionCommand(inputHistory, HadokenCommand);
+	switch (commandId)
+	{
+	case AttackCommandId::Hadouken:
+		return MatchDirectionCommand(inputHistory, HadoukenCommand);
+	case AttackCommandId::Shoryuu:
+		return MatchDirectionCommand(inputHistory, ShoryuuCommand);
+	case AttackCommandId::Yoga:
+		return MatchDirectionCommand(inputHistory, YogaCommand);
+	case AttackCommandId::ReverseYoga:
+		return MatchDirectionCommand(inputHistory, ReverseYogaCommand);
+	case AttackCommandId::FullRotate:
+		return MatchFullRotateCommand(inputHistory);
+	default:
+		return false;
+	}
 }
 
 /// <summary>
-/// 昇竜コマンドが、入力者の向きを基準に成立しているか確認する。
+/// 上下左右成分がすべて入力履歴内に存在するか確認する。
 /// </summary>
 /// <param name="inputHistory">検索対象の入力履歴。</param>
-/// <returns>過去履歴から簡易昇竜入力が見つかれば true。</returns>
-bool CommandInputSystem::MatchShoryuCommand(const InputHistoryComponent& inputHistory)
+/// <returns>上下左右の全成分があり、4回以上の方向変化があれば true。</returns>
+bool CommandInputSystem::MatchFullRotateCommand(const InputHistoryComponent& inputHistory)
 {
-	return MatchDirectionCommand(inputHistory, ShoryuCommand);
+	int componentMask = 0;
+	int acceptedDirectionCount = 0;
+	int lastAcceptedDirection = 0;
+
+	for (int offset = 0; offset < inputHistory.storedFrameCount; ++offset)
+	{
+		const InputHistoryFrame* frame = GetHistoryFrameFromLatest(inputHistory, offset);
+		if (!frame)
+		{
+			continue;
+		}
+
+		const int relativeDirection = ConvertToRelativeDirection(frame->direction, frame->facingDirection);
+		if (relativeDirection == 5 || relativeDirection == lastAcceptedDirection)
+		{
+			continue;
+		}
+
+		lastAcceptedDirection = relativeDirection;
+		++acceptedDirectionCount;
+		componentMask |= GetDirectionComponentMask(relativeDirection);
+	}
+
+	constexpr int RequiredMask = DirectionUp | DirectionDown | DirectionBack | DirectionForward;
+	return acceptedDirectionCount >= FullRotateRequiredDirectionCount
+		&& (componentMask & RequiredMask) == RequiredMask;
 }
 
 /// <summary>
@@ -347,5 +426,93 @@ int CommandInputSystem::GetDirectionComponentMask(int direction)
 	case 9: return DirectionUp | DirectionForward;
 	default:
 		return 0;
+	}
+}
+
+/// <summary>
+/// AttackButtonId を InputHistoryFrame の攻撃ボタン mask に変換する。
+/// </summary>
+/// <param name="button">変換する攻撃ボタン ID。</param>
+/// <returns>対応する bit mask。未対応なら 0。</returns>
+uint32_t CommandInputSystem::GetAttackButtonMask(AttackButtonId button)
+{
+	switch (button)
+	{
+	case AttackButtonId::AttackA:
+		return InputHistoryAttackMask::AttackA;
+	case AttackButtonId::AttackB:
+		return InputHistoryAttackMask::AttackB;
+	case AttackButtonId::AttackX:
+		return InputHistoryAttackMask::AttackX;
+	case AttackButtonId::AttackY:
+		return InputHistoryAttackMask::AttackY;
+	default:
+		return 0;
+	}
+}
+
+/// <summary>
+/// 通常攻撃ボタンの優先度を返す。
+/// </summary>
+/// <param name="button">優先度を取得する攻撃ボタン。</param>
+/// <returns>A が最も高い通常攻撃優先度。</returns>
+int CommandInputSystem::GetNormalAttackPriority(AttackButtonId button)
+{
+	switch (button)
+	{
+	case AttackButtonId::AttackA:
+		return NormalAttackAPriority;
+	case AttackButtonId::AttackB:
+		return NormalAttackBPriority;
+	case AttackButtonId::AttackX:
+		return NormalAttackXPriority;
+	case AttackButtonId::AttackY:
+		return NormalAttackYPriority;
+	default:
+		return 0;
+	}
+}
+
+/// <summary>
+/// コマンド種別ごとの優先度を返す。
+/// </summary>
+/// <param name="commandId">優先度を取得するコマンド ID。</param>
+/// <returns>一回転、ヨガ、昇竜、波動の順に高い優先度。</returns>
+int CommandInputSystem::GetCommandPriority(AttackCommandId commandId)
+{
+	switch (commandId)
+	{
+	case AttackCommandId::FullRotate:
+		return FullRotatePriority;
+	case AttackCommandId::Yoga:
+	case AttackCommandId::ReverseYoga:
+		return YogaPriority;
+	case AttackCommandId::Shoryuu:
+		return ShoryuuPriority;
+	case AttackCommandId::Hadouken:
+		return HadoukenPriority;
+	default:
+		return 0;
+	}
+}
+
+/// <summary>
+/// 技の発動可能状態と現在の地上/空中状態が一致するか確認する。
+/// </summary>
+/// <param name="usableState">AttackData が要求する発動可能状態。</param>
+/// <param name="state">現在の Player 状態。</param>
+/// <returns>発動条件を満たしていれば true。</returns>
+bool CommandInputSystem::IsAttackUsableInState(AttackUsableState usableState, const StateComponent& state)
+{
+	switch (usableState)
+	{
+	case AttackUsableState::Ground:
+		return state.isGrounded;
+	case AttackUsableState::Air:
+		return !state.isGrounded;
+	case AttackUsableState::Both:
+		return true;
+	default:
+		return false;
 	}
 }

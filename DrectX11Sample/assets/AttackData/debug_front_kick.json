@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_front_kick",
-  "displayName": "Debug Front Kick",
+  "displayName": "デバッグキック",
+  "attackKind": "Normal",
   "damage": 30,
   "hitstunFrames": 20,
   "frame": {

@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_punch",
   "displayName": "デバッグパンチ",
+  "attackKind": "Normal",
   "damage": 20,
   "hitstunFrames": 10,
   "frame": {

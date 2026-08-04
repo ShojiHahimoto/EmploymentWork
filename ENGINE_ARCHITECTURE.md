@@ -276,9 +276,12 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - コマンド方向判定は可変長のステップ列で扱い、`236`、`41236`、`236236` など長さの違うコマンドを同じ処理で判定する
 - 簡易入力では、テンキー方向を上下左右の成分として扱い、必要成分を含む入力ならそのステップを満たしたものとする
 - 同じ方向を押し続けたフレームは 1 ステップ分として扱い、斜め 1 回だけで複数ステップが成立しないようにする
-- コマンド候補の優先度は、長いコマンド、昇竜、波動、通常攻撃の順に高くする
+- 選択可能コマンドは `Hadouken(236)`、`Shoryuu(626)`、`Yoga(41236)`、`ReverseYoga(63214)`、`FullRotate` を基本とする
+- `FullRotate` は回転方向や開始方向を問わず、入力履歴内に上下左右成分がすべて 1 回以上あれば成立とする
+- コマンド候補の優先度は、`FullRotate > Yoga / ReverseYoga > Shoryuu > Hadouken > 通常攻撃` の順に高くする
 - 通常攻撃同士の同時入力は `AttackA > AttackB > AttackX > AttackY` の優先度で扱う
-- CommandBufferComponent は成立済みコマンド候補を保持し、StateUpdateSystem が行動可能なタイミングで消費する
+- CommandInputSystem は、CharacterAttackDataComponent に割り当て済みの AttackData を読み、必殺技の `commandId` と攻撃ボタンの組み合わせで候補を作る
+- CommandBufferComponent は成立済み攻撃候補を保持し、StateUpdateSystem が行動可能なタイミングで消費する
 - コマンド先行入力の有効期限は技ごとではなく、CommandInputSystem の共通猶予フレームで一括管理する
 - 入力の取得は InputSystem が担当し、入力履歴への保存は InputHistorySystem が担当する
 - StateUpdateSystem は保存済みの InputHistoryComponent と CommandBufferComponent を読み、今フレームの PlayerActionState を決める
@@ -360,8 +363,9 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
 - 通常攻撃の確認用 slotId は `AttackA`、`AttackB`、`AttackX`、`AttackY` とする
-- 波動コマンド 236 + `AttackA` は `SpecialAttack` slot を実行し、現段階の確認用 AttackData は `debug_special_attack` とする
-- 昇竜コマンド + `AttackB` は `SpecialUpper` slot を実行し、現段階の確認用 AttackData は `debug_special_upper` とする
+- 必殺技の確認用 slotId は `SpecialA`、`SpecialB` などとし、スロットに設定されたボタンと AttackData の `commandId` で発動する
+- 例として `SpecialA` は `Hadouken + AttackA` で `debug_special_attack`、`SpecialB` は `Shoryuu + AttackB` で `debug_special_upper` を実行する
+- 必殺技スロットが未設定、または地上/空中条件やコマンド条件を満たさない場合は、同じボタンの通常攻撃を通常通り実行できる
 - 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
 - Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
 - Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
@@ -376,7 +380,10 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は特定キャラクターのフォルダ内に置かない
 - Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
 - `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
-- `AttackList.json` は、`AttackA`、`AttackB`、`AttackX`、`AttackY`、`SpecialAttack`、`SpecialUpper` などの slotId と、使用する AttackData ID の対応だけを持つ
+- `AttackList.json` は `normalAttackSlots` と `specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
+- 通常攻撃はキャラクター側の `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
+- 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
+- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState` を持つ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する

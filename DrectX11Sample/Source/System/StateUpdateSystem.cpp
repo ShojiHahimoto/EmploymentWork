@@ -117,7 +117,7 @@ PlayerActionDecision StateUpdateSystem::DecideBufferedAttack(
 {
 	std::string bufferedAttackSlotId;
 	int commandAcceptedFrame = -1;
-	if (!TrySelectBufferedAttack(commandBuffer, inputFrame.frameNumber, bufferedAttackSlotId, commandAcceptedFrame))
+	if (!TrySelectBufferedAttack(commandBuffer, state, inputFrame.frameNumber, bufferedAttackSlotId, commandAcceptedFrame))
 	{
 		return {};
 	}
@@ -267,12 +267,14 @@ PlayerActionState StateUpdateSystem::ConvertJumpStartupToJump(PlayerActionState 
 /// CommandBufferComponent 内の有効な攻撃候補から、新しいものを優先して 1 つ選ぶ。
 /// </summary>
 /// <param name="commandBuffer">検索対象の先行入力候補。</param>
+/// <param name="state">発動条件の地上/空中判定に使う現在状態。</param>
 /// <param name="currentFrameNumber">今フレームの入力履歴番号。</param>
 /// <param name="outAttackSlotId">選ばれた攻撃スロット ID の書き込み先。</param>
 /// <param name="outCommandAcceptedFrame">選ばれたコマンド成立フレームの書き込み先。</param>
 /// <returns>実行できる攻撃候補があれば true。</returns>
 bool StateUpdateSystem::TrySelectBufferedAttack(
 	const CommandBufferComponent* commandBuffer,
+	const StateComponent& state,
 	int currentFrameNumber,
 	std::string& outAttackSlotId,
 	int& outCommandAcceptedFrame)
@@ -287,7 +289,8 @@ bool StateUpdateSystem::TrySelectBufferedAttack(
 	{
 		if (!command.valid
 			|| command.attackSlotId.empty()
-			|| command.bufferExpireFrame < currentFrameNumber)
+			|| command.bufferExpireFrame < currentFrameNumber
+			|| !IsBufferedAttackUsableInCurrentState(command.usableState, state))
 		{
 			continue;
 		}
@@ -309,6 +312,27 @@ bool StateUpdateSystem::TrySelectBufferedAttack(
 	outAttackSlotId = bestCommand->attackSlotId;
 	outCommandAcceptedFrame = bestCommand->commandAcceptedFrame;
 	return true;
+}
+
+/// <summary>
+/// 先行入力候補が、実行する瞬間の地上/空中状態に合っているか確認する。
+/// </summary>
+/// <param name="usableState">攻撃データ側で指定された発動可能状態。</param>
+/// <param name="state">現在の Player 状態。</param>
+/// <returns>今の状態で発動できるなら true。</returns>
+bool StateUpdateSystem::IsBufferedAttackUsableInCurrentState(AttackUsableState usableState, const StateComponent& state)
+{
+	switch (usableState)
+	{
+	case AttackUsableState::Ground:
+		return state.isGrounded;
+	case AttackUsableState::Air:
+		return !state.isGrounded;
+	case AttackUsableState::Both:
+		return true;
+	default:
+		return false;
+	}
 }
 
 /// <summary>

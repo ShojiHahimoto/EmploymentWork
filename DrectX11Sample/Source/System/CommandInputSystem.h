@@ -2,12 +2,15 @@
 
 #include "Component/InputHistoryComponent.h"
 #include "Core/GameObject.h"
+#include "Data/AttackData.h"
 
 #include <span>
 #include <string>
 
 class World;
+struct CharacterAttackDataComponent;
 struct CommandBufferComponent;
+struct StateComponent;
 
 enum class CommandDirectionMatchMode
 {
@@ -35,14 +38,19 @@ public:
 private:
 	static void UpdatePlayerCommandBuffer(World& world, GameObjectId objectId);
 	static void RemoveExpiredCommands(CommandBufferComponent& commandBuffer, int currentFrameNumber);
-	static void RegisterCommandsFromLatestInput(CommandBufferComponent& commandBuffer, const InputHistoryComponent& inputHistory);
+	static void RegisterCommandsFromLatestInput(
+		CommandBufferComponent& commandBuffer,
+		const InputHistoryComponent& inputHistory,
+		const CharacterAttackDataComponent& characterAttackData,
+		const StateComponent& state);
 	static void AddBufferedCommand(
 		CommandBufferComponent& commandBuffer,
 		const std::string& attackSlotId,
 		int commandAcceptedFrame,
-		int priority);
-	static bool MatchHadokenCommand(const InputHistoryComponent& inputHistory);
-	static bool MatchShoryuCommand(const InputHistoryComponent& inputHistory);
+		int priority,
+		AttackUsableState usableState);
+	static bool MatchCommand(const InputHistoryComponent& inputHistory, AttackCommandId commandId);
+	static bool MatchFullRotateCommand(const InputHistoryComponent& inputHistory);
 	static bool MatchDirectionCommand(
 		const InputHistoryComponent& inputHistory,
 		std::span<const CommandDirectionStep> relativeCommand);
@@ -50,4 +58,8 @@ private:
 	static int ConvertToRelativeDirection(int direction, FacingDirection facingDirection);
 	static bool DoesDirectionMatchStep(int relativeDirection, const CommandDirectionStep& step);
 	static int GetDirectionComponentMask(int direction);
+	static uint32_t GetAttackButtonMask(AttackButtonId button);
+	static int GetNormalAttackPriority(AttackButtonId button);
+	static int GetCommandPriority(AttackCommandId commandId);
+	static bool IsAttackUsableInState(AttackUsableState usableState, const StateComponent& state);
 };
