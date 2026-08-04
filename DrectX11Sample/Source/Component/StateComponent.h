@@ -7,6 +7,9 @@ enum class PlayerActionState
 	Idle,
 	FrontWalk,
 	BackWalk,
+	VerticalJumpStartup,
+	FrontJumpStartup,
+	BackJumpStartup,
 	VerticalJump,
 	FrontJump,
 	BackJump,
@@ -30,6 +33,10 @@ struct StateComponent : public Component
 
 	// プレイヤーの対面方向。
 	FacingDirection facingDirection = FacingDirection::Right;
+
+	// 現在の ActionState に入った瞬間の対面方向。
+	// ジャンプなど、途中で向きが変わると困る行動の基準方向として使う。
+	FacingDirection actionStartFacingDirection = FacingDirection::Right;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。

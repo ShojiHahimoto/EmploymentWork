@@ -14,9 +14,19 @@ public:
 
 private:
 	static void UpdateInputHistory(World& world, GameObjectId objectId, int playerIndex);
-	static InputHistoryFrame BuildHistoryFrame(const Input::PlayerInputState& inputState);
+	static InputHistoryFrame BuildHistoryFrame(
+		const Input::PlayerInputState& inputState,
+		FacingDirection facingDirection,
+		int frameNumber,
+		const InputHistoryFrame* previousFrame);
 	static int ConvertMoveAxisToDirection(const DirectX::SimpleMath::Vector2& moveAxis);
 	static InputButtonHistoryState BuildJumpDirectionState(int currentDirection, int previousDirection);
 	static bool IsJumpDirection(int direction);
 	static InputButtonHistoryState CopyButtonState(const Input::InputActionState& actionState);
+	static uint32_t BuildAttackMask(
+		const InputButtonHistoryState& attackA,
+		const InputButtonHistoryState& attackB,
+		const InputButtonHistoryState& attackX,
+		const InputButtonHistoryState& attackY,
+		bool InputButtonHistoryState::* stateMember);
 };

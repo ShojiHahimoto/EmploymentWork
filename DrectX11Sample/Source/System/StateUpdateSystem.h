@@ -3,14 +3,15 @@
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
+#include "Data/AttackData.h"
 
 #include <string>
 
 class World;
 struct CharacterAttackDataComponent;
+struct CommandBufferComponent;
 struct HitBoxComponent;
 struct VelocityComponent;
-struct TransformComponent;
 
 struct PlayerActionDecision
 {
@@ -22,6 +23,10 @@ struct PlayerActionDecision
 
 	// 攻撃へ遷移する場合に、CharacterAttackDataComponent のどの slotId を使うかを指定する。
 	std::string attackSlotId;
+
+	// CommandBufferComponent から選んだ候補を、攻撃開始時に消費するための識別情報。
+	bool consumeCommand = false;
+	int commandAcceptedFrame = -1;
 };
 
 class StateUpdateSystem
@@ -35,15 +40,40 @@ private:
 	static PlayerActionDecision DecideNextAction(
 		const StateComponent& state,
 		const VelocityComponent& velocity,
-		const InputHistoryFrame& inputFrame);
-	static PlayerActionDecision DecideNeutralAction(const StateComponent& state, const VelocityComponent& velocity, const InputHistoryFrame& inputFrame);
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer);
+	static PlayerActionDecision DecideBufferedAttack(
+		const StateComponent& state,
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer);
+	static PlayerActionDecision DecideJumpStartupAction(
+		const StateComponent& state,
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer);
+	static PlayerActionDecision DecideNeutralAction(
+		const StateComponent& state,
+		const VelocityComponent& velocity,
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer);
 	static bool HasHorizontalMoveDirection(int direction);
-	static bool HasAttackTrigger(const InputHistoryFrame& inputFrame);
-	static std::string SelectAttackSlotId(const InputHistoryFrame& inputFrame);
+	static bool IsJumpStartupAction(PlayerActionState actionState);
+	static PlayerActionState ConvertJumpStartupToJump(PlayerActionState actionState);
+	static bool TrySelectBufferedAttack(
+		const CommandBufferComponent* commandBuffer,
+		const StateComponent& state,
+		int currentFrameNumber,
+		std::string& outAttackSlotId,
+		int& outCommandAcceptedFrame);
+	static bool IsBufferedAttackUsableInCurrentState(AttackUsableState usableState, const StateComponent& state);
 	static bool IsLockedAction(PlayerActionState actionState);
 	static bool IsActionFinished(const StateComponent& state);
 	static int CalculateAttackTotalFrames(const CharacterAttackDataComponent* attackData, const std::string& attackSlotId);
 	static bool CanCancelAction(const StateComponent& state);
-	static void ApplyActionState(StateComponent& state, HitBoxComponent* hitBox, const CharacterAttackDataComponent* attackData, const PlayerActionDecision& decision);
-	static void ApplyPlayerDirection(World& world, GameObjectId objectId, StateComponent& state, const TransformComponent& transform);
+	static void ApplyActionState(
+		StateComponent& state,
+		HitBoxComponent* hitBox,
+		const CharacterAttackDataComponent* attackData,
+		CommandBufferComponent* commandBuffer,
+		const PlayerActionDecision& decision);
+	static void ConsumeBufferedCommand(CommandBufferComponent* commandBuffer, const PlayerActionDecision& decision);
 };

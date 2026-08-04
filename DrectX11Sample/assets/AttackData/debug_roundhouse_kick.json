@@ -1,6 +1,7 @@
 ﻿{
   "attackDataId": "debug_roundhouse_kick",
-  "displayName": "Debug Roundhouse Kick",
+  "displayName": "デバッグラウンドハウスキック",
+  "attackKind": "Normal",
   "damage": 50,
   "hitstunFrames": 30,
   "frame": {

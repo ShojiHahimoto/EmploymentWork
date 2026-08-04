@@ -1,0 +1,27 @@
+﻿{
+  "attackDataId": "debug_special_attack",
+  "displayName": "デバッグスペシャルアタック",
+  "attackKind": "Special",
+  "commandId": "Hadoken",
+  "usableState": "Ground",
+  "damage": 45,
+  "hitstunFrames": 25,
+  "frame": {
+    "startup": 8,
+    "active": 5,
+    "recovery": 18
+  },
+  "cancelWindows": [],
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 3.2,
+        "y": 4.4
+      },
+      "size": {
+        "x": 13.0,
+        "y": 12.2
+      }
+    }
+  ]
+}

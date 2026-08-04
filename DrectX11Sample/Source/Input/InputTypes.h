@@ -26,9 +26,10 @@ namespace Input
 	{
 		Move,
 		Jump,
-		LightAttack,
-		MediumAttack,
-		HeavyAttack,
+		AttackA,
+		AttackB,
+		AttackX,
+		AttackY,
 		Guard,
 		Pause,
 		Submit,

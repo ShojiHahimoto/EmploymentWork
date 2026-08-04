@@ -262,9 +262,10 @@ namespace Input
 
 		// Gameplay はキャラクター操作用。現状は Player 0 のキーボードだけに割り当てる。
 		addKeyboardAxis2D(InputActionMapId::Gameplay, InputActionId::Move, KeyboardKey::A, KeyboardKey::D, KeyboardKey::S, KeyboardKey::W);
-		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::LightAttack, KeyboardKey::Y);
-		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::MediumAttack, KeyboardKey::K);
-		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::HeavyAttack, KeyboardKey::L);
+		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::AttackA, KeyboardKey::H);
+		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::AttackB, KeyboardKey::J);
+		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::AttackX, KeyboardKey::Y);
+		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::AttackY, KeyboardKey::U);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::Guard, KeyboardKey::I);
 		addKeyboardButton(InputActionMapId::Gameplay, InputActionId::Pause, KeyboardKey::Escape);
 
@@ -274,9 +275,10 @@ namespace Input
 		constexpr int DefaultGamepadIndex = 0;
 		addGamepadAxis2D(InputActionMapId::Gameplay, InputActionId::Move, Player2Index, DefaultGamepadIndex, GamepadAxis2DSource::LeftStick);
 		addGamepadAxis2D(InputActionMapId::Gameplay, InputActionId::Move, Player2Index, DefaultGamepadIndex, GamepadAxis2DSource::DPad);
-		addGamepadButton(InputActionMapId::Gameplay, InputActionId::LightAttack, Player2Index, DefaultGamepadIndex, GamepadButton::X);
-		addGamepadButton(InputActionMapId::Gameplay, InputActionId::MediumAttack, Player2Index, DefaultGamepadIndex, GamepadButton::Y);
-		addGamepadButton(InputActionMapId::Gameplay, InputActionId::HeavyAttack, Player2Index, DefaultGamepadIndex, GamepadButton::B);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::AttackA, Player2Index, DefaultGamepadIndex, GamepadButton::A);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::AttackB, Player2Index, DefaultGamepadIndex, GamepadButton::B);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::AttackX, Player2Index, DefaultGamepadIndex, GamepadButton::X);
+		addGamepadButton(InputActionMapId::Gameplay, InputActionId::AttackY, Player2Index, DefaultGamepadIndex, GamepadButton::Y);
 		addGamepadButton(InputActionMapId::Gameplay, InputActionId::Guard, Player2Index, DefaultGamepadIndex, GamepadButton::LeftShoulder);
 		addGamepadButton(InputActionMapId::Gameplay, InputActionId::Pause, Player2Index, DefaultGamepadIndex, GamepadButton::Start);
 
