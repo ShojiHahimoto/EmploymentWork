@@ -60,7 +60,7 @@ struct InputHistoryFrame
 struct InputHistoryComponent : public Component
 {
 	// コマンド入力を過去 30F まで遡れるよう、ring buffer として履歴を保持する。
-	static constexpr int HistoryFrameCount = 30;
+	static constexpr int HistoryFrameCount = 15;
 
 	std::array<InputHistoryFrame, HistoryFrameCount> frames = {};
 	int latestFrameIndex = -1;
