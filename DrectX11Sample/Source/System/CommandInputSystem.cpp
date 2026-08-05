@@ -151,12 +151,18 @@ void CommandInputSystem::RegisterCommandsFromLatestInput(
 
 		if (assignedAttack.slotType == AttackSlotType::Normal)
 		{
+			if (assignedAttack.attack.attackKind != AttackKind::Normal
+				|| !IsAttackUsableInState(assignedAttack.attack.usableState, state))
+			{
+				continue;
+			}
+
 			AddBufferedCommand(
 				commandBuffer,
 				assignedAttack.slotId,
 				commandAcceptedFrame,
 				GetNormalAttackPriority(assignedAttack.button),
-				AttackUsableState::Both);
+				assignedAttack.attack.usableState);
 			continue;
 		}
 

@@ -369,10 +369,22 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
+    <None Include="assets\AttackData\debug_air_kick.json">
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_air_punch.json">
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
+    </None>
     <None Include="assets\AttackData\debug_front_kick.json">
       <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
     <None Include="assets\AttackData\debug_hard_punch.json">
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_hard_air_kick.json">
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_hard_air_punch.json">
       <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
     <None Include="assets\AttackData\debug_punch.json">

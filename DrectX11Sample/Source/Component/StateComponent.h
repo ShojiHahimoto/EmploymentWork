@@ -16,6 +16,7 @@ enum class PlayerActionState
 	Fall,
 	GroundAttack,
 	AirAttack,
+	LandingRecovery,
 	Hitstun,
 };
 

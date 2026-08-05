@@ -119,6 +119,8 @@ struct CharacterAttackSlotData
 	std::string attackDataId;
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
+	// groundNormalAttackSlots / airNormalAttackSlots など、スロット側が要求する発動可能状態。
+	AttackUsableState slotUsableState = AttackUsableState::Both;
 };
 
 /// <summary>
@@ -129,5 +131,7 @@ struct CharacterAssignedAttackData
 	std::string slotId;
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
+	// キャラクター側スロットが要求した地上/空中種別。読み込み検証後もデバッグ確認用に保持する。
+	AttackUsableState slotUsableState = AttackUsableState::Both;
 	AttackData attack;
 };

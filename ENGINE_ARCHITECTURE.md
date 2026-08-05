@@ -363,9 +363,14 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
 - 通常攻撃の確認用 slotId は `AttackA`、`AttackB`、`AttackX`、`AttackY` とする
+- 通常攻撃スロットは地上用 `groundNormalAttackSlots` と空中用 `airNormalAttackSlots` に分ける
+- 地上通常攻撃スロットには `usableState: Ground` の AttackData、空中通常攻撃スロットには `usableState: Air` の AttackData だけを割り当てる
+- 同じ `AttackA / AttackB / AttackX / AttackY` ボタンでも、現在の地上/空中状態に合う通常攻撃だけを CommandInputSystem が候補化する
 - 必殺技の確認用 slotId は `SpecialA`、`SpecialB` などとし、スロットに設定されたボタンと AttackData の `commandId` で発動する
 - 例として `SpecialA` は `Hadouken + AttackA` で `debug_special_attack`、`SpecialB` は `Shoryuu + AttackB` で `debug_special_upper` を実行する
 - 必殺技スロットが未設定、または地上/空中条件やコマンド条件を満たさない場合は、同じボタンの通常攻撃を通常通り実行できる
+- 空中攻撃中に接地した場合、攻撃発生前なら硬直なしで `Idle` に戻し、発生中または後隙中なら `LandingRecovery` に遷移する
+- `LandingRecovery` は現段階では固定 5F の着地硬直として扱い、終了後に通常行動へ戻る
 - 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
 - Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
 - Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
@@ -380,8 +385,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は特定キャラクターのフォルダ内に置かない
 - Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
 - `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
-- `AttackList.json` は `normalAttackSlots` と `specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
-- 通常攻撃はキャラクター側の `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
+- `AttackList.json` は `groundNormalAttackSlots`、`airNormalAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
+- 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
 - 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
 - AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState` を持つ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする

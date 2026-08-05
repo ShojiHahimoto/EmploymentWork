@@ -4,7 +4,7 @@
   "attackKind": "Special",
   "commandId": "Hadoken",
   "usableState": "Ground",
-  "damage": 45,
+  "damage": 1000,
   "hitstunFrames": 25,
   "frame": {
     "startup": 8,

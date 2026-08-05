@@ -120,8 +120,12 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="assets\AttackData\debug_air_kick.json" />
+    <None Include="assets\AttackData\debug_air_punch.json" />
     <None Include="assets\AttackData\debug_front_kick.json" />
     <None Include="assets\AttackData\debug_hard_punch.json" />
+    <None Include="assets\AttackData\debug_hard_air_kick.json" />
+    <None Include="assets\AttackData\debug_hard_air_punch.json" />
     <None Include="assets\AttackData\debug_punch.json" />
     <None Include="assets\AttackData\debug_roundhouse_kick.json" />
     <None Include="assets\AttackData\debug_special_attack.json" />

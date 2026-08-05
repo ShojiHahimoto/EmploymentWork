@@ -41,7 +41,13 @@ private:
 		const StateComponent& state,
 		const VelocityComponent& velocity,
 		const InputHistoryFrame& inputFrame,
-		const CommandBufferComponent* commandBuffer);
+		const CommandBufferComponent* commandBuffer,
+		const HitBoxComponent* hitBox,
+		const CharacterAttackDataComponent* attackData);
+	static PlayerActionDecision DecideAirAttackLanding(
+		const StateComponent& state,
+		const HitBoxComponent* hitBox,
+		const CharacterAttackDataComponent* attackData);
 	static PlayerActionDecision DecideBufferedAttack(
 		const StateComponent& state,
 		const InputHistoryFrame& inputFrame,
@@ -65,6 +71,13 @@ private:
 		std::string& outAttackSlotId,
 		int& outCommandAcceptedFrame);
 	static bool IsBufferedAttackUsableInCurrentState(AttackUsableState usableState, const StateComponent& state);
+	static bool HasCurrentAttackReachedActiveFrame(
+		const StateComponent& state,
+		const HitBoxComponent* hitBox,
+		const CharacterAttackDataComponent* attackData);
+	static const CharacterAssignedAttackData* FindAssignedAttack(
+		const CharacterAttackDataComponent* attackData,
+		const std::string& attackSlotId);
 	static bool IsLockedAction(PlayerActionState actionState);
 	static bool IsActionFinished(const StateComponent& state);
 	static int CalculateAttackTotalFrames(const CharacterAttackDataComponent* attackData, const std::string& attackSlotId);

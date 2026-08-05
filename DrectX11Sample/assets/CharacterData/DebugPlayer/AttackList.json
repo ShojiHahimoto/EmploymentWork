@@ -1,6 +1,6 @@
 ﻿{
   "characterId": "DebugPlayer",
-  "normalAttackSlots": [
+  "groundNormalAttackSlots": [
     {
       "slotId": "AttackA",
       "button": "AttackA",
@@ -20,6 +20,28 @@
       "slotId": "AttackY",
       "button": "AttackY",
       "attackDataId": "debug_roundhouse_kick"
+    }
+  ],
+  "airNormalAttackSlots": [
+    {
+      "slotId": "AirAttackA",
+      "button": "AttackA",
+      "attackDataId": "debug_air_punch"
+    },
+    {
+      "slotId": "AirAttackB",
+      "button": "AttackB",
+      "attackDataId": "debug_air_kick"
+    },
+    {
+      "slotId": "AirAttackX",
+      "button": "AttackX",
+      "attackDataId": "debug_hard_air_punch"
+    },
+    {
+      "slotId": "AirAttackY",
+      "button": "AttackY",
+      "attackDataId": "debug_hard_air_kick"
     }
   ],
   "specialAttackSlots": [

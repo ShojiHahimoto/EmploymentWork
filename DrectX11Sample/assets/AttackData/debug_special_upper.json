@@ -4,7 +4,7 @@
   "attackKind": "Special",
   "commandId": "Shoryuu",
   "usableState": "Ground",
-  "damage": 50,
+  "damage": 2000,
   "hitstunFrames": 28,
   "frame": {
     "startup": 6,

@@ -1,0 +1,26 @@
+﻿{
+  "attackDataId": "debug_hard_air_kick",
+  "displayName": "DebugHardAirKick",
+  "attackKind": "Normal",
+  "usableState": "Air",
+  "damage": 38,
+  "hitstunFrames": 24,
+  "frame": {
+    "startup": 11,
+    "active": 6,
+    "recovery": 18
+  },
+  "cancelWindows": [],
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 3.2,
+        "y": 3.7
+      },
+      "size": {
+        "x": 3.4,
+        "y": 2.4
+      }
+    }
+  ]
+}

@@ -141,8 +141,9 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 
 	case PlayerActionState::Idle:
 	case PlayerActionState::GroundAttack:
+	case PlayerActionState::LandingRecovery:
 	case PlayerActionState::Hitstun:
-		// 現段階の攻撃・被弾は仮挙動として横移動を止める。
+		// 現段階の攻撃・着地硬直・被弾は仮挙動として横移動を止める。
 		// 攻撃移動やノックバックを入れる場合は、各 ActionState の処理としてここから分岐を増やす。
 		//result.horizontalVelocity = 0.0f;
 		break;
