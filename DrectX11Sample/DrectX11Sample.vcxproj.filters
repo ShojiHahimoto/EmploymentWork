@@ -55,6 +55,21 @@
     <Filter Include="ヘッダー ファイル\Data">
       <UniqueIdentifier>{74a53e3b-e332-46be-889d-acac457d5feb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\AttackData">
+      <UniqueIdentifier>{879b6924-d03a-43db-8a8a-5bc6069c3b39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\AttackData\Normal">
+      <UniqueIdentifier>{2f5361ff-aa9d-48cc-a812-eaaed2e78c64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\AttackData\Special">
+      <UniqueIdentifier>{811989e5-3dfe-4c17-ba5d-49c13acb024e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\CharacterData">
+      <UniqueIdentifier>{707cc011-c980-4f6d-a15b-511ddc1a7009}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\CharacterData\DebugPlayer">
+      <UniqueIdentifier>{57c78864-1c34-44d4-b344-475614ba263f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -352,33 +367,28 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\AttackData\debug_punch.json">
-      <Filter>リソース ファイル</Filter>
-    </None>
+    <None Include="packages.config" />
+    <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
     <None Include="assets\AttackData\debug_front_kick.json">
-      <Filter>リソース ファイル</Filter>
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
     <None Include="assets\AttackData\debug_hard_punch.json">
-      <Filter>リソース ファイル</Filter>
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
+    </None>
+    <None Include="assets\AttackData\debug_punch.json">
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
     <None Include="assets\AttackData\debug_roundhouse_kick.json">
-      <Filter>リソース ファイル</Filter>
+      <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
     <None Include="assets\AttackData\debug_special_attack.json">
-      <Filter>リソース ファイル</Filter>
+      <Filter>リソース ファイル\AttackData\Special</Filter>
     </None>
     <None Include="assets\AttackData\debug_special_upper.json">
-      <Filter>リソース ファイル</Filter>
+      <Filter>リソース ファイル\AttackData\Special</Filter>
     </None>
-    <None Include="assets\texture\result_kari.png">
-      <Filter>リソース ファイル</Filter>
+    <None Include="assets\CharacterData\DebugPlayer\AttackList.json">
+      <Filter>リソース ファイル\CharacterData\DebugPlayer</Filter>
     </None>
-    <None Include="assets\texture\title_kari.png">
-      <Filter>リソース ファイル</Filter>
-    </None>
-    <None Include="assets\texture\number.png">
-      <Filter>リソース ファイル</Filter>
-    </None>
-    <None Include="packages.config" />
   </ItemGroup>
 </Project>
