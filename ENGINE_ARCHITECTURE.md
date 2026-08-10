@@ -109,6 +109,7 @@ Camera も Component と System に分離する。
 - Projection 行列は CameraComponent の投影設定から作成する
 - DirectX 左手座標系に合わせ、カメラ前方向は +Z とする
 - CameraSystem は入力処理、追従処理、Renderer 所有を担当しない
+- バトル中のメインカメラ追従は BattleCameraSystem が担当し、CameraSystem は行列キャッシュ更新だけを担当する
 - Scene / World 実装前は Game が仮に CameraComponent と Transform を保持する
 - Scene / World 実装後は World が activeCameraId と CameraComponent を管理する
 
@@ -155,6 +156,7 @@ CommandInputSystem
 StateUpdateSystem
 PlayerControlSystem
 MovementSystem
+BattleCameraSystem
 EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
@@ -173,6 +175,7 @@ DebugSystem
 - StateUpdateSystem は、入力履歴、コマンド候補、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
 - PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
+- BattleCameraSystem は、Movement 後の 2 Player 位置からメインカメラ Transform を更新する
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
@@ -217,10 +220,24 @@ MovementSystem は入力を直接読まない。
 - `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映する
 - 上昇中と下降中で重力値を分ける
 
-EmbedResolveSystem は MovementSystem の後、TransformSystem の前に実行する。
+BattleCameraSystem は MovementSystem の後、EmbedResolveSystem の前に実行する。
+
+- メインカメラの X 座標は 2 Player の中心が画面内デッドゾーンを超えた場合だけ追従する
+- X デッドゾーンは画面比率ではなく、カメラ中心から左右に同じワールド距離を置く
+- Player が画面端へ近づいた場合、位置補正で止める前にカメラを動かせるだけ動かす
+- カメラ X はステージ左右端でクランプし、画面にステージ外が映らないようにする
+- カメラ Y は `CameraYFollowMode::NaturalJump` の Player 高さに応じて少しだけ上げ、補間で滑らかに追従する
+- 通常ジャンプ、通常ジャンプ由来の落下、空中攻撃、通常ジャンプ中の通常被弾は `NaturalJump` を維持する
+- バーストなどの被弾吹き飛びは `CameraYFollowMode::Ignore` とし、カメラ Y 追従対象にしない
+- 着地、ダウン、起き上がり、地上復帰時は `CameraYFollowMode::None` に戻す
+- カメラ Z と FOV は現段階では固定値として扱い、ズームはまだ行わない
+- CameraSystem は従来通り、更新済み Transform から View / Projection 行列を作る
+
+EmbedResolveSystem は BattleCameraSystem の後、TransformSystem の前に実行する。
 
 - 仮接地判定、壁補正、プレイヤー同士の PushBox めり込み補正を扱う
-- 現段階の壁は仮実装としてステージ左右端の固定値で扱う
+- 現段階の壁は仮実装として `StageMinX=-30 / StageMaxX=30` の固定値で扱う
+- Player がメインカメラ画角外へ後ろに下がろうとした場合、画面端を壁と同じように扱って位置補正する
 - 片方だけが相手方向へ歩いてめり込んだ場合、歩いていない側を押す
 - 押される側が壁に到達して押し切れない場合、残りのめり込み量は押した側へ戻す
 - 両方が押し合っている場合、またはどちらが押したか確定できない場合は、互いに離す形で補正する

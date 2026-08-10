@@ -75,6 +75,9 @@
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\BattleCameraSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\BattleResultSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -195,6 +198,9 @@
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\Application.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\BattleCameraSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\BattleHUDSystem.h">

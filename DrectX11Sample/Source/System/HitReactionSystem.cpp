@@ -204,6 +204,29 @@ namespace
 		hitBox.currentAttack.slotId.clear();
 		hitBox.currentAttack.hasHit = false;
 	}
+
+	/// <summary>
+	/// 空中被弾時に、バトルカメラの Y 追従を維持するか決める。
+	/// </summary>
+	/// <param name="defender">被弾側 Player 情報。</param>
+	/// <param name="request">今回の被弾反応リクエスト。</param>
+	/// <returns>AirHitstun に入ったあと StateComponent へ保存する CameraYFollowMode。</returns>
+	CameraYFollowMode DecideAirHitstunCameraYFollowMode(
+		const PlayerReactionRuntime& defender,
+		const HitReactionRequest& request)
+	{
+		if (request.hitReactionType == HitReactionType::Burst
+			|| request.hitReactionType == HitReactionType::HardBurst
+			|| request.hitReactionType == HitReactionType::Down)
+		{
+			return CameraYFollowMode::Ignore;
+		}
+
+		// 通常ジャンプ中の通常被弾は、ステートが AirHitstun に変わってもカメラ追従だけ維持する。
+		return defender.state->cameraYFollowMode == CameraYFollowMode::NaturalJump
+			? CameraYFollowMode::NaturalJump
+			: CameraYFollowMode::Ignore;
+	}
 }
 
 void HitReactionSystem::Update(World& world)
@@ -234,7 +257,13 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 
 	if (!request.defenderWasGrounded)
 	{
-		ApplyAirBurst(world, request, GetAirFollowupVelocity());
+		PlayerReactionRuntime defender;
+		if (!TryBuildPlayerReactionRuntime(world, request.defenderId, defender))
+		{
+			return;
+		}
+
+		ApplyAirBurst(world, request, GetAirFollowupVelocity(), DecideAirHitstunCameraYFollowMode(defender, request));
 		return;
 	}
 
@@ -245,7 +274,7 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 		break;
 	case HitReactionType::Burst:
 	case HitReactionType::HardBurst:
-		ApplyAirBurst(world, request, setting.airVelocity);
+		ApplyAirBurst(world, request, setting.airVelocity, CameraYFollowMode::Ignore);
 		break;
 	case HitReactionType::Normal:
 	case HitReactionType::Unknown:
@@ -302,6 +331,7 @@ void HitReactionSystem::ApplyDown(World& world, GameObjectId defenderId, int dow
 	}
 
 	defender.state->currentActionState = PlayerActionState::Down;
+	defender.state->cameraYFollowMode = CameraYFollowMode::None;
 	defender.state->actionFrame = 0;
 	defender.state->actionDurationFrames = downFrames;
 	defender.state->isGrounded = true;
@@ -320,7 +350,8 @@ void HitReactionSystem::ApplyDown(World& world, GameObjectId defenderId, int dow
 void HitReactionSystem::ApplyAirBurst(
 	World& world,
 	const HitReactionRequest& request,
-	const Vector3& baseVelocity)
+	const Vector3& baseVelocity,
+	CameraYFollowMode cameraYFollowMode)
 {
 	PlayerReactionRuntime attacker;
 	PlayerReactionRuntime defender;
@@ -332,6 +363,7 @@ void HitReactionSystem::ApplyAirBurst(
 
 	const float awayDirectionX = GetAwayDirectionX(attacker, defender);
 	defender.state->currentActionState = PlayerActionState::AirHitstun;
+	defender.state->cameraYFollowMode = cameraYFollowMode;
 	defender.state->actionFrame = 0;
 	defender.state->actionDurationFrames = 0;
 	defender.state->isGrounded = false;

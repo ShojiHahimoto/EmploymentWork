@@ -31,6 +31,14 @@ enum class FacingDirection
 	Left
 };
 
+// バトルカメラが Player の Y 方向移動を追従してよいかを表す。
+enum class CameraYFollowMode
+{
+	None,
+	NaturalJump,
+	Ignore
+};
+
 struct StateComponent : public Component
 {
 	// StateUpdateSystem が確定した、今フレームの最終行動。
@@ -42,6 +50,10 @@ struct StateComponent : public Component
 	// 現在の ActionState に入った瞬間の対面方向。
 	// ジャンプなど、途中で向きが変わると困る行動の基準方向として使う。
 	FacingDirection actionStartFacingDirection = FacingDirection::Right;
+
+	// バトルカメラの Y 追従対象かどうか。
+	// 通常ジャンプ由来の空中移動は追い、バーストなどの被弾吹き飛びは追わない。
+	CameraYFollowMode cameraYFollowMode = CameraYFollowMode::None;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。

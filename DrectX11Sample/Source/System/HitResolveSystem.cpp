@@ -236,6 +236,11 @@ void HitResolveSystem::ApplyHitstun(World& world, GameObjectId defenderId, int h
 	StateComponent* state = world.GetComponent<StateComponent>(defenderId);
 	if (state)
 	{
+		if (state->isGrounded)
+		{
+			state->cameraYFollowMode = CameraYFollowMode::None;
+		}
+
 		state->currentActionState = PlayerActionState::Hitstun;
 		state->actionFrame = 0;
 		state->hitstunDurationFrames = hitstunFrames;
@@ -262,6 +267,7 @@ void HitResolveSystem::ApplyGuardstun(World& world, GameObjectId defenderId, int
 	StateComponent* state = world.GetComponent<StateComponent>(defenderId);
 	if (state)
 	{
+		state->cameraYFollowMode = CameraYFollowMode::None;
 		state->currentActionState = PlayerActionState::Guardstun;
 		state->actionFrame = 0;
 		state->guardstunDurationFrames = guardstunFrames;

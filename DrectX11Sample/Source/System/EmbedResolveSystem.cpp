@@ -4,6 +4,7 @@
 #include "Component/StateComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
+#include "System/BattleCameraSystem.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -156,13 +157,24 @@ namespace
 	}
 
 	/// <summary>
-	/// PushBox がステージ壁を越えない範囲で Transform を X 方向へ移動する。
+	/// PushBox が指定 X 範囲を越えないように Transform を移動する。
 	/// </summary>
 	/// <param name="player">移動対象の Player 情報。</param>
 	/// <param name="requestedDeltaX">要求された X 移動量。</param>
+	/// <param name="minX">許可する最小 X。</param>
+	/// <param name="maxX">許可する最大 X。</param>
 	/// <returns>実際に移動できた X 移動量。</returns>
-	float MovePlayerWithinWalls(const PlayerPushBoxRuntime& player, float requestedDeltaX)
+	float MovePlayerWithinXRange(
+		const PlayerPushBoxRuntime& player,
+		float requestedDeltaX,
+		float minX,
+		float maxX)
 	{
+		if (minX > maxX)
+		{
+			return 0.0f;
+		}
+
 		if (std::fabs(requestedDeltaX) <= Epsilon)
 		{
 			return 0.0f;
@@ -173,13 +185,13 @@ namespace
 
 		const float proposedMinX = currentAabb.minX + allowedDeltaX;
 		const float proposedMaxX = currentAabb.maxX + allowedDeltaX;
-		if (proposedMinX < EmbedResolveSystem::StageMinX)
+		if (proposedMinX < minX)
 		{
-			allowedDeltaX += EmbedResolveSystem::StageMinX - proposedMinX;
+			allowedDeltaX += minX - proposedMinX;
 		}
-		if (proposedMaxX > EmbedResolveSystem::StageMaxX)
+		if (proposedMaxX > maxX)
 		{
-			allowedDeltaX -= proposedMaxX - EmbedResolveSystem::StageMaxX;
+			allowedDeltaX -= proposedMaxX - maxX;
 		}
 
 		if (std::fabs(allowedDeltaX) <= Epsilon)
@@ -191,6 +203,21 @@ namespace
 		position.x += allowedDeltaX;
 		TransformSystem::SetLocalPosition(*player.transform, position);
 		return allowedDeltaX;
+	}
+
+	/// <summary>
+	/// PushBox がステージ壁を越えない範囲で Transform を X 方向へ移動する。
+	/// </summary>
+	/// <param name="player">移動対象の Player 情報。</param>
+	/// <param name="requestedDeltaX">要求された X 移動量。</param>
+	/// <returns>実際に移動できた X 移動量。</returns>
+	float MovePlayerWithinWalls(const PlayerPushBoxRuntime& player, float requestedDeltaX)
+	{
+		return MovePlayerWithinXRange(
+			player,
+			requestedDeltaX,
+			EmbedResolveSystem::StageMinX,
+			EmbedResolveSystem::StageMaxX);
 	}
 
 	/// <summary>
@@ -287,6 +314,9 @@ void EmbedResolveSystem::Update(World& world)
 {
 	ResolveWallBounds(world);
 	ResolvePlayerPushBoxes(world);
+	ResolveCameraViewBounds(world);
+	ResolvePlayerPushBoxes(world);
+	ResolveCameraViewBounds(world);
 	ResolveWallBounds(world);
 	ResolveTemporaryGround(world);
 }
@@ -313,6 +343,57 @@ void EmbedResolveSystem::ResolveWallBounds(World& world)
 		else if (aabb.maxX > EmbedResolveSystem::StageMaxX)
 		{
 			MovePlayerWithinWalls(player, EmbedResolveSystem::StageMaxX - aabb.maxX);
+		}
+	}
+}
+
+/// <summary>
+/// Player の PushBox がメインカメラの画角外へ出ないよう補正する。
+/// </summary>
+/// <param name="world">補正対象の Component と ActiveCamera を保持する World。</param>
+void EmbedResolveSystem::ResolveCameraViewBounds(World& world)
+{
+	if (!world.HasActiveCamera())
+	{
+		return;
+	}
+
+	const CameraComponent* camera = world.GetComponent<CameraComponent>(world.GetActiveCameraId());
+	const TransformComponent* cameraTransform = world.GetTransform(world.GetActiveCameraId());
+	if (!camera || !cameraTransform)
+	{
+		return;
+	}
+
+	for (GameObject& object : world.GetGameObjects())
+	{
+		PlayerPushBoxRuntime player;
+		if (!TryBuildPlayerPushBoxRuntime(world, object.id, player))
+		{
+			continue;
+		}
+
+		const Vector3 playerPosition = TransformSystem::GetLocalPosition(*player.transform);
+		float visibleMinX = 0.0f;
+		float visibleMaxX = 0.0f;
+		if (!BattleCameraSystem::CalculateVisibleXRange(*camera, *cameraTransform, playerPosition.z, visibleMinX, visibleMaxX))
+		{
+			continue;
+		}
+
+		// PushBox がぴったり画面端に張り付くと見づらいため、少しだけ内側を実際の可動限界にする。
+		constexpr float CameraEdgeMargin = 0.2f;
+		visibleMinX += CameraEdgeMargin;
+		visibleMaxX -= CameraEdgeMargin;
+
+		const Aabb2D aabb = BuildAabb(*player.transform, *player.state, player.hitBox->pushBox);
+		if (aabb.minX < visibleMinX)
+		{
+			MovePlayerWithinXRange(player, visibleMinX - aabb.minX, visibleMinX, visibleMaxX);
+		}
+		else if (aabb.maxX > visibleMaxX)
+		{
+			MovePlayerWithinXRange(player, visibleMaxX - aabb.maxX, visibleMinX, visibleMaxX);
 		}
 	}
 }

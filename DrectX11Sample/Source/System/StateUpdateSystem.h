@@ -82,6 +82,10 @@ private:
 	static bool IsActionFinished(const StateComponent& state);
 	static int CalculateAttackTotalFrames(const CharacterAttackDataComponent* attackData, const std::string& attackSlotId);
 	static bool CanCancelAction(const StateComponent& state);
+	static CameraYFollowMode DecideCameraYFollowMode(
+		PlayerActionState nextActionState,
+		bool isGrounded,
+		CameraYFollowMode previousMode);
 	static void ApplyActionState(
 		StateComponent& state,
 		HitBoxComponent* hitBox,

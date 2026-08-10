@@ -6,6 +6,7 @@
 
 class World;
 struct HitReactionRequest;
+enum class CameraYFollowMode;
 
 class HitReactionSystem
 {
@@ -20,6 +21,10 @@ private:
 	static void ApplyReactionRequest(World& world, const HitReactionRequest& request);
 	static void ApplyNormalBack(World& world, const HitReactionRequest& request, float backDistance);
 	static void ApplyDown(World& world, GameObjectId defenderId, int downFrames);
-	static void ApplyAirBurst(World& world, const HitReactionRequest& request, const DirectX::SimpleMath::Vector3& baseVelocity);
+	static void ApplyAirBurst(
+		World& world,
+		const HitReactionRequest& request,
+		const DirectX::SimpleMath::Vector3& baseVelocity,
+		CameraYFollowMode cameraYFollowMode);
 	static void ResolveLandedAirHitstun(World& world);
 };

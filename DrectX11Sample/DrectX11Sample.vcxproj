@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp" />
+    <ClCompile Include="Source\System\BattleCameraSystem.cpp" />
     <ClCompile Include="Source\System\BattleResultSystem.cpp" />
     <ClCompile Include="Source\System\CommandInputSystem.cpp" />
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
@@ -89,6 +90,7 @@
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\TitleScene.h" />
     <ClInclude Include="Source\System\Application.h" />
+    <ClInclude Include="Source\System\BattleCameraSystem.h" />
     <ClInclude Include="Source\System\BattleHUDSystem.h" />
     <ClInclude Include="Source\System\BattleResultSystem.h" />
     <ClInclude Include="Source\System\CameraSystem.h" />

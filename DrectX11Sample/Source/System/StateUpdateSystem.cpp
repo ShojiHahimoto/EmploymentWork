@@ -527,6 +527,47 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 }
 
 /// <summary>
+/// 行動遷移後に、バトルカメラが Player の Y 移動を追うべきかを決める。
+/// </summary>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+/// <param name="isGrounded">遷移時点で接地している場合は true。</param>
+/// <param name="previousMode">遷移前に保持していたカメラ Y 追従モード。</param>
+/// <returns>遷移後に StateComponent へ保存する CameraYFollowMode。</returns>
+CameraYFollowMode StateUpdateSystem::DecideCameraYFollowMode(
+	PlayerActionState nextActionState,
+	bool isGrounded,
+	CameraYFollowMode previousMode)
+{
+	switch (nextActionState)
+	{
+	case PlayerActionState::VerticalJump:
+	case PlayerActionState::FrontJump:
+	case PlayerActionState::BackJump:
+		return CameraYFollowMode::NaturalJump;
+	default:
+		break;
+	}
+
+	if (isGrounded)
+	{
+		return CameraYFollowMode::None;
+	}
+
+	switch (nextActionState)
+	{
+	case PlayerActionState::Fall:
+	case PlayerActionState::AirAttack:
+	case PlayerActionState::Hitstun:
+		// 通常ジャンプから落下、空中攻撃、通常被弾へ移った場合はカメラ追従を維持する。
+		return previousMode == CameraYFollowMode::NaturalJump
+			? CameraYFollowMode::NaturalJump
+			: CameraYFollowMode::None;
+	default:
+		return CameraYFollowMode::None;
+	}
+}
+
+/// <summary>
 /// 決定した ActionState を StateComponent に反映し、必要なら actionFrame を 0 に戻す。
 /// </summary>
 /// <param name="state">更新する StateComponent。</param>
@@ -546,6 +587,7 @@ void StateUpdateSystem::ApplyActionState(
 	{
 		const PlayerActionState previousActionState = state.currentActionState;
 		const FacingDirection previousActionStartFacingDirection = state.actionStartFacingDirection;
+		const CameraYFollowMode previousCameraYFollowMode = state.cameraYFollowMode;
 		const bool isJumpStartupToJump = IsJumpStartupAction(previousActionState)
 			&& ConvertJumpStartupToJump(previousActionState) == decision.nextActionState;
 
@@ -553,6 +595,10 @@ void StateUpdateSystem::ApplyActionState(
 		state.actionStartFacingDirection = isJumpStartupToJump
 			? previousActionStartFacingDirection
 			: state.facingDirection;
+		state.cameraYFollowMode = DecideCameraYFollowMode(
+			state.currentActionState,
+			state.isGrounded,
+			previousCameraYFollowMode);
 		state.actionFrame = 0;
 		state.actionDurationFrames = 0;
 		state.cancelEnabled = false;
