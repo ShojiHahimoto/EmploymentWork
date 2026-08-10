@@ -5,6 +5,9 @@ class World;
 class EmbedResolveSystem
 {
 public:
+	static constexpr float StageMinX = -15.0f;
+	static constexpr float StageMaxX = 15.0f;
+
 	/// <summary>
 	/// 移動後の地面、壁、プレイヤー同士のめり込みを補正する。
 	/// </summary>

@@ -158,6 +158,7 @@ MovementSystem
 EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
+HitReactionSystem
 BattleResultSystem
 BattleHUDSystem
 TransformSystem
@@ -175,6 +176,7 @@ DebugSystem
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
+- HitReactionSystem は、HitResolveSystem が確定した被弾反応リクエストを読み、ヒットバック、ガードバック、吹き飛び、ダウンを処理する
 - BattleResultSystem は、KO とラウンドタイマーのタイムアップを確認し、勝敗結果を確定する
 - BattleHUDSystem は、HPバーやラウンドタイマーなどの対戦 HUD 表示状態を更新し、ゲームビューへ描画する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
@@ -183,7 +185,7 @@ DebugSystem
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -223,17 +225,27 @@ EmbedResolveSystem は MovementSystem の後、TransformSystem の前に実行�
 - 押される側が壁に到達して押し切れない場合、残りのめり込み量は押した側へ戻す
 - 両方が押し合っている場合、またはどちらが押したか確定できない場合は、互いに離す形で補正する
 
-HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
+HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
 
 - HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
 - AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
 - HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
 - HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / Guardstun` を確定する
+- HitResolveSystem はヒット/ガード確定後に `HitReactionRequest` を World へ積み、座標や Velocity は直接変更しない
+- HitReactionSystem は `HitReactionRequest` を読み、通常ヒットバックやガードバックは 1 フレームの即時座標補正として処理する
+- 通常ヒットバックやガードバックで防御側が壁に到達して下がりきれない場合、不足分を攻撃側へ返して 2 Player 間の距離を確保する
+- `AttackData.hitReactionType` は `Normal / Down / Burst / HardBurst` を基本とする
+- `Normal` は防御側を後ろへずらす地上ヒットバックとして扱う
+- `Down` はその場で `PlayerActionState::Down` へ遷移し、一定フレーム後 `WakeUp`、その後 `Idle` へ戻る
+- `Burst` と `HardBurst` は防御側に吹き飛び Velocity を設定し、`AirHitstun` として重力で落下させる
+- `Burst` と `HardBurst` の防御側が着地した場合は `Down` へ遷移する
+- 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
+- `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
 - `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::Guardstun` を維持するフレーム数として扱う
 - ガード時は本来ダメージの 1/10 を HP へ適用する
 - 通常ガードは地上の `Idle / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立し、`Guardstun` 中は入力に関係なく連続ガードとして扱う
-- HPバーのダメージ蓄積表示は `Hitstun` と `Guardstun` 中に停止し、硬直解除後に現在HPへ追いつく
+- HPバーのダメージ蓄積表示は `Hitstun / Guardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。
@@ -394,6 +406,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
 - 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
 - AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
+- AttackData は `hitReactionType` を持ち、技ごとの被弾反応を `Normal / Down / Burst / HardBurst` から選ぶ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する

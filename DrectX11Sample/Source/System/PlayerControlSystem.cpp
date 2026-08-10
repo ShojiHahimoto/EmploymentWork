@@ -136,6 +136,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		break;
 
 	case PlayerActionState::AirAttack:
+	case PlayerActionState::AirHitstun:
 		result.setHorizontalVelocity = false;
 		break;
 
@@ -144,7 +145,9 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 	case PlayerActionState::LandingRecovery:
 	case PlayerActionState::Hitstun:
 	case PlayerActionState::Guardstun:
-		// 現段階の攻撃・着地硬直・被弾・ガード硬直は仮挙動として横移動を止める。
+	case PlayerActionState::Down:
+	case PlayerActionState::WakeUp:
+		// 現段階の攻撃・着地硬直・地上被弾・ガード・ダウン系は、横移動を止める。
 		// 攻撃移動やノックバックを入れる場合は、各 ActionState の処理としてここから分岐を増やす。
 		//result.horizontalVelocity = 0.0f;
 		break;

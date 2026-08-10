@@ -7,6 +7,7 @@
   "damage": 1000,
   "hitstunFrames": 25,
   "guardstunFrames": 12,
+  "hitReactionType": "Burst",
   "frame": {
     "startup": 8,
     "active": 5,

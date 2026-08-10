@@ -140,6 +140,8 @@ void HitResolveSystem::Update(World& world)
 	{
 		const bool guarded = ShouldResolveAsGuard(world, result);
 		const int resolvedDamage = guarded ? CalculateGuardDamage(result.damage) : result.damage;
+		const StateComponent* defenderState = world.GetComponent<StateComponent>(result.defenderId);
+		const bool defenderWasGrounded = defenderState ? defenderState->isGrounded : true;
 
 		DebugLog(
 			guarded ? "[Guard] " : "[Hit] ",
@@ -166,6 +168,8 @@ void HitResolveSystem::Update(World& world)
 		{
 			ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 		}
+
+		QueueHitReaction(world, result, guarded, defenderWasGrounded);
 	}
 
 	world.ClearHitCollisionResults();
@@ -271,4 +275,26 @@ void HitResolveSystem::ApplyGuardstun(World& world, GameObjectId defenderId, int
 		hitBox->currentAttack.slotId.clear();
 		hitBox->currentAttack.hasHit = false;
 	}
+}
+
+/// <summary>
+/// 確定済みのヒットまたはガードから、位置補正や吹き飛び用の被弾反応リクエストを作る。
+/// </summary>
+/// <param name="world">リクエストを蓄積する World。</param>
+/// <param name="result">HitCollisionSystem が収集した攻撃接触結果。</param>
+/// <param name="guarded">ガードとして解決された場合は true。</param>
+/// <param name="defenderWasGrounded">HitResolve 前の防御側が接地していた場合は true。</param>
+void HitResolveSystem::QueueHitReaction(
+	World& world,
+	const HitCollisionResult& result,
+	bool guarded,
+	bool defenderWasGrounded)
+{
+	HitReactionRequest request;
+	request.attackerId = result.attackerId;
+	request.defenderId = result.defenderId;
+	request.hitReactionType = guarded ? HitReactionType::Normal : result.hitReactionType;
+	request.guarded = guarded;
+	request.defenderWasGrounded = defenderWasGrounded;
+	world.AddHitReactionRequest(request);
 }

@@ -12,6 +12,8 @@ namespace
 {
 	constexpr int JumpStartupFrames = 4;
 	constexpr int AttackLandingRecoveryFrames = 5;
+	constexpr int DefaultDownFrames = 30;
+	constexpr int DefaultWakeUpFrames = 20;
 }
 
 void StateUpdateSystem::Update(World& world)
@@ -83,6 +85,23 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	if (state.hitstunRequested)
 	{
 		return { PlayerActionState::Hitstun, true };
+	}
+
+	if (state.currentActionState == PlayerActionState::AirHitstun)
+	{
+		return state.isGrounded
+			? PlayerActionDecision{ PlayerActionState::Down, true }
+			: PlayerActionDecision{ PlayerActionState::AirHitstun, false };
+	}
+
+	if (state.currentActionState == PlayerActionState::Down && IsActionFinished(state))
+	{
+		return { PlayerActionState::WakeUp, true };
+	}
+
+	if (state.currentActionState == PlayerActionState::WakeUp && IsActionFinished(state))
+	{
+		return { PlayerActionState::Idle, true };
 	}
 
 	if (state.currentActionState == PlayerActionState::AirAttack)
@@ -428,7 +447,10 @@ bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 		|| actionState == PlayerActionState::AirAttack
 		|| actionState == PlayerActionState::LandingRecovery
 		|| actionState == PlayerActionState::Hitstun
-		|| actionState == PlayerActionState::Guardstun;
+		|| actionState == PlayerActionState::Guardstun
+		|| actionState == PlayerActionState::AirHitstun
+		|| actionState == PlayerActionState::Down
+		|| actionState == PlayerActionState::WakeUp;
 }
 
 /// <summary>
@@ -453,6 +475,11 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 		return state.actionFrame >= state.hitstunDurationFrames;
 	case PlayerActionState::Guardstun:
 		return state.actionFrame >= state.guardstunDurationFrames;
+	case PlayerActionState::AirHitstun:
+		return false;
+	case PlayerActionState::Down:
+	case PlayerActionState::WakeUp:
+		return state.actionDurationFrames <= 0 || state.actionFrame >= state.actionDurationFrames;
 	default:
 		return true;
 	}
@@ -548,6 +575,24 @@ void StateUpdateSystem::ApplyActionState(
 		else if (state.currentActionState == PlayerActionState::LandingRecovery)
 		{
 			state.actionDurationFrames = AttackLandingRecoveryFrames;
+			if (hitBox)
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
+		}
+		else if (state.currentActionState == PlayerActionState::Down)
+		{
+			state.actionDurationFrames = DefaultDownFrames;
+			if (hitBox)
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
+		}
+		else if (state.currentActionState == PlayerActionState::WakeUp)
+		{
+			state.actionDurationFrames = DefaultWakeUpFrames;
 			if (hitBox)
 			{
 				hitBox->currentAttack.slotId.clear();

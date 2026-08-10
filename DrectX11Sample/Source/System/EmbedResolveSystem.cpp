@@ -15,8 +15,6 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
-	constexpr float StageMinX = -15.0f;
-	constexpr float StageMaxX = 15.0f;
 	constexpr float Epsilon = 0.0001f;
 
 	struct Aabb2D
@@ -175,13 +173,13 @@ namespace
 
 		const float proposedMinX = currentAabb.minX + allowedDeltaX;
 		const float proposedMaxX = currentAabb.maxX + allowedDeltaX;
-		if (proposedMinX < StageMinX)
+		if (proposedMinX < EmbedResolveSystem::StageMinX)
 		{
-			allowedDeltaX += StageMinX - proposedMinX;
+			allowedDeltaX += EmbedResolveSystem::StageMinX - proposedMinX;
 		}
-		if (proposedMaxX > StageMaxX)
+		if (proposedMaxX > EmbedResolveSystem::StageMaxX)
 		{
-			allowedDeltaX -= proposedMaxX - StageMaxX;
+			allowedDeltaX -= proposedMaxX - EmbedResolveSystem::StageMaxX;
 		}
 
 		if (std::fabs(allowedDeltaX) <= Epsilon)
@@ -308,13 +306,13 @@ void EmbedResolveSystem::ResolveWallBounds(World& world)
 		}
 
 		const Aabb2D aabb = BuildAabb(*player.transform, *player.state, player.hitBox->pushBox);
-		if (aabb.minX < StageMinX)
+		if (aabb.minX < EmbedResolveSystem::StageMinX)
 		{
-			MovePlayerWithinWalls(player, StageMinX - aabb.minX);
+			MovePlayerWithinWalls(player, EmbedResolveSystem::StageMinX - aabb.minX);
 		}
-		else if (aabb.maxX > StageMaxX)
+		else if (aabb.maxX > EmbedResolveSystem::StageMaxX)
 		{
-			MovePlayerWithinWalls(player, StageMaxX - aabb.maxX);
+			MovePlayerWithinWalls(player, EmbedResolveSystem::StageMaxX - aabb.maxX);
 		}
 	}
 }

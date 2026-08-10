@@ -65,13 +65,16 @@ namespace
 	/// </summary>
 	/// <param name="world">StateComponent を取得する World。</param>
 	/// <param name="playerId">確認する Player GameObject ID。</param>
-	/// <returns>ヒットスタン中またはガードスタン中なら true。</returns>
+	/// <returns>被弾・ガード・ダウン系の硬直中なら true。</returns>
 	bool IsPlayerInDamageHoldState(const World& world, GameObjectId playerId)
 	{
 		const StateComponent* state = world.GetComponent<StateComponent>(playerId);
 		return state
 			&& (state->currentActionState == PlayerActionState::Hitstun
-				|| state->currentActionState == PlayerActionState::Guardstun);
+				|| state->currentActionState == PlayerActionState::Guardstun
+				|| state->currentActionState == PlayerActionState::AirHitstun
+				|| state->currentActionState == PlayerActionState::Down
+				|| state->currentActionState == PlayerActionState::WakeUp);
 	}
 
 	/// <summary>

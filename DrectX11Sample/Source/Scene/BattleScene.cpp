@@ -19,6 +19,7 @@
 #include "System/Debugger.h"
 #include "System/EmbedResolveSystem.h"
 #include "System/HitCollisionSystem.h"
+#include "System/HitReactionSystem.h"
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
@@ -135,6 +136,7 @@ void BattleScene::RunSystems()
 	EmbedResolveSystem::Update(world);
 	HitCollisionSystem::Update(world);
 	HitResolveSystem::Update(world);
+	HitReactionSystem::Update(world);
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());

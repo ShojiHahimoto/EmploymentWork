@@ -258,6 +258,32 @@ namespace
 	}
 
 	/// <summary>
+	/// JSON の hitReactionType 文字列を HitReactionType に変換する。
+	/// </summary>
+	/// <param name="text">JSON に保存されている被弾反応種別。</param>
+	/// <returns>対応する HitReactionType。不明な場合は Unknown。</returns>
+	HitReactionType ParseHitReactionType(const std::string& text)
+	{
+		if (text == "Normal")
+		{
+			return HitReactionType::Normal;
+		}
+		if (text == "Down")
+		{
+			return HitReactionType::Down;
+		}
+		if (text == "Burst")
+		{
+			return HitReactionType::Burst;
+		}
+		if (text == "HardBurst")
+		{
+			return HitReactionType::HardBurst;
+		}
+		return HitReactionType::Unknown;
+	}
+
+	/// <summary>
 	/// JSON の button 文字列を AttackButtonId に変換する。
 	/// </summary>
 	/// <param name="text">AttackA / AttackB / AttackX / AttackY などの文字列。</param>
@@ -618,6 +644,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
+	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);

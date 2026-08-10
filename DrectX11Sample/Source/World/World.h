@@ -3,6 +3,7 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
+#include "Data/AttackData.h"
 
 #include <array>
 #include <cassert>
@@ -50,7 +51,17 @@ struct HitCollisionResult
 	int damage = 10;
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;
+	HitReactionType hitReactionType = HitReactionType::Normal;
 	int hitboxIndex = -1;
+};
+
+struct HitReactionRequest
+{
+	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
+	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
+	HitReactionType hitReactionType = HitReactionType::Normal;
+	bool guarded = false;
+	bool defenderWasGrounded = true;
 };
 
 class World
@@ -108,6 +119,10 @@ public:
 	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
 	void ClearHitCollisionResults();
 
+	void AddHitReactionRequest(const HitReactionRequest& request);
+	const std::vector<HitReactionRequest>& GetHitReactionRequests() const;
+	void ClearHitReactionRequests();
+
 	void SetBattlePlayerId(int playerIndex, GameObjectId objectId);
 	GameObjectId GetBattlePlayerId(int playerIndex) const;
 	GameObjectId GetOpponentBattlePlayerId(GameObjectId objectId) const;
@@ -124,6 +139,7 @@ private:
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
 	std::vector<HitCollisionResult> hitCollisionResults;
+	std::vector<HitReactionRequest> hitReactionRequests;
 	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
 	BattleResult battleResult = BattleResult::None;
 	GameObjectId nextObjectId = 1;

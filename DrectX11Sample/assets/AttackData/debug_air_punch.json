@@ -6,6 +6,7 @@
   "damage": 18,
   "hitstunFrames": 12,
   "guardstunFrames": 6,
+  "hitReactionType": "Normal",
   "frame": {
     "startup": 5,
     "active": 4,

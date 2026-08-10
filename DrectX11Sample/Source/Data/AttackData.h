@@ -39,6 +39,15 @@ enum class AttackUsableState
 	Unknown
 };
 
+enum class HitReactionType
+{
+	Normal,
+	Down,
+	Burst,
+	HardBurst,
+	Unknown
+};
+
 enum class AttackSlotType
 {
 	Normal,
@@ -107,6 +116,8 @@ struct AttackData
 	AttackCommandId commandId = AttackCommandId::None;
 	// Ground / Air / Both のどこで発動できるか。
 	AttackUsableState usableState = AttackUsableState::Both;
+	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
+	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackFrameData frame;
 	std::vector<AttackCancelWindowData> cancelWindows;
 	std::vector<AttackHitboxData> hitboxes;

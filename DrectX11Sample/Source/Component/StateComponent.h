@@ -19,6 +19,9 @@ enum class PlayerActionState
 	LandingRecovery,
 	Hitstun,
 	Guardstun,
+	AirHitstun,
+	Down,
+	WakeUp,
 };
 
 // 対面方向

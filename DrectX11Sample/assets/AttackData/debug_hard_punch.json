@@ -6,6 +6,7 @@
   "damage": 500,
   "hitstunFrames": 24,
   "guardstunFrames": 12,
+  "hitReactionType": "HardBurst",
   "frame": {
     "startup": 15,
     "active": 4,
