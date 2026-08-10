@@ -6,6 +6,7 @@
   "usableState": "Ground",
   "damage": 1000,
   "hitstunFrames": 25,
+  "guardstunFrames": 12,
   "frame": {
     "startup": 8,
     "active": 5,

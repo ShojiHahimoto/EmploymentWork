@@ -614,6 +614,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
 	outAttackData.damage = GetInt(root, "damage", outAttackData.damage);
 	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
+	outAttackData.guardstunFrames = GetInt(root, "guardstunFrames", outAttackData.hitstunFrames);
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));

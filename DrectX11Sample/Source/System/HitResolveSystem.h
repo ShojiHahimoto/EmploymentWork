@@ -17,4 +17,5 @@ private:
 	static void MarkAttackAsHit(World& world, GameObjectId attackerId);
 	static void ApplyDamage(World& world, GameObjectId defenderId, int damage);
 	static void ApplyHitstun(World& world, GameObjectId defenderId, int hitstunFrames);
+	static void ApplyGuardstun(World& world, GameObjectId defenderId, int guardstunFrames);
 };

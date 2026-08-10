@@ -5,6 +5,7 @@
   "usableState": "Air",
   "damage": 24,
   "hitstunFrames": 16,
+  "guardstunFrames": 8,
   "frame": {
     "startup": 7,
     "active": 5,

@@ -99,6 +99,8 @@ struct AttackData
 	int damage = 10;
 	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
 	int hitstunFrames = 30;
+	// この攻撃がガードされた相手を Guardstun に固定するフレーム数。
+	int guardstunFrames = 30;
 	// 通常攻撃か必殺技か。入力候補の作成と編集画面で使う。
 	AttackKind attackKind = AttackKind::Normal;
 	// 必殺技用のコマンド種別。通常攻撃では None を使う。

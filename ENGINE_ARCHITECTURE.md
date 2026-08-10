@@ -183,7 +183,7 @@ DebugSystem
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -228,8 +228,12 @@ HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別�
 - HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
 - AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
 - HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
-- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun` を確定する
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / Guardstun` を確定する
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::Guardstun` を維持するフレーム数として扱う
+- ガード時は本来ダメージの 1/10 を HP へ適用する
+- 通常ガードは地上の `Idle / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立し、`Guardstun` 中は入力に関係なく連続ガードとして扱う
+- HPバーのダメージ蓄積表示は `Hitstun` と `Guardstun` 中に停止し、硬直解除後に現在HPへ追いつく
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。
@@ -299,7 +303,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。
 
 - 地面、壁、プレイヤー押し合いは EmbedResolveSystem で位置を補正する
-- 攻撃判定、やられ判定、ガード判定は HitCollisionSystem で収集する
+- 攻撃判定とやられ判定の接触は HitCollisionSystem で収集する
+- ガード成立可否は、収集済み接触結果と防御側の入力/状態を見て HitResolveSystem で確定する
 - ダメージ、State 変更、ヒットストップなどの結果は HitResolveSystem で確定する
 - HitCollisionSystem は結果を直接確定しない
 
@@ -388,7 +393,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `AttackList.json` は `groundNormalAttackSlots`、`airNormalAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
 - 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
 - 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
-- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState` を持つ
+- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する

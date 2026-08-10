@@ -427,7 +427,8 @@ bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 	return actionState == PlayerActionState::GroundAttack
 		|| actionState == PlayerActionState::AirAttack
 		|| actionState == PlayerActionState::LandingRecovery
-		|| actionState == PlayerActionState::Hitstun;
+		|| actionState == PlayerActionState::Hitstun
+		|| actionState == PlayerActionState::Guardstun;
 }
 
 /// <summary>
@@ -450,6 +451,8 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 		return state.actionFrame >= AttackLandingRecoveryFrames;
 	case PlayerActionState::Hitstun:
 		return state.actionFrame >= state.hitstunDurationFrames;
+	case PlayerActionState::Guardstun:
+		return state.actionFrame >= state.guardstunDurationFrames;
 	default:
 		return true;
 	}

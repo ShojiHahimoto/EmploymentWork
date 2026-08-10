@@ -18,6 +18,7 @@ enum class PlayerActionState
 	AirAttack,
 	LandingRecovery,
 	Hitstun,
+	Guardstun,
 };
 
 // 対面方向
@@ -53,5 +54,7 @@ struct StateComponent : public Component
 	bool hitstunRequested = false;
 	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int hitstunDurationFrames = 30;
+	// 現在の Guardstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
+	int guardstunDurationFrames = 30;
 	bool cancelEnabled = false;
 };

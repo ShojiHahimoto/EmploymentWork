@@ -192,6 +192,7 @@ namespace
 			result.attackDisplayName = assignedAttack.attack.displayName;
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
+			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
 			result.hitboxIndex = static_cast<int>(hitboxIndex);
 			world.AddHitCollisionResult(result);
 			return true;

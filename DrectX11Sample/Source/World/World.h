@@ -49,6 +49,7 @@ struct HitCollisionResult
 	std::string attackDisplayName;
 	int damage = 10;
 	int hitstunFrames = 30;
+	int guardstunFrames = 30;
 	int hitboxIndex = -1;
 };
 
