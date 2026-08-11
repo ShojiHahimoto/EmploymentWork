@@ -422,6 +422,9 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `AttackList.json` は `groundNormalAttackSlots`、`airNormalAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
 - 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
 - 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
+- `AttackList.json` の `attackDataId` は `assets/AttackData` からの相対 ID を基本とする。例: `debug_punch`、`Ground/slot_00`
+- Loader は手動編集しやすいよう、`Ground/slot_00.json` や `assets/AttackData/Ground/slot_00.json` のような書き方も読み込み時に吸収する
+- ファイル名だけで指定して複数候補が見つかる場合は曖昧な指定として扱うため、カテゴリ付き ID を推奨する
 - AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
 - AttackData は `hitReactionType` を持ち、技ごとの被弾反応を `Normal / Down / Burst / HardBurst` から選ぶ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
@@ -469,6 +472,25 @@ SceneManager が Scene を管理する。
 - Scene はゲームロジック本体を直接持たない
 - Scene は `Update` ではなく `RunSystems` を持ち、その Scene で使う System 群を固定順で実行する入口とする
 - SceneManager は即時切り替えではなく、切り替え要求を保持して安全なタイミングで反映する
+
+### 非バトル Scene の扱い
+
+バトル部分以外の Scene は、同一フレーム内の全体整合性がバトルほど厳しくないため、必要に応じて Scene 内で直接制御してよい。
+
+- Title / Result / Customize などは、BattleScene と同じ System 群を無理に持たせない
+- InputSystem と ActionMap は Scene をまたいで使い回す
+- Scene が World を持つ構造は維持し、必要になった段階で UI 用 GameObject やプレビュー用 GameObject を追加する
+- 非バトル Scene でも GameObject / Component にゲームロジックを持たせる方針にはしない
+
+CustomizeScene は技調整・キャラクター調整用の作業 Scene とする。
+
+- 現段階ではタイトル画面の `P` キーから入る仮導線とする
+- 技調整のパラメータウィンドウは、まず ImGui で実装する
+- 地上技、空中技、必殺技の各スロット数は定数で管理し、実行中には変更しない
+- AttackData 編集中はメモリ上の draft を変更し、Save 操作時だけ JSON へ書き戻す
+- AttackData の保存先は `assets/AttackData/<Category>/slot_XX.json` を基準とする
+- AttackDataSaver は CharacterDataLoader が読み込める JSON 形式を維持する
+- 将来の専用 UI 化やプレビュー再生を追加しても、保存形式と Loader 互換性を壊さない
 
 ## 禁止事項
 

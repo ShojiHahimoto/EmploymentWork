@@ -90,6 +90,9 @@
     <ClCompile Include="Source\Input\InputSystem.cpp">
       <Filter>ソース ファイル\Input</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Data\AttackDataSaver.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
@@ -97,6 +100,9 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\CustomizeScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\ResultScene.cpp">
@@ -314,6 +320,9 @@
     <ClInclude Include="Source\Scene\BattleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\CustomizeScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\ResultScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
@@ -369,6 +378,9 @@
       <Filter>ヘッダー ファイル\Input</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\AttackData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\AttackDataSaver.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\CharacterData.h">

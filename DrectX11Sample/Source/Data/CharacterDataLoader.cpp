@@ -5,11 +5,107 @@
 
 #include <filesystem>
 #include <fstream>
+#include <vector>
 #include <sstream>
 
 namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
+
+	/// <summary>
+	/// パス末尾が .json でない場合だけ .json を補う。
+	/// </summary>
+	/// <param name="path">確認するパス。</param>
+	/// <returns>.json 拡張子を持つパス。</returns>
+	std::filesystem::path WithJsonExtension(const std::filesystem::path& path)
+	{
+		std::filesystem::path result = path;
+		if (result.extension() != ".json")
+		{
+			result += ".json";
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// AttackList.json の attackDataId から実際に読む JSON パスを解決する。
+	/// </summary>
+	/// <param name="attackDataId">AttackData ID、または assets/AttackData からの相対パス。</param>
+	/// <param name="outPath">見つかった JSON パスの書き込み先。</param>
+	/// <returns>読み込み対象ファイルが一意に見つかった場合は true。</returns>
+	bool ResolveAttackDataPath(const std::string& attackDataId, std::filesystem::path& outPath)
+	{
+		if (attackDataId.empty())
+		{
+			return false;
+		}
+
+		const std::filesystem::path requestedPath = WithJsonExtension(std::filesystem::path(attackDataId));
+		const std::filesystem::path rootPath(AttackDataRootPath);
+		std::vector<std::filesystem::path> candidatePaths;
+
+		if (requestedPath.is_absolute())
+		{
+			candidatePaths.push_back(requestedPath);
+		}
+		else
+		{
+			// "assets/AttackData/Ground/slot_00.json" のように書かれている場合をそのまま試す。
+			candidatePaths.push_back(requestedPath);
+			// "debug_punch" や "Ground/slot_00" のような AttackData ルート基準 ID を試す。
+			candidatePaths.push_back(rootPath / requestedPath);
+		}
+
+		for (const std::filesystem::path& candidatePath : candidatePaths)
+		{
+			std::error_code errorCode;
+			if (std::filesystem::is_regular_file(candidatePath, errorCode))
+			{
+				outPath = candidatePath;
+				return true;
+			}
+		}
+
+		if (requestedPath.has_parent_path())
+		{
+			return false;
+		}
+
+		std::vector<std::filesystem::path> matchedPaths;
+		std::error_code errorCode;
+		for (const std::filesystem::directory_entry& entry :
+			std::filesystem::recursive_directory_iterator(rootPath, errorCode))
+		{
+			if (errorCode)
+			{
+				break;
+			}
+
+			if (!entry.is_regular_file(errorCode))
+			{
+				continue;
+			}
+
+			if (entry.path().filename() == requestedPath.filename())
+			{
+				matchedPaths.push_back(entry.path());
+			}
+		}
+
+		if (matchedPaths.size() == 1)
+		{
+			outPath = matchedPaths.front();
+			return true;
+		}
+
+		if (matchedPaths.size() > 1)
+		{
+			DebugLog("[CharacterData] AttackData ID is ambiguous. Id=", attackDataId);
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// テキストファイルを読み込み、文字列として返す。
@@ -628,7 +724,12 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 
 bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, AttackData& outAttackData)
 {
-	const std::filesystem::path attackPath = std::filesystem::path(AttackDataRootPath) / (attackDataId + ".json");
+	std::filesystem::path attackPath;
+	if (!ResolveAttackDataPath(attackDataId, attackPath))
+	{
+		DebugLog("[CharacterData] AttackData file not found. Id=", attackDataId);
+		return false;
+	}
 
 	JsonValue root;
 	if (!ReadJsonFile(attackPath, root))

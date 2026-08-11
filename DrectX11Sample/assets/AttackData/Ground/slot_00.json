@@ -1,0 +1,29 @@
+﻿{
+  "attackDataId": "Ground/slot_00",
+  "displayName": "Ground Slot 0",
+  "attackKind": "Normal",
+  "commandId": "None",
+  "usableState": "Ground",
+  "damage": 2000,
+  "hitstunFrames": 30,
+  "guardstunFrames": 30,
+  "hitReactionType": "HardBurst",
+  "frame": {
+    "startup": 5,
+    "active": 18,
+    "recovery": 10
+  },
+  "cancelWindows": [],
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.500,
+        "y": 4.000
+      },
+      "size": {
+        "x": 6.300,
+        "y": 6.950
+      }
+    }
+  ]
+}

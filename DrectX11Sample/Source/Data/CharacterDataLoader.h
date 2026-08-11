@@ -18,7 +18,7 @@ public:
 	/// <summary>
 	/// 指定 AttackData ID に対応する技 JSON を読み込む。
 	/// </summary>
-	/// <param name="attackDataId">assets/AttackData 配下の JSON 名に対応する技 ID。</param>
+	/// <param name="attackDataId">assets/AttackData 配下の技 ID。例: debug_punch / Ground/slot_00。</param>
 	/// <param name="outAttackData">読み込んだ技データの書き込み先。</param>
 	/// <returns>読み込みに成功した場合は true。</returns>
 	static bool LoadAttackData(const std::string& attackDataId, AttackData& outAttackData);

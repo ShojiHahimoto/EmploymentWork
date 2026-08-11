@@ -3,10 +3,13 @@
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Scene/BattleScene.h"
+#include "Scene/CustomizeScene.h"
 #include "Scene/SceneManager.h"
 #include "System/Application.h"
 #include "System/Debugger.h"
 #include "System/Renderer.h"
+
+#include <Windows.h>
 
 #include <memory>
 
@@ -45,19 +48,26 @@ void TitleScene::Exit()
 }
 
 /// <summary>
-/// UI Submit が押されたら BattleScene への切り替えを予約する。
+/// UI Submit が押されたら BattleScene、仮導線の P が押されたら CustomizeScene への切り替えを予約する。
 /// </summary>
 void TitleScene::RunSystems()
 {
-	if (!WasSubmitTriggered())
+	if (WasCustomizeTriggered())
 	{
+		SceneManager::GetInstance().RequestChangeScene(
+			std::make_unique<CustomizeScene>(
+				static_cast<int>(Application::GetWidth()),
+				static_cast<int>(Application::GetHeight())));
 		return;
 	}
 
-	SceneManager::GetInstance().RequestChangeScene(
-		std::make_unique<BattleScene>(
-			static_cast<int>(Application::GetWidth()),
-			static_cast<int>(Application::GetHeight())));
+	if (WasSubmitTriggered())
+	{
+		SceneManager::GetInstance().RequestChangeScene(
+			std::make_unique<BattleScene>(
+				static_cast<int>(Application::GetWidth()),
+				static_cast<int>(Application::GetHeight())));
+	}
 }
 
 /// <summary>
@@ -121,4 +131,17 @@ bool TitleScene::WasSubmitTriggered() const
 	}
 
 	return false;
+}
+
+/// <summary>
+/// 技調整シーンへ入る仮導線として、P キーが Trigger されたか確認する。
+/// </summary>
+/// <returns>P キーが今フレーム押された場合は true。</returns>
+bool TitleScene::WasCustomizeTriggered()
+{
+	const bool pressed = (GetAsyncKeyState('P') & 0x8000) != 0;
+	const bool triggered = pressed && !customizeKeyPressedLastFrame;
+	customizeKeyPressedLastFrame = pressed;
+
+	return triggered;
 }
