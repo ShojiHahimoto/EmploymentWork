@@ -4,8 +4,10 @@
   "attackKind": "Special",
   "commandId": "Hadoken",
   "usableState": "Ground",
-  "damage": 45,
+  "damage": 1000,
   "hitstunFrames": 25,
+  "guardstunFrames": 12,
+  "hitReactionType": "Burst",
   "frame": {
     "startup": 8,
     "active": 5,

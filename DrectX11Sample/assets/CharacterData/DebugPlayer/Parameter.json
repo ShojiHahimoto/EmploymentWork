@@ -9,7 +9,7 @@
     "backJumpHorizontalVelocity": -0.13,
     "riseGravityPerFrame": -0.045,
     "fallGravityPerFrame": -0.040,
-    "maxHp": 100,
+    "maxHp": 10000,
     "modelScale": {
       "x": 0.05,
       "y": 0.05,

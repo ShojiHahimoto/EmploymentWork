@@ -61,15 +61,20 @@ namespace
 	}
 
 	/// <summary>
-	/// 指定 Player が現在ヒットスタン中か確認する。
+	/// 指定 Player が、HPバーのダメージ蓄積表示を止める硬直中か確認する。
 	/// </summary>
 	/// <param name="world">StateComponent を取得する World。</param>
 	/// <param name="playerId">確認する Player GameObject ID。</param>
-	/// <returns>ヒットスタン中なら true。</returns>
-	bool IsPlayerInHitstun(const World& world, GameObjectId playerId)
+	/// <returns>被弾・ガード・ダウン系の硬直中なら true。</returns>
+	bool IsPlayerInDamageHoldState(const World& world, GameObjectId playerId)
 	{
 		const StateComponent* state = world.GetComponent<StateComponent>(playerId);
-		return state && state->currentActionState == PlayerActionState::Hitstun;
+		return state
+			&& (state->currentActionState == PlayerActionState::Hitstun
+				|| state->currentActionState == PlayerActionState::Guardstun
+				|| state->currentActionState == PlayerActionState::AirHitstun
+				|| state->currentActionState == PlayerActionState::Down
+				|| state->currentActionState == PlayerActionState::WakeUp);
 	}
 
 	/// <summary>
@@ -164,9 +169,9 @@ void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, Health
 	else
 	{
 		gauge.healthRatio = currentRatio;
-		if (IsPlayerInHitstun(world, targetPlayerId))
+		if (IsPlayerInDamageHoldState(world, targetPlayerId))
 		{
-			// ヒットスタン中はダメージバーを古い長さで止め、連続ヒットの蓄積を見せる。
+			// ヒットスタン/ガードスタン中はダメージバーを古い長さで止め、連続ダメージの蓄積を見せる。
 			gauge.damageRatio = std::max(gauge.damageRatio, gauge.healthRatio);
 		}
 		else

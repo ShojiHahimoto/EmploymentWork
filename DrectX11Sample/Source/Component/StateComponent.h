@@ -16,7 +16,12 @@ enum class PlayerActionState
 	Fall,
 	GroundAttack,
 	AirAttack,
+	LandingRecovery,
 	Hitstun,
+	Guardstun,
+	AirHitstun,
+	Down,
+	WakeUp,
 };
 
 // 対面方向
@@ -24,6 +29,14 @@ enum class FacingDirection
 {
 	Right,
 	Left
+};
+
+// バトルカメラが Player の Y 方向移動を追従してよいかを表す。
+enum class CameraYFollowMode
+{
+	None,
+	NaturalJump,
+	Ignore
 };
 
 struct StateComponent : public Component
@@ -37,6 +50,10 @@ struct StateComponent : public Component
 	// 現在の ActionState に入った瞬間の対面方向。
 	// ジャンプなど、途中で向きが変わると困る行動の基準方向として使う。
 	FacingDirection actionStartFacingDirection = FacingDirection::Right;
+
+	// バトルカメラの Y 追従対象かどうか。
+	// 通常ジャンプ由来の空中移動は追い、バーストなどの被弾吹き飛びは追わない。
+	CameraYFollowMode cameraYFollowMode = CameraYFollowMode::None;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。
@@ -52,5 +69,7 @@ struct StateComponent : public Component
 	bool hitstunRequested = false;
 	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int hitstunDurationFrames = 30;
+	// 現在の Guardstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
+	int guardstunDurationFrames = 30;
 	bool cancelEnabled = false;
 };

@@ -109,6 +109,7 @@ Camera も Component と System に分離する。
 - Projection 行列は CameraComponent の投影設定から作成する
 - DirectX 左手座標系に合わせ、カメラ前方向は +Z とする
 - CameraSystem は入力処理、追従処理、Renderer 所有を担当しない
+- バトル中のメインカメラ追従は BattleCameraSystem が担当し、CameraSystem は行列キャッシュ更新だけを担当する
 - Scene / World 実装前は Game が仮に CameraComponent と Transform を保持する
 - Scene / World 実装後は World が activeCameraId と CameraComponent を管理する
 
@@ -155,9 +156,11 @@ CommandInputSystem
 StateUpdateSystem
 PlayerControlSystem
 MovementSystem
+BattleCameraSystem
 EmbedResolveSystem
 HitCollisionSystem
 HitResolveSystem
+HitReactionSystem
 BattleResultSystem
 BattleHUDSystem
 TransformSystem
@@ -172,9 +175,11 @@ DebugSystem
 - StateUpdateSystem は、入力履歴、コマンド候補、現在状態、地上/空中、被弾、キャンセル可否を見て今フレームの `PlayerActionState` と `actionFrame` を更新する
 - PlayerControlSystem は、確定済みの `PlayerActionState` に応じて歩き、攻撃、被弾などの行動処理を行う
 - MovementSystem は、Velocity による移動、重力、ジャンプ、技移動など、めり込み解消前の位置更新を扱う
+- BattleCameraSystem は、Movement 後の 2 Player 位置からメインカメラ Transform を更新する
 - EmbedResolveSystem は、地面、壁、プレイヤー同士の押し合いなど、移動後の位置めり込み解消を扱う
 - HitCollisionSystem は、攻撃判定とやられ判定など、ヒット用の接触情報を収集する
 - HitResolveSystem は、ヒット結果、ダメージ、のけぞり State、ヒットストップなどの結果を確定する
+- HitReactionSystem は、HitResolveSystem が確定した被弾反応リクエストを読み、ヒットバック、ガードバック、吹き飛び、ダウンを処理する
 - BattleResultSystem は、KO とラウンドタイマーのタイムアップを確認し、勝敗結果を確定する
 - BattleHUDSystem は、HPバーやラウンドタイマーなどの対戦 HUD 表示状態を更新し、ゲームビューへ描画する
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
@@ -183,7 +188,7 @@ DebugSystem
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`Hitstun` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -215,21 +220,49 @@ MovementSystem は入力を直接読まない。
 - `MovementSystem::Update` は空中重力を Velocity に加算し、確定済み Velocity を Transform に反映する
 - 上昇中と下降中で重力値を分ける
 
-EmbedResolveSystem は MovementSystem の後、TransformSystem の前に実行する。
+BattleCameraSystem は MovementSystem の後、EmbedResolveSystem の前に実行する。
+
+- メインカメラの X 座標は 2 Player の中心が画面内デッドゾーンを超えた場合だけ追従する
+- X デッドゾーンは画面比率ではなく、カメラ中心から左右に同じワールド距離を置く
+- Player が画面端へ近づいた場合、位置補正で止める前にカメラを動かせるだけ動かす
+- カメラ X はステージ左右端でクランプし、画面にステージ外が映らないようにする
+- カメラ Y は `CameraYFollowMode::NaturalJump` の Player 高さに応じて少しだけ上げ、補間で滑らかに追従する
+- 通常ジャンプ、通常ジャンプ由来の落下、空中攻撃、通常ジャンプ中の通常被弾は `NaturalJump` を維持する
+- バーストなどの被弾吹き飛びは `CameraYFollowMode::Ignore` とし、カメラ Y 追従対象にしない
+- 着地、ダウン、起き上がり、地上復帰時は `CameraYFollowMode::None` に戻す
+- カメラ Z と FOV は現段階では固定値として扱い、ズームはまだ行わない
+- CameraSystem は従来通り、更新済み Transform から View / Projection 行列を作る
+
+EmbedResolveSystem は BattleCameraSystem の後、TransformSystem の前に実行する。
 
 - 仮接地判定、壁補正、プレイヤー同士の PushBox めり込み補正を扱う
-- 現段階の壁は仮実装としてステージ左右端の固定値で扱う
+- 現段階の壁は仮実装として `StageMinX=-30 / StageMaxX=30` の固定値で扱う
+- Player がメインカメラ画角外へ後ろに下がろうとした場合、画面端を壁と同じように扱って位置補正する
 - 片方だけが相手方向へ歩いてめり込んだ場合、歩いていない側を押す
 - 押される側が壁に到達して押し切れない場合、残りのめり込み量は押した側へ戻す
 - 両方が押し合っている場合、またはどちらが押したか確定できない場合は、互いに離す形で補正する
 
-HitCollisionSystem と HitResolveSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
+HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや壁補正とは別に攻撃ヒット処理を扱う。
 
 - HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
 - AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
 - HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
-- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun` を確定する
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / Guardstun` を確定する
+- HitResolveSystem はヒット/ガード確定後に `HitReactionRequest` を World へ積み、座標や Velocity は直接変更しない
+- HitReactionSystem は `HitReactionRequest` を読み、通常ヒットバックやガードバックは 1 フレームの即時座標補正として処理する
+- 通常ヒットバックやガードバックで防御側が壁に到達して下がりきれない場合、不足分を攻撃側へ返して 2 Player 間の距離を確保する
+- `AttackData.hitReactionType` は `Normal / Down / Burst / HardBurst` を基本とする
+- `Normal` は防御側を後ろへずらす地上ヒットバックとして扱う
+- `Down` はその場で `PlayerActionState::Down` へ遷移し、一定フレーム後 `WakeUp`、その後 `Idle` へ戻る
+- `Burst` と `HardBurst` は防御側に吹き飛び Velocity を設定し、`AirHitstun` として重力で落下させる
+- `Burst` と `HardBurst` の防御側が着地した場合は `Down` へ遷移する
+- 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
+- `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::Guardstun` を維持するフレーム数として扱う
+- ガード時は本来ダメージの 1/10 を HP へ適用する
+- 通常ガードは地上の `Idle / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立し、`Guardstun` 中は入力に関係なく連続ガードとして扱う
+- HPバーのダメージ蓄積表示は `Hitstun / Guardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。
@@ -299,7 +332,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 格闘ゲームでは、位置補正用の接触とヒット判定用の接触を分ける。
 
 - 地面、壁、プレイヤー押し合いは EmbedResolveSystem で位置を補正する
-- 攻撃判定、やられ判定、ガード判定は HitCollisionSystem で収集する
+- 攻撃判定とやられ判定の接触は HitCollisionSystem で収集する
+- ガード成立可否は、収集済み接触結果と防御側の入力/状態を見て HitResolveSystem で確定する
 - ダメージ、State 変更、ヒットストップなどの結果は HitResolveSystem で確定する
 - HitCollisionSystem は結果を直接確定しない
 
@@ -363,9 +397,14 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
 - 通常攻撃の確認用 slotId は `AttackA`、`AttackB`、`AttackX`、`AttackY` とする
+- 通常攻撃スロットは地上用 `groundNormalAttackSlots` と空中用 `airNormalAttackSlots` に分ける
+- 地上通常攻撃スロットには `usableState: Ground` の AttackData、空中通常攻撃スロットには `usableState: Air` の AttackData だけを割り当てる
+- 同じ `AttackA / AttackB / AttackX / AttackY` ボタンでも、現在の地上/空中状態に合う通常攻撃だけを CommandInputSystem が候補化する
 - 必殺技の確認用 slotId は `SpecialA`、`SpecialB` などとし、スロットに設定されたボタンと AttackData の `commandId` で発動する
 - 例として `SpecialA` は `Hadouken + AttackA` で `debug_special_attack`、`SpecialB` は `Shoryuu + AttackB` で `debug_special_upper` を実行する
 - 必殺技スロットが未設定、または地上/空中条件やコマンド条件を満たさない場合は、同じボタンの通常攻撃を通常通り実行できる
+- 空中攻撃中に接地した場合、攻撃発生前なら硬直なしで `Idle` に戻し、発生中または後隙中なら `LandingRecovery` に遷移する
+- `LandingRecovery` は現段階では固定 5F の着地硬直として扱い、終了後に通常行動へ戻る
 - 飛び道具、設置技、独立して移動する攻撃は、必要になった段階で GameObject として Spawn する
 - Debug ビルドではゲームビュー上に PushBox を白、HurtBox を緑、AttackBox を赤の半透明表示にする
 - Scene View は自由カメラ確認用に使い、HitBox 可視化はゲームビュー側で確認する
@@ -380,10 +419,11 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は特定キャラクターのフォルダ内に置かない
 - Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
 - `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
-- `AttackList.json` は `normalAttackSlots` と `specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
-- 通常攻撃はキャラクター側の `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
+- `AttackList.json` は `groundNormalAttackSlots`、`airNormalAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
+- 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
 - 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
-- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState` を持つ
+- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
+- AttackData は `hitReactionType` を持ち、技ごとの被弾反応を `Normal / Down / Burst / HardBurst` から選ぶ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する

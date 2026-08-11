@@ -11,6 +11,9 @@
 namespace
 {
 	constexpr int JumpStartupFrames = 4;
+	constexpr int AttackLandingRecoveryFrames = 5;
+	constexpr int DefaultDownFrames = 30;
+	constexpr int DefaultWakeUpFrames = 20;
 }
 
 void StateUpdateSystem::Update(World& world)
@@ -57,7 +60,7 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 		? inputHistory->frames[inputHistory->latestFrameIndex]
 		: neutralInputFrame;
 
-	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame, commandBuffer);
+	const PlayerActionDecision decision = DecideNextAction(*state, *velocity, inputFrame, commandBuffer, hitBox, attackData);
 	ApplyActionState(*state, hitBox, attackData, commandBuffer, decision);
 }
 
@@ -68,23 +71,44 @@ void StateUpdateSystem::UpdatePlayerState(World& world, GameObjectId objectId)
 /// <param name="velocity">空中上昇・落下の判定に使う VelocityComponent。</param>
 /// <param name="inputFrame">今フレームの入力履歴。</param>
 /// <param name="commandBuffer">入力履歴から成立済みのコマンド候補。</param>
+/// <param name="hitBox">現在実行中の攻撃スロットを確認する HitBoxComponent。</param>
+/// <param name="attackData">攻撃発生フレームを確認する CharacterAttackDataComponent。</param>
 /// <returns>次の PlayerActionState と、同じ状態を最初からやり直すかどうか。</returns>
 PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	const StateComponent& state,
 	const VelocityComponent& velocity,
 	const InputHistoryFrame& inputFrame,
-	const CommandBufferComponent* commandBuffer)
+	const CommandBufferComponent* commandBuffer,
+	const HitBoxComponent* hitBox,
+	const CharacterAttackDataComponent* attackData)
 {
 	if (state.hitstunRequested)
 	{
 		return { PlayerActionState::Hitstun, true };
 	}
 
+	if (state.currentActionState == PlayerActionState::AirHitstun)
+	{
+		return state.isGrounded
+			? PlayerActionDecision{ PlayerActionState::Down, true }
+			: PlayerActionDecision{ PlayerActionState::AirHitstun, false };
+	}
+
+	if (state.currentActionState == PlayerActionState::Down && IsActionFinished(state))
+	{
+		return { PlayerActionState::WakeUp, true };
+	}
+
+	if (state.currentActionState == PlayerActionState::WakeUp && IsActionFinished(state))
+	{
+		return { PlayerActionState::Idle, true };
+	}
+
 	if (state.currentActionState == PlayerActionState::AirAttack)
 	{
 		if (state.isGrounded)
 		{
-			return { PlayerActionState::Idle, false };
+			return DecideAirAttackLanding(state, hitBox, attackData);
 		}
 	}
 
@@ -101,6 +125,31 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	}
 
 	return DecideNeutralAction(state, velocity, inputFrame, commandBuffer);
+}
+
+/// <summary>
+/// 空中攻撃中に接地した場合、発生前なら硬直なし、発生以降なら着地硬直へ遷移する。
+/// </summary>
+/// <param name="state">現在の AirAttack 状態と actionFrame。</param>
+/// <param name="hitBox">現在実行中の攻撃スロットを持つ HitBoxComponent。</param>
+/// <param name="attackData">発生フレームを確認する CharacterAttackDataComponent。</param>
+/// <returns>Idle または LandingRecovery への遷移 Decision。</returns>
+PlayerActionDecision StateUpdateSystem::DecideAirAttackLanding(
+	const StateComponent& state,
+	const HitBoxComponent* hitBox,
+	const CharacterAttackDataComponent* attackData)
+{
+	if (IsActionFinished(state))
+	{
+		return { PlayerActionState::Idle, false };
+	}
+
+	if (HasCurrentAttackReachedActiveFrame(state, hitBox, attackData))
+	{
+		return { PlayerActionState::LandingRecovery, true };
+	}
+
+	return { PlayerActionState::Idle, false };
 }
 
 /// <summary>
@@ -336,6 +385,58 @@ bool StateUpdateSystem::IsBufferedAttackUsableInCurrentState(AttackUsableState u
 }
 
 /// <summary>
+/// 現在の攻撃が、発生フレーム以降まで進んでいるか確認する。
+/// </summary>
+/// <param name="state">現在の actionFrame を持つ StateComponent。</param>
+/// <param name="hitBox">現在実行中の攻撃スロットを持つ HitBoxComponent。</param>
+/// <param name="attackData">スロットから AttackData を探す CharacterAttackDataComponent。</param>
+/// <returns>発生中または後隙中なら true。技データが見つからない場合は false。</returns>
+bool StateUpdateSystem::HasCurrentAttackReachedActiveFrame(
+	const StateComponent& state,
+	const HitBoxComponent* hitBox,
+	const CharacterAttackDataComponent* attackData)
+{
+	if (!hitBox || hitBox->currentAttack.slotId.empty())
+	{
+		return false;
+	}
+
+	const CharacterAssignedAttackData* assignedAttack = FindAssignedAttack(attackData, hitBox->currentAttack.slotId);
+	if (!assignedAttack)
+	{
+		return false;
+	}
+
+	return state.actionFrame >= std::max(0, assignedAttack->attack.frame.startup);
+}
+
+/// <summary>
+/// CharacterAttackDataComponent から指定 slotId の技データを探す。
+/// </summary>
+/// <param name="attackData">検索対象の CharacterAttackDataComponent。</param>
+/// <param name="attackSlotId">検索する攻撃スロット ID。</param>
+/// <returns>見つかった技データ。存在しない場合は nullptr。</returns>
+const CharacterAssignedAttackData* StateUpdateSystem::FindAssignedAttack(
+	const CharacterAttackDataComponent* attackData,
+	const std::string& attackSlotId)
+{
+	if (!attackData || attackSlotId.empty())
+	{
+		return nullptr;
+	}
+
+	for (const CharacterAssignedAttackData& assignedAttack : attackData->attacks)
+	{
+		if (assignedAttack.slotId == attackSlotId)
+		{
+			return &assignedAttack;
+		}
+	}
+
+	return nullptr;
+}
+
+/// <summary>
 /// 指定 ActionState が、終了またはキャンセルまで他行動へ移れない状態か判定する。
 /// </summary>
 /// <param name="actionState">判定する PlayerActionState。</param>
@@ -344,7 +445,12 @@ bool StateUpdateSystem::IsLockedAction(PlayerActionState actionState)
 {
 	return actionState == PlayerActionState::GroundAttack
 		|| actionState == PlayerActionState::AirAttack
-		|| actionState == PlayerActionState::Hitstun;
+		|| actionState == PlayerActionState::LandingRecovery
+		|| actionState == PlayerActionState::Hitstun
+		|| actionState == PlayerActionState::Guardstun
+		|| actionState == PlayerActionState::AirHitstun
+		|| actionState == PlayerActionState::Down
+		|| actionState == PlayerActionState::WakeUp;
 }
 
 /// <summary>
@@ -363,8 +469,17 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 	case PlayerActionState::GroundAttack:
 	case PlayerActionState::AirAttack:
 		return state.actionDurationFrames <= 0 || state.actionFrame >= state.actionDurationFrames;
+	case PlayerActionState::LandingRecovery:
+		return state.actionFrame >= AttackLandingRecoveryFrames;
 	case PlayerActionState::Hitstun:
 		return state.actionFrame >= state.hitstunDurationFrames;
+	case PlayerActionState::Guardstun:
+		return state.actionFrame >= state.guardstunDurationFrames;
+	case PlayerActionState::AirHitstun:
+		return false;
+	case PlayerActionState::Down:
+	case PlayerActionState::WakeUp:
+		return state.actionDurationFrames <= 0 || state.actionFrame >= state.actionDurationFrames;
 	default:
 		return true;
 	}
@@ -412,6 +527,47 @@ bool StateUpdateSystem::CanCancelAction(const StateComponent& state)
 }
 
 /// <summary>
+/// 行動遷移後に、バトルカメラが Player の Y 移動を追うべきかを決める。
+/// </summary>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+/// <param name="isGrounded">遷移時点で接地している場合は true。</param>
+/// <param name="previousMode">遷移前に保持していたカメラ Y 追従モード。</param>
+/// <returns>遷移後に StateComponent へ保存する CameraYFollowMode。</returns>
+CameraYFollowMode StateUpdateSystem::DecideCameraYFollowMode(
+	PlayerActionState nextActionState,
+	bool isGrounded,
+	CameraYFollowMode previousMode)
+{
+	switch (nextActionState)
+	{
+	case PlayerActionState::VerticalJump:
+	case PlayerActionState::FrontJump:
+	case PlayerActionState::BackJump:
+		return CameraYFollowMode::NaturalJump;
+	default:
+		break;
+	}
+
+	if (isGrounded)
+	{
+		return CameraYFollowMode::None;
+	}
+
+	switch (nextActionState)
+	{
+	case PlayerActionState::Fall:
+	case PlayerActionState::AirAttack:
+	case PlayerActionState::Hitstun:
+		// 通常ジャンプから落下、空中攻撃、通常被弾へ移った場合はカメラ追従を維持する。
+		return previousMode == CameraYFollowMode::NaturalJump
+			? CameraYFollowMode::NaturalJump
+			: CameraYFollowMode::None;
+	default:
+		return CameraYFollowMode::None;
+	}
+}
+
+/// <summary>
 /// 決定した ActionState を StateComponent に反映し、必要なら actionFrame を 0 に戻す。
 /// </summary>
 /// <param name="state">更新する StateComponent。</param>
@@ -431,6 +587,7 @@ void StateUpdateSystem::ApplyActionState(
 	{
 		const PlayerActionState previousActionState = state.currentActionState;
 		const FacingDirection previousActionStartFacingDirection = state.actionStartFacingDirection;
+		const CameraYFollowMode previousCameraYFollowMode = state.cameraYFollowMode;
 		const bool isJumpStartupToJump = IsJumpStartupAction(previousActionState)
 			&& ConvertJumpStartupToJump(previousActionState) == decision.nextActionState;
 
@@ -438,6 +595,10 @@ void StateUpdateSystem::ApplyActionState(
 		state.actionStartFacingDirection = isJumpStartupToJump
 			? previousActionStartFacingDirection
 			: state.facingDirection;
+		state.cameraYFollowMode = DecideCameraYFollowMode(
+			state.currentActionState,
+			state.isGrounded,
+			previousCameraYFollowMode);
 		state.actionFrame = 0;
 		state.actionDurationFrames = 0;
 		state.cancelEnabled = false;
@@ -456,6 +617,33 @@ void StateUpdateSystem::ApplyActionState(
 			}
 
 			ConsumeBufferedCommand(commandBuffer, decision);
+		}
+		else if (state.currentActionState == PlayerActionState::LandingRecovery)
+		{
+			state.actionDurationFrames = AttackLandingRecoveryFrames;
+			if (hitBox)
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
+		}
+		else if (state.currentActionState == PlayerActionState::Down)
+		{
+			state.actionDurationFrames = DefaultDownFrames;
+			if (hitBox)
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
+		}
+		else if (state.currentActionState == PlayerActionState::WakeUp)
+		{
+			state.actionDurationFrames = DefaultWakeUpFrames;
+			if (hitBox)
+			{
+				hitBox->currentAttack.slotId.clear();
+				hitBox->currentAttack.hasHit = false;
+			}
 		}
 		else if (hitBox)
 		{

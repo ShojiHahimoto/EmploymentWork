@@ -2,8 +2,11 @@
   "attackDataId": "debug_front_kick",
   "displayName": "デバッグキック",
   "attackKind": "Normal",
-  "damage": 30,
+  "usableState": "Ground",
+  "damage": 200,
   "hitstunFrames": 20,
+  "guardstunFrames": 10,
+  "hitReactionType": "Burst",
   "frame": {
     "startup": 7,
     "active": 4,
@@ -21,8 +24,8 @@
   "hitboxes": [
     {
       "offset": {
-        "x": 1.0,
-        "y": 0.9
+        "x": 5.0,
+        "y": 5.0
       },
       "size": {
         "x": 2.6,

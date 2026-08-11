@@ -77,6 +77,24 @@ namespace
 	}
 
 	/// <summary>
+	/// 防御側が現在攻撃を受け付ける状態か確認する。
+	/// </summary>
+	/// <param name="state">防御側の StateComponent。</param>
+	/// <returns>ダウン、起き上がり、着地済み AirHitstun でなければ true。</returns>
+	bool CanDefenderReceiveAttack(const StateComponent& state)
+	{
+		if (state.currentActionState == PlayerActionState::Down
+			|| state.currentActionState == PlayerActionState::WakeUp)
+		{
+			return false;
+		}
+
+		// Burst 系で地面に着いたフレームは、この後 HitReactionSystem が Down へ変える。
+		// その 1 フレームだけ追撃できてしまう事故を防ぐため、接地済み AirHitstun は攻撃対象から外す。
+		return !(state.currentActionState == PlayerActionState::AirHitstun && state.isGrounded);
+	}
+
+	/// <summary>
 	/// CharacterAttackDataComponent から指定スロットの技データを探す。
 	/// </summary>
 	/// <param name="attackData">検索対象の CharacterAttackDataComponent。</param>
@@ -147,6 +165,11 @@ namespace
 			return false;
 		}
 
+		if (!CanDefenderReceiveAttack(*defenderState))
+		{
+			return false;
+		}
+
 		if (!defenderHitBox->hurtBox.enabled
 			|| defenderHitBox->hurtBox.size.x <= 0.0f
 			|| defenderHitBox->hurtBox.size.y <= 0.0f)
@@ -192,6 +215,8 @@ namespace
 			result.attackDisplayName = assignedAttack.attack.displayName;
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
+			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
+			result.hitReactionType = assignedAttack.attack.hitReactionType;
 			result.hitboxIndex = static_cast<int>(hitboxIndex);
 			world.AddHitCollisionResult(result);
 			return true;

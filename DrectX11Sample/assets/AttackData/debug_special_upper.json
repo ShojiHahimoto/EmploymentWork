@@ -4,8 +4,10 @@
   "attackKind": "Special",
   "commandId": "Shoryuu",
   "usableState": "Ground",
-  "damage": 50,
+  "damage": 2000,
   "hitstunFrames": 28,
+  "guardstunFrames": 14,
+  "hitReactionType": "HardBurst",
   "frame": {
     "startup": 6,
     "active": 4,

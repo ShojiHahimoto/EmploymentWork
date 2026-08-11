@@ -39,6 +39,15 @@ enum class AttackUsableState
 	Unknown
 };
 
+enum class HitReactionType
+{
+	Normal,
+	Down,
+	Burst,
+	HardBurst,
+	Unknown
+};
+
 enum class AttackSlotType
 {
 	Normal,
@@ -99,12 +108,16 @@ struct AttackData
 	int damage = 10;
 	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
 	int hitstunFrames = 30;
+	// この攻撃がガードされた相手を Guardstun に固定するフレーム数。
+	int guardstunFrames = 30;
 	// 通常攻撃か必殺技か。入力候補の作成と編集画面で使う。
 	AttackKind attackKind = AttackKind::Normal;
 	// 必殺技用のコマンド種別。通常攻撃では None を使う。
 	AttackCommandId commandId = AttackCommandId::None;
 	// Ground / Air / Both のどこで発動できるか。
 	AttackUsableState usableState = AttackUsableState::Both;
+	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
+	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackFrameData frame;
 	std::vector<AttackCancelWindowData> cancelWindows;
 	std::vector<AttackHitboxData> hitboxes;
@@ -119,6 +132,8 @@ struct CharacterAttackSlotData
 	std::string attackDataId;
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
+	// groundNormalAttackSlots / airNormalAttackSlots など、スロット側が要求する発動可能状態。
+	AttackUsableState slotUsableState = AttackUsableState::Both;
 };
 
 /// <summary>
@@ -129,5 +144,7 @@ struct CharacterAssignedAttackData
 	std::string slotId;
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
+	// キャラクター側スロットが要求した地上/空中種別。読み込み検証後もデバッグ確認用に保持する。
+	AttackUsableState slotUsableState = AttackUsableState::Both;
 	AttackData attack;
 };

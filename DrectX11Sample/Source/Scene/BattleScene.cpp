@@ -10,6 +10,7 @@
 #include "Resource/ModelResource.h"
 #include "Scene/ResultScene.h"
 #include "Scene/SceneManager.h"
+#include "System/BattleCameraSystem.h"
 #include "System/BattleHUDSystem.h"
 #include "System/BattleResultSystem.h"
 #include "System/CameraSystem.h"
@@ -19,6 +20,7 @@
 #include "System/Debugger.h"
 #include "System/EmbedResolveSystem.h"
 #include "System/HitCollisionSystem.h"
+#include "System/HitReactionSystem.h"
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
@@ -78,13 +80,13 @@ void BattleScene::Enter()
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
-		Vector3(-2.0f, 0.0f, 8.0f),
+		Vector3(-4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f));
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer2,
 		"DebugPlayer2",
-		Vector3(2.0f, 0.0f, 8.0f),
+		Vector3(4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f));
 
 	world.RequestSpawn(
@@ -132,9 +134,11 @@ void BattleScene::RunSystems()
 	StateUpdateSystem::Update(world);
 	PlayerControlSystem::Update(world);
 	MovementSystem::Update(world);
+	BattleCameraSystem::Update(world);
 	EmbedResolveSystem::Update(world);
 	HitCollisionSystem::Update(world);
 	HitResolveSystem::Update(world);
+	HitReactionSystem::Update(world);
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
@@ -266,6 +270,7 @@ void BattleScene::InitializeBattleHUD()
 void BattleScene::RunInitialWorldSetup()
 {
 	SpawnDestroySystem::Update(world);
+	BattleCameraSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
@@ -308,6 +313,7 @@ void BattleScene::OnResize(int newWidth, int newHeight)
 		const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 		CameraSystem::SetAspectRatio(world.GetActiveCamera(), aspectRatio);
 
+		BattleCameraSystem::Update(world);
 		BattleHUDSystem::Update(world, width, height);
 		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 

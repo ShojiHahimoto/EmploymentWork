@@ -2,8 +2,11 @@
   "attackDataId": "debug_punch",
   "displayName": "デバッグパンチ",
   "attackKind": "Normal",
-  "damage": 20,
-  "hitstunFrames": 10,
+  "usableState": "Ground",
+  "damage": 100,
+  "hitstunFrames": 30,
+  "guardstunFrames": 30,
+  "hitReactionType": "Normal",
   "frame": {
     "startup": 5,
     "active": 3,
@@ -23,7 +26,7 @@
     {
       "offset": {
         "x": 2.8,
-        "y": 4.5
+        "y": 7.5
       },
       "size": {
         "x": 2.5,

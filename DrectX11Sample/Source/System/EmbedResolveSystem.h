@@ -5,6 +5,9 @@ class World;
 class EmbedResolveSystem
 {
 public:
+	static constexpr float StageMinX = -30.0f;
+	static constexpr float StageMaxX = 30.0f;
+
 	/// <summary>
 	/// 移動後の地面、壁、プレイヤー同士のめり込みを補正する。
 	/// </summary>
@@ -13,6 +16,7 @@ public:
 
 private:
 	static void ResolveWallBounds(World& world);
+	static void ResolveCameraViewBounds(World& world);
 	static void ResolvePlayerPushBoxes(World& world);
 	static void ResolveTemporaryGround(World& world);
 };

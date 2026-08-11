@@ -258,6 +258,32 @@ namespace
 	}
 
 	/// <summary>
+	/// JSON の hitReactionType 文字列を HitReactionType に変換する。
+	/// </summary>
+	/// <param name="text">JSON に保存されている被弾反応種別。</param>
+	/// <returns>対応する HitReactionType。不明な場合は Unknown。</returns>
+	HitReactionType ParseHitReactionType(const std::string& text)
+	{
+		if (text == "Normal")
+		{
+			return HitReactionType::Normal;
+		}
+		if (text == "Down")
+		{
+			return HitReactionType::Down;
+		}
+		if (text == "Burst")
+		{
+			return HitReactionType::Burst;
+		}
+		if (text == "HardBurst")
+		{
+			return HitReactionType::HardBurst;
+		}
+		return HitReactionType::Unknown;
+	}
+
+	/// <summary>
 	/// JSON の button 文字列を AttackButtonId に変換する。
 	/// </summary>
 	/// <param name="text">AttackA / AttackB / AttackX / AttackY などの文字列。</param>
@@ -285,6 +311,52 @@ namespace
 			return AttackButtonId::AttackY;
 		}
 		return AttackButtonId::Unknown;
+	}
+
+	/// <summary>
+	/// AttackUsableState をデバッグログ用の文字列へ変換する。
+	/// </summary>
+	/// <param name="state">文字列化する発動可能状態。</param>
+	/// <returns>発動可能状態を表す文字列。</returns>
+	const char* ToAttackUsableStateText(AttackUsableState state)
+	{
+		switch (state)
+		{
+		case AttackUsableState::Ground:
+			return "Ground";
+		case AttackUsableState::Air:
+			return "Air";
+		case AttackUsableState::Both:
+			return "Both";
+		default:
+			return "Unknown";
+		}
+	}
+
+	/// <summary>
+	/// 技スロットが要求する地上/空中種別と、AttackData 側の発動可能状態が一致するか確認する。
+	/// </summary>
+	/// <param name="slot">検証するキャラクター側の技スロット。</param>
+	/// <param name="attackData">スロットに割り当てる技データ。</param>
+	/// <returns>割り当ててよい組み合わせなら true。</returns>
+	bool IsAttackSlotCompatible(const CharacterAttackSlotData& slot, const AttackData& attackData)
+	{
+		if (slot.slotType == AttackSlotType::Normal && attackData.attackKind != AttackKind::Normal)
+		{
+			return false;
+		}
+		if (slot.slotType == AttackSlotType::Special && attackData.attackKind != AttackKind::Special)
+		{
+			return false;
+		}
+
+		if (slot.slotUsableState == AttackUsableState::Both
+			|| slot.slotUsableState == AttackUsableState::Unknown)
+		{
+			return true;
+		}
+
+		return attackData.usableState == slot.slotUsableState;
 	}
 
 	/// <summary>
@@ -338,6 +410,7 @@ namespace
 		const JsonValue& root,
 		const std::string& arrayKey,
 		AttackSlotType slotType,
+		AttackUsableState slotUsableState,
 		std::vector<CharacterAttackSlotData>& outSlots)
 	{
 		const JsonValue* attackSlots = root.Find(arrayKey);
@@ -357,6 +430,7 @@ namespace
 			slot.slotId = GetString(slotValue, "slotId", "");
 			slot.attackDataId = GetString(slotValue, "attackDataId", "");
 			slot.slotType = slotType;
+			slot.slotUsableState = slotUsableState;
 			slot.button = ParseAttackButtonId(GetString(slotValue, "button", slot.slotId));
 			if (!slot.slotId.empty()
 				&& !slot.attackDataId.empty()
@@ -376,13 +450,15 @@ namespace
 	void LoadAttackSlotsFromJson(const JsonValue& root, std::vector<CharacterAttackSlotData>& outSlots)
 	{
 		outSlots.clear();
-		AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, outSlots);
+		AppendAttackSlotsFromJsonArray(root, "groundNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		AppendAttackSlotsFromJsonArray(root, "airNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
+		AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
+		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, AttackUsableState::Both, outSlots);
 
 		// 旧形式互換。attackSlots しかない場合は通常攻撃スロットとして扱う。
 		if (outSlots.empty())
 		{
-			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, outSlots);
+			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
 		}
 	}
 
@@ -521,7 +597,24 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 		assignedAttack.slotId = slot.slotId;
 		assignedAttack.slotType = slot.slotType;
 		assignedAttack.button = slot.button;
+		assignedAttack.slotUsableState = slot.slotUsableState;
 		assignedAttack.attack = attackData;
+
+		if (!IsAttackSlotCompatible(slot, attackData))
+		{
+			DebugLog(
+				"[CharacterData] Attack slot mismatch. Slot=",
+				slot.slotId,
+				" AttackData=",
+				slot.attackDataId,
+				" SlotUsableState=",
+				ToAttackUsableStateText(slot.slotUsableState),
+				" AttackUsableState=",
+				ToAttackUsableStateText(attackData.usableState));
+			loaded = false;
+			continue;
+		}
+
 		outCharacterData.attacks.push_back(assignedAttack);
 	}
 
@@ -547,9 +640,11 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.displayName = GetString(root, "displayName", outAttackData.attackDataId);
 	outAttackData.damage = GetInt(root, "damage", outAttackData.damage);
 	outAttackData.hitstunFrames = GetInt(root, "hitstunFrames", GetInt(root, "hitstanFrames", outAttackData.hitstunFrames));
+	outAttackData.guardstunFrames = GetInt(root, "guardstunFrames", outAttackData.hitstunFrames);
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
+	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);

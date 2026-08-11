@@ -2,16 +2,19 @@
   "attackDataId": "debug_hard_punch",
   "displayName": "デバッグハードパンチ",
   "attackKind": "Normal",
-  "damage": 40,
+  "usableState": "Ground",
+  "damage": 500,
   "hitstunFrames": 24,
+  "guardstunFrames": 12,
+  "hitReactionType": "HardBurst",
   "frame": {
-    "startup": 9,
+    "startup": 15,
     "active": 4,
     "recovery": 16
   },
   "cancelWindows": [
     {
-      "startFrame": 13,
+      "startFrame": 16,
       "endFrame": 18,
       "cancelTypes": [
         "Special"

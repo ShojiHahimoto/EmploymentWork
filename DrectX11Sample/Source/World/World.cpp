@@ -58,6 +58,7 @@ void World::Clear()
 	spawnRequests.clear();
 	destroyRequests.clear();
 	hitCollisionResults.clear();
+	hitReactionRequests.clear();
 	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
 	battleResult = BattleResult::None;
 	nextObjectId = 1;
@@ -283,6 +284,32 @@ const std::vector<HitCollisionResult>& World::GetHitCollisionResults() const
 void World::ClearHitCollisionResults()
 {
 	hitCollisionResults.clear();
+}
+
+/// <summary>
+/// HitResolveSystem が確定した被弾反応リクエストを追加する。
+/// </summary>
+/// <param name="request">HitReactionSystem で処理する被弾反応リクエスト。</param>
+void World::AddHitReactionRequest(const HitReactionRequest& request)
+{
+	hitReactionRequests.push_back(request);
+}
+
+/// <summary>
+/// 蓄積されている被弾反応リクエストを取得する。
+/// </summary>
+/// <returns>読み取り専用の被弾反応リクエスト配列。</returns>
+const std::vector<HitReactionRequest>& World::GetHitReactionRequests() const
+{
+	return hitReactionRequests;
+}
+
+/// <summary>
+/// 被弾反応リクエストをすべて破棄する。
+/// </summary>
+void World::ClearHitReactionRequests()
+{
+	hitReactionRequests.clear();
 }
 
 /// <summary>

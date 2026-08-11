@@ -1,0 +1,28 @@
+﻿{
+  "attackDataId": "debug_air_punch",
+  "displayName": "DebugAirPunch",
+  "attackKind": "Normal",
+  "usableState": "Air",
+  "damage": 18,
+  "hitstunFrames": 12,
+  "guardstunFrames": 6,
+  "hitReactionType": "Normal",
+  "frame": {
+    "startup": 5,
+    "active": 4,
+    "recovery": 12
+  },
+  "cancelWindows": [],
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.4,
+        "y": 4.6
+      },
+      "size": {
+        "x": 2.4,
+        "y": 1.8
+      }
+    }
+  ]
+}
