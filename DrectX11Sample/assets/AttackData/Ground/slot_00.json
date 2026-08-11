@@ -10,19 +10,19 @@
   "hitReactionType": "HardBurst",
   "frame": {
     "startup": 5,
-    "active": 18,
+    "active": 3,
     "recovery": 10
   },
   "cancelWindows": [],
   "hitboxes": [
     {
       "offset": {
-        "x": 2.500,
-        "y": 4.000
+        "x": 0.500,
+        "y": 9.100
       },
       "size": {
-        "x": 6.300,
-        "y": 6.950
+        "x": 2.950,
+        "y": 1.800
       }
     }
   ]

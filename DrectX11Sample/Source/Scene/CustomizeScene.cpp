@@ -4,12 +4,17 @@
 #include "Data/CharacterDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
+#include "Resource/ModelResource.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TitleScene.h"
+#include "System/CameraSystem.h"
+#include "System/Debugger.h"
+#include "System/TransformSystem.h"
 #include "System/imgui-docking/imgui.h"
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdint>
 #include <filesystem>
 #include <iomanip>
 #include <iterator>
@@ -21,6 +26,9 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
+	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
+	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
+	constexpr float PreviewBoxDepth = 0.08f;
 	constexpr const char* CategoryLabels[] = { "Ground", "Air", "Special" };
 	constexpr AttackUsableState UsableStateValues[] = {
 		AttackUsableState::Ground,
@@ -160,6 +168,7 @@ void CustomizeScene::Enter()
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 	mode = CustomizeMode::MainMenu;
 	statusMessage.clear();
+	InitializePreview();
 }
 
 /// <summary>
@@ -167,6 +176,7 @@ void CustomizeScene::Enter()
 /// </summary>
 void CustomizeScene::Exit()
 {
+	ReleasePreview();
 	world.Clear();
 }
 
@@ -175,6 +185,8 @@ void CustomizeScene::Exit()
 /// </summary>
 void CustomizeScene::RunSystems()
 {
+	UpdatePreviewPlayback();
+
 	if (WasCancelTriggered())
 	{
 		NavigateBack();
@@ -187,8 +199,6 @@ void CustomizeScene::RunSystems()
 /// <param name="renderer">現段階では未使用。後でプレビュー描画に使う。</param>
 void CustomizeScene::Draw(Renderer& renderer)
 {
-	(void)renderer;
-
 	switch (mode)
 	{
 	case CustomizeMode::MainMenu:
@@ -201,7 +211,7 @@ void CustomizeScene::Draw(Renderer& renderer)
 		DrawAttackSlotSelect();
 		break;
 	case CustomizeMode::AttackEditor:
-		DrawAttackEditor();
+		DrawAttackEditor(renderer);
 		break;
 	default:
 		DrawMainMenu();
@@ -394,27 +404,86 @@ void CustomizeScene::DrawAttackSlotSelect()
 /// <summary>
 /// 技調整画面全体を描画する。
 /// </summary>
-void CustomizeScene::DrawAttackEditor()
+/// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
+void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 {
+	ClampPreviewCurrentFrame();
+	RenderAttackPreview(renderer);
+	DrawAttackPreviewWindow(renderer);
+	DrawAttackEditorWindow();
+}
+
+/// <summary>
+/// 左側の技プレビューウィンドウを描画し、再生ボタンで previewCurrentFrame を操作する。
+/// </summary>
+/// <param name="renderer">RenderTexture 表示のために受け取る Renderer。描画本体は RenderAttackPreview 側で行う。</param>
+void CustomizeScene::DrawAttackPreviewWindow(Renderer& renderer)
+{
+	(void)renderer;
+
 	ImGui::SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond_Always);
 	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 40.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
 	if (ImGui::Begin("Attack Preview"))
 	{
 		ImGui::Text("Editing: %s", editingAttackDataId.c_str());
+		ImGui::Text("Phase: %s", GetPreviewPhaseText());
+		ImGui::Text("Current Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
 		ImGui::Separator();
-		ImGui::Text("Preview will be added after save flow is stable.");
-		ImGui::Text("Current Frame: 0");
-		ImGui::Button("Play");
+
+		if (previewRenderTexture.shaderResourceView)
+		{
+			const ImVec2 availableSize = ImGui::GetContentRegionAvail();
+			const float reservedControlHeight = 48.0f;
+			const float textureAspect = static_cast<float>(PreviewTextureWidth) / static_cast<float>(PreviewTextureHeight);
+			ImVec2 imageSize(
+				std::max(1.0f, availableSize.x),
+				std::max(120.0f, availableSize.y - reservedControlHeight));
+
+			if (imageSize.x / imageSize.y > textureAspect)
+			{
+				imageSize.x = imageSize.y * textureAspect;
+			}
+			else
+			{
+				imageSize.y = imageSize.x / textureAspect;
+			}
+
+			ImGui::Image(
+				static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(previewRenderTexture.shaderResourceView)),
+				imageSize,
+				ImVec2(0.0f, 0.0f),
+				ImVec2(1.0f, 1.0f));
+		}
+		else
+		{
+			ImGui::TextWrapped("Preview RenderTexture is not available.");
+		}
+
+		if (ImGui::Button("Play", ImVec2(72.0f, 28.0f)))
+		{
+			if (previewCurrentFrame >= GetPreviewTotalFrames())
+			{
+				previewCurrentFrame = 0;
+			}
+			previewPlaying = true;
+		}
 		ImGui::SameLine();
-		ImGui::Button("Stop");
+		if (ImGui::Button("Stop", ImVec2(72.0f, 28.0f)))
+		{
+			previewPlaying = false;
+		}
 		ImGui::SameLine();
-		ImGui::Button("< 1F");
+		if (ImGui::Button("< 1F", ImVec2(72.0f, 28.0f)))
+		{
+			StepPreviewFrame(-1);
+		}
 		ImGui::SameLine();
-		ImGui::Button("1F >");
+		if (ImGui::Button("1F >", ImVec2(72.0f, 28.0f)))
+		{
+			StepPreviewFrame(1);
+		}
 	}
 	ImGui::End();
-
-	DrawAttackEditorWindow();
 }
 
 /// <summary>
@@ -467,6 +536,7 @@ void CustomizeScene::DrawAttackEditorWindow()
 
 		DrawHitboxEditor();
 		ClampAttackDataValues(draftAttack);
+		ClampPreviewCurrentFrame();
 
 		ImGui::Separator();
 		if (ImGui::Button("Save", ImVec2(120.0f, 30.0f)))
@@ -533,6 +603,8 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 	}
 
 	CopyDisplayNameToBuffer();
+	previewCurrentFrame = 0;
+	previewPlaying = false;
 	mode = CustomizeMode::AttackEditor;
 }
 
@@ -567,6 +639,218 @@ void CustomizeScene::SyncDraftFromEditor()
 	}
 
 	ClampAttackDataValues(draftAttack);
+}
+
+/// <summary>
+/// 技調整プレビュー用のモデル、カメラ、RenderTexture を初期化する。
+/// </summary>
+void CustomizeScene::InitializePreview()
+{
+	ReleasePreview();
+
+	ModelResourceManager::LoadModel(
+		PreviewModelKey,
+		PreviewModelPath,
+		Renderer::GetDevice());
+
+	TransformSystem::SetLocalPosition(previewPlayerTransform, Vector3(0.0f, 0.0f, 8.0f));
+	TransformSystem::SetLocalEulerRotationDegrees(previewPlayerTransform, Vector3(0.0f, -90.0f, 0.0f));
+	TransformSystem::SetLocalScale(previewPlayerTransform, Vector3(0.05f, 0.05f, 0.05f));
+	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
+
+	TransformSystem::SetLocalPosition(previewCameraTransform, Vector3(0.0f, 4.0f, -12.0f));
+	TransformSystem::SetLocalEulerRotationDegrees(previewCameraTransform, Vector3(0.0f, 0.0f, 0.0f));
+	TransformSystem::SetLocalScale(previewCameraTransform, Vector3::One);
+	TransformSystem::UpdateWorldTransform(previewCameraTransform);
+
+	const float aspectRatio = static_cast<float>(PreviewTextureWidth) / static_cast<float>(PreviewTextureHeight);
+	CameraSystem::SetPerspective(previewCamera, 45.0f, aspectRatio, 0.1f, 1000.0f);
+	CameraSystem::Update(previewCamera, previewCameraTransform);
+
+	const HRESULT hr = Renderer::CreateRenderTexture(previewRenderTexture, PreviewTextureWidth, PreviewTextureHeight);
+	if (FAILED(hr))
+	{
+		DebugLog("[CustomizeScene] Preview RenderTexture creation failed. hr=", static_cast<long>(hr));
+	}
+}
+
+/// <summary>
+/// 技調整プレビュー用の RenderTexture を解放する。
+/// </summary>
+void CustomizeScene::ReleasePreview()
+{
+	Renderer::ReleaseRenderTexture(previewRenderTexture);
+}
+
+/// <summary>
+/// Play 中なら表示フレームを 1 つ進め、技プレビュー終端に到達したら停止する。
+/// </summary>
+void CustomizeScene::UpdatePreviewPlayback()
+{
+	if (mode != CustomizeMode::AttackEditor || !previewPlaying)
+	{
+		return;
+	}
+
+	++previewCurrentFrame;
+	if (previewCurrentFrame >= GetPreviewTotalFrames())
+	{
+		previewCurrentFrame = GetPreviewTotalFrames();
+		previewPlaying = false;
+	}
+}
+
+/// <summary>
+/// プレビュー用カメラでモデルと現在フレームの AttackBox を RenderTexture へ描画する。
+/// </summary>
+/// <param name="renderer">描画に使う Renderer。</param>
+void CustomizeScene::RenderAttackPreview(Renderer& renderer)
+{
+	if (!previewRenderTexture.renderTargetView)
+	{
+		return;
+	}
+
+	const float clearColor[4] = { 0.04f, 0.045f, 0.06f, 1.0f };
+	Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
+
+	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
+	TransformSystem::UpdateWorldTransform(previewCameraTransform);
+	CameraSystem::Update(previewCamera, previewCameraTransform);
+	renderer.SetViewProjection(previewCamera.viewMatrix, previewCamera.projectionMatrix);
+
+	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
+	const bool drewModel = previewModel
+		&& renderer.DrawModel(*previewModel, TransformSystem::GetWorldMatrix(previewPlayerTransform));
+	if (!drewModel)
+	{
+		const Matrix fallbackWorld =
+			Matrix::CreateScale(1.0f, 4.0f, 1.0f)
+			* Matrix::CreateTranslation(Vector3(0.0f, 3.0f, 8.0f));
+		renderer.DrawDebugCube(fallbackWorld);
+	}
+
+	DrawPreviewAttackBoxes(renderer);
+	Renderer::RestoreBackBuffer();
+}
+
+/// <summary>
+/// 現在フレームが active 範囲に入っている場合だけ、技の AttackBox を赤い半透明矩形で描画する。
+/// </summary>
+/// <param name="renderer">DebugBox 描画に使う Renderer。</param>
+void CustomizeScene::DrawPreviewAttackBoxes(Renderer& renderer)
+{
+	if (!IsPreviewAttackActive())
+	{
+		return;
+	}
+
+	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.35f);
+	const Vector3 basePosition = TransformSystem::GetWorldPosition(previewPlayerTransform);
+
+	for (const AttackHitboxData& hitbox : draftAttack.hitboxes)
+	{
+		if (hitbox.size.x <= 0.0f || hitbox.size.y <= 0.0f)
+		{
+			continue;
+		}
+
+		const Vector3 center(
+			basePosition.x + hitbox.offset.x,
+			basePosition.y + hitbox.offset.y,
+			basePosition.z);
+		const Matrix boxWorld =
+			Matrix::CreateScale(hitbox.size.x * 0.5f, hitbox.size.y * 0.5f, PreviewBoxDepth * 0.5f)
+			* Matrix::CreateTranslation(center);
+
+		renderer.DrawDebugBox(boxWorld, attackBoxColor);
+	}
+}
+
+/// <summary>
+/// 現在フレームを、0F の Idle を含むプレビュー表示範囲内へ収める。
+/// </summary>
+void CustomizeScene::ClampPreviewCurrentFrame()
+{
+	previewCurrentFrame = std::clamp(previewCurrentFrame, 0, GetPreviewTotalFrames());
+}
+
+/// <summary>
+/// プレビュー再生を止め、指定フレーム数だけ手動で進める。
+/// </summary>
+/// <param name="frameDelta">進めるフレーム数。負数なら戻す。</param>
+void CustomizeScene::StepPreviewFrame(int frameDelta)
+{
+	previewPlaying = false;
+	previewCurrentFrame += frameDelta;
+	ClampPreviewCurrentFrame();
+}
+
+/// <summary>
+/// プレビュー表示フレームを内部 actionFrame に変換し、AttackData::frame の active 範囲内か確認する。
+/// </summary>
+/// <returns>AttackBox を表示するフレームなら true。</returns>
+bool CustomizeScene::IsPreviewAttackActive() const
+{
+	const int actionFrame = GetPreviewActionFrame();
+	const int activeStartFrame = std::max(0, draftAttack.frame.startup);
+	const int activeFrameCount = std::max(0, draftAttack.frame.active);
+	return activeFrameCount > 0
+		&& actionFrame >= activeStartFrame
+		&& actionFrame < activeStartFrame + activeFrameCount;
+}
+
+/// <summary>
+/// startup + active + recovery から、内部処理上の攻撃総フレーム数を取得する。
+/// </summary>
+/// <returns>最低 1F を保証した総フレーム数。プレビュー表示では 0F Idle を含めて 0..この値まで表示する。</returns>
+int CustomizeScene::GetPreviewTotalFrames() const
+{
+	const int startup = std::max(0, draftAttack.frame.startup);
+	const int active = std::max(0, draftAttack.frame.active);
+	const int recovery = std::max(0, draftAttack.frame.recovery);
+	return std::max(1, startup + active + recovery);
+}
+
+/// <summary>
+/// プレビュー表示フレームを、内部の PlayerActionState::actionFrame 相当へ変換する。
+/// </summary>
+/// <returns>0F Idle は -1、1F 以降は 0 始まりの内部 actionFrame。</returns>
+int CustomizeScene::GetPreviewActionFrame() const
+{
+	return previewCurrentFrame - 1;
+}
+
+/// <summary>
+/// 現在のプレビュー表示フレームが Idle、前隙、攻撃判定中、後隙のどこにいるかを返す。
+/// </summary>
+/// <returns>現在フェーズの表示名。</returns>
+const char* CustomizeScene::GetPreviewPhaseText() const
+{
+	if (previewCurrentFrame <= 0)
+	{
+		return "Idle";
+	}
+
+	const int actionFrame = GetPreviewActionFrame();
+	const int startup = std::max(0, draftAttack.frame.startup);
+	const int active = std::max(0, draftAttack.frame.active);
+	const int totalFrames = GetPreviewTotalFrames();
+
+	if (actionFrame < startup)
+	{
+		return "Startup";
+	}
+	if (active > 0 && actionFrame < startup + active)
+	{
+		return "Active";
+	}
+	if (actionFrame < totalFrames)
+	{
+		return "Recovery";
+	}
+
+	return "End";
 }
 
 /// <summary>

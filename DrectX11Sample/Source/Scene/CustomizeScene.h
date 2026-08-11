@@ -1,7 +1,10 @@
 ﻿#pragma once
 
+#include "Component/CameraComponent.h"
+#include "Component/TransformComponent.h"
 #include "Data/AttackData.h"
 #include "Scene/Scene.h"
+#include "System/Renderer.h"
 #include "World/World.h"
 
 #include <array>
@@ -41,6 +44,8 @@ private:
 	static constexpr int GroundAttackSlotCount = 20;
 	static constexpr int AirAttackSlotCount = 20;
 	static constexpr int SpecialAttackSlotCount = 20;
+	static constexpr int PreviewTextureWidth = 640;
+	static constexpr int PreviewTextureHeight = 360;
 
 	World world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
@@ -53,6 +58,12 @@ private:
 	std::array<char, 128> displayNameBuffer = {};
 	std::string editingAttackDataId;
 	std::string statusMessage;
+	Renderer::RenderTexture previewRenderTexture;
+	CameraComponent previewCamera;
+	TransformComponent previewCameraTransform;
+	TransformComponent previewPlayerTransform;
+	int previewCurrentFrame = 0;
+	bool previewPlaying = false;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -61,13 +72,27 @@ private:
 	void DrawMainMenu();
 	void DrawAttackCategorySelect();
 	void DrawAttackSlotSelect();
-	void DrawAttackEditor();
+	void DrawAttackEditor(Renderer& renderer);
+	void DrawAttackPreviewWindow(Renderer& renderer);
 	void DrawAttackEditorWindow();
 	void DrawHitboxEditor();
 
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SaveDraftAttack();
 	void SyncDraftFromEditor();
+
+	void InitializePreview();
+	void ReleasePreview();
+	void UpdatePreviewPlayback();
+	void RenderAttackPreview(Renderer& renderer);
+	void DrawPreviewAttackBoxes(Renderer& renderer);
+	void ClampPreviewCurrentFrame();
+	void StepPreviewFrame(int frameDelta);
+
+	bool IsPreviewAttackActive() const;
+	int GetPreviewTotalFrames() const;
+	int GetPreviewActionFrame() const;
+	const char* GetPreviewPhaseText() const;
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
