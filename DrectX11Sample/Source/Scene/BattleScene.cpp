@@ -1,5 +1,6 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/BattleCameraFollowComponent.h"
 #include "Component/BattleTimerComponent.h"
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/HealthGaugeComponent.h"
@@ -55,6 +56,7 @@ void BattleScene::Enter()
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
+	world.AddComponent<BattleCameraFollowComponent>(cameraId);
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{

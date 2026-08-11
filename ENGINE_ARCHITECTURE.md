@@ -222,9 +222,9 @@ MovementSystem は入力を直接読まない。
 
 BattleCameraSystem は MovementSystem の後、EmbedResolveSystem の前に実行する。
 
-- メインカメラの X 座標は 2 Player の中心が画面内デッドゾーンを超えた場合だけ追従する
-- X デッドゾーンは画面比率ではなく、カメラ中心から左右に同じワールド距離を置く
-- Player が画面端へ近づいた場合、位置補正で止める前にカメラを動かせるだけ動かす
+- メインカメラの目標 X 座標は常に 2 Player の X 座標の中心とする
+- 実際のカメラ X 座標は `BattleCameraFollowComponent::velocityX` を使い、加速と減速で目標へ滑らかに追従する
+- X 方向のデッドゾーンは設けない
 - カメラ X はステージ左右端でクランプし、画面にステージ外が映らないようにする
 - カメラ Y は `CameraYFollowMode::NaturalJump` の Player 高さに応じて少しだけ上げ、補間で滑らかに追従する
 - 通常ジャンプ、通常ジャンプ由来の落下、空中攻撃、通常ジャンプ中の通常被弾は `NaturalJump` を維持する

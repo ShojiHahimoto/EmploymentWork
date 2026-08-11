@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Component\BattleTimerComponent.h" />
+    <ClInclude Include="Source\Component\BattleCameraFollowComponent.h" />
     <ClInclude Include="Source\Component\CameraComponent.h" />
     <ClInclude Include="Source\Component\CharacterAttackDataComponent.h" />
     <ClInclude Include="Source\Component\CharacterParameterComponent.h" />

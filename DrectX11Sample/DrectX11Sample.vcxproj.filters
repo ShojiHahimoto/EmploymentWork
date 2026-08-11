@@ -197,6 +197,9 @@
     <ClInclude Include="Source\Component\BattleTimerComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\BattleCameraFollowComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\Application.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
