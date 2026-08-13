@@ -473,16 +473,6 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 		return nullptr;
 	};
 
-	auto isAttackActive = [](const AttackFrameData& frame, int actionFrame)
-	{
-		const int activeStartFrame = std::max(0, frame.startup);
-		const int activeFrameCount = std::max(0, frame.active);
-		const int activeEndFrame = activeStartFrame + activeFrameCount;
-		return activeFrameCount > 0
-			&& actionFrame >= activeStartFrame
-			&& actionFrame < activeEndFrame;
-	};
-
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.tag != GameObjectTag::Player)
@@ -521,7 +511,7 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 			continue;
 		}
 
-		if (!isAttackActive(assignedAttack->attack.frame, state->actionFrame))
+		if (!IsAttackFrameActive(assignedAttack->attack.frame, state->actionFrame))
 		{
 			continue;
 		}

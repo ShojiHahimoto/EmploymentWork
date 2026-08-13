@@ -405,7 +405,9 @@ bool StateUpdateSystem::HasCurrentAttackReachedActiveFrame(
 		return false;
 	}
 
-	return state.actionFrame >= std::max(0, assignedAttack->attack.frame.startup);
+	const AttackFrameData& frame = assignedAttack->attack.frame;
+	return GetAttackActiveFrameCount(frame) > 0
+		&& state.actionFrame >= GetAttackActiveStartFrame(frame);
 }
 
 /// <summary>
@@ -488,7 +490,7 @@ bool StateUpdateSystem::IsActionFinished(const StateComponent& state)
 /// </summary>
 /// <param name="attackData">キャラクターに割り当てられた技データ。</param>
 /// <param name="attackSlotId">実行する攻撃 slotId。</param>
-/// <returns>startup + active + recovery。取得できない場合は 0。</returns>
+/// <returns>発生フレーム番号、持続、後隙から計算した総フレーム数。取得できない場合は 0。</returns>
 int StateUpdateSystem::CalculateAttackTotalFrames(
 	const CharacterAttackDataComponent* attackData,
 	const std::string& attackSlotId)
@@ -505,10 +507,7 @@ int StateUpdateSystem::CalculateAttackTotalFrames(
 			continue;
 		}
 
-		const AttackFrameData& frame = assignedAttack.attack.frame;
-		return std::max(0, frame.startup)
-			+ std::max(0, frame.active)
-			+ std::max(0, frame.recovery);
+		return GetAttackTotalFrames(assignedAttack.attack.frame);
 	}
 
 	return 0;

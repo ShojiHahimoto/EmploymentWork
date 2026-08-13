@@ -5,7 +5,7 @@
   "commandId": "None",
   "usableState": "Ground",
   "damage": 300,
-  "hitstunFrames": 13,
+  "hitstunFrames": 14,
   "guardstunFrames": 9,
   "hitReactionType": "Normal",
   "frame": {
@@ -16,7 +16,7 @@
   "canAttackCancel": false,
   "cancelSetting": {
     "startFrame": 8,
-    "endFrame": 13,
+    "endFrame": 9,
     "cancelTypes": ["Special", "Jump"]
   },
   "hitboxes": [

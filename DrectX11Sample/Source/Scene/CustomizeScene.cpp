@@ -229,7 +229,7 @@ namespace
 		attackData.damage = std::max(0, attackData.damage);
 		attackData.hitstunFrames = std::max(0, attackData.hitstunFrames);
 		attackData.guardstunFrames = std::max(0, attackData.guardstunFrames);
-		attackData.frame.startup = std::max(0, attackData.frame.startup);
+		attackData.frame.startup = std::max(2, attackData.frame.startup);
 		attackData.frame.active = std::max(0, attackData.frame.active);
 		attackData.frame.recovery = std::max(0, attackData.frame.recovery);
 		if (attackData.usableState != AttackUsableState::Air)
@@ -243,7 +243,7 @@ namespace
 			hitbox.size.y = std::max(0.0f, hitbox.size.y);
 		}
 
-		const int totalFrames = std::max(1, attackData.frame.startup + attackData.frame.active + attackData.frame.recovery);
+		const int totalFrames = GetAttackTotalFrames(attackData.frame);
 		const int maxActionFrame = totalFrames - 1;
 		attackData.cancelSetting.startFrame = std::max(0, attackData.cancelSetting.startFrame);
 		attackData.cancelSetting.startFrame = std::min(attackData.cancelSetting.startFrame, maxActionFrame);
@@ -790,7 +790,7 @@ void CustomizeScene::DrawCancelSettingEditor()
 		&& draftAttack.cancelSetting.endFrame == 0
 		&& draftAttack.cancelSetting.cancelTypes.empty())
 	{
-		draftAttack.cancelSetting.startFrame = std::max(0, draftAttack.frame.startup + draftAttack.frame.active);
+		draftAttack.cancelSetting.startFrame = GetAttackActiveEndFrameExclusive(draftAttack.frame);
 		draftAttack.cancelSetting.endFrame = std::max(draftAttack.cancelSetting.startFrame, GetPreviewTotalFrames() - 1);
 		draftAttack.cancelSetting.cancelTypes.push_back(AttackCancelType::Special);
 	}
@@ -1286,23 +1286,16 @@ void CustomizeScene::StepPreviewFrame(int frameDelta)
 bool CustomizeScene::IsPreviewAttackActive() const
 {
 	const int actionFrame = GetPreviewActionFrame();
-	const int activeStartFrame = std::max(0, draftAttack.frame.startup);
-	const int activeFrameCount = std::max(0, draftAttack.frame.active);
-	return activeFrameCount > 0
-		&& actionFrame >= activeStartFrame
-		&& actionFrame < activeStartFrame + activeFrameCount;
+	return IsAttackFrameActive(draftAttack.frame, actionFrame);
 }
 
 /// <summary>
-/// startup + active + recovery から、内部処理上の攻撃総フレーム数を取得する。
+/// AttackFrameData の新しい発生フレーム定義から、内部処理上の攻撃総フレーム数を取得する。
 /// </summary>
 /// <returns>最低 1F を保証した総フレーム数。プレビュー表示では 0F Idle を含めて 0..この値まで表示する。</returns>
 int CustomizeScene::GetPreviewTotalFrames() const
 {
-	const int startup = std::max(0, draftAttack.frame.startup);
-	const int active = std::max(0, draftAttack.frame.active);
-	const int recovery = std::max(0, draftAttack.frame.recovery);
-	return std::max(1, startup + active + recovery);
+	return GetAttackTotalFrames(draftAttack.frame);
 }
 
 /// <summary>
@@ -1326,19 +1319,19 @@ const char* CustomizeScene::GetPreviewPhaseText() const
 	}
 
 	const int actionFrame = GetPreviewActionFrame();
-	const int startup = std::max(0, draftAttack.frame.startup);
-	const int active = std::max(0, draftAttack.frame.active);
+	const int activeStartFrame = GetAttackActiveStartFrame(draftAttack.frame);
+	const int activeEndFrame = GetAttackActiveEndFrameExclusive(draftAttack.frame);
 	const int totalFrames = GetPreviewTotalFrames();
 
-	if (actionFrame < startup)
+	if (actionFrame < activeStartFrame)
 	{
 		return "Startup";
 	}
-	if (active > 0 && actionFrame < startup + active)
+	if (IsAttackFrameActive(draftAttack.frame, actionFrame))
 	{
 		return "Active";
 	}
-	if (actionFrame < totalFrames)
+	if (actionFrame >= activeEndFrame && actionFrame < totalFrames)
 	{
 		return "Recovery";
 	}

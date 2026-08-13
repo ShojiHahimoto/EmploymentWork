@@ -2,6 +2,7 @@
 
 #include <SimpleMath.h>
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -65,14 +66,70 @@ enum class AttackButtonId
 };
 
 /// <summary>
-/// 技の発生、持続、硬直フレームを保持する。
+/// 技の発生フレーム番号、持続フレーム数、攻撃終了後の硬直フレーム数を保持する。
 /// </summary>
 struct AttackFrameData
 {
-	int startup = 0;
+	// 攻撃ボタンを押したフレームを 1F とした時、何フレーム目から攻撃判定が出るか。最速は 2F。
+	int startup = 2;
+	// 攻撃判定が出続けるフレーム数。
 	int active = 0;
+	// 攻撃判定が消えた後、操作不能として残るフレーム数。
 	int recovery = 0;
 };
+
+/// <summary>
+/// AttackFrameData::startup を、0 始まりの actionFrame 上の攻撃判定開始フレームへ変換する。
+/// </summary>
+/// <param name="frame">変換する技フレーム情報。</param>
+/// <returns>内部 actionFrame 上の active 開始フレーム。</returns>
+inline int GetAttackActiveStartFrame(const AttackFrameData& frame)
+{
+	return std::max(2, frame.startup) - 1;
+}
+
+/// <summary>
+/// AttackFrameData::active を負数にならない持続フレーム数として取得する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <returns>0 以上の active フレーム数。</returns>
+inline int GetAttackActiveFrameCount(const AttackFrameData& frame)
+{
+	return std::max(0, frame.active);
+}
+
+/// <summary>
+/// 攻撃判定が終了する内部 actionFrame を、終端を含まない形で取得する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <returns>active 終了直後の actionFrame。</returns>
+inline int GetAttackActiveEndFrameExclusive(const AttackFrameData& frame)
+{
+	return GetAttackActiveStartFrame(frame) + GetAttackActiveFrameCount(frame);
+}
+
+/// <summary>
+/// 技全体の操作不能フレーム数を取得する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <returns>active 開始前、active、recovery を合計した最低 1F の総フレーム数。</returns>
+inline int GetAttackTotalFrames(const AttackFrameData& frame)
+{
+	return std::max(1, GetAttackActiveEndFrameExclusive(frame) + std::max(0, frame.recovery));
+}
+
+/// <summary>
+/// 指定 actionFrame が攻撃判定の active 範囲内か確認する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <param name="actionFrame">攻撃ボタンを押したフレームを 0 とする内部経過フレーム。</param>
+/// <returns>active 中なら true。</returns>
+inline bool IsAttackFrameActive(const AttackFrameData& frame, int actionFrame)
+{
+	return GetAttackActiveFrameCount(frame) > 0
+		&& actionFrame >= GetAttackActiveStartFrame(frame)
+		&& actionFrame < GetAttackActiveEndFrameExclusive(frame);
+}
 
 /// <summary>
 /// 特定フレーム範囲で許可されるキャンセル設定を保持する。
@@ -86,7 +143,7 @@ struct AttackCancelSettingData
 
 /// <summary>
 /// 技が生成する 2D 当たり判定の形状を保持する。
-/// 発生タイミングは AttackData::frame の startup / active を正とする。
+/// 発生タイミングは AttackData::frame から GetAttackActiveStartFrame / IsAttackFrameActive で決定する。
 /// </summary>
 struct AttackHitboxData
 {

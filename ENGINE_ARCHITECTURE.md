@@ -496,6 +496,9 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - AttackDataSaver は CharacterDataLoader が読み込める JSON 形式を維持する
 - スロット一覧は保存済み AttackData の表示名を見せ、手動保存した JSON も選びやすくする
 - AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
+- `frame.startup` は前隙フレーム数ではなく、攻撃ボタンを押したフレームを 1F とした時に何フレーム目から攻撃判定が出るかを表す
+- `frame.startup` の最小値は 2F とする。1F は内部 `actionFrame=0` から攻撃判定が出るため、このプロジェクトでは使用しない
+- `frame.active` は攻撃判定が出ているフレーム数、`frame.recovery` は攻撃判定が消えた後の硬直フレーム数を表す
 - キャンセル設定は `canAttackCancel` で有効/無効を切り替える。有効フラグを OFF にしても編集中 draft の `cancelSetting` は消さず、再度 ON にした時に直前編集内容を復元する
 - キャンセル開始/終了フレームは内部データと JSON では 0 始まりを維持し、CustomizeScene の表示と入力だけプレビューに合わせて 1 始まりに変換する
 - `AttackUsableState` は `Ground / Air` のみとし、通常技はカテゴリで固定、必殺技だけ CustomizeScene で選択可能にする
@@ -503,7 +506,7 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - 技プレビューは段階的に実装し、現段階では静止モデル、現在フレーム操作、active フレーム中の AttackBox 表示だけを扱う
 - プレビューの Play / Stop / 1F 操作は、表示上だけ `0F = 攻撃ボタンを押す前の Idle`、`1F = 攻撃ボタンを押したフレーム` として扱う
 - AttackData とバトル内部処理は 0 始まりを維持し、プレビュー表示フレームから 1 を引いた値を内部 actionFrame 相当として使う
-- 例として `startup=5 / active=3 / recovery=10` の場合、内部は `0〜4 Startup / 5〜7 Active / 8〜17 Recovery`、プレビュー表示は `0 Idle / 1〜5 Startup / 6〜8 Active / 9〜18 Recovery` とする
+- 例として `startup=4 / active=3 / recovery=7` の場合、内部は `0〜2 Startup / 3〜5 Active / 6〜12 Recovery`、プレビュー表示は `0 Idle / 1〜3 Startup / 4〜6 Active / 7〜13 Recovery` とする
 - 本格的なモーション再生やキーフレームアニメーション編集は、保存形式とプレビュー導線が安定した後に追加する
 - 将来の専用 UI 化やプレビュー再生を追加しても、保存形式と Loader 互換性を壊さない
 

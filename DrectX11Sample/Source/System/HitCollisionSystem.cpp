@@ -116,22 +116,6 @@ namespace
 	}
 
 	/// <summary>
-	/// 技全体の frame 設定から、現在フレームが攻撃判定の持続中か確認する。
-	/// </summary>
-	/// <param name="frame">技の発生、持続、後隙フレーム。</param>
-	/// <param name="actionFrame">攻撃ボタンを押したフレームを 0 とする経過フレーム。</param>
-	/// <returns>startup 以上、startup + active 未満なら true。</returns>
-	bool IsAttackActive(const AttackFrameData& frame, int actionFrame)
-	{
-		const int activeStartFrame = std::max(0, frame.startup);
-		const int activeFrameCount = std::max(0, frame.active);
-		const int activeEndFrame = activeStartFrame + activeFrameCount;
-		return activeFrameCount > 0
-			&& actionFrame >= activeStartFrame
-			&& actionFrame < activeEndFrame;
-	}
-
-	/// <summary>
 	/// 攻撃判定の矩形が有効な大きさを持っているか確認する。
 	/// </summary>
 	/// <param name="hitbox">確認する攻撃判定形状。</param>
@@ -183,7 +167,7 @@ namespace
 			defenderHitBox->hurtBox.offset,
 			defenderHitBox->hurtBox.size);
 
-		if (!IsAttackActive(assignedAttack.attack.frame, attackerState->actionFrame))
+		if (!IsAttackFrameActive(assignedAttack.attack.frame, attackerState->actionFrame))
 		{
 			return false;
 		}

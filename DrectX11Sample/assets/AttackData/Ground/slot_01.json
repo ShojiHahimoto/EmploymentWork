@@ -7,17 +7,17 @@
   "damage": 800,
   "hitstunFrames": 25,
   "guardstunFrames": 20,
-  "hitReactionType": "HardBurst",
+  "hitReactionType": "Normal",
   "frame": {
     "startup": 10,
     "active": 5,
     "recovery": 17
   },
-  "canAttackCancel": false,
+  "canAttackCancel": true,
   "cancelSetting": {
-    "startFrame": 0,
-    "endFrame": 0,
-    "cancelTypes": []
+    "startFrame": 14,
+    "endFrame": 30,
+    "cancelTypes": ["Special"]
   },
   "hitboxes": [
     {

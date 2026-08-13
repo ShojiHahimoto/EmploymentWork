@@ -1,17 +1,17 @@
 ﻿{
-  "attackDataId": "Ground/slot_03",
-  "displayName": "前蹴り",
+  "attackDataId": "Air/slot_01",
+  "displayName": "脳天パンチ",
   "attackKind": "Normal",
   "commandId": "None",
-  "usableState": "Ground",
+  "usableState": "Air",
   "damage": 800,
-  "hitstunFrames": 26,
-  "guardstunFrames": 20,
+  "hitstunFrames": 20,
+  "guardstunFrames": 15,
   "hitReactionType": "Normal",
   "frame": {
-    "startup": 12,
-    "active": 2,
-    "recovery": 23
+    "startup": 10,
+    "active": 5,
+    "recovery": 10
   },
   "canAttackCancel": false,
   "cancelSetting": {
@@ -22,12 +22,12 @@
   "hitboxes": [
     {
       "offset": {
-        "x": 4.900,
-        "y": 4.800
+        "x": 2.500,
+        "y": 4.000
       },
       "size": {
-        "x": 5.600,
-        "y": 3.300
+        "x": 2.000,
+        "y": 2.000
       }
     }
   ]

@@ -7,7 +7,7 @@
   "damage": 300,
   "hitstunFrames": 14,
   "guardstunFrames": 12,
-  "hitReactionType": "Normal",
+  "hitReactionType": "Down",
   "frame": {
     "startup": 5,
     "active": 2,

@@ -4,14 +4,14 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Air",
-  "damage": 100,
-  "hitstunFrames": 30,
-  "guardstunFrames": 30,
+  "damage": 500,
+  "hitstunFrames": 15,
+  "guardstunFrames": 10,
   "hitReactionType": "Normal",
   "frame": {
-    "startup": 5,
-    "active": 3,
-    "recovery": 10
+    "startup": 7,
+    "active": 4,
+    "recovery": 7
   },
   "canAttackCancel": false,
   "cancelSetting": {
@@ -22,12 +22,12 @@
   "hitboxes": [
     {
       "offset": {
-        "x": 2.500,
-        "y": 4.000
+        "x": 0.750,
+        "y": 2.450
       },
       "size": {
-        "x": 2.000,
-        "y": 2.000
+        "x": 3.900,
+        "y": 3.250
       }
     }
   ]
