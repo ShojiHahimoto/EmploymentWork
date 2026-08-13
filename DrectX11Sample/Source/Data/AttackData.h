@@ -35,7 +35,6 @@ enum class AttackUsableState
 {
 	Ground,
 	Air,
-	Both,
 	Unknown
 };
 
@@ -114,8 +113,8 @@ struct AttackData
 	AttackKind attackKind = AttackKind::Normal;
 	// 必殺技用のコマンド種別。通常攻撃では None を使う。
 	AttackCommandId commandId = AttackCommandId::None;
-	// Ground / Air / Both のどこで発動できるか。
-	AttackUsableState usableState = AttackUsableState::Both;
+	// Ground / Air のどちらで発動できるか。
+	AttackUsableState usableState = AttackUsableState::Ground;
 	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackFrameData frame;
@@ -134,8 +133,8 @@ struct CharacterAttackSlotData
 	std::string attackDataId;
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
-	// groundNormalAttackSlots / airNormalAttackSlots など、スロット側が要求する発動可能状態。
-	AttackUsableState slotUsableState = AttackUsableState::Both;
+	// groundAttackSlots / airAttackSlots など、スロット側が要求する発動可能状態。
+	AttackUsableState slotUsableState = AttackUsableState::Ground;
 };
 
 /// <summary>
@@ -147,6 +146,6 @@ struct CharacterAssignedAttackData
 	AttackSlotType slotType = AttackSlotType::Normal;
 	AttackButtonId button = AttackButtonId::None;
 	// キャラクター側スロットが要求した地上/空中種別。読み込み検証後もデバッグ確認用に保持する。
-	AttackUsableState slotUsableState = AttackUsableState::Both;
+	AttackUsableState slotUsableState = AttackUsableState::Ground;
 	AttackData attack;
 };

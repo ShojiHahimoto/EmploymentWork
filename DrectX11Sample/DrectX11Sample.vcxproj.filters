@@ -96,6 +96,9 @@
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Data\CharacterDataSaver.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Data\JsonValue.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
@@ -387,6 +390,9 @@
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\CharacterDataLoader.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\CharacterDataSaver.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\JsonValue.h">

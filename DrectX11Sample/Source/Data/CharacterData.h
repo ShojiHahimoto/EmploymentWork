@@ -26,8 +26,8 @@ struct CharacterParameterData
 {
 	// CharacterData フォルダ名と対応するキャラクター ID。
 	std::string characterId = "DebugPlayer";
-	// UI やデバッグ表示で使う表示名。
-	std::string displayName = "デバッグプレイヤー";
+	// UI やデバッグ表示で使うキャラクター名。
+	std::string characterName = "デバッグプレイヤー";
 
 	float forwardWalkSpeed = 0.08f;
 	float backwardWalkSpeed = 0.06f;

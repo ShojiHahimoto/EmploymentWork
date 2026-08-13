@@ -1,28 +1,28 @@
 ﻿{
   "characterId": "DebugPlayer",
-  "groundNormalAttackSlots": [
+  "groundAttackSlots": [
     {
       "slotId": "AttackA",
       "button": "AttackA",
-      "attackDataId": "debug_punch"
+      "attackDataId": "Ground/slot_00"
     },
     {
       "slotId": "AttackB",
       "button": "AttackB",
-      "attackDataId": "debug_front_kick"
+      "attackDataId": "Ground/slot_00"
     },
     {
       "slotId": "AttackX",
       "button": "AttackX",
-      "attackDataId": "debug_hard_punch"
+      "attackDataId": "Ground/slot_00"
     },
     {
       "slotId": "AttackY",
       "button": "AttackY",
-      "attackDataId": "debug_roundhouse_kick"
+      "attackDataId": "Ground/slot_00"
     }
   ],
-  "airNormalAttackSlots": [
+  "airAttackSlots": [
     {
       "slotId": "AirAttackA",
       "button": "AttackA",

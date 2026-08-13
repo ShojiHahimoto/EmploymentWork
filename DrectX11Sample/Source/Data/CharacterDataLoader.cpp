@@ -359,10 +359,6 @@ namespace
 		{
 			return AttackUsableState::Air;
 		}
-		if (text == "Both")
-		{
-			return AttackUsableState::Both;
-		}
 		return AttackUsableState::Unknown;
 	}
 
@@ -431,15 +427,13 @@ namespace
 	{
 		switch (state)
 		{
-		case AttackUsableState::Ground:
-			return "Ground";
-		case AttackUsableState::Air:
-			return "Air";
-		case AttackUsableState::Both:
-			return "Both";
-		default:
-			return "Unknown";
-		}
+	case AttackUsableState::Ground:
+		return "Ground";
+	case AttackUsableState::Air:
+		return "Air";
+	default:
+		return "Unknown";
+	}
 	}
 
 	/// <summary>
@@ -459,8 +453,7 @@ namespace
 			return false;
 		}
 
-		if (slot.slotUsableState == AttackUsableState::Both
-			|| slot.slotUsableState == AttackUsableState::Unknown)
+		if (slot.slotUsableState == AttackUsableState::Unknown)
 		{
 			return true;
 		}
@@ -476,7 +469,7 @@ namespace
 	void LoadParameterFromJson(const JsonValue& root, CharacterParameterData& parameter)
 	{
 		parameter.characterId = GetString(root, "characterId", parameter.characterId);
-		parameter.displayName = GetString(root, "displayName", parameter.displayName);
+		parameter.characterName = GetString(root, "characterName", GetString(root, "displayName", parameter.characterName));
 
 		const JsonValue* parameters = root.Find("parameters");
 		const JsonValue& source = parameters && parameters->IsObject() ? *parameters : root;
@@ -559,15 +552,32 @@ namespace
 	void LoadAttackSlotsFromJson(const JsonValue& root, std::vector<CharacterAttackSlotData>& outSlots)
 	{
 		outSlots.clear();
-		AppendAttackSlotsFromJsonArray(root, "groundNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "airNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, AttackUsableState::Both, outSlots);
+
+		const size_t beforeGroundSlots = outSlots.size();
+		AppendAttackSlotsFromJsonArray(root, "groundAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		if (outSlots.size() == beforeGroundSlots)
+		{
+			AppendAttackSlotsFromJsonArray(root, "groundNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		}
+
+		const size_t beforeAirSlots = outSlots.size();
+		AppendAttackSlotsFromJsonArray(root, "airAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
+		if (outSlots.size() == beforeAirSlots)
+		{
+			AppendAttackSlotsFromJsonArray(root, "airNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
+		}
+
+		if (outSlots.empty())
+		{
+			AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		}
+
+		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, AttackUsableState::Unknown, outSlots);
 
 		// 旧形式互換。attackSlots しかない場合は通常攻撃スロットとして扱う。
 		if (outSlots.empty())
 		{
-			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
+			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
 		}
 	}
 
@@ -751,7 +761,7 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 
 	DebugLog(
 		"[CharacterData] Load result. Character=",
-		outCharacterData.parameter.displayName,
+		outCharacterData.parameter.characterName,
 		" Attacks=",
 		outCharacterData.attacks.size());
 	return loaded;
@@ -779,7 +789,11 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.guardstunFrames = GetInt(root, "guardstunFrames", outAttackData.hitstunFrames);
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
-	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
+	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Ground"));
+	if (outAttackData.usableState == AttackUsableState::Unknown)
+	{
+		outAttackData.usableState = AttackUsableState::Ground;
+	}
 	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelSettingFromJson(root, outAttackData);

@@ -377,8 +377,6 @@ bool StateUpdateSystem::IsBufferedAttackUsableInCurrentState(AttackUsableState u
 		return state.isGrounded;
 	case AttackUsableState::Air:
 		return !state.isGrounded;
-	case AttackUsableState::Both:
-		return true;
 	default:
 		return false;
 	}

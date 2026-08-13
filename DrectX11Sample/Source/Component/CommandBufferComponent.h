@@ -24,7 +24,7 @@ struct BufferedCommandInput
 	int priority = 0;
 
 	// 候補技が実行可能な状態。先行入力消費時にも地上/空中条件を確認する。
-	AttackUsableState usableState = AttackUsableState::Both;
+	AttackUsableState usableState = AttackUsableState::Ground;
 
 	bool valid = false;
 };

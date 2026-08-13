@@ -2,6 +2,7 @@
 
 #include "Data/AttackDataSaver.h"
 #include "Data/CharacterDataLoader.h"
+#include "Data/CharacterDataSaver.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Resource/ModelResource.h"
@@ -21,22 +22,31 @@
 #include <iterator>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 using namespace DirectX::SimpleMath;
 
 namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
+	constexpr const char* CharacterDataRootPath = "assets/CharacterData";
 	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
 	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
 	constexpr float PreviewBoxDepth = 0.08f;
 	constexpr const char* CategoryLabels[] = { "Ground", "Air", "Special" };
+	constexpr const char* CharacterSlotGroupLabels[] = { "Ground", "Air", "Special" };
+	constexpr AttackButtonId AttackButtonValues[] = {
+		AttackButtonId::AttackA,
+		AttackButtonId::AttackB,
+		AttackButtonId::AttackX,
+		AttackButtonId::AttackY
+	};
+	constexpr const char* AttackButtonLabels[] = { "A", "B", "X", "Y" };
 	constexpr AttackUsableState UsableStateValues[] = {
 		AttackUsableState::Ground,
-		AttackUsableState::Air,
-		AttackUsableState::Both
+		AttackUsableState::Air
 	};
-	constexpr const char* UsableStateLabels[] = { "Ground", "Air", "Both" };
+	constexpr const char* UsableStateLabels[] = { "Ground", "Air" };
 	constexpr HitReactionType HitReactionValues[] = {
 		HitReactionType::Normal,
 		HitReactionType::Down,
@@ -61,6 +71,13 @@ namespace
 		"FullRotate"
 	};
 
+	struct AttackPickerItem
+	{
+		std::string attackDataId;
+		std::string displayName;
+		AttackData attackData;
+	};
+
 	/// <summary>
 	/// 編集対象の AttackData ID から JSON ファイルのパスを作る。
 	/// </summary>
@@ -79,6 +96,74 @@ namespace
 	int ToCategoryIndex(CustomizeAttackCategory category)
 	{
 		return static_cast<int>(category);
+	}
+
+	/// <summary>
+	/// CustomizeCharacterAttackSlotGroup を配列アクセス用の番号へ変換する。
+	/// </summary>
+	/// <param name="group">変換するキャラクター側の技スロット種別。</param>
+	/// <returns>Ground=0, Air=1, Special=2。</returns>
+	int ToCharacterSlotGroupIndex(CustomizeCharacterAttackSlotGroup group)
+	{
+		return static_cast<int>(group);
+	}
+
+	/// <summary>
+	/// 攻撃ボタンを UI 用の短い表示名へ変換する。
+	/// </summary>
+	/// <param name="button">表示する攻撃ボタン。</param>
+	/// <returns>A / B / X / Y の短縮名。</returns>
+	const char* ToAttackButtonShortLabel(AttackButtonId button)
+	{
+		for (int index = 0; index < static_cast<int>(std::size(AttackButtonValues)); ++index)
+		{
+			if (AttackButtonValues[index] == button)
+			{
+				return AttackButtonLabels[index];
+			}
+		}
+
+		return "-";
+	}
+
+	/// <summary>
+	/// 攻撃候補 JSON のパスから、assets/AttackData 基準の拡張子なし ID を作る。
+	/// </summary>
+	/// <param name="attackPath">実際の AttackData JSON パス。</param>
+	/// <returns>AttackList.json に保存する attackDataId。</returns>
+	std::string BuildAttackDataIdFromPath(const std::filesystem::path& attackPath)
+	{
+		std::error_code errorCode;
+		std::filesystem::path relativePath = std::filesystem::relative(attackPath, AttackDataRootPath, errorCode);
+		if (errorCode)
+		{
+			relativePath = attackPath.filename();
+		}
+
+		relativePath.replace_extension();
+		return relativePath.generic_string();
+	}
+
+	/// <summary>
+	/// 通常技カテゴリから、固定する発動可能状態を取得する。
+	/// </summary>
+	/// <param name="category">現在の技カテゴリ。</param>
+	/// <returns>地上カテゴリなら Ground、空中カテゴリなら Air。</returns>
+	AttackUsableState GetFixedNormalUsableState(CustomizeAttackCategory category)
+	{
+		return category == CustomizeAttackCategory::Air
+			? AttackUsableState::Air
+			: AttackUsableState::Ground;
+	}
+
+	/// <summary>
+	/// AttackUsableState を UI 表示用の文字列へ変換する。
+	/// </summary>
+	/// <param name="state">表示する発動可能状態。</param>
+	/// <returns>Ground / Air の表示名。</returns>
+	const char* ToUsableStateLabel(AttackUsableState state)
+	{
+		return state == AttackUsableState::Air ? "Air" : "Ground";
 	}
 
 	/// <summary>
@@ -147,6 +232,10 @@ namespace
 		attackData.frame.startup = std::max(0, attackData.frame.startup);
 		attackData.frame.active = std::max(0, attackData.frame.active);
 		attackData.frame.recovery = std::max(0, attackData.frame.recovery);
+		if (attackData.usableState != AttackUsableState::Air)
+		{
+			attackData.usableState = AttackUsableState::Ground;
+		}
 
 		for (AttackHitboxData& hitbox : attackData.hitboxes)
 		{
@@ -154,8 +243,12 @@ namespace
 			hitbox.size.y = std::max(0.0f, hitbox.size.y);
 		}
 
+		const int totalFrames = std::max(1, attackData.frame.startup + attackData.frame.active + attackData.frame.recovery);
+		const int maxActionFrame = totalFrames - 1;
 		attackData.cancelSetting.startFrame = std::max(0, attackData.cancelSetting.startFrame);
+		attackData.cancelSetting.startFrame = std::min(attackData.cancelSetting.startFrame, maxActionFrame);
 		attackData.cancelSetting.endFrame = std::max(attackData.cancelSetting.startFrame, attackData.cancelSetting.endFrame);
+		attackData.cancelSetting.endFrame = std::min(attackData.cancelSetting.endFrame, maxActionFrame);
 		attackData.cancelSetting.cancelTypes.erase(
 			std::remove(attackData.cancelSetting.cancelTypes.begin(), attackData.cancelSetting.cancelTypes.end(), AttackCancelType::Unknown),
 			attackData.cancelSetting.cancelTypes.end());
@@ -261,6 +354,15 @@ void CustomizeScene::Draw(Renderer& renderer)
 	case CustomizeMode::AttackEditor:
 		DrawAttackEditor(renderer);
 		break;
+	case CustomizeMode::CharacterSlotSelect:
+		DrawCharacterSlotSelect();
+		break;
+	case CustomizeMode::CharacterEditor:
+		DrawCharacterEditor();
+		break;
+	case CustomizeMode::AttackPicker:
+		DrawAttackPicker();
+		break;
 	default:
 		DrawMainMenu();
 		break;
@@ -348,6 +450,15 @@ void CustomizeScene::NavigateBack()
 	case CustomizeMode::AttackEditor:
 		mode = CustomizeMode::AttackSlotSelect;
 		break;
+	case CustomizeMode::CharacterSlotSelect:
+		mode = CustomizeMode::MainMenu;
+		break;
+	case CustomizeMode::CharacterEditor:
+		mode = CustomizeMode::CharacterSlotSelect;
+		break;
+	case CustomizeMode::AttackPicker:
+		mode = CustomizeMode::CharacterEditor;
+		break;
 	default:
 		mode = CustomizeMode::MainMenu;
 		break;
@@ -368,9 +479,11 @@ void CustomizeScene::DrawMainMenu()
 			mode = CustomizeMode::AttackCategorySelect;
 		}
 
-		ImGui::BeginDisabled();
-		ImGui::Button("Character Editor", ImVec2(220.0f, 32.0f));
-		ImGui::EndDisabled();
+		if (ImGui::Button("Character Editor", ImVec2(220.0f, 32.0f)))
+		{
+			RefreshCharacterSlotSummaries();
+			mode = CustomizeMode::CharacterSlotSelect;
+		}
 
 		ImGui::Separator();
 		if (ImGui::Button("Back To Title", ImVec2(220.0f, 28.0f)))
@@ -563,10 +676,18 @@ void CustomizeScene::DrawAttackEditorWindow()
 		ImGui::InputInt("Recovery", &draftAttack.frame.recovery);
 
 		ImGui::Separator();
-		int usableIndex = FindUsableStateIndex(draftAttack.usableState);
-		if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
+		if (selectedCategory == CustomizeAttackCategory::Special)
 		{
-			draftAttack.usableState = UsableStateValues[usableIndex];
+			int usableIndex = FindUsableStateIndex(draftAttack.usableState);
+			if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
+			{
+				draftAttack.usableState = UsableStateValues[usableIndex];
+			}
+		}
+		else
+		{
+			draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
+			ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draftAttack.usableState));
 		}
 
 		int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
@@ -681,8 +802,22 @@ void CustomizeScene::DrawCancelSettingEditor()
 	}
 
 	AttackCancelSettingData& cancelSetting = draftAttack.cancelSetting;
-	ImGui::InputInt("Cancel Start Frame (Internal 0F)", &cancelSetting.startFrame);
-	ImGui::InputInt("Cancel End Frame (Internal 0F)", &cancelSetting.endFrame);
+	// UI 表示はプレビューと同じ 1 始まりにし、内部データだけ 0 始まりを維持する。
+	int displayStartFrame = std::max(1, cancelSetting.startFrame + 1);
+	int displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
+	if (ImGui::InputInt("Cancel Start Frame (Preview 1F)", &displayStartFrame))
+	{
+		displayStartFrame = std::max(1, displayStartFrame);
+		cancelSetting.startFrame = displayStartFrame - 1;
+		cancelSetting.endFrame = std::max(cancelSetting.startFrame, cancelSetting.endFrame);
+	}
+	displayStartFrame = cancelSetting.startFrame + 1;
+	displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
+	if (ImGui::InputInt("Cancel End Frame (Preview 1F)", &displayEndFrame))
+	{
+		displayEndFrame = std::max(displayStartFrame, displayEndFrame);
+		cancelSetting.endFrame = displayEndFrame - 1;
+	}
 
 	bool normalEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Normal);
 	bool specialEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Special);
@@ -701,6 +836,212 @@ void CustomizeScene::DrawCancelSettingEditor()
 	{
 		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Jump, jumpEnabled);
 	}
+}
+
+/// <summary>
+/// キャラクター作成スロットの一覧を描画する。
+/// </summary>
+void CustomizeScene::DrawCharacterSlotSelect()
+{
+	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(560.0f, 420.0f), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Character Slots"))
+	{
+		if (ImGui::Button("Refresh Character Slots", ImVec2(180.0f, 28.0f)))
+		{
+			RefreshCharacterSlotSummaries();
+		}
+		ImGui::Separator();
+
+		for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
+		{
+			ImGui::PushID(slotIndex);
+			const std::string label = BuildCharacterSlotButtonLabel(slotIndex);
+			if (ImGui::Button(label.c_str(), ImVec2(170.0f, 58.0f)))
+			{
+				SelectCharacterSlot(slotIndex);
+			}
+			ImGui::PopID();
+
+			if ((slotIndex + 1) % 3 != 0)
+			{
+				ImGui::SameLine();
+			}
+		}
+
+		ImGui::Separator();
+		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
+		{
+			NavigateBack();
+		}
+	}
+	ImGui::End();
+}
+
+/// <summary>
+/// キャラクター名と各攻撃ボタンの技割り当てを編集する。
+/// </summary>
+void CustomizeScene::DrawCharacterEditor()
+{
+	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(720.0f, 620.0f), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Character Editor"))
+	{
+		ImGui::Text("Character Id: %s", draftCharacterParameter.characterId.c_str());
+		ImGui::InputText("Character Name", characterNameBuffer.data(), characterNameBuffer.size());
+
+		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Ground, "Ground Attack Slots");
+		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Air, "Air Attack Slots");
+		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Special, "Special Attack Slots");
+
+		ImGui::Separator();
+		if (ImGui::Button("Save Character", ImVec2(150.0f, 30.0f)))
+		{
+			SaveDraftCharacter();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
+		{
+			NavigateBack();
+		}
+
+		if (!statusMessage.empty())
+		{
+			ImGui::TextWrapped("%s", statusMessage.c_str());
+		}
+	}
+	ImGui::End();
+}
+
+/// <summary>
+/// 指定したキャラクター側スロットグループの割り当て一覧を描画する。
+/// </summary>
+/// <param name="group">描画するスロットグループ。</param>
+/// <param name="label">ImGui に表示するグループ名。</param>
+void CustomizeScene::DrawCharacterAttackSlotGroup(
+	CustomizeCharacterAttackSlotGroup group,
+	const char* label)
+{
+	ImGui::Separator();
+	ImGui::Text("%s", label);
+
+	std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
+		GetCharacterAttackSlotDrafts(group);
+	const bool isSpecial = group == CustomizeCharacterAttackSlotGroup::Special;
+	for (int slotIndex = 0; slotIndex < CharacterAttackButtonSlotCount; ++slotIndex)
+	{
+		CustomizeCharacterAttackSlotDraft& draft = drafts[slotIndex];
+		const std::string assignedName = draft.attackDataId.empty()
+			? (isSpecial ? "(Empty)" : "(Required)")
+			: (draft.attackDisplayName.empty() ? draft.attackDataId : draft.attackDisplayName);
+
+		ImGui::PushID(static_cast<int>(group) * 10 + slotIndex);
+		ImGui::Text("%s Slot %s: %s",
+			CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(group)],
+			ToAttackButtonShortLabel(draft.button),
+			assignedName.c_str());
+		ImGui::SameLine(360.0f);
+		if (ImGui::Button("Select", ImVec2(90.0f, 24.0f)))
+		{
+			pickingSlotGroup = group;
+			pickingSlotIndex = slotIndex;
+			mode = CustomizeMode::AttackPicker;
+		}
+
+		if (isSpecial)
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Clear", ImVec2(80.0f, 24.0f)))
+			{
+				draft.attackDataId.clear();
+				draft.attackDisplayName.clear();
+			}
+		}
+		ImGui::PopID();
+	}
+}
+
+/// <summary>
+/// 現在選択中のキャラクター側スロットへ割り当てる AttackData 候補を描画する。
+/// </summary>
+void CustomizeScene::DrawAttackPicker()
+{
+	std::vector<AttackPickerItem> pickerItems;
+	const std::filesystem::path rootPath(AttackDataRootPath);
+	std::error_code errorCode;
+	if (std::filesystem::exists(rootPath, errorCode))
+	{
+		for (const std::filesystem::directory_entry& entry :
+			std::filesystem::recursive_directory_iterator(rootPath, errorCode))
+		{
+			if (errorCode)
+			{
+				break;
+			}
+			if (!entry.is_regular_file(errorCode) || entry.path().extension() != ".json")
+			{
+				continue;
+			}
+
+			const std::string attackDataId = BuildAttackDataIdFromPath(entry.path());
+			AttackData attackData;
+			if (!CharacterDataLoader::LoadAttackData(attackDataId, attackData)
+				|| !IsAttackCompatibleWithCharacterSlotGroup(pickingSlotGroup, attackData))
+			{
+				continue;
+			}
+
+			AttackPickerItem item;
+			item.attackDataId = attackDataId;
+			item.displayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
+			item.attackData = attackData;
+			pickerItems.push_back(item);
+		}
+	}
+
+	std::sort(
+		pickerItems.begin(),
+		pickerItems.end(),
+		[](const AttackPickerItem& lhs, const AttackPickerItem& rhs)
+		{
+			return lhs.attackDataId < rhs.attackDataId;
+		});
+
+	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(620.0f, 520.0f), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Select Attack Data"))
+	{
+		const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
+			GetCharacterAttackSlotDrafts(pickingSlotGroup);
+		const CustomizeCharacterAttackSlotDraft& targetSlot = drafts[pickingSlotIndex];
+		ImGui::Text("Assign To: %s %s",
+			CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(pickingSlotGroup)],
+			ToAttackButtonShortLabel(targetSlot.button));
+		ImGui::Separator();
+
+		for (const AttackPickerItem& item : pickerItems)
+		{
+			std::ostringstream label;
+			label << item.displayName << "  [" << item.attackDataId << "]";
+			if (ImGui::Selectable(label.str().c_str()))
+			{
+				AssignAttackToCharacterSlot(item.attackDataId, item.attackData);
+				mode = CustomizeMode::CharacterEditor;
+			}
+		}
+
+		if (pickerItems.empty())
+		{
+			ImGui::TextDisabled("No compatible AttackData found.");
+		}
+
+		ImGui::Separator();
+		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
+		{
+			NavigateBack();
+		}
+	}
+	ImGui::End();
 }
 
 /// <summary>
@@ -730,6 +1071,20 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 	{
 		draftAttack.hitboxes.push_back(AttackHitboxData{});
 	}
+	draftAttack.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
+	if (category == CustomizeAttackCategory::Special)
+	{
+		if (draftAttack.usableState != AttackUsableState::Air)
+		{
+			draftAttack.usableState = AttackUsableState::Ground;
+		}
+	}
+	else
+	{
+		draftAttack.commandId = AttackCommandId::None;
+		draftAttack.usableState = GetFixedNormalUsableState(category);
+	}
+	ClampAttackDataValues(draftAttack);
 
 	CopyDisplayNameToBuffer();
 	previewCurrentFrame = 0;
@@ -763,9 +1118,17 @@ void CustomizeScene::SyncDraftFromEditor()
 	draftAttack.attackKind = selectedCategory == CustomizeAttackCategory::Special
 		? AttackKind::Special
 		: AttackKind::Normal;
-	if (selectedCategory != CustomizeAttackCategory::Special)
+	if (selectedCategory == CustomizeAttackCategory::Special)
+	{
+		if (draftAttack.usableState != AttackUsableState::Air)
+		{
+			draftAttack.usableState = AttackUsableState::Ground;
+		}
+	}
+	else
 	{
 		draftAttack.commandId = AttackCommandId::None;
+		draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
 	}
 
 	ClampAttackDataValues(draftAttack);
@@ -1121,4 +1484,420 @@ void CustomizeScene::CopyDisplayNameToBuffer()
 {
 	displayNameBuffer.fill('\0');
 	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", draftAttack.displayName.c_str());
+}
+
+/// <summary>
+/// キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。
+/// </summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>slot 0 は DebugPlayer、それ以外は CharacterSlotXX。</returns>
+std::string CustomizeScene::BuildCharacterId(int slotIndex) const
+{
+	if (slotIndex == 0)
+	{
+		return "DebugPlayer";
+	}
+
+	std::ostringstream stream;
+	stream << "CharacterSlot" << std::setw(2) << std::setfill('0') << slotIndex;
+	return stream.str();
+}
+
+/// <summary>
+/// キャラクタースロット番号から CharacterData 保存フォルダを作る。
+/// </summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>assets/CharacterData 配下の保存フォルダパス。</returns>
+std::string CustomizeScene::BuildCharacterFolderPath(int slotIndex) const
+{
+	return (std::filesystem::path(CharacterDataRootPath) / BuildCharacterId(slotIndex)).generic_string();
+}
+
+/// <summary>
+/// キャラクタースロット一覧に表示するボタンラベルを作る。
+/// </summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>スロット番号、保存済み名、ImGui ID を含むラベル。</returns>
+std::string CustomizeScene::BuildCharacterSlotButtonLabel(int slotIndex) const
+{
+	std::ostringstream label;
+	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex << "\n";
+
+	const CustomizeCharacterSlotSummary& summary = characterSlotSummaries[slotIndex];
+	if (summary.hasSavedData)
+	{
+		label << summary.characterName;
+	}
+	else
+	{
+		label << "New Character";
+	}
+
+	label << "##character_slot_" << slotIndex;
+	return label.str();
+}
+
+/// <summary>
+/// キャラクター側の固定ボタンスロットを初期化する。
+/// </summary>
+/// <param name="group">地上通常技、空中通常技、必殺技のどれか。</param>
+/// <param name="slotIndex">ABXY の何番目か。</param>
+/// <returns>未割り当て状態のスロット draft。</returns>
+CustomizeCharacterAttackSlotDraft CustomizeScene::CreateCharacterAttackSlotDraft(
+	CustomizeCharacterAttackSlotGroup group,
+	int slotIndex) const
+{
+	const int clampedIndex = std::clamp(slotIndex, 0, CharacterAttackButtonSlotCount - 1);
+	const AttackButtonId button = AttackButtonValues[clampedIndex];
+	const std::string buttonText = ToAttackButtonShortLabel(button);
+
+	CustomizeCharacterAttackSlotDraft draft;
+	draft.button = button;
+	switch (group)
+	{
+	case CustomizeCharacterAttackSlotGroup::Air:
+		draft.slotId = std::string("AirAttack") + buttonText;
+		draft.slotType = AttackSlotType::Normal;
+		draft.slotUsableState = AttackUsableState::Air;
+		break;
+	case CustomizeCharacterAttackSlotGroup::Special:
+		draft.slotId = std::string("Special") + buttonText;
+		draft.slotType = AttackSlotType::Special;
+		draft.slotUsableState = AttackUsableState::Unknown;
+		break;
+	case CustomizeCharacterAttackSlotGroup::Ground:
+	default:
+		draft.slotId = std::string("Attack") + buttonText;
+		draft.slotType = AttackSlotType::Normal;
+		draft.slotUsableState = AttackUsableState::Ground;
+		break;
+	}
+
+	return draft;
+}
+
+/// <summary>
+/// 指定グループのキャラクター側スロット draft 配列を取得する。
+/// </summary>
+/// <param name="group">取得するスロットグループ。</param>
+/// <returns>変更可能な draft 配列。</returns>
+std::array<CustomizeCharacterAttackSlotDraft, CustomizeScene::CharacterAttackButtonSlotCount>&
+CustomizeScene::GetCharacterAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group)
+{
+	switch (group)
+	{
+	case CustomizeCharacterAttackSlotGroup::Air:
+		return airAttackSlotDrafts;
+	case CustomizeCharacterAttackSlotGroup::Special:
+		return specialAttackSlotDrafts;
+	case CustomizeCharacterAttackSlotGroup::Ground:
+	default:
+		return groundAttackSlotDrafts;
+	}
+}
+
+/// <summary>
+/// 指定グループのキャラクター側スロット draft 配列を読み取り専用で取得する。
+/// </summary>
+/// <param name="group">取得するスロットグループ。</param>
+/// <returns>読み取り専用の draft 配列。</returns>
+const std::array<CustomizeCharacterAttackSlotDraft, CustomizeScene::CharacterAttackButtonSlotCount>&
+CustomizeScene::GetCharacterAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group) const
+{
+	switch (group)
+	{
+	case CustomizeCharacterAttackSlotGroup::Air:
+		return airAttackSlotDrafts;
+	case CustomizeCharacterAttackSlotGroup::Special:
+		return specialAttackSlotDrafts;
+	case CustomizeCharacterAttackSlotGroup::Ground:
+	default:
+		return groundAttackSlotDrafts;
+	}
+}
+
+/// <summary>
+/// 選択したキャラクタースロットを編集用 draft に読み込む。
+/// </summary>
+/// <param name="slotIndex">編集するキャラクタースロット番号。</param>
+void CustomizeScene::SelectCharacterSlot(int slotIndex)
+{
+	selectedCharacterSlotIndex = std::clamp(slotIndex, 0, CharacterSlotCount - 1);
+	editingCharacterFolderPath = BuildCharacterFolderPath(selectedCharacterSlotIndex);
+
+	draftCharacterParameter = CharacterParameterData{};
+	draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
+	draftCharacterParameter.characterName = selectedCharacterSlotIndex == 0
+		? "デバッグプレイヤー"
+		: "Character Slot " + std::to_string(selectedCharacterSlotIndex);
+
+	for (int index = 0; index < CharacterAttackButtonSlotCount; ++index)
+	{
+		groundAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Ground, index);
+		airAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Air, index);
+		specialAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Special, index);
+	}
+
+	CharacterData loadedCharacter;
+	const bool hasSavedData =
+		std::filesystem::exists(std::filesystem::path(editingCharacterFolderPath) / "Parameter.json")
+		|| std::filesystem::exists(std::filesystem::path(editingCharacterFolderPath) / "AttackList.json");
+	const bool loadedCompletely = hasSavedData
+		&& CharacterDataLoader::LoadCharacterData(editingCharacterFolderPath, loadedCharacter);
+	if (hasSavedData)
+	{
+		draftCharacterParameter = loadedCharacter.parameter;
+		draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
+
+		for (const CharacterAssignedAttackData& assignedAttack : loadedCharacter.attacks)
+		{
+			CustomizeCharacterAttackSlotGroup group = CustomizeCharacterAttackSlotGroup::Ground;
+			if (assignedAttack.slotType == AttackSlotType::Special)
+			{
+				group = CustomizeCharacterAttackSlotGroup::Special;
+			}
+			else if (assignedAttack.slotUsableState == AttackUsableState::Air)
+			{
+				group = CustomizeCharacterAttackSlotGroup::Air;
+			}
+
+			std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
+				GetCharacterAttackSlotDrafts(group);
+			for (CustomizeCharacterAttackSlotDraft& draft : drafts)
+			{
+				if (draft.button != assignedAttack.button)
+				{
+					continue;
+				}
+
+				draft.attackDataId = assignedAttack.attack.attackDataId;
+				draft.attackDisplayName = assignedAttack.attack.displayName.empty()
+					? assignedAttack.attack.attackDataId
+					: assignedAttack.attack.displayName;
+				break;
+			}
+		}
+
+		statusMessage = loadedCompletely
+			? "Loaded existing character data."
+			: "Loaded character draft with missing or invalid attack data.";
+	}
+	else
+	{
+		statusMessage = "New character draft created.";
+	}
+
+	CopyCharacterNameToBuffer();
+	RefreshCharacterAttackSlotNames();
+	mode = CustomizeMode::CharacterEditor;
+}
+
+/// <summary>
+/// キャラクター編集バッファの内容を CharacterData JSON として保存する。
+/// </summary>
+void CustomizeScene::SaveDraftCharacter()
+{
+	draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
+	draftCharacterParameter.characterName = characterNameBuffer.data();
+	if (draftCharacterParameter.characterName.empty())
+	{
+		statusMessage = "Character name is required.";
+		return;
+	}
+
+	std::string missingSlotName;
+	if (!AreRequiredCharacterAttackSlotsFilled(missingSlotName))
+	{
+		statusMessage = "Required slot is empty: " + missingSlotName;
+		return;
+	}
+
+	std::vector<CharacterAttackSlotData> attackSlots = BuildCharacterAttackSlotsForSave();
+	if (CharacterDataSaver::SaveCharacterData(editingCharacterFolderPath, draftCharacterParameter, attackSlots))
+	{
+		RefreshCharacterSlotSummaries();
+		statusMessage = "Saved: " + editingCharacterFolderPath;
+		return;
+	}
+
+	statusMessage = "Character save failed.";
+}
+
+/// <summary>
+/// draftCharacterParameter のキャラクター名を ImGui 入力用固定バッファへコピーする。
+/// </summary>
+void CustomizeScene::CopyCharacterNameToBuffer()
+{
+	characterNameBuffer.fill('\0');
+	std::snprintf(
+		characterNameBuffer.data(),
+		characterNameBuffer.size(),
+		"%s",
+		draftCharacterParameter.characterName.c_str());
+}
+
+/// <summary>
+/// CharacterData フォルダを確認し、キャラクタースロット一覧表示用の名前を更新する。
+/// </summary>
+void CustomizeScene::RefreshCharacterSlotSummaries()
+{
+	for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
+	{
+		CustomizeCharacterSlotSummary& summary = characterSlotSummaries[slotIndex];
+		summary = CustomizeCharacterSlotSummary{};
+
+		const std::filesystem::path characterFolder(BuildCharacterFolderPath(slotIndex));
+		const bool hasSavedData =
+			std::filesystem::exists(characterFolder / "Parameter.json")
+			|| std::filesystem::exists(characterFolder / "AttackList.json");
+		if (!hasSavedData)
+		{
+			continue;
+		}
+
+		CharacterData loadedCharacter;
+		CharacterDataLoader::LoadCharacterData(characterFolder.generic_string(), loadedCharacter);
+		summary.hasSavedData = true;
+		summary.characterName = loadedCharacter.parameter.characterName.empty()
+			? BuildCharacterId(slotIndex)
+			: loadedCharacter.parameter.characterName;
+	}
+}
+
+/// <summary>
+/// キャラクター draft 内の attackDataId から表示名を読み直す。
+/// </summary>
+void CustomizeScene::RefreshCharacterAttackSlotNames()
+{
+	for (CustomizeCharacterAttackSlotGroup group : {
+		CustomizeCharacterAttackSlotGroup::Ground,
+		CustomizeCharacterAttackSlotGroup::Air,
+		CustomizeCharacterAttackSlotGroup::Special })
+	{
+		std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
+			GetCharacterAttackSlotDrafts(group);
+		for (CustomizeCharacterAttackSlotDraft& draft : drafts)
+		{
+			if (draft.attackDataId.empty())
+			{
+				draft.attackDisplayName.clear();
+				continue;
+			}
+
+			AttackData attackData;
+			if (CharacterDataLoader::LoadAttackData(draft.attackDataId, attackData))
+			{
+				draft.attackDisplayName = attackData.displayName.empty()
+					? draft.attackDataId
+					: attackData.displayName;
+			}
+			else
+			{
+				draft.attackDisplayName = draft.attackDataId;
+			}
+		}
+	}
+}
+
+/// <summary>
+/// AttackPicker で選んだ技を、現在選択中のキャラクター側スロットへ割り当てる。
+/// </summary>
+/// <param name="attackDataId">割り当てる AttackData ID。</param>
+/// <param name="attackData">表示名確認用に読み込み済みの AttackData。</param>
+void CustomizeScene::AssignAttackToCharacterSlot(const std::string& attackDataId, const AttackData& attackData)
+{
+	std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
+		GetCharacterAttackSlotDrafts(pickingSlotGroup);
+	CustomizeCharacterAttackSlotDraft& draft = drafts[pickingSlotIndex];
+	draft.attackDataId = attackDataId;
+	draft.attackDisplayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
+}
+
+/// <summary>
+/// キャラクター draft から保存用 CharacterAttackSlotData 配列を作る。
+/// </summary>
+/// <returns>AttackList.json に保存する技スロット情報。</returns>
+std::vector<CharacterAttackSlotData> CustomizeScene::BuildCharacterAttackSlotsForSave() const
+{
+	std::vector<CharacterAttackSlotData> result;
+	const auto appendSlots =
+		[&result](const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts)
+		{
+			for (const CustomizeCharacterAttackSlotDraft& draft : drafts)
+			{
+				if (draft.attackDataId.empty())
+				{
+					continue;
+				}
+
+				CharacterAttackSlotData slot;
+				slot.slotId = draft.slotId;
+				slot.attackDataId = draft.attackDataId;
+				slot.slotType = draft.slotType;
+				slot.button = draft.button;
+				slot.slotUsableState = draft.slotUsableState;
+				result.push_back(slot);
+			}
+		};
+
+	appendSlots(groundAttackSlotDrafts);
+	appendSlots(airAttackSlotDrafts);
+	appendSlots(specialAttackSlotDrafts);
+	return result;
+}
+
+/// <summary>
+/// 地上通常技と空中通常技の必須スロットが埋まっているか確認する。
+/// </summary>
+/// <param name="outMissingSlotName">未設定スロットがある場合の表示名。</param>
+/// <returns>必須スロットが全て埋まっている場合は true。</returns>
+bool CustomizeScene::AreRequiredCharacterAttackSlotsFilled(std::string& outMissingSlotName) const
+{
+	const auto checkSlots =
+		[&outMissingSlotName](
+			const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts,
+			const char* groupName)
+		{
+			for (const CustomizeCharacterAttackSlotDraft& draft : drafts)
+			{
+				if (!draft.attackDataId.empty())
+				{
+					continue;
+				}
+
+				outMissingSlotName = std::string(groupName) + " " + ToAttackButtonShortLabel(draft.button);
+				return false;
+			}
+
+			return true;
+		};
+
+	return checkSlots(groundAttackSlotDrafts, "Ground")
+		&& checkSlots(airAttackSlotDrafts, "Air");
+}
+
+/// <summary>
+/// AttackData が選択中のキャラクター側スロットへ割り当て可能か確認する。
+/// </summary>
+/// <param name="group">割り当て先のキャラクター側スロットグループ。</param>
+/// <param name="attackData">確認する AttackData。</param>
+/// <returns>通常/必殺、地上/空中の条件を満たす場合は true。</returns>
+bool CustomizeScene::IsAttackCompatibleWithCharacterSlotGroup(
+	CustomizeCharacterAttackSlotGroup group,
+	const AttackData& attackData) const
+{
+	switch (group)
+	{
+	case CustomizeCharacterAttackSlotGroup::Air:
+		return attackData.attackKind == AttackKind::Normal
+			&& attackData.usableState == AttackUsableState::Air;
+	case CustomizeCharacterAttackSlotGroup::Special:
+		return attackData.attackKind == AttackKind::Special
+			&& (attackData.usableState == AttackUsableState::Ground
+				|| attackData.usableState == AttackUsableState::Air);
+	case CustomizeCharacterAttackSlotGroup::Ground:
+	default:
+		return attackData.attackKind == AttackKind::Normal
+			&& attackData.usableState == AttackUsableState::Ground;
+	}
 }

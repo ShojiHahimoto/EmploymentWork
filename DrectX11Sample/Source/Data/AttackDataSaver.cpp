@@ -99,16 +99,15 @@ namespace
 	const char* ToAttackUsableStateText(AttackUsableState value)
 	{
 		switch (value)
-		{
-		case AttackUsableState::Ground:
-			return "Ground";
-		case AttackUsableState::Air:
-			return "Air";
-		case AttackUsableState::Both:
-		default:
-			return "Both";
-		}
+	{
+	case AttackUsableState::Ground:
+		return "Ground";
+	case AttackUsableState::Air:
+		return "Air";
+	default:
+		return "Ground";
 	}
+}
 
 	/// <summary>
 	/// HitReactionType を JSON 保存用の文字列へ変換する。

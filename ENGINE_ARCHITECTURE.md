@@ -397,7 +397,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 1vs1 前提では、同じ攻撃中の多段ヒット防止は相手 ID ではなく `hasHit` の bool で管理する
 - 通常攻撃の AttackBox は GameObject として生成せず、`CharacterAttackDataComponent` と `actionFrame` から有効フレームだけ一時的に計算する
 - 通常攻撃の確認用 slotId は `AttackA`、`AttackB`、`AttackX`、`AttackY` とする
-- 通常攻撃スロットは地上用 `groundNormalAttackSlots` と空中用 `airNormalAttackSlots` に分ける
+- 通常攻撃スロットは地上用 `groundAttackSlots` と空中用 `airAttackSlots` に分ける
 - 地上通常攻撃スロットには `usableState: Ground` の AttackData、空中通常攻撃スロットには `usableState: Air` の AttackData だけを割り当てる
 - 同じ `AttackA / AttackB / AttackX / AttackY` ボタンでも、現在の地上/空中状態に合う通常攻撃だけを CommandInputSystem が候補化する
 - 必殺技の確認用 slotId は `SpecialA`、`SpecialB` などとし、スロットに設定されたボタンと AttackData の `commandId` で発動する
@@ -418,10 +418,13 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は `assets/AttackData/<AttackDataId>.json` に技 1 つ単位で保存する
 - AttackData は特定キャラクターのフォルダ内に置かない
 - Character は、基本パラメータと AttackData ID のスロット割り当てで定義する
-- `Parameter.json` は、キャラクター名、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などを持つ
-- `AttackList.json` は `groundNormalAttackSlots`、`airNormalAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
+- `Parameter.json` は `characterName` と、前歩き速度、後ろ歩き速度、ジャンプ初速、前後ジャンプ横速度、上昇/下降重力などの固定パラメータを持つ
+- カスタマイズシーンのキャラクター作成では、現段階では `characterName` と技スロットだけを編集し、基本パラメータはゲーム側の固定 JSON として扱う
+- `AttackList.json` は `groundAttackSlots`、`airAttackSlots`、`specialAttackSlots` を分け、slotId、button、使用する AttackData ID の対応だけを持つ
 - 通常攻撃はキャラクター側の地上/空中それぞれの `AttackA / AttackB / AttackX / AttackY` スロットに割り当てる
-- 必殺技はキャラクター側の任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
+- 地上通常攻撃スロットと空中通常攻撃スロットは全て必須とし、未設定のまま保存しない
+- 必殺技はキャラクター側の `AttackA / AttackB / AttackX / AttackY` に対応する任意スロットに割り当て、AttackData 側の `commandId` とスロットの `button` の組み合わせで発動する
+- 必殺技スロットは任意のため、未設定なら同じボタンの通常攻撃を通常通り出せる
 - `AttackList.json` の `attackDataId` は `assets/AttackData` からの相対 ID を基本とする。例: `debug_punch`、`Ground/slot_00`
 - Loader は手動編集しやすいよう、`Ground/slot_00.json` や `assets/AttackData/Ground/slot_00.json` のような書き方も読み込み時に吸収する
 - ファイル名だけで指定して複数候補が見つかる場合は曖昧な指定として扱うため、カテゴリ付き ID を推奨する
@@ -432,6 +435,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `CharacterParameterComponent` は、その GameObject が使うキャラクター基本パラメータを保持する
 - `CharacterAttackDataComponent` は、slotId と読み込み済み AttackData の組み合わせを保持する
 - 将来の技調整モードでは、メモリ上の AttackData / CharacterData を編集し、保存時に JSON へ書き戻す
+- `CharacterDataSaver` は `characterName`、`groundAttackSlots`、`airAttackSlots`、`specialAttackSlots` を保存し、旧命名へ戻さない
 - JSON の項目追加時は、未指定項目にデフォルト値を使えるようにし、既存データの読み込みを壊さない
 
 ## 3D Model / Resource
@@ -493,6 +497,9 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - スロット一覧は保存済み AttackData の表示名を見せ、手動保存した JSON も選びやすくする
 - AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
 - キャンセル設定は `canAttackCancel` で有効/無効を切り替える。有効フラグを OFF にしても編集中 draft の `cancelSetting` は消さず、再度 ON にした時に直前編集内容を復元する
+- キャンセル開始/終了フレームは内部データと JSON では 0 始まりを維持し、CustomizeScene の表示と入力だけプレビューに合わせて 1 始まりに変換する
+- `AttackUsableState` は `Ground / Air` のみとし、通常技はカテゴリで固定、必殺技だけ CustomizeScene で選択可能にする
+- キャンセル開始/終了フレームは、保存前と編集中の補正で技の総フレーム範囲内に収める
 - 技プレビューは段階的に実装し、現段階では静止モデル、現在フレーム操作、active フレーム中の AttackBox 表示だけを扱う
 - プレビューの Play / Stop / 1F 操作は、表示上だけ `0F = 攻撃ボタンを押す前の Idle`、`1F = 攻撃ボタンを押したフレーム` として扱う
 - AttackData とバトル内部処理は 0 始まりを維持し、プレビュー表示フレームから 1 を引いた値を内部 actionFrame 相当として使う

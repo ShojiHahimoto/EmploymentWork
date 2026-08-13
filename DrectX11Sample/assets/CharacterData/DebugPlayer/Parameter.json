@@ -1,38 +1,38 @@
 ﻿{
   "characterId": "DebugPlayer",
-  "displayName": "デバッグプレイヤー",
+  "characterName": "debugPlayer",
   "parameters": {
-    "forwardWalkSpeed": 0.14,
-    "backwardWalkSpeed": 0.12,
-    "jumpInitialVelocity": 1.02,
-    "frontJumpHorizontalVelocity": 0.15,
-    "backJumpHorizontalVelocity": -0.13,
+    "forwardWalkSpeed": 0.140,
+    "backwardWalkSpeed": 0.120,
+    "jumpInitialVelocity": 1.020,
+    "frontJumpHorizontalVelocity": 0.150,
+    "backJumpHorizontalVelocity": -0.130,
     "riseGravityPerFrame": -0.045,
     "fallGravityPerFrame": -0.040,
     "maxHp": 10000,
     "modelScale": {
-      "x": 0.05,
-      "y": 0.05,
-      "z": 0.05
+      "x": 0.050,
+      "y": 0.050,
+      "z": 0.050
     },
     "pushBox": {
       "offset": {
-        "x": -0.15,
-        "y": 4.5
+        "x": -0.150,
+        "y": 4.500
       },
       "size": {
-        "x": 2.0,
-        "y": 8.5
+        "x": 2.000,
+        "y": 8.500
       }
     },
     "hurtBox": {
       "offset": {
-        "x": -0.15,
-        "y": 4.5
+        "x": -0.150,
+        "y": 4.500
       },
       "size": {
-        "x": 1.5,
-        "y": 8.0
+        "x": 1.500,
+        "y": 8.000
       }
     }
   }

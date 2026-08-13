@@ -27,6 +27,7 @@
     <ClCompile Include="Source\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Data\AttackDataSaver.cpp" />
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
+    <ClCompile Include="Source\Data\CharacterDataSaver.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
@@ -83,6 +84,7 @@
     <ClInclude Include="Source\Data\AttackDataSaver.h" />
     <ClInclude Include="Source\Data\CharacterData.h" />
     <ClInclude Include="Source\Data\CharacterDataLoader.h" />
+    <ClInclude Include="Source\Data\CharacterDataSaver.h" />
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
