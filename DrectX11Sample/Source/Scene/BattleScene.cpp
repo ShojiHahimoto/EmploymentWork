@@ -25,6 +25,7 @@
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
+#include "System/PlayerInvincibilitySystem.h"
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
@@ -138,9 +139,11 @@ void BattleScene::RunSystems()
 	MovementSystem::Update(world);
 	BattleCameraSystem::Update(world);
 	EmbedResolveSystem::Update(world);
+	PlayerInvincibilitySystem::Update(world);
 	HitCollisionSystem::Update(world);
 	HitResolveSystem::Update(world);
 	HitReactionSystem::Update(world);
+	PlayerInvincibilitySystem::Update(world);
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
@@ -439,6 +442,7 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 	constexpr float DebugBoxDepth = 0.08f;
 	const Color pushBoxColor(1.0f, 1.0f, 1.0f, 0.28f);
 	const Color hurtBoxColor(0.0f, 1.0f, 0.2f, 0.28f);
+	const Color invincibleHurtBoxColor(1.0f, 0.9f, 0.0f, 0.30f);
 	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.32f);
 
 	auto drawRect = [&renderer](const Vector3& basePosition, const HitBoxRect2D& rect, FacingDirection facingDirection, const Color& color)
@@ -489,7 +493,8 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 		}
 
 		const Vector3 basePosition = TransformSystem::GetWorldPosition(*transform);
-		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, hurtBoxColor);
+		const Color& currentHurtBoxColor = state->isInvincible ? invincibleHurtBoxColor : hurtBoxColor;
+		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, currentHurtBoxColor);
 		drawRect(basePosition, hitBox->pushBox, state->facingDirection, pushBoxColor);
 
 		const bool isAttackState = state->currentActionState == PlayerActionState::GroundAttack

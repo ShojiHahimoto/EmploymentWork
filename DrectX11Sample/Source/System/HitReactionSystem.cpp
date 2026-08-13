@@ -336,7 +336,6 @@ void HitReactionSystem::ApplyDown(World& world, GameObjectId defenderId, int dow
 	defender.state->actionDurationFrames = downFrames;
 	defender.state->isGrounded = true;
 	defender.state->hitstunRequested = false;
-	defender.state->cancelEnabled = false;
 	defender.velocity->velocity = Vector3::Zero;
 	ClearCurrentAttack(*defender.hitBox);
 }
@@ -368,7 +367,6 @@ void HitReactionSystem::ApplyAirBurst(
 	defender.state->actionDurationFrames = 0;
 	defender.state->isGrounded = false;
 	defender.state->hitstunRequested = false;
-	defender.state->cancelEnabled = false;
 	defender.velocity->velocity = Vector3(baseVelocity.x * awayDirectionX, baseVelocity.y, baseVelocity.z);
 	ClearCurrentAttack(*defender.hitBox);
 }

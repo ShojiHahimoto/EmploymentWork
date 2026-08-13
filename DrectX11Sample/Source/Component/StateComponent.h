@@ -66,10 +66,12 @@ struct StateComponent : public Component
 	// 接地、被弾、キャンセルなどの判定材料。
 	// 今後 GroundSystem / HitResolveSystem / AttackSystem が更新する想定。
 	bool isGrounded = true;
+	// 今フレーム攻撃を受けない状態なら true。
+	// ダウン/起き上がりなどの状態由来と、今後追加する技フレーム由来の無敵をここに集約する。
+	bool isInvincible = false;
 	bool hitstunRequested = false;
 	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int hitstunDurationFrames = 30;
 	// 現在の Guardstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int guardstunDurationFrames = 30;
-	bool cancelEnabled = false;
 };

@@ -245,7 +245,6 @@ void HitResolveSystem::ApplyHitstun(World& world, GameObjectId defenderId, int h
 		state->actionFrame = 0;
 		state->hitstunDurationFrames = hitstunFrames;
 		state->hitstunRequested = false;
-		state->cancelEnabled = false;
 	}
 
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(defenderId);
@@ -272,7 +271,6 @@ void HitResolveSystem::ApplyGuardstun(World& world, GameObjectId defenderId, int
 		state->actionFrame = 0;
 		state->guardstunDurationFrames = guardstunFrames;
 		state->hitstunRequested = false;
-		state->cancelEnabled = false;
 	}
 
 	HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(defenderId);

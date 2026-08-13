@@ -80,18 +80,10 @@ namespace
 	/// 防御側が現在攻撃を受け付ける状態か確認する。
 	/// </summary>
 	/// <param name="state">防御側の StateComponent。</param>
-	/// <returns>ダウン、起き上がり、着地済み AirHitstun でなければ true。</returns>
+	/// <returns>無敵状態でなければ true。</returns>
 	bool CanDefenderReceiveAttack(const StateComponent& state)
 	{
-		if (state.currentActionState == PlayerActionState::Down
-			|| state.currentActionState == PlayerActionState::WakeUp)
-		{
-			return false;
-		}
-
-		// Burst 系で地面に着いたフレームは、この後 HitReactionSystem が Down へ変える。
-		// その 1 フレームだけ追撃できてしまう事故を防ぐため、接地済み AirHitstun は攻撃対象から外す。
-		return !(state.currentActionState == PlayerActionState::AirHitstun && state.isGrounded);
+		return !state.isInvincible;
 	}
 
 	/// <summary>

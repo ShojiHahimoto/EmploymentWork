@@ -54,6 +54,11 @@
       "slotId": "SpecialX",
       "button": "AttackX",
       "attackDataId": "Special/slot_01"
+    },
+    {
+      "slotId": "SpecialY",
+      "button": "AttackY",
+      "attackDataId": "Special/slot_02"
     }
   ]
 }

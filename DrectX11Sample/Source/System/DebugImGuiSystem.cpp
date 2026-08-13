@@ -513,7 +513,7 @@ void DebugImGuiSystem::DrawHitBoxDebugWindow()
 	}
 
 	ImGui::SetNextWindowPos(ImVec2(460.0f, 190.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(260.0f, 130.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300.0f, 150.0f), ImGuiCond_FirstUseEver);
 
 	if (ImGui::Begin("HitBox Debug"))
 	{
@@ -525,6 +525,9 @@ void DebugImGuiSystem::DrawHitBoxDebugWindow()
 		ImGui::Text("HurtBox");
 		ImGui::SameLine();
 		ImGui::ColorButton("HurtBoxColor", ImVec4(0.0f, 1.0f, 0.2f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("Invincible HurtBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("InvincibleHurtBoxColor", ImVec4(1.0f, 0.9f, 0.0f, 0.30f), ImGuiColorEditFlags_NoTooltip);
 		ImGui::Text("AttackBox");
 		ImGui::SameLine();
 		ImGui::ColorButton("AttackBoxColor", ImVec4(1.0f, 0.0f, 0.0f, 0.32f), ImGuiColorEditFlags_NoTooltip);
