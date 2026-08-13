@@ -3,6 +3,7 @@
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Scene/BattleScene.h"
+#include "Scene/BattleSetupScene.h"
 #include "Scene/CustomizeScene.h"
 #include "Scene/SceneManager.h"
 #include "System/Application.h"
@@ -48,7 +49,7 @@ void TitleScene::Exit()
 }
 
 /// <summary>
-/// UI Submit が押されたら BattleScene、仮導線の P が押されたら CustomizeScene への切り替えを予約する。
+/// UI Submit が押されたら BattleSetupScene、B が押されたら開発用に BattleScene へ直行する。
 /// </summary>
 void TitleScene::RunSystems()
 {
@@ -61,10 +62,19 @@ void TitleScene::RunSystems()
 		return;
 	}
 
-	if (WasSubmitTriggered())
+	if (WasBattleShortcutTriggered())
 	{
 		SceneManager::GetInstance().RequestChangeScene(
 			std::make_unique<BattleScene>(
+				static_cast<int>(Application::GetWidth()),
+				static_cast<int>(Application::GetHeight())));
+		return;
+	}
+
+	if (WasSubmitTriggered())
+	{
+		SceneManager::GetInstance().RequestChangeScene(
+			std::make_unique<BattleSetupScene>(
 				static_cast<int>(Application::GetWidth()),
 				static_cast<int>(Application::GetHeight())));
 	}
@@ -142,6 +152,19 @@ bool TitleScene::WasCustomizeTriggered()
 	const bool pressed = (GetAsyncKeyState('P') & 0x8000) != 0;
 	const bool triggered = pressed && !customizeKeyPressedLastFrame;
 	customizeKeyPressedLastFrame = pressed;
+
+	return triggered;
+}
+
+/// <summary>
+/// 開発用に BattleSetupScene を経由せず BattleScene へ入る B キーが Trigger されたか確認する。
+/// </summary>
+/// <returns>B キーが今フレーム押された場合は true。</returns>
+bool TitleScene::WasBattleShortcutTriggered()
+{
+	const bool pressed = (GetAsyncKeyState('B') & 0x8000) != 0;
+	const bool triggered = pressed && !battleShortcutKeyPressedLastFrame;
+	battleShortcutKeyPressedLastFrame = pressed;
 
 	return triggered;
 }

@@ -64,6 +64,8 @@ namespace Input
 		RightThumb,
 		LeftShoulder,
 		RightShoulder,
+		LeftTrigger,
+		RightTrigger,
 		A,
 		B,
 		X,
@@ -119,6 +121,13 @@ namespace Input
 
 		// 左スティック、右スティック、十字キーのどれから Axis2D を作るか。
 		GamepadAxis2DSource source = GamepadAxis2DSource::LeftStick;
+
+		// source が DPad の場合だけ使う、上下左右に対応するボタン設定。
+		// 初期値は実際の十字キーだが、キーコンフィグで ABXY / LB / RB / LT / RT などへ差し替えられる。
+		GamepadButton negativeXButton = GamepadButton::DPadLeft;
+		GamepadButton positiveXButton = GamepadButton::DPadRight;
+		GamepadButton negativeYButton = GamepadButton::DPadDown;
+		GamepadButton positiveYButton = GamepadButton::DPadUp;
 	};
 
 	struct InputBinding

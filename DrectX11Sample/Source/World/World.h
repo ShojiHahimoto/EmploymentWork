@@ -34,6 +34,7 @@ struct SpawnRequest
 	std::string name = "GameObject";
 	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 rotationDegrees = DirectX::SimpleMath::Vector3::Zero;
+	std::string characterFolderPath;
 };
 
 struct DestroyRequest
@@ -109,7 +110,12 @@ public:
 	const CameraComponent& GetActiveCamera() const;
 	bool HasActiveCamera() const;
 
-	void RequestSpawn(SpawnType type, const std::string& name, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees);
+	void RequestSpawn(
+		SpawnType type,
+		const std::string& name,
+		const DirectX::SimpleMath::Vector3& position,
+		const DirectX::SimpleMath::Vector3& rotationDegrees,
+		const std::string& characterFolderPath = "");
 	void RequestDestroy(GameObjectId objectId);
 
 	const std::vector<SpawnRequest>& GetSpawnRequests() const;

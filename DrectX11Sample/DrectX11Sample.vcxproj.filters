@@ -67,7 +67,7 @@
     <Filter Include="リソース ファイル\CharacterData">
       <UniqueIdentifier>{707cc011-c980-4f6d-a15b-511ddc1a7009}</UniqueIdentifier>
     </Filter>
-    <Filter Include="リソース ファイル\CharacterData\DebugPlayer">
+    <Filter Include="リソース ファイル\CharacterData\CharacterSlot00">
       <UniqueIdentifier>{57c78864-1c34-44d4-b344-475614ba263f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -93,6 +93,9 @@
     <ClCompile Include="Source\Data\AttackDataSaver.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Data\BattleSetupData.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
@@ -103,6 +106,9 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\BattleSetupScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\CustomizeScene.cpp">
@@ -329,6 +335,9 @@
     <ClInclude Include="Source\Scene\BattleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Scene\BattleSetupScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\CustomizeScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
@@ -392,6 +401,9 @@
     <ClInclude Include="Source\Data\AttackDataSaver.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Data\BattleSetupData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Data\CharacterData.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
@@ -407,7 +419,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
+    <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">
+      <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
+    </None>
     <None Include="assets\AttackData\debug_air_kick.json">
       <Filter>リソース ファイル\AttackData\Normal</Filter>
     </None>
@@ -438,8 +452,8 @@
     <None Include="assets\AttackData\debug_special_upper.json">
       <Filter>リソース ファイル\AttackData\Special</Filter>
     </None>
-    <None Include="assets\CharacterData\DebugPlayer\AttackList.json">
-      <Filter>リソース ファイル\CharacterData\DebugPlayer</Filter>
+    <None Include="assets\CharacterData\CharacterSlot00\AttackList.json">
+      <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
     </None>
   </ItemGroup>
 </Project>

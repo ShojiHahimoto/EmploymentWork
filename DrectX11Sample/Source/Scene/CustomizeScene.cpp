@@ -1,6 +1,7 @@
 ﻿#include "Scene/CustomizeScene.h"
 
 #include "Data/AttackDataSaver.h"
+#include "Data/BattleSetupData.h"
 #include "Data/CharacterDataLoader.h"
 #include "Data/CharacterDataSaver.h"
 #include "Input/InputSystem.h"
@@ -1503,17 +1504,10 @@ void CustomizeScene::CopyDisplayNameToBuffer()
 /// キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。
 /// </summary>
 /// <param name="slotIndex">キャラクタースロット番号。</param>
-/// <returns>slot 0 は DebugPlayer、それ以外は CharacterSlotXX。</returns>
+/// <returns>CharacterSlot00 のような固定桁の ID。</returns>
 std::string CustomizeScene::BuildCharacterId(int slotIndex) const
 {
-	if (slotIndex == 0)
-	{
-		return "DebugPlayer";
-	}
-
-	std::ostringstream stream;
-	stream << "CharacterSlot" << std::setw(2) << std::setfill('0') << slotIndex;
-	return stream.str();
+	return BattleSetup::BuildCharacterSlotId(slotIndex);
 }
 
 /// <summary>
@@ -1640,9 +1634,7 @@ void CustomizeScene::SelectCharacterSlot(int slotIndex)
 
 	draftCharacterParameter = CharacterParameterData{};
 	draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
-	draftCharacterParameter.characterName = selectedCharacterSlotIndex == 0
-		? "デバッグプレイヤー"
-		: "Character Slot " + std::to_string(selectedCharacterSlotIndex);
+	draftCharacterParameter.characterName = "Character Slot " + std::to_string(selectedCharacterSlotIndex);
 
 	for (int index = 0; index < CharacterAttackButtonSlotCount; ++index)
 	{

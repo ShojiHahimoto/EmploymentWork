@@ -9,6 +9,7 @@
 #include "Component/ModelComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
+#include "Data/BattleSetupData.h"
 #include "Data/CharacterDataLoader.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
@@ -37,8 +38,12 @@ namespace
 			object->tag = GameObjectTag::Player;
 		}
 
+		const std::string characterFolderPath = request.characterFolderPath.empty()
+			? BattleSetup::BuildCharacterFolderPath(0)
+			: request.characterFolderPath;
+
 		CharacterData characterData;
-		CharacterDataLoader::LoadCharacterData("assets/CharacterData/DebugPlayer", characterData);
+		CharacterDataLoader::LoadCharacterData(characterFolderPath, characterData);
 
 		TransformComponent* transform = world.GetTransform(objectId);
 		if (transform)

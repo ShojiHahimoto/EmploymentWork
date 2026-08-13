@@ -26,10 +26,12 @@
     <ClCompile Include="Source\Input\InputConfigLoader.cpp" />
     <ClCompile Include="Source\Input\InputSystem.cpp" />
     <ClCompile Include="Source\Data\AttackDataSaver.cpp" />
+    <ClCompile Include="Source\Data\BattleSetupData.cpp" />
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
     <ClCompile Include="Source\Data\CharacterDataSaver.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
+    <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
     <ClCompile Include="Source\Scene\ResultScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
@@ -83,6 +85,7 @@
     <ClInclude Include="Source\Core\GameObject.h" />
     <ClInclude Include="Source\Data\AttackData.h" />
     <ClInclude Include="Source\Data\AttackDataSaver.h" />
+    <ClInclude Include="Source\Data\BattleSetupData.h" />
     <ClInclude Include="Source\Data\CharacterData.h" />
     <ClInclude Include="Source\Data\CharacterDataLoader.h" />
     <ClInclude Include="Source\Data\CharacterDataSaver.h" />
@@ -92,6 +95,7 @@
     <ClInclude Include="Source\Input\InputSystem.h" />
     <ClInclude Include="Source\Input\InputTypes.h" />
     <ClInclude Include="Source\Scene\BattleScene.h" />
+    <ClInclude Include="Source\Scene\BattleSetupScene.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
@@ -133,8 +137,8 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="assets\CharacterData\DebugPlayer\AttackList.json" />
-    <None Include="assets\CharacterData\DebugPlayer\Parameter.json" />
+    <None Include="assets\CharacterData\CharacterSlot00\AttackList.json" />
+    <None Include="assets\CharacterData\CharacterSlot00\Parameter.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -40,6 +40,12 @@ namespace Input
 		static void SetSettings(const InputSettings& newSettings);
 		static const InputSettings& GetSettings();
 
+		// セットアップ画面などが物理入力状態を直接確認するための API。
+		static int GetMaxGamepadCount();
+		static bool IsGamepadConnected(int gamepadIndex);
+		static bool IsKeyboardKeyDown(KeyboardKey key);
+		static bool IsGamepadButtonDown(int gamepadIndex, GamepadButton button);
+
 	private:
 		// 現在有効な ActionMap。プレイヤーごとには分けない。
 		static InputActionMapId currentActionMap;
@@ -72,9 +78,7 @@ namespace Input
 		static void FinalizeActionStates();
 
 		static bool IsValidPlayerIndex(int playerIndex);
-		static bool IsKeyboardKeyDown(KeyboardKey key);
 		static bool IsValidGamepadIndex(int gamepadIndex);
-		static bool IsGamepadButtonDown(int gamepadIndex, GamepadButton button);
 		static DirectX::SimpleMath::Vector2 GetGamepadAxis2D(const GamepadAxis2DBinding& binding);
 
 		// 同じ Action に複数 Binding がある場合、入力値を 1 つの ActionState に合成する。

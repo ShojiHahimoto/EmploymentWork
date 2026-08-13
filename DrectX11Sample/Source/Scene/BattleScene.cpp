@@ -44,7 +44,21 @@ using namespace DirectX::SimpleMath;
 /// <param name="initialWidth">初期ウィンドウ幅。</param>
 /// <param name="initialHeight">初期ウィンドウ高さ。</param>
 BattleScene::BattleScene(int initialWidth, int initialHeight)
-	: width(initialWidth)
+	: setupData(BattleSetup::CreateDefaultBattleSetupData())
+	, width(initialWidth)
+	, height(initialHeight)
+{
+}
+
+/// <summary>
+/// BattleScene を現在の描画サイズとバトル開始設定で初期化する。
+/// </summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
+/// <param name="battleSetupData">1P/2Pの入力デバイスとキャラ選択情報。</param>
+BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& battleSetupData)
+	: setupData(battleSetupData)
+	, width(initialWidth)
 	, height(initialHeight)
 {
 }
@@ -54,6 +68,7 @@ BattleScene::BattleScene(int initialWidth, int initialHeight)
 /// </summary>
 void BattleScene::Enter()
 {
+	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
@@ -84,13 +99,15 @@ void BattleScene::Enter()
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
 		Vector3(-4.0f, 0.0f, 8.0f),
-		Vector3(0.0f, 0.0f, 0.0f));
+		Vector3(0.0f, 0.0f, 0.0f),
+		setupData.players[0].characterFolderPath);
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer2,
 		"DebugPlayer2",
 		Vector3(4.0f, 0.0f, 8.0f),
-		Vector3(0.0f, 0.0f, 0.0f));
+		Vector3(0.0f, 0.0f, 0.0f),
+		setupData.players[1].characterFolderPath);
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,

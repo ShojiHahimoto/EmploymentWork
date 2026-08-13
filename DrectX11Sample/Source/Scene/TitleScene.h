@@ -26,7 +26,9 @@ private:
 	int width = 0;
 	int height = 0;
 	bool customizeKeyPressedLastFrame = false;
+	bool battleShortcutKeyPressedLastFrame = false;
 
 	bool WasSubmitTriggered() const;
 	bool WasCustomizeTriggered();
+	bool WasBattleShortcutTriggered();
 };

@@ -25,7 +25,7 @@ struct CharacterBoxParameterData
 struct CharacterParameterData
 {
 	// CharacterData フォルダ名と対応するキャラクター ID。
-	std::string characterId = "DebugPlayer";
+	std::string characterId = "CharacterSlot00";
 	// UI やデバッグ表示で使うキャラクター名。
 	std::string characterName = "デバッグプレイヤー";
 
