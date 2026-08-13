@@ -2,7 +2,7 @@
   "attackDataId": "Special/slot_02",
   "displayName": "ビッグバン",
   "attackKind": "Special",
-  "commandId": "Hadouken",
+  "commandId": "Yoga",
   "usableState": "Ground",
   "damage": 10000,
   "hitstunFrames": 30,
