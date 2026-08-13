@@ -13,11 +13,11 @@
     "active": 3,
     "recovery": 15
   },
-  "canAttackCancel": false,
+  "canAttackCancel": true,
   "cancelSetting": {
-    "startFrame": 0,
-    "endFrame": 0,
-    "cancelTypes": []
+    "startFrame": 14,
+    "endFrame": 28,
+    "cancelTypes": ["Special"]
   },
   "hitboxes": [
     {

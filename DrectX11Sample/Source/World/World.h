@@ -52,6 +52,7 @@ struct HitCollisionResult
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;
 	HitReactionType hitReactionType = HitReactionType::Normal;
+	AttackUsableState attackUsableState = AttackUsableState::Ground;
 	int hitboxIndex = -1;
 };
 
@@ -60,6 +61,7 @@ struct HitReactionRequest
 	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
 	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
 	HitReactionType hitReactionType = HitReactionType::Normal;
+	AttackUsableState attackUsableState = AttackUsableState::Ground;
 	bool guarded = false;
 	bool defenderWasGrounded = true;
 };

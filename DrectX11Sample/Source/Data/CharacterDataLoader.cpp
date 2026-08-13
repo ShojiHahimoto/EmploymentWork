@@ -795,6 +795,10 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 		outAttackData.usableState = AttackUsableState::Ground;
 	}
 	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
+	if (outAttackData.usableState == AttackUsableState::Air)
+	{
+		outAttackData.hitReactionType = HitReactionType::Normal;
+	}
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelSettingFromJson(root, outAttackData);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);

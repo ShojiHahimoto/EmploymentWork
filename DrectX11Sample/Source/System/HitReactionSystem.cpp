@@ -263,7 +263,29 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 			return;
 		}
 
-		ApplyAirBurst(world, request, GetAirFollowupVelocity(), DecideAirHitstunCameraYFollowMode(defender, request));
+		switch (request.hitReactionType)
+		{
+		case HitReactionType::Burst:
+		case HitReactionType::HardBurst:
+			ApplyCornerAttackerBack(world, request, setting.groundBackDistance);
+			ApplyAirBurst(world, request, setting.airVelocity, CameraYFollowMode::Ignore);
+			break;
+		case HitReactionType::Down:
+			ApplyDown(world, request.defenderId, setting.downFrames);
+			break;
+		case HitReactionType::Normal:
+		case HitReactionType::Unknown:
+		default:
+			ApplyAirBurst(world, request, GetAirFollowupVelocity(), DecideAirHitstunCameraYFollowMode(defender, request));
+			break;
+		}
+		return;
+	}
+
+	if (request.attackUsableState == AttackUsableState::Air
+		&& request.hitReactionType == HitReactionType::Normal)
+	{
+		// 空中技を地上で受けた場合は、その場ヒットスタン用に位置を動かさない。
 		return;
 	}
 
@@ -274,6 +296,7 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 		break;
 	case HitReactionType::Burst:
 	case HitReactionType::HardBurst:
+		ApplyCornerAttackerBack(world, request, setting.groundBackDistance);
 		ApplyAirBurst(world, request, setting.airVelocity, CameraYFollowMode::Ignore);
 		break;
 	case HitReactionType::Normal:
@@ -314,6 +337,40 @@ void HitReactionSystem::ApplyNormalBack(World& world, const HitReactionRequest& 
 	{
 		MovePlayerWithinWalls(attacker, -remainingDeltaX);
 	}
+}
+
+/// <summary>
+/// 防御側が背面の壁に接している場合だけ、攻撃側を後ろへずらす。
+/// </summary>
+/// <param name="world">対象 Component を取得する World。</param>
+/// <param name="request">攻撃側と防御側の GameObject ID を持つリクエスト。</param>
+/// <param name="backDistance">画面端時に攻撃側へ返す距離。</param>
+void HitReactionSystem::ApplyCornerAttackerBack(World& world, const HitReactionRequest& request, float backDistance)
+{
+	if (backDistance <= 0.0f)
+	{
+		return;
+	}
+
+	PlayerReactionRuntime attacker;
+	PlayerReactionRuntime defender;
+	if (!TryBuildPlayerReactionRuntime(world, request.attackerId, attacker)
+		|| !TryBuildPlayerReactionRuntime(world, request.defenderId, defender))
+	{
+		return;
+	}
+
+	const float awayDirectionX = GetAwayDirectionX(attacker, defender);
+	const Aabb2D defenderAabb = BuildAabb(*defender.transform, *defender.state, defender.hitBox->pushBox);
+	const bool defenderBackTouchesWall = awayDirectionX > 0.0f
+		? defenderAabb.maxX >= EmbedResolveSystem::StageMaxX - Epsilon
+		: defenderAabb.minX <= EmbedResolveSystem::StageMinX + Epsilon;
+	if (!defenderBackTouchesWall)
+	{
+		return;
+	}
+
+	MovePlayerWithinWalls(attacker, -awayDirectionX * backDistance);
 }
 
 /// <summary>

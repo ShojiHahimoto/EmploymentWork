@@ -298,6 +298,7 @@ void HitResolveSystem::QueueHitReaction(
 	request.attackerId = result.attackerId;
 	request.defenderId = result.defenderId;
 	request.hitReactionType = guarded ? HitReactionType::Normal : result.hitReactionType;
+	request.attackUsableState = result.attackUsableState;
 	request.guarded = guarded;
 	request.defenderWasGrounded = defenderWasGrounded;
 	world.AddHitReactionRequest(request);

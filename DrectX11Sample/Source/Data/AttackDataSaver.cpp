@@ -179,7 +179,10 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	json << "  \"damage\": " << attackData.damage << ",\n";
 	json << "  \"hitstunFrames\": " << attackData.hitstunFrames << ",\n";
 	json << "  \"guardstunFrames\": " << attackData.guardstunFrames << ",\n";
-	json << "  \"hitReactionType\": \"" << ToHitReactionTypeText(attackData.hitReactionType) << "\",\n";
+	const HitReactionType savedHitReactionType = attackData.usableState == AttackUsableState::Air
+		? HitReactionType::Normal
+		: attackData.hitReactionType;
+	json << "  \"hitReactionType\": \"" << ToHitReactionTypeText(savedHitReactionType) << "\",\n";
 	json << "  \"frame\": {\n";
 	json << "    \"startup\": " << attackData.frame.startup << ",\n";
 	json << "    \"active\": " << attackData.frame.active << ",\n";

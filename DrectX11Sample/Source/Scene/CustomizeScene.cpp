@@ -236,6 +236,10 @@ namespace
 		{
 			attackData.usableState = AttackUsableState::Ground;
 		}
+		if (attackData.usableState == AttackUsableState::Air)
+		{
+			attackData.hitReactionType = HitReactionType::Normal;
+		}
 
 		for (AttackHitboxData& hitbox : attackData.hitboxes)
 		{
@@ -690,10 +694,18 @@ void CustomizeScene::DrawAttackEditorWindow()
 			ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draftAttack.usableState));
 		}
 
-		int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
-		if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
+		if (draftAttack.usableState == AttackUsableState::Air)
 		{
-			draftAttack.hitReactionType = HitReactionValues[reactionIndex];
+			draftAttack.hitReactionType = HitReactionType::Normal;
+			ImGui::Text("Hit Reaction: Normal (Fixed for Air)");
+		}
+		else
+		{
+			int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
+			if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
+			{
+				draftAttack.hitReactionType = HitReactionValues[reactionIndex];
+			}
 		}
 
 		if (selectedCategory == CustomizeAttackCategory::Special)
@@ -1084,6 +1096,10 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 		draftAttack.commandId = AttackCommandId::None;
 		draftAttack.usableState = GetFixedNormalUsableState(category);
 	}
+	if (draftAttack.usableState == AttackUsableState::Air)
+	{
+		draftAttack.hitReactionType = HitReactionType::Normal;
+	}
 	ClampAttackDataValues(draftAttack);
 
 	CopyDisplayNameToBuffer();
@@ -1129,6 +1145,10 @@ void CustomizeScene::SyncDraftFromEditor()
 	{
 		draftAttack.commandId = AttackCommandId::None;
 		draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
+	}
+	if (draftAttack.usableState == AttackUsableState::Air)
+	{
+		draftAttack.hitReactionType = HitReactionType::Normal;
 	}
 
 	ClampAttackDataValues(draftAttack);

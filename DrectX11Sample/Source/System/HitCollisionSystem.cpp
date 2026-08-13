@@ -192,7 +192,11 @@ namespace
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
-			result.hitReactionType = assignedAttack.attack.hitReactionType;
+			result.attackUsableState = assignedAttack.attack.usableState;
+			// 空中技はリアクションタイプを持たず、常に Normal として扱う。
+			result.hitReactionType = assignedAttack.attack.usableState == AttackUsableState::Air
+				? HitReactionType::Normal
+				: assignedAttack.attack.hitReactionType;
 			result.hitboxIndex = static_cast<int>(hitboxIndex);
 			world.AddHitCollisionResult(result);
 			return true;
