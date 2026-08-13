@@ -1,6 +1,6 @@
 ﻿#include "System/BattleCameraSystem.h"
 
-#include "Component/HitBoxComponent.h"
+#include "Component/BattleCameraFollowComponent.h"
 #include "Component/StateComponent.h"
 #include "System/EmbedResolveSystem.h"
 #include "System/TransformSystem.h"
@@ -21,21 +21,12 @@ namespace
 	constexpr float JumpLiftRate = 0.22f;
 	constexpr float MaxJumpLift = 2.0f;
 	constexpr float VerticalFollowRate = 0.10f;
-	constexpr float CenterDeadZoneHalfWidth = 2.0f;
-	constexpr float CameraEdgeFollowMargin = 2.0f;
 	constexpr float MinProjectionDistance = 0.001f;
 
 	struct BattlePlayerCameraTarget
 	{
 		Vector3 position = Vector3::Zero;
 		const StateComponent* state = nullptr;
-		const HitBoxComponent* hitBox = nullptr;
-	};
-
-	struct Aabb2D
-	{
-		float minX = 0.0f;
-		float maxX = 0.0f;
 	};
 
 	/// <summary>
@@ -50,7 +41,6 @@ namespace
 		const GameObjectId playerId = world.GetBattlePlayerId(playerIndex);
 		const TransformComponent* transform = world.GetTransform(playerId);
 		const StateComponent* state = world.GetComponent<StateComponent>(playerId);
-		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(playerId);
 		if (!transform || !state)
 		{
 			return false;
@@ -58,87 +48,72 @@ namespace
 
 		outTarget.position = TransformSystem::GetLocalPosition(*transform);
 		outTarget.state = state;
-		outTarget.hitBox = hitBox;
 		return true;
 	}
 
 	/// <summary>
-	/// Player の PushBox から、カメラ追従判定用の X 範囲を作る。
+	/// 値を 1 フレームで動かせる最大量以内で target へ近づける。
 	/// </summary>
-	/// <param name="player">Player の位置、向き、HitBox を持つカメラ追従情報。</param>
-	/// <returns>PushBox があればその X 範囲。なければ Player 位置だけの X 範囲。</returns>
-	Aabb2D BuildPlayerCameraAabb(const BattlePlayerCameraTarget& player)
+	/// <param name="current">現在値。</param>
+	/// <param name="target">目標値。</param>
+	/// <param name="maxDelta">このフレームで変化できる最大量。</param>
+	/// <returns>target に近づけた値。</returns>
+	float MoveTowards(float current, float target, float maxDelta)
 	{
-		if (!player.hitBox || !player.hitBox->pushBox.enabled)
+		const float delta = target - current;
+		const float absDelta = std::fabs(delta);
+		if (absDelta <= maxDelta)
 		{
-			return { player.position.x, player.position.x };
+			return target;
 		}
 
-		const float facingSign = player.state->facingDirection == FacingDirection::Right ? 1.0f : -1.0f;
-		const float centerX = player.position.x + player.hitBox->pushBox.offset.x * facingSign;
-		const float halfWidth = player.hitBox->pushBox.size.x * 0.5f;
-		return { centerX - halfWidth, centerX + halfWidth };
+		return current + (delta > 0.0f ? maxDelta : -maxDelta);
 	}
 
 	/// <summary>
-	/// カメラ中心から左右に同じ幅のデッドゾーンを置き、2 Player 中心が外に出た分だけ追従する。
+	/// 2 Player 中心へ向けて、加速と減速を使った次のカメラ X 座標を計算する。
 	/// </summary>
 	/// <param name="currentCameraX">現在のカメラ X 座標。</param>
-	/// <param name="playerCenterX">2 Player の中心 X 座標。</param>
-	/// <returns>中心デッドゾーンを超えた分だけ追従したカメラ X 座標。</returns>
-	float CalculateCenterDeadZoneCameraX(float currentCameraX, float playerCenterX)
-	{
-		const float deadZoneMinX = currentCameraX - CenterDeadZoneHalfWidth;
-		const float deadZoneMaxX = currentCameraX + CenterDeadZoneHalfWidth;
-
-		if (playerCenterX < deadZoneMinX)
-		{
-			return currentCameraX + (playerCenterX - deadZoneMinX);
-		}
-		if (playerCenterX > deadZoneMaxX)
-		{
-			return currentCameraX + (playerCenterX - deadZoneMaxX);
-		}
-
-		return currentCameraX;
-	}
-
-	/// <summary>
-	/// Player が画面端へ近づいた場合、位置補正で止める前にカメラを動かせるだけ動かす。
-	/// </summary>
-	/// <param name="targetCameraX">中心デッドゾーンから求めた仮カメラ X 座標。</param>
-	/// <param name="visibleHalfWidth">対象平面上で画面半分に相当する X 幅。</param>
-	/// <param name="player1">Player1 のカメラ追従情報。</param>
-	/// <param name="player2">Player2 のカメラ追従情報。</param>
-	/// <returns>Player が端へ寄った分を加味したカメラ X 座標。</returns>
-	float AdjustCameraXForPlayerScreenEdges(
+	/// <param name="targetCameraX">常に 2 Player 中心から求める目標カメラ X 座標。</param>
+	/// <param name="follow">カメラの追従速度と調整値を保持する Component。</param>
+	/// <returns>このフレームで反映するカメラ X 座標。</returns>
+	float CalculateSmoothCameraX(
+		float currentCameraX,
 		float targetCameraX,
-		float visibleHalfWidth,
-		const BattlePlayerCameraTarget& player1,
-		const BattlePlayerCameraTarget& player2)
+		BattleCameraFollowComponent& follow)
 	{
-		const Aabb2D player1Aabb = BuildPlayerCameraAabb(player1);
-		const Aabb2D player2Aabb = BuildPlayerCameraAabb(player2);
-		const float playersMinX = std::min(player1Aabb.minX, player2Aabb.minX);
-		const float playersMaxX = std::max(player1Aabb.maxX, player2Aabb.maxX);
-		const float safeVisibleMinX = targetCameraX - visibleHalfWidth + CameraEdgeFollowMargin;
-		const float safeVisibleMaxX = targetCameraX + visibleHalfWidth - CameraEdgeFollowMargin;
-
-		if (playersMaxX - playersMinX > safeVisibleMaxX - safeVisibleMinX)
+		const float distance = targetCameraX - currentCameraX;
+		if (std::fabs(distance) <= follow.snapDistance)
 		{
-			return (playersMinX + playersMaxX) * 0.5f;
+			follow.velocityX = 0.0f;
+			return targetCameraX;
 		}
 
-		if (playersMinX < safeVisibleMinX)
+		const float desiredVelocity = std::clamp(
+			distance * follow.followPower,
+			-follow.maxSpeed,
+			follow.maxSpeed);
+		const bool changingDirection = follow.velocityX * desiredVelocity < 0.0f;
+		const bool reducingSpeed = std::fabs(desiredVelocity) < std::fabs(follow.velocityX);
+		const float maxVelocityDelta = (changingDirection || reducingSpeed)
+			? follow.deceleration
+			: follow.acceleration;
+
+		follow.velocityX = MoveTowards(follow.velocityX, desiredVelocity, maxVelocityDelta);
+		if (std::fabs(follow.velocityX) <= follow.stopSpeed && std::fabs(desiredVelocity) <= follow.stopSpeed)
 		{
-			return targetCameraX + (playersMinX - safeVisibleMinX);
-		}
-		if (playersMaxX > safeVisibleMaxX)
-		{
-			return targetCameraX + (playersMaxX - safeVisibleMaxX);
+			follow.velocityX = 0.0f;
 		}
 
-		return targetCameraX;
+		const float nextCameraX = currentCameraX + follow.velocityX;
+		const float nextDistance = targetCameraX - nextCameraX;
+		if (distance * nextDistance <= 0.0f)
+		{
+			follow.velocityX = 0.0f;
+			return targetCameraX;
+		}
+
+		return nextCameraX;
 	}
 
 	/// <summary>
@@ -173,8 +148,10 @@ void BattleCameraSystem::Update(World& world)
 	}
 
 	CameraComponent& camera = world.GetActiveCamera();
-	TransformComponent* cameraTransform = world.GetTransform(world.GetActiveCameraId());
-	if (!cameraTransform)
+	const GameObjectId cameraId = world.GetActiveCameraId();
+	TransformComponent* cameraTransform = world.GetTransform(cameraId);
+	BattleCameraFollowComponent* follow = world.GetComponent<BattleCameraFollowComponent>(cameraId);
+	if (!cameraTransform || !follow)
 	{
 		return;
 	}
@@ -191,18 +168,18 @@ void BattleCameraSystem::Update(World& world)
 	const float targetPlaneZ = (player1.position.z + player2.position.z) * 0.5f;
 	const float visibleHalfWidth = CalculateVisibleHalfWidth(camera, *cameraTransform, targetPlaneZ);
 	const float playerCenterX = (player1.position.x + player2.position.x) * 0.5f;
-	const float deadZoneCameraX = CalculateCenterDeadZoneCameraX(cameraPosition.x, playerCenterX);
-	const float edgeAdjustedCameraX = AdjustCameraXForPlayerScreenEdges(
-		deadZoneCameraX,
-		visibleHalfWidth,
-		player1,
-		player2);
-	const float targetCameraX = ClampCameraXToStage(edgeAdjustedCameraX, visibleHalfWidth);
+	const float targetCameraX = ClampCameraXToStage(playerCenterX, visibleHalfWidth);
+	const float smoothCameraX = CalculateSmoothCameraX(cameraPosition.x, targetCameraX, *follow);
+	const float clampedCameraX = ClampCameraXToStage(smoothCameraX, visibleHalfWidth);
+	if (clampedCameraX != smoothCameraX)
+	{
+		follow->velocityX = 0.0f;
+	}
 
 	const float highestPlayerY = CalculateHighestNaturalJumpY(player1, player2);
 	const float targetCameraY = BaseCameraY + std::clamp(highestPlayerY * JumpLiftRate, 0.0f, MaxJumpLift);
 
-	cameraPosition.x = targetCameraX;
+	cameraPosition.x = clampedCameraX;
 	cameraPosition.y += (targetCameraY - cameraPosition.y) * VerticalFollowRate;
 	cameraPosition.z = BaseCameraZ;
 	TransformSystem::SetLocalPosition(*cameraTransform, cameraPosition);

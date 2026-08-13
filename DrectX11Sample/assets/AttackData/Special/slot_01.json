@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Special/slot_01",
+  "displayName": "ヘッドバッド",
+  "attackKind": "Special",
+  "commandId": "Shoryuu",
+  "usableState": "Ground",
+  "damage": 2000,
+  "hitstunFrames": 30,
+  "guardstunFrames": 26,
+  "hitReactionType": "HardBurst",
+  "frame": {
+    "startup": 15,
+    "active": 5,
+    "recovery": 20
+  },
+  "canAttackCancel": true,
+  "cancelSetting": {
+    "startFrame": 19,
+    "endFrame": 38,
+    "cancelTypes": ["Jump"]
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 1.450,
+        "y": 8.250
+      },
+      "size": {
+        "x": 3.350,
+        "y": 3.250
+      }
+    }
+  ]
+}

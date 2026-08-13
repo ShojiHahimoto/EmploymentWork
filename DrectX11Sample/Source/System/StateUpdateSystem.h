@@ -48,10 +48,26 @@ private:
 		const StateComponent& state,
 		const HitBoxComponent* hitBox,
 		const CharacterAttackDataComponent* attackData);
+	static PlayerActionDecision DecideAttackCancelAction(
+		const StateComponent& state,
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer,
+		const HitBoxComponent* hitBox,
+		const CharacterAttackDataComponent* attackData);
 	static PlayerActionDecision DecideBufferedAttack(
 		const StateComponent& state,
 		const InputHistoryFrame& inputFrame,
 		const CommandBufferComponent* commandBuffer);
+	static PlayerActionDecision DecideBufferedCancelAttack(
+		const StateComponent& state,
+		const InputHistoryFrame& inputFrame,
+		const CommandBufferComponent* commandBuffer,
+		const CharacterAttackDataComponent* attackData,
+		const AttackCancelSettingData& cancelSetting);
+	static PlayerActionDecision DecideJumpCancelAction(
+		const StateComponent& state,
+		const InputHistoryFrame& inputFrame,
+		const AttackCancelSettingData& cancelSetting);
 	static PlayerActionDecision DecideJumpStartupAction(
 		const StateComponent& state,
 		const InputHistoryFrame& inputFrame,
@@ -75,13 +91,16 @@ private:
 		const StateComponent& state,
 		const HitBoxComponent* hitBox,
 		const CharacterAttackDataComponent* attackData);
+	static bool IsAttackActionState(PlayerActionState actionState);
+	static bool IsAttackCancelWindowActive(const AttackData& attack, int actionFrame);
+	static bool HasCancelType(const AttackCancelSettingData& cancelSetting, AttackCancelType cancelType);
+	static AttackCancelType GetAttackCancelType(const CharacterAssignedAttackData& attack);
 	static const CharacterAssignedAttackData* FindAssignedAttack(
 		const CharacterAttackDataComponent* attackData,
 		const std::string& attackSlotId);
 	static bool IsLockedAction(PlayerActionState actionState);
 	static bool IsActionFinished(const StateComponent& state);
 	static int CalculateAttackTotalFrames(const CharacterAttackDataComponent* attackData, const std::string& attackSlotId);
-	static bool CanCancelAction(const StateComponent& state);
 	static CameraYFollowMode DecideCameraYFollowMode(
 		PlayerActionState nextActionState,
 		bool isGrounded,

@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Special/slot_00",
+  "displayName": "回し蹴り",
+  "attackKind": "Special",
+  "commandId": "Hadouken",
+  "usableState": "Ground",
+  "damage": 1000,
+  "hitstunFrames": 24,
+  "guardstunFrames": 16,
+  "hitReactionType": "Burst",
+  "frame": {
+    "startup": 12,
+    "active": 3,
+    "recovery": 15
+  },
+  "canAttackCancel": true,
+  "cancelSetting": {
+    "startFrame": 14,
+    "endFrame": 28,
+    "cancelTypes": ["Special"]
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 3.400,
+        "y": 5.300
+      },
+      "size": {
+        "x": 4.600,
+        "y": 3.950
+      }
+    }
+  ]
+}

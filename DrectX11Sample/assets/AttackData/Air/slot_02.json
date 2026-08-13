@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Air/slot_02",
+  "displayName": "飛び膝蹴り",
+  "attackKind": "Normal",
+  "commandId": "None",
+  "usableState": "Air",
+  "damage": 500,
+  "hitstunFrames": 15,
+  "guardstunFrames": 10,
+  "hitReactionType": "Normal",
+  "frame": {
+    "startup": 7,
+    "active": 4,
+    "recovery": 7
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 0.750,
+        "y": 2.450
+      },
+      "size": {
+        "x": 3.900,
+        "y": 3.250
+      }
+    }
+  ]
+}

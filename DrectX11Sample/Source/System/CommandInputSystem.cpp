@@ -516,8 +516,6 @@ bool CommandInputSystem::IsAttackUsableInState(AttackUsableState usableState, co
 		return state.isGrounded;
 	case AttackUsableState::Air:
 		return !state.isGrounded;
-	case AttackUsableState::Both:
-		return true;
 	default:
 		return false;
 	}

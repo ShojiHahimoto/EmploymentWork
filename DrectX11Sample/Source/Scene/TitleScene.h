@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Scene/Scene.h"
 #include "World/World.h"
@@ -25,6 +25,10 @@ private:
 	ID3D11ShaderResourceView* backgroundTexture = nullptr;
 	int width = 0;
 	int height = 0;
+	bool customizeKeyPressedLastFrame = false;
+	bool battleShortcutKeyPressedLastFrame = false;
 
 	bool WasSubmitTriggered() const;
+	bool WasCustomizeTriggered();
+	bool WasBattleShortcutTriggered();
 };

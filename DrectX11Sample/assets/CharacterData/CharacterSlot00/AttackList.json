@@ -1,59 +1,64 @@
 ﻿{
-  "characterId": "DebugPlayer",
-  "groundNormalAttackSlots": [
+  "characterId": "CharacterSlot00",
+  "groundAttackSlots": [
     {
       "slotId": "AttackA",
       "button": "AttackA",
-      "attackDataId": "debug_punch"
+      "attackDataId": "Ground/slot_02"
     },
     {
       "slotId": "AttackB",
       "button": "AttackB",
-      "attackDataId": "debug_front_kick"
+      "attackDataId": "Ground/slot_03"
     },
     {
       "slotId": "AttackX",
       "button": "AttackX",
-      "attackDataId": "debug_hard_punch"
+      "attackDataId": "Ground/slot_00"
     },
     {
       "slotId": "AttackY",
       "button": "AttackY",
-      "attackDataId": "debug_roundhouse_kick"
+      "attackDataId": "Ground/slot_01"
     }
   ],
-  "airNormalAttackSlots": [
+  "airAttackSlots": [
     {
       "slotId": "AirAttackA",
       "button": "AttackA",
-      "attackDataId": "debug_air_punch"
+      "attackDataId": "Air/slot_02"
     },
     {
       "slotId": "AirAttackB",
       "button": "AttackB",
-      "attackDataId": "debug_air_kick"
+      "attackDataId": "Air/slot_03"
     },
     {
       "slotId": "AirAttackX",
       "button": "AttackX",
-      "attackDataId": "debug_hard_air_punch"
+      "attackDataId": "Air/slot_00"
     },
     {
       "slotId": "AirAttackY",
       "button": "AttackY",
-      "attackDataId": "debug_hard_air_kick"
+      "attackDataId": "Air/slot_01"
     }
   ],
   "specialAttackSlots": [
     {
       "slotId": "SpecialA",
       "button": "AttackA",
-      "attackDataId": "debug_special_attack"
+      "attackDataId": "Special/slot_00"
     },
     {
-      "slotId": "SpecialB",
-      "button": "AttackB",
-      "attackDataId": "debug_special_upper"
+      "slotId": "SpecialX",
+      "button": "AttackX",
+      "attackDataId": "Special/slot_01"
+    },
+    {
+      "slotId": "SpecialY",
+      "button": "AttackY",
+      "attackDataId": "Special/slot_02"
     }
   ]
 }

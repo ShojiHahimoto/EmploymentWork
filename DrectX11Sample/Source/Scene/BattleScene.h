@@ -3,6 +3,7 @@
 #include "Scene/Scene.h"
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
+#include "Data/BattleSetupData.h"
 #include "System/Renderer.h"
 #include "System/DebugCameraControlSystem.h"
 #include "World/World.h"
@@ -11,6 +12,7 @@ class BattleScene : public Scene
 {
 public:
 	BattleScene(int initialWidth, int initialHeight);
+	BattleScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& battleSetupData);
 	~BattleScene() override = default;
 
 	void Enter() override;
@@ -24,6 +26,7 @@ public:
 
 private:
 	World world;
+	BattleSetup::BattleSetupData setupData;
 	int width;
 	int height;
 	ID3D11ShaderResourceView* hudNumberTexture = nullptr;

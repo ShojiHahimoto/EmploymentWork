@@ -1,0 +1,39 @@
+﻿{
+  "characterId": "CharacterSlot00",
+  "characterName": "ジョージ",
+  "parameters": {
+    "forwardWalkSpeed": 0.140,
+    "backwardWalkSpeed": 0.120,
+    "jumpInitialVelocity": 1.020,
+    "frontJumpHorizontalVelocity": 0.150,
+    "backJumpHorizontalVelocity": -0.130,
+    "riseGravityPerFrame": -0.045,
+    "fallGravityPerFrame": -0.040,
+    "maxHp": 10000,
+    "modelScale": {
+      "x": 0.050,
+      "y": 0.050,
+      "z": 0.050
+    },
+    "pushBox": {
+      "offset": {
+        "x": -0.150,
+        "y": 4.500
+      },
+      "size": {
+        "x": 2.000,
+        "y": 8.500
+      }
+    },
+    "hurtBox": {
+      "offset": {
+        "x": -0.150,
+        "y": 4.500
+      },
+      "size": {
+        "x": 1.500,
+        "y": 8.000
+      }
+    }
+  }
+}

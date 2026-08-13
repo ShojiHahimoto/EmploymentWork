@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Ground/slot_02",
+  "displayName": "ローキック",
+  "attackKind": "Normal",
+  "commandId": "None",
+  "usableState": "Ground",
+  "damage": 300,
+  "hitstunFrames": 14,
+  "guardstunFrames": 12,
+  "hitReactionType": "Down",
+  "frame": {
+    "startup": 5,
+    "active": 2,
+    "recovery": 12
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 3.100,
+        "y": 1.900
+      },
+      "size": {
+        "x": 2.650,
+        "y": 2.700
+      }
+    }
+  ]
+}

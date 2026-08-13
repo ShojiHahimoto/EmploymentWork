@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Air/slot_01",
+  "displayName": "脳天パンチ",
+  "attackKind": "Normal",
+  "commandId": "None",
+  "usableState": "Air",
+  "damage": 800,
+  "hitstunFrames": 20,
+  "guardstunFrames": 15,
+  "hitReactionType": "Normal",
+  "frame": {
+    "startup": 10,
+    "active": 5,
+    "recovery": 10
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.500,
+        "y": 4.000
+      },
+      "size": {
+        "x": 2.000,
+        "y": 2.000
+      }
+    }
+  ]
+}

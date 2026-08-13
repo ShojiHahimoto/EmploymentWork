@@ -1,5 +1,6 @@
 ﻿#include "Scene/BattleScene.h"
 
+#include "Component/BattleCameraFollowComponent.h"
 #include "Component/BattleTimerComponent.h"
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/HealthGaugeComponent.h"
@@ -24,6 +25,7 @@
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
+#include "System/PlayerInvincibilitySystem.h"
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
@@ -42,7 +44,21 @@ using namespace DirectX::SimpleMath;
 /// <param name="initialWidth">初期ウィンドウ幅。</param>
 /// <param name="initialHeight">初期ウィンドウ高さ。</param>
 BattleScene::BattleScene(int initialWidth, int initialHeight)
-	: width(initialWidth)
+	: setupData(BattleSetup::CreateDefaultBattleSetupData())
+	, width(initialWidth)
+	, height(initialHeight)
+{
+}
+
+/// <summary>
+/// BattleScene を現在の描画サイズとバトル開始設定で初期化する。
+/// </summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
+/// <param name="battleSetupData">1P/2Pの入力デバイスとキャラ選択情報。</param>
+BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& battleSetupData)
+	: setupData(battleSetupData)
+	, width(initialWidth)
 	, height(initialHeight)
 {
 }
@@ -52,9 +68,11 @@ BattleScene::BattleScene(int initialWidth, int initialHeight)
 /// </summary>
 void BattleScene::Enter()
 {
+	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
+	world.AddComponent<BattleCameraFollowComponent>(cameraId);
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
 	if (cameraTransform)
 	{
@@ -81,13 +99,15 @@ void BattleScene::Enter()
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
 		Vector3(-4.0f, 0.0f, 8.0f),
-		Vector3(0.0f, 0.0f, 0.0f));
+		Vector3(0.0f, 0.0f, 0.0f),
+		setupData.players[0].characterFolderPath);
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer2,
 		"DebugPlayer2",
 		Vector3(4.0f, 0.0f, 8.0f),
-		Vector3(0.0f, 0.0f, 0.0f));
+		Vector3(0.0f, 0.0f, 0.0f),
+		setupData.players[1].characterFolderPath);
 
 	world.RequestSpawn(
 		SpawnType::DebugCube,
@@ -136,9 +156,11 @@ void BattleScene::RunSystems()
 	MovementSystem::Update(world);
 	BattleCameraSystem::Update(world);
 	EmbedResolveSystem::Update(world);
+	PlayerInvincibilitySystem::Update(world);
 	HitCollisionSystem::Update(world);
 	HitResolveSystem::Update(world);
 	HitReactionSystem::Update(world);
+	PlayerInvincibilitySystem::Update(world);
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
@@ -437,6 +459,7 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 	constexpr float DebugBoxDepth = 0.08f;
 	const Color pushBoxColor(1.0f, 1.0f, 1.0f, 0.28f);
 	const Color hurtBoxColor(0.0f, 1.0f, 0.2f, 0.28f);
+	const Color invincibleHurtBoxColor(1.0f, 0.9f, 0.0f, 0.30f);
 	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.32f);
 
 	auto drawRect = [&renderer](const Vector3& basePosition, const HitBoxRect2D& rect, FacingDirection facingDirection, const Color& color)
@@ -471,16 +494,6 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 		return nullptr;
 	};
 
-	auto isAttackActive = [](const AttackFrameData& frame, int actionFrame)
-	{
-		const int activeStartFrame = std::max(0, frame.startup);
-		const int activeFrameCount = std::max(0, frame.active);
-		const int activeEndFrame = activeStartFrame + activeFrameCount;
-		return activeFrameCount > 0
-			&& actionFrame >= activeStartFrame
-			&& actionFrame < activeEndFrame;
-	};
-
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.tag != GameObjectTag::Player)
@@ -497,7 +510,8 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 		}
 
 		const Vector3 basePosition = TransformSystem::GetWorldPosition(*transform);
-		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, hurtBoxColor);
+		const Color& currentHurtBoxColor = state->isInvincible ? invincibleHurtBoxColor : hurtBoxColor;
+		drawRect(basePosition, hitBox->hurtBox, state->facingDirection, currentHurtBoxColor);
 		drawRect(basePosition, hitBox->pushBox, state->facingDirection, pushBoxColor);
 
 		const bool isAttackState = state->currentActionState == PlayerActionState::GroundAttack
@@ -519,7 +533,7 @@ void BattleScene::DrawDebugHitBoxes(Renderer& renderer)
 			continue;
 		}
 
-		if (!isAttackActive(assignedAttack->attack.frame, state->actionFrame))
+		if (!IsAttackFrameActive(assignedAttack->attack.frame, state->actionFrame))
 		{
 			continue;
 		}

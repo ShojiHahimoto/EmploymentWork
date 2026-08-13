@@ -73,8 +73,7 @@ namespace
 			&& (state->currentActionState == PlayerActionState::Hitstun
 				|| state->currentActionState == PlayerActionState::Guardstun
 				|| state->currentActionState == PlayerActionState::AirHitstun
-				|| state->currentActionState == PlayerActionState::Down
-				|| state->currentActionState == PlayerActionState::WakeUp);
+				|| state->currentActionState == PlayerActionState::Down);
 	}
 
 	/// <summary>

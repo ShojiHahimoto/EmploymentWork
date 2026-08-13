@@ -80,18 +80,10 @@ namespace
 	/// 防御側が現在攻撃を受け付ける状態か確認する。
 	/// </summary>
 	/// <param name="state">防御側の StateComponent。</param>
-	/// <returns>ダウン、起き上がり、着地済み AirHitstun でなければ true。</returns>
+	/// <returns>無敵状態でなければ true。</returns>
 	bool CanDefenderReceiveAttack(const StateComponent& state)
 	{
-		if (state.currentActionState == PlayerActionState::Down
-			|| state.currentActionState == PlayerActionState::WakeUp)
-		{
-			return false;
-		}
-
-		// Burst 系で地面に着いたフレームは、この後 HitReactionSystem が Down へ変える。
-		// その 1 フレームだけ追撃できてしまう事故を防ぐため、接地済み AirHitstun は攻撃対象から外す。
-		return !(state.currentActionState == PlayerActionState::AirHitstun && state.isGrounded);
+		return !state.isInvincible;
 	}
 
 	/// <summary>
@@ -113,22 +105,6 @@ namespace
 		}
 
 		return nullptr;
-	}
-
-	/// <summary>
-	/// 技全体の frame 設定から、現在フレームが攻撃判定の持続中か確認する。
-	/// </summary>
-	/// <param name="frame">技の発生、持続、後隙フレーム。</param>
-	/// <param name="actionFrame">攻撃ボタンを押したフレームを 0 とする経過フレーム。</param>
-	/// <returns>startup 以上、startup + active 未満なら true。</returns>
-	bool IsAttackActive(const AttackFrameData& frame, int actionFrame)
-	{
-		const int activeStartFrame = std::max(0, frame.startup);
-		const int activeFrameCount = std::max(0, frame.active);
-		const int activeEndFrame = activeStartFrame + activeFrameCount;
-		return activeFrameCount > 0
-			&& actionFrame >= activeStartFrame
-			&& actionFrame < activeEndFrame;
 	}
 
 	/// <summary>
@@ -183,7 +159,7 @@ namespace
 			defenderHitBox->hurtBox.offset,
 			defenderHitBox->hurtBox.size);
 
-		if (!IsAttackActive(assignedAttack.attack.frame, attackerState->actionFrame))
+		if (!IsAttackFrameActive(assignedAttack.attack.frame, attackerState->actionFrame))
 		{
 			return false;
 		}
@@ -216,7 +192,11 @@ namespace
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
-			result.hitReactionType = assignedAttack.attack.hitReactionType;
+			result.attackUsableState = assignedAttack.attack.usableState;
+			// 空中技はリアクションタイプを持たず、常に Normal として扱う。
+			result.hitReactionType = assignedAttack.attack.usableState == AttackUsableState::Air
+				? HitReactionType::Normal
+				: assignedAttack.attack.hitReactionType;
 			result.hitboxIndex = static_cast<int>(hitboxIndex);
 			world.AddHitCollisionResult(result);
 			return true;

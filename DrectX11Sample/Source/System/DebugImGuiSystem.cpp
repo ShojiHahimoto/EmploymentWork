@@ -8,9 +8,11 @@
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
+#include "System/Debugger.h"
 #include "System/TransformSystem.h"
 
 #include <cstdint>
+#include <filesystem>
 
 #if defined(_DEBUG)
 #include "System/imgui-docking/imgui.h"
@@ -28,6 +30,42 @@ using namespace DirectX::SimpleMath;
 
 bool DebugImGuiSystem::initialized = false;
 bool DebugImGuiSystem::drawHitBoxes = true;
+
+#if defined(_DEBUG)
+namespace
+{
+	constexpr const char* JapaneseFontPath = "assets/font/static/NotoSansJP-Regular.ttf";
+	constexpr float DebugImGuiFontSize = 18.0f;
+
+	/// <summary>
+	/// ImGui に日本語グリフを含むフォントを登録し、UTF-8 の日本語文字列を表示できるようにする。
+	/// </summary>
+	/// <param name="io">フォントを登録する ImGuiIO。</param>
+	void LoadJapaneseFont(ImGuiIO& io)
+	{
+		if (!std::filesystem::exists(JapaneseFontPath))
+		{
+			DebugLog("[DebugImGui] Japanese font not found. Path=", JapaneseFontPath);
+			io.Fonts->AddFontDefault();
+			return;
+		}
+
+		ImFont* japaneseFont = io.Fonts->AddFontFromFileTTF(
+			JapaneseFontPath,
+			DebugImGuiFontSize,
+			nullptr,
+			io.Fonts->GetGlyphRangesJapanese());
+		if (!japaneseFont)
+		{
+			DebugLog("[DebugImGui] Japanese font load failed. Path=", JapaneseFontPath);
+			io.Fonts->AddFontDefault();
+			return;
+		}
+
+		io.FontDefault = japaneseFont;
+	}
+}
+#endif
 
 /// <summary>
 /// Debug ビルド用の ImGui コンテキストと Win32 / DirectX11 バックエンドを初期化する。
@@ -56,6 +94,7 @@ bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11Devic
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	LoadJapaneseFont(io);
 
 	ImGui::StyleColorsDark();
 
@@ -178,6 +217,10 @@ bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wPa
 	case WM_SYSKEYDOWN:
 	case WM_SYSKEYUP:
 	case WM_CHAR:
+		// 全角入力は ImGui backend が IME 確定文字を処理する。
+		// ここで通すと Application 側の DefWindowProcW でも処理され、同じ文字が二重入力されることがある。
+	case WM_IME_COMPOSITION:
+	case WM_IME_CHAR:
 		return io.WantCaptureKeyboard;
 
 	default:
@@ -470,7 +513,7 @@ void DebugImGuiSystem::DrawHitBoxDebugWindow()
 	}
 
 	ImGui::SetNextWindowPos(ImVec2(460.0f, 190.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(260.0f, 130.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300.0f, 150.0f), ImGuiCond_FirstUseEver);
 
 	if (ImGui::Begin("HitBox Debug"))
 	{
@@ -482,6 +525,9 @@ void DebugImGuiSystem::DrawHitBoxDebugWindow()
 		ImGui::Text("HurtBox");
 		ImGui::SameLine();
 		ImGui::ColorButton("HurtBoxColor", ImVec4(0.0f, 1.0f, 0.2f, 0.28f), ImGuiColorEditFlags_NoTooltip);
+		ImGui::Text("Invincible HurtBox");
+		ImGui::SameLine();
+		ImGui::ColorButton("InvincibleHurtBoxColor", ImVec4(1.0f, 0.9f, 0.0f, 0.30f), ImGuiColorEditFlags_NoTooltip);
 		ImGui::Text("AttackBox");
 		ImGui::SameLine();
 		ImGui::ColorButton("AttackBoxColor", ImVec4(1.0f, 0.0f, 0.0f, 0.32f), ImGuiColorEditFlags_NoTooltip);

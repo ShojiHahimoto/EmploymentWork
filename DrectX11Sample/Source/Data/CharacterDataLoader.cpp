@@ -5,11 +5,107 @@
 
 #include <filesystem>
 #include <fstream>
+#include <vector>
 #include <sstream>
 
 namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
+
+	/// <summary>
+	/// パス末尾が .json でない場合だけ .json を補う。
+	/// </summary>
+	/// <param name="path">確認するパス。</param>
+	/// <returns>.json 拡張子を持つパス。</returns>
+	std::filesystem::path WithJsonExtension(const std::filesystem::path& path)
+	{
+		std::filesystem::path result = path;
+		if (result.extension() != ".json")
+		{
+			result += ".json";
+		}
+
+		return result;
+	}
+
+	/// <summary>
+	/// AttackList.json の attackDataId から実際に読む JSON パスを解決する。
+	/// </summary>
+	/// <param name="attackDataId">AttackData ID、または assets/AttackData からの相対パス。</param>
+	/// <param name="outPath">見つかった JSON パスの書き込み先。</param>
+	/// <returns>読み込み対象ファイルが一意に見つかった場合は true。</returns>
+	bool ResolveAttackDataPath(const std::string& attackDataId, std::filesystem::path& outPath)
+	{
+		if (attackDataId.empty())
+		{
+			return false;
+		}
+
+		const std::filesystem::path requestedPath = WithJsonExtension(std::filesystem::path(attackDataId));
+		const std::filesystem::path rootPath(AttackDataRootPath);
+		std::vector<std::filesystem::path> candidatePaths;
+
+		if (requestedPath.is_absolute())
+		{
+			candidatePaths.push_back(requestedPath);
+		}
+		else
+		{
+			// "assets/AttackData/Ground/slot_00.json" のように書かれている場合をそのまま試す。
+			candidatePaths.push_back(requestedPath);
+			// "debug_punch" や "Ground/slot_00" のような AttackData ルート基準 ID を試す。
+			candidatePaths.push_back(rootPath / requestedPath);
+		}
+
+		for (const std::filesystem::path& candidatePath : candidatePaths)
+		{
+			std::error_code errorCode;
+			if (std::filesystem::is_regular_file(candidatePath, errorCode))
+			{
+				outPath = candidatePath;
+				return true;
+			}
+		}
+
+		if (requestedPath.has_parent_path())
+		{
+			return false;
+		}
+
+		std::vector<std::filesystem::path> matchedPaths;
+		std::error_code errorCode;
+		for (const std::filesystem::directory_entry& entry :
+			std::filesystem::recursive_directory_iterator(rootPath, errorCode))
+		{
+			if (errorCode)
+			{
+				break;
+			}
+
+			if (!entry.is_regular_file(errorCode))
+			{
+				continue;
+			}
+
+			if (entry.path().filename() == requestedPath.filename())
+			{
+				matchedPaths.push_back(entry.path());
+			}
+		}
+
+		if (matchedPaths.size() == 1)
+		{
+			outPath = matchedPaths.front();
+			return true;
+		}
+
+		if (matchedPaths.size() > 1)
+		{
+			DebugLog("[CharacterData] AttackData ID is ambiguous. Id=", attackDataId);
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// テキストファイルを読み込み、文字列として返す。
@@ -112,6 +208,19 @@ namespace
 	{
 		const JsonValue* value = object.Find(key);
 		return value && value->IsNumber() ? static_cast<float>(value->AsNumber(defaultValue)) : defaultValue;
+	}
+
+	/// <summary>
+	/// Object から bool 値を取得し、存在しない場合は既定値を返す。
+	/// </summary>
+	/// <param name="object">参照する JSON Object。</param>
+	/// <param name="key">取得するキー。</param>
+	/// <param name="defaultValue">キーがない場合の既定値。</param>
+	/// <returns>取得した bool 値または既定値。</returns>
+	bool GetBool(const JsonValue& object, const std::string& key, bool defaultValue)
+	{
+		const JsonValue* value = object.Find(key);
+		return value && value->IsBool() ? value->AsBool(defaultValue) : defaultValue;
 	}
 
 	/// <summary>
@@ -250,10 +359,6 @@ namespace
 		{
 			return AttackUsableState::Air;
 		}
-		if (text == "Both")
-		{
-			return AttackUsableState::Both;
-		}
 		return AttackUsableState::Unknown;
 	}
 
@@ -322,15 +427,13 @@ namespace
 	{
 		switch (state)
 		{
-		case AttackUsableState::Ground:
-			return "Ground";
-		case AttackUsableState::Air:
-			return "Air";
-		case AttackUsableState::Both:
-			return "Both";
-		default:
-			return "Unknown";
-		}
+	case AttackUsableState::Ground:
+		return "Ground";
+	case AttackUsableState::Air:
+		return "Air";
+	default:
+		return "Unknown";
+	}
 	}
 
 	/// <summary>
@@ -350,8 +453,7 @@ namespace
 			return false;
 		}
 
-		if (slot.slotUsableState == AttackUsableState::Both
-			|| slot.slotUsableState == AttackUsableState::Unknown)
+		if (slot.slotUsableState == AttackUsableState::Unknown)
 		{
 			return true;
 		}
@@ -367,7 +469,7 @@ namespace
 	void LoadParameterFromJson(const JsonValue& root, CharacterParameterData& parameter)
 	{
 		parameter.characterId = GetString(root, "characterId", parameter.characterId);
-		parameter.displayName = GetString(root, "displayName", parameter.displayName);
+		parameter.characterName = GetString(root, "characterName", GetString(root, "displayName", parameter.characterName));
 
 		const JsonValue* parameters = root.Find("parameters");
 		const JsonValue& source = parameters && parameters->IsObject() ? *parameters : root;
@@ -450,15 +552,32 @@ namespace
 	void LoadAttackSlotsFromJson(const JsonValue& root, std::vector<CharacterAttackSlotData>& outSlots)
 	{
 		outSlots.clear();
-		AppendAttackSlotsFromJsonArray(root, "groundNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "airNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
-		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, AttackUsableState::Both, outSlots);
+
+		const size_t beforeGroundSlots = outSlots.size();
+		AppendAttackSlotsFromJsonArray(root, "groundAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		if (outSlots.size() == beforeGroundSlots)
+		{
+			AppendAttackSlotsFromJsonArray(root, "groundNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		}
+
+		const size_t beforeAirSlots = outSlots.size();
+		AppendAttackSlotsFromJsonArray(root, "airAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
+		if (outSlots.size() == beforeAirSlots)
+		{
+			AppendAttackSlotsFromJsonArray(root, "airNormalAttackSlots", AttackSlotType::Normal, AttackUsableState::Air, outSlots);
+		}
+
+		if (outSlots.empty())
+		{
+			AppendAttackSlotsFromJsonArray(root, "normalAttackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
+		}
+
+		AppendAttackSlotsFromJsonArray(root, "specialAttackSlots", AttackSlotType::Special, AttackUsableState::Unknown, outSlots);
 
 		// 旧形式互換。attackSlots しかない場合は通常攻撃スロットとして扱う。
 		if (outSlots.empty())
 		{
-			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, AttackUsableState::Both, outSlots);
+			AppendAttackSlotsFromJsonArray(root, "attackSlots", AttackSlotType::Normal, AttackUsableState::Ground, outSlots);
 		}
 	}
 
@@ -477,43 +596,65 @@ namespace
 	}
 
 	/// <summary>
-	/// AttackData JSON からキャンセル可能フレーム情報を読み込む。
+	/// JSON Object から単数のキャンセル設定を読み込む。
+	/// </summary>
+	/// <param name="source">startFrame / endFrame / cancelTypes を含む JSON Object。</param>
+	/// <param name="outCancelSetting">読み込んだキャンセル設定の書き込み先。</param>
+	void LoadCancelSettingObject(const JsonValue& source, AttackCancelSettingData& outCancelSetting)
+	{
+		outCancelSetting.startFrame = GetInt(source, "startFrame", outCancelSetting.startFrame);
+		outCancelSetting.endFrame = GetInt(source, "endFrame", outCancelSetting.endFrame);
+		outCancelSetting.cancelTypes.clear();
+
+		const JsonValue* cancelTypes = source.Find("cancelTypes");
+		if (cancelTypes && cancelTypes->IsArray())
+		{
+			for (const JsonValue& cancelTypeValue : cancelTypes->AsArray())
+			{
+				if (cancelTypeValue.IsString())
+				{
+					outCancelSetting.cancelTypes.push_back(ParseCancelType(cancelTypeValue.AsString()));
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// AttackData JSON からキャンセル設定を読み込む。
 	/// </summary>
 	/// <param name="root">AttackData JSON の root Object。</param>
-	/// <param name="outCancelWindows">読み込んだキャンセル情報の書き込み先。</param>
-	void LoadCancelWindowsFromJson(const JsonValue& root, std::vector<AttackCancelWindowData>& outCancelWindows)
+	/// <param name="outAttackData">読み込んだキャンセル設定を書き込む AttackData。</param>
+	void LoadCancelSettingFromJson(const JsonValue& root, AttackData& outAttackData)
 	{
-		outCancelWindows.clear();
-		const JsonValue* cancelWindows = root.Find("cancelWindows");
-		if (!cancelWindows || !cancelWindows->IsArray())
+		outAttackData.canAttackCancel = GetBool(root, "canAttackCancel", outAttackData.canAttackCancel);
+
+		const JsonValue* cancelSetting = root.Find("cancelSetting");
+		if (cancelSetting && cancelSetting->IsObject())
+		{
+			LoadCancelSettingObject(*cancelSetting, outAttackData.cancelSetting);
+			return;
+		}
+
+		// 旧 JSON 互換。配列形式が残っている場合は先頭 1 件だけ単数設定へ移す。
+		const JsonValue* cancelSettings = root.Find("cancelSettings");
+		if (!cancelSettings || !cancelSettings->IsArray())
+		{
+			cancelSettings = root.Find("cancelWindows");
+		}
+
+		if (!cancelSettings || !cancelSettings->IsArray())
 		{
 			return;
 		}
 
-		for (const JsonValue& windowValue : cancelWindows->AsArray())
+		for (const JsonValue& settingValue : cancelSettings->AsArray())
 		{
-			if (!windowValue.IsObject())
+			if (settingValue.IsObject())
 			{
-				continue;
+				LoadCancelSettingObject(settingValue, outAttackData.cancelSetting);
+				outAttackData.canAttackCancel = true;
+				return;
 			}
-
-			AttackCancelWindowData cancelWindow;
-			cancelWindow.startFrame = GetInt(windowValue, "startFrame", cancelWindow.startFrame);
-			cancelWindow.endFrame = GetInt(windowValue, "endFrame", cancelWindow.endFrame);
-
-			const JsonValue* cancelTypes = windowValue.Find("cancelTypes");
-			if (cancelTypes && cancelTypes->IsArray())
-			{
-				for (const JsonValue& cancelTypeValue : cancelTypes->AsArray())
-				{
-					if (cancelTypeValue.IsString())
-					{
-						cancelWindow.cancelTypes.push_back(ParseCancelType(cancelTypeValue.AsString()));
-					}
-				}
-			}
-
-			outCancelWindows.push_back(cancelWindow);
 		}
 	}
 
@@ -620,7 +761,7 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 
 	DebugLog(
 		"[CharacterData] Load result. Character=",
-		outCharacterData.parameter.displayName,
+		outCharacterData.parameter.characterName,
 		" Attacks=",
 		outCharacterData.attacks.size());
 	return loaded;
@@ -628,7 +769,12 @@ bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPa
 
 bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, AttackData& outAttackData)
 {
-	const std::filesystem::path attackPath = std::filesystem::path(AttackDataRootPath) / (attackDataId + ".json");
+	std::filesystem::path attackPath;
+	if (!ResolveAttackDataPath(attackDataId, attackPath))
+	{
+		DebugLog("[CharacterData] AttackData file not found. Id=", attackDataId);
+		return false;
+	}
 
 	JsonValue root;
 	if (!ReadJsonFile(attackPath, root))
@@ -643,10 +789,18 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.guardstunFrames = GetInt(root, "guardstunFrames", outAttackData.hitstunFrames);
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
-	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
+	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Ground"));
+	if (outAttackData.usableState == AttackUsableState::Unknown)
+	{
+		outAttackData.usableState = AttackUsableState::Ground;
+	}
 	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
+	if (outAttackData.usableState == AttackUsableState::Air)
+	{
+		outAttackData.hitReactionType = HitReactionType::Normal;
+	}
 	LoadAttackFrameFromJson(root, outAttackData.frame);
-	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
+	LoadCancelSettingFromJson(root, outAttackData);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);
 	return true;
 }

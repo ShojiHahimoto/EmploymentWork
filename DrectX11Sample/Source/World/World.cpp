@@ -200,13 +200,20 @@ bool World::HasActiveCamera() const
 /// <param name="name">生成する GameObject の表示名。空の場合は既定名を使う。</param>
 /// <param name="position">生成時のローカル座標。</param>
 /// <param name="rotationDegrees">生成時のローカル回転角度。</param>
-void World::RequestSpawn(SpawnType type, const std::string& name, const DirectX::SimpleMath::Vector3& position, const DirectX::SimpleMath::Vector3& rotationDegrees)
+/// <param name="characterFolderPath">Player 生成時に読み込む CharacterData フォルダパス。</param>
+void World::RequestSpawn(
+	SpawnType type,
+	const std::string& name,
+	const DirectX::SimpleMath::Vector3& position,
+	const DirectX::SimpleMath::Vector3& rotationDegrees,
+	const std::string& characterFolderPath)
 {
 	SpawnRequest request;
 	request.type = type;
 	request.name = name.empty() ? "GameObject" : name;
 	request.position = position;
 	request.rotationDegrees = rotationDegrees;
+	request.characterFolderPath = characterFolderPath;
 	spawnRequests.push_back(request);
 }
 

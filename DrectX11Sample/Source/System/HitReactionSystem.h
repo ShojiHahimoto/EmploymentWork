@@ -20,6 +20,7 @@ public:
 private:
 	static void ApplyReactionRequest(World& world, const HitReactionRequest& request);
 	static void ApplyNormalBack(World& world, const HitReactionRequest& request, float backDistance);
+	static void ApplyCornerAttackerBack(World& world, const HitReactionRequest& request, float backDistance);
 	static void ApplyDown(World& world, GameObjectId defenderId, int downFrames);
 	static void ApplyAirBurst(
 		World& world,
