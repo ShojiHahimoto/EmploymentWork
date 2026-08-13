@@ -12,23 +12,22 @@
     "active": 4,
     "recovery": 16
   },
-  "cancelWindows": [
-    {
-      "startFrame": 16,
-      "endFrame": 18,
-      "cancelTypes": [
-        "Special"
-      ]
-    }
-  ],
+  "canAttackCancel": true,
+  "cancelSetting": {
+    "startFrame": 16,
+    "endFrame": 18,
+    "cancelTypes": [
+      "S"
+    ]
+  },
   "hitboxes": [
     {
       "offset": {
-        "x": 3.0,
+        "x": 3,
         "y": 4.7
       },
       "size": {
-        "x": 3.0,
+        "x": 3,
         "y": 2.1
       }
     }

@@ -490,6 +490,9 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - AttackData 編集中はメモリ上の draft を変更し、Save 操作時だけ JSON へ書き戻す
 - AttackData の保存先は `assets/AttackData/<Category>/slot_XX.json` を基準とする
 - AttackDataSaver は CharacterDataLoader が読み込める JSON 形式を維持する
+- スロット一覧は保存済み AttackData の表示名を見せ、手動保存した JSON も選びやすくする
+- AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
+- キャンセル設定は `canAttackCancel` で有効/無効を切り替える。有効フラグを OFF にしても編集中 draft の `cancelSetting` は消さず、再度 ON にした時に直前編集内容を復元する
 - 技プレビューは段階的に実装し、現段階では静止モデル、現在フレーム操作、active フレーム中の AttackBox 表示だけを扱う
 - プレビューの Play / Stop / 1F 操作は、表示上だけ `0F = 攻撃ボタンを押す前の Idle`、`1F = 攻撃ボタンを押したフレーム` として扱う
 - AttackData とバトル内部処理は 0 始まりを維持し、プレビュー表示フレームから 1 を引いた値を内部 actionFrame 相当として使う

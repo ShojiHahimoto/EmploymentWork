@@ -12,15 +12,14 @@
     "active": 5,
     "recovery": 18
   },
-  "cancelWindows": [
-    {
-      "startFrame": 15,
-      "endFrame": 20,
-      "cancelTypes": [
-        "Special"
-      ]
-    }
-  ],
+  "canAttackCancel": true,
+  "cancelSetting": {
+    "startFrame": 15,
+    "endFrame": 20,
+    "cancelTypes": [
+      "S"
+    ]
+  },
   "hitboxes": [
     {
       "offset": {

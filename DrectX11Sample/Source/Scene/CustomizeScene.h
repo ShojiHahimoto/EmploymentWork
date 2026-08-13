@@ -25,6 +25,15 @@ enum class CustomizeAttackCategory
 	Special
 };
 
+/// <summary>
+/// 技スロット一覧に表示する、保存済み AttackData の概要を保持する。
+/// </summary>
+struct CustomizeAttackSlotSummary
+{
+	bool hasSavedData = false;
+	std::string displayName;
+};
+
 class CustomizeScene : public Scene
 {
 public:
@@ -44,6 +53,7 @@ private:
 	static constexpr int GroundAttackSlotCount = 20;
 	static constexpr int AirAttackSlotCount = 20;
 	static constexpr int SpecialAttackSlotCount = 20;
+	static constexpr int MaxAttackSlotCount = 20;
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
 
@@ -58,6 +68,7 @@ private:
 	std::array<char, 128> displayNameBuffer = {};
 	std::string editingAttackDataId;
 	std::string statusMessage;
+	std::array<std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>, 3> attackSlotSummaries = {};
 	Renderer::RenderTexture previewRenderTexture;
 	CameraComponent previewCamera;
 	TransformComponent previewCameraTransform;
@@ -76,6 +87,7 @@ private:
 	void DrawAttackPreviewWindow(Renderer& renderer);
 	void DrawAttackEditorWindow();
 	void DrawHitboxEditor();
+	void DrawCancelSettingEditor();
 
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SaveDraftAttack();
@@ -95,6 +107,8 @@ private:
 	const char* GetPreviewPhaseText() const;
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
+	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
+	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
 	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex, const std::string& attackDataId) const;
 	void CopyDisplayNameToBuffer();

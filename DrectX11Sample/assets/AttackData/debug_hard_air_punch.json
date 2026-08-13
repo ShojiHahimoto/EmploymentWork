@@ -12,7 +12,12 @@
     "active": 5,
     "recovery": 16
   },
-  "cancelWindows": [],
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
   "hitboxes": [
     {
       "offset": {
@@ -20,7 +25,7 @@
         "y": 4.8
       },
       "size": {
-        "x": 3.0,
+        "x": 3,
         "y": 2.2
       }
     }

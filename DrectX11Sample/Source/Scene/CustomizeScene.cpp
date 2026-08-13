@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <iomanip>
@@ -146,6 +147,53 @@ namespace
 		attackData.frame.startup = std::max(0, attackData.frame.startup);
 		attackData.frame.active = std::max(0, attackData.frame.active);
 		attackData.frame.recovery = std::max(0, attackData.frame.recovery);
+
+		for (AttackHitboxData& hitbox : attackData.hitboxes)
+		{
+			hitbox.size.x = std::max(0.0f, hitbox.size.x);
+			hitbox.size.y = std::max(0.0f, hitbox.size.y);
+		}
+
+		attackData.cancelSetting.startFrame = std::max(0, attackData.cancelSetting.startFrame);
+		attackData.cancelSetting.endFrame = std::max(attackData.cancelSetting.startFrame, attackData.cancelSetting.endFrame);
+		attackData.cancelSetting.cancelTypes.erase(
+			std::remove(attackData.cancelSetting.cancelTypes.begin(), attackData.cancelSetting.cancelTypes.end(), AttackCancelType::Unknown),
+			attackData.cancelSetting.cancelTypes.end());
+	}
+
+	/// <summary>
+	/// 指定したキャンセル種別がキャンセル設定に含まれているか確認する。
+	/// </summary>
+	/// <param name="cancelTypes">確認対象のキャンセル種別配列。</param>
+	/// <param name="cancelType">探すキャンセル種別。</param>
+	/// <returns>含まれている場合は true。</returns>
+	bool HasCancelType(const std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType)
+	{
+		return std::find(cancelTypes.begin(), cancelTypes.end(), cancelType) != cancelTypes.end();
+	}
+
+	/// <summary>
+	/// ImGui のチェック状態に合わせて、キャンセル種別を追加または削除する。
+	/// </summary>
+	/// <param name="cancelTypes">編集するキャンセル種別配列。</param>
+	/// <param name="cancelType">切り替えるキャンセル種別。</param>
+	/// <param name="enabled">true なら追加、false なら削除する。</param>
+	void SetCancelTypeEnabled(std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType, bool enabled)
+	{
+		const auto found = std::find(cancelTypes.begin(), cancelTypes.end(), cancelType);
+		if (enabled)
+		{
+			if (found == cancelTypes.end())
+			{
+				cancelTypes.push_back(cancelType);
+			}
+			return;
+		}
+
+		if (found != cancelTypes.end())
+		{
+			cancelTypes.erase(found);
+		}
 	}
 }
 
@@ -348,6 +396,7 @@ void CustomizeScene::DrawAttackCategorySelect()
 			if (ImGui::Button(CategoryLabels[index], ImVec2(220.0f, 32.0f)))
 			{
 				selectedCategory = static_cast<CustomizeAttackCategory>(index);
+				RefreshAttackSlotSummaries(selectedCategory);
 				mode = CustomizeMode::AttackSlotSelect;
 			}
 			ImGui::PopID();
@@ -374,13 +423,18 @@ void CustomizeScene::DrawAttackSlotSelect()
 		ImGui::Text("Category: %s", CategoryLabels[ToCategoryIndex(selectedCategory)]);
 		ImGui::Separator();
 
+		if (ImGui::Button("Refresh Slot Names", ImVec2(160.0f, 28.0f)))
+		{
+			RefreshAttackSlotSummaries(selectedCategory);
+		}
+		ImGui::Separator();
+
 		const int slotCount = GetAttackSlotCount(selectedCategory);
 		for (int slotIndex = 0; slotIndex < slotCount; ++slotIndex)
 		{
 			ImGui::PushID(slotIndex);
-			std::ostringstream label;
-			label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex;
-			if (ImGui::Button(label.str().c_str(), ImVec2(120.0f, 28.0f)))
+			const std::string label = BuildAttackSlotButtonLabel(selectedCategory, slotIndex);
+			if (ImGui::Button(label.c_str(), ImVec2(126.0f, 52.0f)))
 			{
 				SelectAttackSlot(selectedCategory, slotIndex);
 			}
@@ -496,7 +550,7 @@ void CustomizeScene::DrawAttackEditorWindow()
 	if (ImGui::Begin("Attack Parameters"))
 	{
 		ImGui::Text("Slot: %s", editingAttackDataId.c_str());
-		ImGui::InputText("Display Name", displayNameBuffer.data(), displayNameBuffer.size());
+		ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
 
 		ImGui::Separator();
 		ImGui::InputInt("Damage", &draftAttack.damage);
@@ -535,6 +589,7 @@ void CustomizeScene::DrawAttackEditorWindow()
 		}
 
 		DrawHitboxEditor();
+		DrawCancelSettingEditor();
 		ClampAttackDataValues(draftAttack);
 		ClampPreviewCurrentFrame();
 
@@ -558,20 +613,94 @@ void CustomizeScene::DrawAttackEditorWindow()
 }
 
 /// <summary>
-/// 現段階で編集対象にする 1 つ目の AttackBox を描画する。
+/// 技に含まれる全 AttackBox の位置と大きさを編集する。
 /// </summary>
 void CustomizeScene::DrawHitboxEditor()
 {
-	if (draftAttack.hitboxes.empty())
+	ImGui::Separator();
+	ImGui::Text("AttackBoxes");
+
+	for (size_t index = 0; index < draftAttack.hitboxes.size();)
 	{
-		draftAttack.hitboxes.push_back(AttackHitboxData{});
+		ImGui::PushID(static_cast<int>(index));
+		AttackHitboxData& hitbox = draftAttack.hitboxes[index];
+
+		ImGui::Text("AttackBox %zu", index);
+		ImGui::DragFloat2("AttackBox Offset X / Y", &hitbox.offset.x, 0.05f);
+		ImGui::DragFloat2("AttackBox Size Width / Height", &hitbox.size.x, 0.05f, 0.0f, 100.0f);
+
+		bool deleted = false;
+		if (draftAttack.hitboxes.size() > 1
+			&& ImGui::Button("Delete AttackBox", ImVec2(150.0f, 24.0f)))
+		{
+			draftAttack.hitboxes.erase(draftAttack.hitboxes.begin() + static_cast<std::ptrdiff_t>(index));
+			deleted = true;
+		}
+
+		ImGui::PopID();
+		if (!deleted)
+		{
+			++index;
+		}
 	}
 
-	AttackHitboxData& hitbox = draftAttack.hitboxes.front();
+	if (ImGui::Button("Add AttackBox", ImVec2(150.0f, 26.0f)))
+	{
+		AttackHitboxData hitbox;
+		hitbox.offset = Vector2(2.5f, 4.0f);
+		hitbox.size = Vector2(2.0f, 2.0f);
+		draftAttack.hitboxes.push_back(hitbox);
+	}
+}
+
+/// <summary>
+/// 技のキャンセル設定として、可能フレームと許可するキャンセル種別を編集する。
+/// </summary>
+void CustomizeScene::DrawCancelSettingEditor()
+{
 	ImGui::Separator();
-	ImGui::Text("AttackBox 0");
-	ImGui::DragFloat2("Offset X / Y", &hitbox.offset.x, 0.05f);
-	ImGui::DragFloat2("Width / Height", &hitbox.size.x, 0.05f, 0.0f, 100.0f);
+	ImGui::Text("Cancel Setting");
+
+	const bool wasAttackCancelEnabled = draftAttack.canAttackCancel;
+	if (ImGui::Checkbox("Can Attack Cancel", &draftAttack.canAttackCancel)
+		&& draftAttack.canAttackCancel
+		&& !wasAttackCancelEnabled
+		&& draftAttack.cancelSetting.startFrame == 0
+		&& draftAttack.cancelSetting.endFrame == 0
+		&& draftAttack.cancelSetting.cancelTypes.empty())
+	{
+		draftAttack.cancelSetting.startFrame = std::max(0, draftAttack.frame.startup + draftAttack.frame.active);
+		draftAttack.cancelSetting.endFrame = std::max(draftAttack.cancelSetting.startFrame, GetPreviewTotalFrames() - 1);
+		draftAttack.cancelSetting.cancelTypes.push_back(AttackCancelType::Special);
+	}
+
+	if (!draftAttack.canAttackCancel)
+	{
+		ImGui::TextDisabled("Cancel setting data is kept in this draft while hidden.");
+		return;
+	}
+
+	AttackCancelSettingData& cancelSetting = draftAttack.cancelSetting;
+	ImGui::InputInt("Cancel Start Frame (Internal 0F)", &cancelSetting.startFrame);
+	ImGui::InputInt("Cancel End Frame (Internal 0F)", &cancelSetting.endFrame);
+
+	bool normalEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Normal);
+	bool specialEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Special);
+	bool jumpEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Jump);
+	if (ImGui::Checkbox("Normal Cancel", &normalEnabled))
+	{
+		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Normal, normalEnabled);
+	}
+	ImGui::SameLine();
+	if (ImGui::Checkbox("Special Cancel", &specialEnabled))
+	{
+		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Special, specialEnabled);
+	}
+	ImGui::SameLine();
+	if (ImGui::Checkbox("Jump Cancel", &jumpEnabled))
+	{
+		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Jump, jumpEnabled);
+	}
 }
 
 /// <summary>
@@ -616,6 +745,7 @@ void CustomizeScene::SaveDraftAttack()
 	SyncDraftFromEditor();
 	if (AttackDataSaver::SaveAttackData(editingAttackDataId, draftAttack))
 	{
+		RefreshAttackSlotSummaries(selectedCategory);
 		statusMessage = "Saved: assets/AttackData/" + editingAttackDataId + ".json";
 		return;
 	}
@@ -870,6 +1000,71 @@ int CustomizeScene::GetAttackSlotCount(CustomizeAttackCategory category) const
 	default:
 		return GroundAttackSlotCount;
 	}
+}
+
+/// <summary>
+/// 選択カテゴリのスロット JSON を確認し、一覧表示用の保存済み名を更新する。
+/// </summary>
+/// <param name="category">更新する技カテゴリ。</param>
+void CustomizeScene::RefreshAttackSlotSummaries(CustomizeAttackCategory category)
+{
+	const int categoryIndex = ToCategoryIndex(category);
+	const int slotCount = GetAttackSlotCount(category);
+	std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>& summaries = attackSlotSummaries[categoryIndex];
+
+	for (int slotIndex = 0; slotIndex < MaxAttackSlotCount; ++slotIndex)
+	{
+		CustomizeAttackSlotSummary& summary = summaries[slotIndex];
+		summary = CustomizeAttackSlotSummary{};
+
+		if (slotIndex >= slotCount)
+		{
+			continue;
+		}
+
+		const std::string attackDataId = BuildAttackDataId(category, slotIndex);
+		if (!std::filesystem::exists(BuildAttackDataPath(attackDataId)))
+		{
+			continue;
+		}
+
+		AttackData loadedAttack;
+		if (!CharacterDataLoader::LoadAttackData(attackDataId, loadedAttack))
+		{
+			continue;
+		}
+
+		summary.hasSavedData = true;
+		summary.displayName = loadedAttack.displayName.empty()
+			? attackDataId
+			: loadedAttack.displayName;
+	}
+}
+
+/// <summary>
+/// スロット番号と保存済み技名をまとめた、ImGui Button 用ラベルを作る。
+/// </summary>
+/// <param name="category">表示する技カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>表示名と ImGui ID を含むボタンラベル。</returns>
+std::string CustomizeScene::BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const
+{
+	std::ostringstream label;
+	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex;
+
+	const CustomizeAttackSlotSummary& summary = attackSlotSummaries[ToCategoryIndex(category)][slotIndex];
+	label << "\n";
+	if (summary.hasSavedData)
+	{
+		label << summary.displayName;
+	}
+	else
+	{
+		label << "New Attack";
+	}
+
+	label << "##attack_slot_" << ToCategoryIndex(category) << "_" << slotIndex;
+	return label.str();
 }
 
 /// <summary>

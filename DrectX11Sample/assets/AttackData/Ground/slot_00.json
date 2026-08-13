@@ -1,6 +1,6 @@
 ﻿{
   "attackDataId": "Ground/slot_00",
-  "displayName": "Ground Slot 0",
+  "displayName": "abc",
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Ground",
@@ -13,7 +13,12 @@
     "active": 3,
     "recovery": 10
   },
-  "cancelWindows": [],
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 8,
+    "endFrame": 17,
+    "cancelTypes": ["Special", "Jump"]
+  },
   "hitboxes": [
     {
       "offset": {

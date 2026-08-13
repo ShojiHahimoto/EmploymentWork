@@ -76,9 +76,9 @@ struct AttackFrameData
 };
 
 /// <summary>
-/// 特定フレーム範囲で許可されるキャンセル種別を保持する。
+/// 特定フレーム範囲で許可されるキャンセル設定を保持する。
 /// </summary>
-struct AttackCancelWindowData
+struct AttackCancelSettingData
 {
 	int startFrame = 0;
 	int endFrame = 0;
@@ -119,7 +119,9 @@ struct AttackData
 	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackFrameData frame;
-	std::vector<AttackCancelWindowData> cancelWindows;
+	// false の場合、cancelSetting の中身は保持するが対戦中のキャンセル判定には使わない。
+	bool canAttackCancel = false;
+	AttackCancelSettingData cancelSetting;
 	std::vector<AttackHitboxData> hitboxes;
 };
 

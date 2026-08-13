@@ -211,6 +211,19 @@ namespace
 	}
 
 	/// <summary>
+	/// Object から bool 値を取得し、存在しない場合は既定値を返す。
+	/// </summary>
+	/// <param name="object">参照する JSON Object。</param>
+	/// <param name="key">取得するキー。</param>
+	/// <param name="defaultValue">キーがない場合の既定値。</param>
+	/// <returns>取得した bool 値または既定値。</returns>
+	bool GetBool(const JsonValue& object, const std::string& key, bool defaultValue)
+	{
+		const JsonValue* value = object.Find(key);
+		return value && value->IsBool() ? value->AsBool(defaultValue) : defaultValue;
+	}
+
+	/// <summary>
 	/// x / y を持つ JSON Object から Vector2 を作る。
 	/// </summary>
 	/// <param name="object">x / y を含む JSON Object。</param>
@@ -573,43 +586,65 @@ namespace
 	}
 
 	/// <summary>
-	/// AttackData JSON からキャンセル可能フレーム情報を読み込む。
+	/// JSON Object から単数のキャンセル設定を読み込む。
+	/// </summary>
+	/// <param name="source">startFrame / endFrame / cancelTypes を含む JSON Object。</param>
+	/// <param name="outCancelSetting">読み込んだキャンセル設定の書き込み先。</param>
+	void LoadCancelSettingObject(const JsonValue& source, AttackCancelSettingData& outCancelSetting)
+	{
+		outCancelSetting.startFrame = GetInt(source, "startFrame", outCancelSetting.startFrame);
+		outCancelSetting.endFrame = GetInt(source, "endFrame", outCancelSetting.endFrame);
+		outCancelSetting.cancelTypes.clear();
+
+		const JsonValue* cancelTypes = source.Find("cancelTypes");
+		if (cancelTypes && cancelTypes->IsArray())
+		{
+			for (const JsonValue& cancelTypeValue : cancelTypes->AsArray())
+			{
+				if (cancelTypeValue.IsString())
+				{
+					outCancelSetting.cancelTypes.push_back(ParseCancelType(cancelTypeValue.AsString()));
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// AttackData JSON からキャンセル設定を読み込む。
 	/// </summary>
 	/// <param name="root">AttackData JSON の root Object。</param>
-	/// <param name="outCancelWindows">読み込んだキャンセル情報の書き込み先。</param>
-	void LoadCancelWindowsFromJson(const JsonValue& root, std::vector<AttackCancelWindowData>& outCancelWindows)
+	/// <param name="outAttackData">読み込んだキャンセル設定を書き込む AttackData。</param>
+	void LoadCancelSettingFromJson(const JsonValue& root, AttackData& outAttackData)
 	{
-		outCancelWindows.clear();
-		const JsonValue* cancelWindows = root.Find("cancelWindows");
-		if (!cancelWindows || !cancelWindows->IsArray())
+		outAttackData.canAttackCancel = GetBool(root, "canAttackCancel", outAttackData.canAttackCancel);
+
+		const JsonValue* cancelSetting = root.Find("cancelSetting");
+		if (cancelSetting && cancelSetting->IsObject())
+		{
+			LoadCancelSettingObject(*cancelSetting, outAttackData.cancelSetting);
+			return;
+		}
+
+		// 旧 JSON 互換。配列形式が残っている場合は先頭 1 件だけ単数設定へ移す。
+		const JsonValue* cancelSettings = root.Find("cancelSettings");
+		if (!cancelSettings || !cancelSettings->IsArray())
+		{
+			cancelSettings = root.Find("cancelWindows");
+		}
+
+		if (!cancelSettings || !cancelSettings->IsArray())
 		{
 			return;
 		}
 
-		for (const JsonValue& windowValue : cancelWindows->AsArray())
+		for (const JsonValue& settingValue : cancelSettings->AsArray())
 		{
-			if (!windowValue.IsObject())
+			if (settingValue.IsObject())
 			{
-				continue;
+				LoadCancelSettingObject(settingValue, outAttackData.cancelSetting);
+				outAttackData.canAttackCancel = true;
+				return;
 			}
-
-			AttackCancelWindowData cancelWindow;
-			cancelWindow.startFrame = GetInt(windowValue, "startFrame", cancelWindow.startFrame);
-			cancelWindow.endFrame = GetInt(windowValue, "endFrame", cancelWindow.endFrame);
-
-			const JsonValue* cancelTypes = windowValue.Find("cancelTypes");
-			if (cancelTypes && cancelTypes->IsArray())
-			{
-				for (const JsonValue& cancelTypeValue : cancelTypes->AsArray())
-				{
-					if (cancelTypeValue.IsString())
-					{
-						cancelWindow.cancelTypes.push_back(ParseCancelType(cancelTypeValue.AsString()));
-					}
-				}
-			}
-
-			outCancelWindows.push_back(cancelWindow);
 		}
 	}
 
@@ -747,7 +782,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Both"));
 	outAttackData.hitReactionType = ParseHitReactionType(GetString(root, "hitReactionType", "Normal"));
 	LoadAttackFrameFromJson(root, outAttackData.frame);
-	LoadCancelWindowsFromJson(root, outAttackData.cancelWindows);
+	LoadCancelSettingFromJson(root, outAttackData);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);
 	return true;
 }

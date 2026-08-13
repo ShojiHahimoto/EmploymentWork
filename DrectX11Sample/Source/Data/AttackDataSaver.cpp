@@ -186,34 +186,28 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	json << "    \"active\": " << attackData.frame.active << ",\n";
 	json << "    \"recovery\": " << attackData.frame.recovery << "\n";
 	json << "  },\n";
-	json << "  \"cancelWindows\": [";
-	for (size_t index = 0; index < attackData.cancelWindows.size(); ++index)
+	json << "  \"canAttackCancel\": " << (attackData.canAttackCancel ? "true" : "false") << ",\n";
+	json << "  \"cancelSetting\": {\n";
+	json << "    \"startFrame\": " << attackData.cancelSetting.startFrame << ",\n";
+	json << "    \"endFrame\": " << attackData.cancelSetting.endFrame << ",\n";
+	json << "    \"cancelTypes\": [";
+	for (size_t cancelIndex = 0; cancelIndex < attackData.cancelSetting.cancelTypes.size(); ++cancelIndex)
 	{
-		const AttackCancelWindowData& cancelWindow = attackData.cancelWindows[index];
-		json << (index == 0 ? "\n" : ",\n");
-		json << "    {\n";
-		json << "      \"startFrame\": " << cancelWindow.startFrame << ",\n";
-		json << "      \"endFrame\": " << cancelWindow.endFrame << ",\n";
-		json << "      \"cancelTypes\": [";
-		for (size_t cancelIndex = 0; cancelIndex < cancelWindow.cancelTypes.size(); ++cancelIndex)
+		if (cancelIndex > 0)
 		{
-			if (cancelIndex > 0)
-			{
-				json << ", ";
-			}
-
-			const AttackCancelType cancelType = cancelWindow.cancelTypes[cancelIndex];
-			const char* cancelText = cancelType == AttackCancelType::Special
-				? "Special"
-				: cancelType == AttackCancelType::Jump
-					? "Jump"
-					: "Normal";
-			json << "\"" << cancelText << "\"";
+			json << ", ";
 		}
-		json << "]\n";
-		json << "    }";
+
+		const AttackCancelType cancelType = attackData.cancelSetting.cancelTypes[cancelIndex];
+		const char* cancelText = cancelType == AttackCancelType::Special
+			? "Special"
+			: cancelType == AttackCancelType::Jump
+				? "Jump"
+				: "Normal";
+		json << "\"" << cancelText << "\"";
 	}
-	json << (attackData.cancelWindows.empty() ? "],\n" : "\n  ],\n");
+	json << "]\n";
+	json << "  },\n";
 	json << "  \"hitboxes\": [";
 	for (size_t index = 0; index < attackData.hitboxes.size(); ++index)
 	{

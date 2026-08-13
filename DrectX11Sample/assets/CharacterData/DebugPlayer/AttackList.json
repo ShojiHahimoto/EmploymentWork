@@ -4,7 +4,7 @@
     {
       "slotId": "AttackA",
       "button": "AttackA",
-      "attackDataId": "Ground/slot_00"
+      "attackDataId": "debug_punch"
     },
     {
       "slotId": "AttackB",
