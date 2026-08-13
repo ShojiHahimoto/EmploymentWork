@@ -217,6 +217,10 @@ bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wPa
 	case WM_SYSKEYDOWN:
 	case WM_SYSKEYUP:
 	case WM_CHAR:
+		// 全角入力は ImGui backend が IME 確定文字を処理する。
+		// ここで通すと Application 側の DefWindowProcW でも処理され、同じ文字が二重入力されることがある。
+	case WM_IME_COMPOSITION:
+	case WM_IME_CHAR:
 		return io.WantCaptureKeyboard;
 
 	default:

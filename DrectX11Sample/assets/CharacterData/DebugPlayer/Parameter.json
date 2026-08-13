@@ -1,6 +1,6 @@
 ﻿{
   "characterId": "DebugPlayer",
-  "characterName": "debugPlayer",
+  "characterName": "ジョージ",
   "parameters": {
     "forwardWalkSpeed": 0.140,
     "backwardWalkSpeed": 0.120,
