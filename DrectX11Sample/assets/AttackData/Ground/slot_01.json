@@ -1,0 +1,34 @@
+﻿{
+  "attackDataId": "Ground/slot_01",
+  "displayName": "ストレート",
+  "attackKind": "Normal",
+  "commandId": "None",
+  "usableState": "Ground",
+  "damage": 800,
+  "hitstunFrames": 25,
+  "guardstunFrames": 20,
+  "hitReactionType": "HardBurst",
+  "frame": {
+    "startup": 10,
+    "active": 5,
+    "recovery": 17
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 3.600,
+        "y": 7.100
+      },
+      "size": {
+        "x": 4.050,
+        "y": 2.350
+      }
+    }
+  ]
+}

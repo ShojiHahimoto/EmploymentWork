@@ -76,6 +76,16 @@
 - 日本語ログを `std::cout` や `OutputDebugStringA` へ直接出さない
 - 文字化けが出た場合は、対象 JSON / C++ ファイルが UTF-8 BOM 付き + CRLF で保存されているか確認する
 
+## ImGui 日本語表示
+
+ImGui で日本語を表示する場合は、UTF-8 文字列をそのまま扱い、ImGui 初期化時に日本語グリフを持つフォントを登録する。
+
+- 標準フォントは `assets/font/static/NotoSansJP-Regular.ttf` を使う
+- フォント登録は `DebugImGuiSystem::Init` 内で Win32 / DirectX11 バックエンド初期化前に行う
+- フォントファイルが無い場合は、デバッグログを出して ImGui のデフォルトフォントへフォールバックする
+- UI 表示名、技名、キャラクター名などの内部データは UTF-8 の `std::string` として保持する
+- 日本語が `?` になる場合は、まず ImGui フォント読み込みと対象ファイルの UTF-8 BOM 保存を確認する
+
 ## C++ 言語標準
 
 このプロジェクトは C++20 を使用する。
