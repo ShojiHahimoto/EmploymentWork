@@ -19,6 +19,8 @@ private:
 		FacingDirection facingDirection,
 		int frameNumber,
 		const InputHistoryFrame* previousFrame);
+	static void UpdateDisplayHistory(InputHistoryComponent& inputHistory, const InputHistoryFrame& frame);
+	static bool IsSameDisplayInput(const InputDisplayHistoryEntry& entry, const InputHistoryFrame& frame);
 	static int ConvertMoveAxisToDirection(const DirectX::SimpleMath::Vector2& moveAxis);
 	static InputButtonHistoryState BuildJumpDirectionState(int currentDirection, int previousDirection);
 	static bool IsJumpDirection(int direction);

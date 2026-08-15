@@ -57,13 +57,32 @@ struct InputHistoryFrame
 	bool sameAsPrevious = false;
 };
 
+struct InputDisplayHistoryEntry
+{
+	// 入力表示に出すテンキー方向。
+	int direction = 5;
+
+	// 入力表示に出す、押されている攻撃ボタン群。
+	uint32_t attackPressMask = 0;
+
+	// 同じ direction + attackPressMask が継続しているフレーム数。
+	int holdFrames = 0;
+};
+
 struct InputHistoryComponent : public Component
 {
-	// コマンド入力を過去 30F まで遡れるよう、ring buffer として履歴を保持する。
+	// コマンド入力を過去 15F まで遡れるよう、ring buffer として履歴を保持する。
 	static constexpr int HistoryFrameCount = 15;
+
+	// 画面表示用の圧縮履歴。最新入力を index 0 に置き、古いものほど後ろへ流す。
+	static constexpr int DisplayHistoryEntryCount = 15;
+	static constexpr int MaxDisplayHoldFrames = 99;
 
 	std::array<InputHistoryFrame, HistoryFrameCount> frames = {};
 	int latestFrameIndex = -1;
 	int storedFrameCount = 0;
 	int nextFrameNumber = 0;
+
+	std::array<InputDisplayHistoryEntry, DisplayHistoryEntryCount> displayEntries = {};
+	int displayEntryCount = 0;
 };
