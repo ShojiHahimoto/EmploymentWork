@@ -1,0 +1,16 @@
+﻿{
+  "version": 1,
+  "configId": "gamepad_config_00",
+  "configName": "Lジャンプ",
+  "deviceType": "Gamepad",
+  "bindings": {
+    "moveUp": "LB",
+    "moveDown": "DPadDown",
+    "moveLeft": "DPadLeft",
+    "moveRight": "DPadRight",
+    "attackA": "A",
+    "attackB": "B",
+    "attackX": "X",
+    "attackY": "Y"
+  }
+}

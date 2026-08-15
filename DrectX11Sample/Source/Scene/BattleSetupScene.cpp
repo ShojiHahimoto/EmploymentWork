@@ -7,6 +7,7 @@
 #include "Scene/TitleScene.h"
 #include "System/imgui-docking/imgui.h"
 
+#include <cstdio>
 #include <filesystem>
 #include <memory>
 
@@ -175,6 +176,7 @@ void BattleSetupScene::Enter()
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 	RefreshCharacterSlotSummaries();
+	RefreshInputConfigSummaries();
 	statusMessage = "Battle setup ready.";
 }
 
@@ -269,6 +271,15 @@ void BattleSetupScene::RefreshCharacterSlotSummaries()
 }
 
 /// <summary>
+/// 保存済みキーコンフィグ一覧を Keyboard / Gamepad ごとに読み直す。
+/// </summary>
+void BattleSetupScene::RefreshInputConfigSummaries()
+{
+	keyboardInputConfigs = Input::InputConfigLoader::LoadNamedInputConfigs(BattleSetup::InputDeviceKind::Keyboard);
+	gamepadInputConfigs = Input::InputConfigLoader::LoadNamedInputConfigs(BattleSetup::InputDeviceKind::Gamepad);
+}
+
+/// <summary>
 /// バトル開始前の設定を編集する ImGui ウィンドウを描画する。
 /// </summary>
 void BattleSetupScene::DrawSetupWindow()
@@ -334,6 +345,7 @@ void BattleSetupScene::DrawDeviceSelector(int playerIndex)
 	BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
 	const std::string currentDeviceText = ToInputDeviceText(player.device);
 
+	ImGui::BeginDisabled(IsCreatingInputConfigFor(playerIndex));
 	if (ImGui::BeginCombo("Input Device", currentDeviceText.c_str()))
 	{
 		const bool keyboardSelected = player.device.kind == BattleSetup::InputDeviceKind::Keyboard;
@@ -364,6 +376,7 @@ void BattleSetupScene::DrawDeviceSelector(int playerIndex)
 
 		ImGui::EndCombo();
 	}
+	ImGui::EndDisabled();
 }
 
 /// <summary>
@@ -405,19 +418,98 @@ void BattleSetupScene::DrawCharacterSelector(int playerIndex)
 /// <param name="playerIndex">設定する Player 番号。</param>
 void BattleSetupScene::DrawKeyConfig(int playerIndex)
 {
-	BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
-	if (ImGui::TreeNode("Key Config"))
+	//if (ImGui::TreeNode("Key Config"))
 	{
-		if (player.device.kind == BattleSetup::InputDeviceKind::Keyboard)
+		if (IsCreatingInputConfigFor(playerIndex))
 		{
-			DrawKeyboardKeyConfig(playerIndex);
+			DrawNewInputConfigEditor(playerIndex);
 		}
 		else
 		{
-			DrawGamepadKeyConfig(playerIndex);
+			DrawInputConfigSelector(playerIndex);
 		}
 
-		ImGui::TreePop();
+		//ImGui::TreePop();
+	}
+}
+
+/// <summary>
+/// 選択中デバイスに合う保存済みキーコンフィグ一覧を描画する。
+/// </summary>
+/// <param name="playerIndex">設定する Player 番号。</param>
+void BattleSetupScene::DrawInputConfigSelector(int playerIndex)
+{
+	BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
+	const bool usesKeyboard = player.device.kind == BattleSetup::InputDeviceKind::Keyboard;
+	const std::vector<Input::NamedInputConfig>& configs = usesKeyboard ? keyboardInputConfigs : gamepadInputConfigs;
+	const std::string& currentConfigId = usesKeyboard ? player.keyboardConfigId : player.gamepadConfigId;
+	const std::string& currentConfigName = usesKeyboard ? player.keyboardConfigName : player.gamepadConfigName;
+	const char* defaultConfigId = usesKeyboard ? "default_keyboard" : "default_gamepad";
+	const char* defaultConfigName = usesKeyboard ? "Default Keyboard" : "Default Gamepad";
+
+	if (ImGui::BeginCombo("Saved Key Config", currentConfigName.c_str()))
+	{
+		if (ImGui::Selectable(defaultConfigName, currentConfigId == defaultConfigId))
+		{
+			if (usesKeyboard)
+			{
+				player.keyboardConfigId = defaultConfigId;
+				player.keyboardConfigName = defaultConfigName;
+				player.keyboardConfig = BattleSetup::KeyboardKeyConfig{};
+			}
+			else
+			{
+				player.gamepadConfigId = defaultConfigId;
+				player.gamepadConfigName = defaultConfigName;
+				player.gamepadConfig = BattleSetup::GamepadKeyConfig{};
+			}
+		}
+
+		for (const Input::NamedInputConfig& config : configs)
+		{
+			if (ImGui::Selectable(config.configName.c_str(), currentConfigId == config.configId))
+			{
+				ApplyNamedInputConfig(playerIndex, config);
+			}
+		}
+
+		ImGui::Separator();
+		if (ImGui::Selectable("New Config..."))
+		{
+			BeginNewInputConfig(playerIndex);
+		}
+
+		ImGui::EndCombo();
+	}
+}
+
+/// <summary>
+/// 新規キーコンフィグの名前入力、キー割り当て、保存ボタンを描画する。
+/// </summary>
+/// <param name="playerIndex">編集する Player 番号。</param>
+void BattleSetupScene::DrawNewInputConfigEditor(int playerIndex)
+{
+	const bool editingKeyboard = editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Keyboard;
+	ImGui::TextUnformatted(editingKeyboard ? "New Keyboard Config" : "New Gamepad Config");
+	ImGui::InputText("Config Name", inputConfigNameBuffer.data(), inputConfigNameBuffer.size());
+
+	if (editingKeyboard)
+	{
+		DrawKeyboardKeyConfig(playerIndex);
+	}
+	else
+	{
+		DrawGamepadKeyConfig(playerIndex);
+	}
+
+	if (ImGui::Button("Save Key Config", ImVec2(150.0f, 0.0f)))
+	{
+		SaveDraftInputConfig();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel", ImVec2(100.0f, 0.0f)))
+	{
+		CancelNewInputConfig();
 	}
 }
 
@@ -427,7 +519,7 @@ void BattleSetupScene::DrawKeyConfig(int playerIndex)
 /// <param name="playerIndex">設定する Player 番号。</param>
 void BattleSetupScene::DrawKeyboardKeyConfig(int playerIndex)
 {
-	const BattleSetup::KeyboardKeyConfig& config = setupData.players[static_cast<size_t>(playerIndex)].keyboardConfig;
+	const BattleSetup::KeyboardKeyConfig& config = GetKeyboardConfigForDraw(playerIndex);
 	DrawKeyboardBindingButton(playerIndex, BattleSetupCaptureTarget::MoveUp, "Move Up Key", config.moveUp);
 	DrawKeyboardBindingButton(playerIndex, BattleSetupCaptureTarget::MoveDown, "Move Down Key", config.moveDown);
 	DrawKeyboardBindingButton(playerIndex, BattleSetupCaptureTarget::MoveLeft, "Move Left Key", config.moveLeft);
@@ -444,7 +536,7 @@ void BattleSetupScene::DrawKeyboardKeyConfig(int playerIndex)
 /// <param name="playerIndex">設定する Player 番号。</param>
 void BattleSetupScene::DrawGamepadKeyConfig(int playerIndex)
 {
-	const BattleSetup::GamepadKeyConfig& config = setupData.players[static_cast<size_t>(playerIndex)].gamepadConfig;
+	const BattleSetup::GamepadKeyConfig& config = GetGamepadConfigForDraw(playerIndex);
 	DrawGamepadBindingButton(playerIndex, BattleSetupCaptureTarget::MoveUp, "Move Up Button", config.moveUp);
 	DrawGamepadBindingButton(playerIndex, BattleSetupCaptureTarget::MoveDown, "Move Down Button", config.moveDown);
 	DrawGamepadBindingButton(playerIndex, BattleSetupCaptureTarget::MoveLeft, "Move Left Button", config.moveLeft);
@@ -503,6 +595,113 @@ void BattleSetupScene::DrawGamepadBindingButton(int playerIndex, BattleSetupCapt
 		BeginBindingCapture(playerIndex, BattleSetupCaptureDevice::Gamepad, target);
 	}
 	ImGui::PopID();
+}
+
+/// <summary>
+/// 現在選択中のデバイス種別をもとに、新規キーコンフィグ作成を開始する。
+/// </summary>
+/// <param name="playerIndex">作成対象の Player 番号。</param>
+void BattleSetupScene::BeginNewInputConfig(int playerIndex)
+{
+	if (playerIndex < 0 || playerIndex >= Input::MaxPlayers)
+	{
+		return;
+	}
+
+	const BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
+	creatingInputConfig = true;
+	editingInputConfigPlayerIndex = playerIndex;
+	editingInputConfigDeviceKind = player.device.kind;
+	draftKeyboardConfig = player.keyboardConfig;
+	draftGamepadConfig = player.gamepadConfig;
+	capturingTarget = BattleSetupCaptureTarget::None;
+	capturingPlayerIndex = -1;
+
+	inputConfigNameBuffer.fill('\0');
+	const char* defaultName = editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Keyboard
+		? "New Keyboard Config"
+		: "New Gamepad Config";
+	std::snprintf(inputConfigNameBuffer.data(), inputConfigNameBuffer.size(), "%s", defaultName);
+	statusMessage = "Editing new key config.";
+}
+
+/// <summary>
+/// 新規キーコンフィグ作成を破棄し、保存済み選択表示へ戻る。
+/// </summary>
+void BattleSetupScene::CancelNewInputConfig()
+{
+	creatingInputConfig = false;
+	editingInputConfigPlayerIndex = -1;
+	capturingTarget = BattleSetupCaptureTarget::None;
+	capturingPlayerIndex = -1;
+	statusMessage = "Key config creation canceled.";
+}
+
+/// <summary>
+/// 編集中のキーコンフィグを JSON に保存し、作成した設定を現在プレイヤーへ適用する。
+/// </summary>
+void BattleSetupScene::SaveDraftInputConfig()
+{
+	if (!creatingInputConfig || editingInputConfigPlayerIndex < 0)
+	{
+		return;
+	}
+
+	const std::string configName = inputConfigNameBuffer.data();
+	if (configName.empty())
+	{
+		statusMessage = "Config name is required.";
+		return;
+	}
+
+	Input::NamedInputConfig config;
+	config.deviceKind = editingInputConfigDeviceKind;
+	config.configId = Input::InputConfigLoader::GenerateNextConfigId(config.deviceKind);
+	config.configName = configName;
+	config.filePath = Input::InputConfigLoader::BuildConfigFilePath(config.deviceKind, config.configId);
+	config.keyboardConfig = draftKeyboardConfig;
+	config.gamepadConfig = draftGamepadConfig;
+
+	if (!Input::InputConfigLoader::SaveNamedInputConfig(config))
+	{
+		statusMessage = "Key config save failed.";
+		return;
+	}
+
+	RefreshInputConfigSummaries();
+	ApplyNamedInputConfig(editingInputConfigPlayerIndex, config);
+	creatingInputConfig = false;
+	editingInputConfigPlayerIndex = -1;
+	capturingTarget = BattleSetupCaptureTarget::None;
+	capturingPlayerIndex = -1;
+	statusMessage = "Saved key config: " + config.configName;
+}
+
+/// <summary>
+/// 保存済みキーコンフィグを指定プレイヤーの現在設定へ反映する。
+/// </summary>
+/// <param name="playerIndex">適用先 Player 番号。</param>
+/// <param name="config">適用する保存済みキーコンフィグ。</param>
+void BattleSetupScene::ApplyNamedInputConfig(int playerIndex, const Input::NamedInputConfig& config)
+{
+	if (playerIndex < 0 || playerIndex >= Input::MaxPlayers)
+	{
+		return;
+	}
+
+	BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
+	if (config.deviceKind == BattleSetup::InputDeviceKind::Keyboard)
+	{
+		player.keyboardConfigId = config.configId;
+		player.keyboardConfigName = config.configName;
+		player.keyboardConfig = config.keyboardConfig;
+	}
+	else
+	{
+		player.gamepadConfigId = config.configId;
+		player.gamepadConfigName = config.configName;
+		player.gamepadConfig = config.gamepadConfig;
+	}
 }
 
 /// <summary>
@@ -587,8 +786,7 @@ void BattleSetupScene::ApplyCapturedKeyboardKey(Input::KeyboardKey key)
 		return;
 	}
 
-	BattleSetup::KeyboardKeyConfig& config =
-		setupData.players[static_cast<size_t>(capturingPlayerIndex)].keyboardConfig;
+	BattleSetup::KeyboardKeyConfig& config = GetKeyboardConfigForEdit(capturingPlayerIndex);
 	switch (capturingTarget)
 	{
 	case BattleSetupCaptureTarget::MoveLeft: config.moveLeft = key; break;
@@ -621,8 +819,7 @@ void BattleSetupScene::ApplyCapturedGamepadButton(Input::GamepadButton button)
 		return;
 	}
 
-	BattleSetup::GamepadKeyConfig& config =
-		setupData.players[static_cast<size_t>(capturingPlayerIndex)].gamepadConfig;
+	BattleSetup::GamepadKeyConfig& config = GetGamepadConfigForEdit(capturingPlayerIndex);
 	switch (capturingTarget)
 	{
 	case BattleSetupCaptureTarget::MoveLeft: config.moveLeft = button; break;
@@ -651,8 +848,7 @@ void BattleSetupScene::ApplyCapturedGamepadButton(Input::GamepadButton button)
 /// <returns>別項目で使用済みなら true。</returns>
 bool BattleSetupScene::IsKeyboardKeyAlreadyUsed(int playerIndex, BattleSetupCaptureTarget target, Input::KeyboardKey key) const
 {
-	const BattleSetup::KeyboardKeyConfig& config =
-		setupData.players[static_cast<size_t>(playerIndex)].keyboardConfig;
+	const BattleSetup::KeyboardKeyConfig& config = GetKeyboardConfigForDraw(playerIndex);
 	return (target != BattleSetupCaptureTarget::MoveLeft && config.moveLeft == key)
 		|| (target != BattleSetupCaptureTarget::MoveRight && config.moveRight == key)
 		|| (target != BattleSetupCaptureTarget::MoveDown && config.moveDown == key)
@@ -672,8 +868,7 @@ bool BattleSetupScene::IsKeyboardKeyAlreadyUsed(int playerIndex, BattleSetupCapt
 /// <returns>別項目で使用済みなら true。</returns>
 bool BattleSetupScene::IsGamepadButtonAlreadyUsed(int playerIndex, BattleSetupCaptureTarget target, Input::GamepadButton button) const
 {
-	const BattleSetup::GamepadKeyConfig& config =
-		setupData.players[static_cast<size_t>(playerIndex)].gamepadConfig;
+	const BattleSetup::GamepadKeyConfig& config = GetGamepadConfigForDraw(playerIndex);
 	return (target != BattleSetupCaptureTarget::MoveLeft && config.moveLeft == button)
 		|| (target != BattleSetupCaptureTarget::MoveRight && config.moveRight == button)
 		|| (target != BattleSetupCaptureTarget::MoveDown && config.moveDown == button)
@@ -682,6 +877,80 @@ bool BattleSetupScene::IsGamepadButtonAlreadyUsed(int playerIndex, BattleSetupCa
 		|| (target != BattleSetupCaptureTarget::AttackB && config.attackB == button)
 		|| (target != BattleSetupCaptureTarget::AttackX && config.attackX == button)
 		|| (target != BattleSetupCaptureTarget::AttackY && config.attackY == button);
+}
+
+/// <summary>
+/// 指定プレイヤーが現在キーコンフィグ新規作成中か確認する。
+/// </summary>
+/// <param name="playerIndex">確認する Player 番号。</param>
+/// <returns>指定プレイヤーの新規作成中なら true。</returns>
+bool BattleSetupScene::IsCreatingInputConfigFor(int playerIndex) const
+{
+	return creatingInputConfig && editingInputConfigPlayerIndex == playerIndex;
+}
+
+/// <summary>
+/// キーボードキー設定の表示対象を取得する。
+/// </summary>
+/// <param name="playerIndex">取得する Player 番号。</param>
+/// <returns>新規作成中なら draft、通常時なら PlayerSetup のキー設定。</returns>
+const BattleSetup::KeyboardKeyConfig& BattleSetupScene::GetKeyboardConfigForDraw(int playerIndex) const
+{
+	if (IsCreatingInputConfigFor(playerIndex)
+		&& editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Keyboard)
+	{
+		return draftKeyboardConfig;
+	}
+
+	return setupData.players[static_cast<size_t>(playerIndex)].keyboardConfig;
+}
+
+/// <summary>
+/// ゲームパッドボタン設定の表示対象を取得する。
+/// </summary>
+/// <param name="playerIndex">取得する Player 番号。</param>
+/// <returns>新規作成中なら draft、通常時なら PlayerSetup のボタン設定。</returns>
+const BattleSetup::GamepadKeyConfig& BattleSetupScene::GetGamepadConfigForDraw(int playerIndex) const
+{
+	if (IsCreatingInputConfigFor(playerIndex)
+		&& editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Gamepad)
+	{
+		return draftGamepadConfig;
+	}
+
+	return setupData.players[static_cast<size_t>(playerIndex)].gamepadConfig;
+}
+
+/// <summary>
+/// キーボードキー設定の編集対象を取得する。
+/// </summary>
+/// <param name="playerIndex">取得する Player 番号。</param>
+/// <returns>新規作成中なら draft、通常時なら PlayerSetup のキー設定。</returns>
+BattleSetup::KeyboardKeyConfig& BattleSetupScene::GetKeyboardConfigForEdit(int playerIndex)
+{
+	if (IsCreatingInputConfigFor(playerIndex)
+		&& editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Keyboard)
+	{
+		return draftKeyboardConfig;
+	}
+
+	return setupData.players[static_cast<size_t>(playerIndex)].keyboardConfig;
+}
+
+/// <summary>
+/// ゲームパッドボタン設定の編集対象を取得する。
+/// </summary>
+/// <param name="playerIndex">取得する Player 番号。</param>
+/// <returns>新規作成中なら draft、通常時なら PlayerSetup のボタン設定。</returns>
+BattleSetup::GamepadKeyConfig& BattleSetupScene::GetGamepadConfigForEdit(int playerIndex)
+{
+	if (IsCreatingInputConfigFor(playerIndex)
+		&& editingInputConfigDeviceKind == BattleSetup::InputDeviceKind::Gamepad)
+	{
+		return draftGamepadConfig;
+	}
+
+	return setupData.players[static_cast<size_t>(playerIndex)].gamepadConfig;
 }
 
 /// <summary>

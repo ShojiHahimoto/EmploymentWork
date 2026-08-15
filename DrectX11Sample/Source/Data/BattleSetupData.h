@@ -57,6 +57,10 @@ namespace BattleSetup
 		int characterSlotIndex = 0;
 		std::string characterId = "CharacterSlot00";
 		std::string characterFolderPath = "assets/CharacterData/CharacterSlot00";
+		std::string keyboardConfigId = "default_keyboard";
+		std::string keyboardConfigName = "Default Keyboard";
+		std::string gamepadConfigId = "default_gamepad";
+		std::string gamepadConfigName = "Default Gamepad";
 		KeyboardKeyConfig keyboardConfig;
 		GamepadKeyConfig gamepadConfig;
 	};
