@@ -418,18 +418,13 @@ void BattleSetupScene::DrawCharacterSelector(int playerIndex)
 /// <param name="playerIndex">設定する Player 番号。</param>
 void BattleSetupScene::DrawKeyConfig(int playerIndex)
 {
-	//if (ImGui::TreeNode("Key Config"))
+	if (IsCreatingInputConfigFor(playerIndex))
 	{
-		if (IsCreatingInputConfigFor(playerIndex))
-		{
-			DrawNewInputConfigEditor(playerIndex);
-		}
-		else
-		{
-			DrawInputConfigSelector(playerIndex);
-		}
-
-		//ImGui::TreePop();
+		DrawNewInputConfigEditor(playerIndex);
+	}
+	else
+	{
+		DrawInputConfigSelector(playerIndex);
 	}
 }
 
