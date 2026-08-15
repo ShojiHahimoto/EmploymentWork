@@ -116,6 +116,11 @@ namespace
 			return false;
 		}
 
+		if (state->currentActionState == PlayerActionState::Down || state->currentActionState == PlayerActionState::WakeUp)
+		{
+			return false;
+		}
+
 		outRuntime.objectId = objectId;
 		outRuntime.transform = transform;
 		outRuntime.state = state;

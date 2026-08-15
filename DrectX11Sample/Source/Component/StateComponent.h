@@ -4,24 +4,24 @@
 
 enum class PlayerActionState
 {
-	Idle,
-	FrontWalk,
-	BackWalk,
-	VerticalJumpStartup,
-	FrontJumpStartup,
-	BackJumpStartup,
-	VerticalJump,
-	FrontJump,
-	BackJump,
-	Fall,
-	GroundAttack,
-	AirAttack,
-	LandingRecovery,
-	Hitstun,
-	Guardstun,
-	AirHitstun,
-	Down,
-	WakeUp,
+	Idle,						//待機
+	FrontWalk,					//前歩き
+	BackWalk,					//後ろ歩き
+	VerticalJumpStartup,		//垂直ジャンプ以降中
+	FrontJumpStartup,			//前ジャンプ中
+	BackJumpStartup,			//後ろジャンプ中
+	VerticalJump,				//垂直ジャンプ
+	FrontJump,					//前ジャンプ
+	BackJump,					//後ろジャンプ
+	Fall,						//落下
+	GroundAttack,				//地上攻撃
+	AirAttack,					//空中攻撃
+	LandingRecovery,			//着地硬直
+	Hitstun,					//ヒット硬直
+	Guardstun,					//ガード硬直
+	AirHitstun,					//空中ヒット硬直
+	Down,						//ダウン
+	WakeUp,						//起き上がり
 };
 
 // 対面方向
