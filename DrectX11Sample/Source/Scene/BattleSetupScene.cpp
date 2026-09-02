@@ -964,19 +964,24 @@ bool BattleSetupScene::ValidateSetup(std::string& outMessage) const
 	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
 	{
 		const BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
-		if (player.device.kind == BattleSetup::InputDeviceKind::Gamepad
-			&& !Input::InputSystem::IsGamepadConnected(player.device.gamepadIndex))
-		{
-			outMessage = std::to_string(playerIndex + 1) + "P gamepad is disconnected.";
-			return false;
-		}
-
 		const BattleSetupCharacterSlotSummary& summary =
 			characterSlotSummaries[static_cast<size_t>(player.characterSlotIndex)];
 		if (!summary.hasSavedData)
 		{
 			outMessage = std::to_string(playerIndex + 1) + "P character slot is empty.";
 			return false;
+		}
+	}
+
+	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
+	{
+		const BattleSetup::PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
+		if (player.device.kind == BattleSetup::InputDeviceKind::Gamepad
+			&& !Input::InputSystem::IsGamepadConnected(player.device.gamepadIndex))
+		{
+			// 未接続ゲームパッドは入力なしとして扱えるため、開発中の確認を止めない。
+			outMessage = std::to_string(playerIndex + 1) + "P gamepad is disconnected. Battle can start without that input.";
+			return true;
 		}
 	}
 

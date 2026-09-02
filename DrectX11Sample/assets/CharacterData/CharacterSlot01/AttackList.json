@@ -1,0 +1,64 @@
+﻿{
+  "characterId": "CharacterSlot01",
+  "groundAttackSlots": [
+    {
+      "slotId": "AttackA",
+      "button": "AttackA",
+      "attackDataId": "Ground/slot_00"
+    },
+    {
+      "slotId": "AttackB",
+      "button": "AttackB",
+      "attackDataId": "Ground/slot_02"
+    },
+    {
+      "slotId": "AttackX",
+      "button": "AttackX",
+      "attackDataId": "Ground/slot_03"
+    },
+    {
+      "slotId": "AttackY",
+      "button": "AttackY",
+      "attackDataId": "Ground/slot_01"
+    }
+  ],
+  "airAttackSlots": [
+    {
+      "slotId": "AirAttackA",
+      "button": "AttackA",
+      "attackDataId": "Air/slot_02"
+    },
+    {
+      "slotId": "AirAttackB",
+      "button": "AttackB",
+      "attackDataId": "Air/slot_00"
+    },
+    {
+      "slotId": "AirAttackX",
+      "button": "AttackX",
+      "attackDataId": "Air/slot_01"
+    },
+    {
+      "slotId": "AirAttackY",
+      "button": "AttackY",
+      "attackDataId": "Air/slot_03"
+    }
+  ],
+  "specialAttackSlots": [
+    {
+      "slotId": "SpecialA",
+      "button": "AttackA",
+      "attackDataId": "Special/slot_01"
+    },
+    {
+      "slotId": "SpecialB",
+      "button": "AttackB",
+      "attackDataId": "Special/slot_00"
+    },
+    {
+      "slotId": "SpecialX",
+      "button": "AttackX",
+      "attackDataId": "Special/slot_02"
+    }
+  ]
+}

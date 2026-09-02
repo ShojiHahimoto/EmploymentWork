@@ -1,0 +1,39 @@
+﻿{
+  "characterId": "CharacterSlot01",
+  "characterName": "ファイター",
+  "parameters": {
+    "forwardWalkSpeed": 0.080,
+    "backwardWalkSpeed": 0.060,
+    "jumpInitialVelocity": 0.320,
+    "frontJumpHorizontalVelocity": 0.100,
+    "backJumpHorizontalVelocity": -0.050,
+    "riseGravityPerFrame": -0.012,
+    "fallGravityPerFrame": -0.020,
+    "maxHp": 100,
+    "modelScale": {
+      "x": 0.050,
+      "y": 0.050,
+      "z": 0.050
+    },
+    "pushBox": {
+      "offset": {
+        "x": -0.150,
+        "y": 4.500
+      },
+      "size": {
+        "x": 2.000,
+        "y": 2.500
+      }
+    },
+    "hurtBox": {
+      "offset": {
+        "x": -0.150,
+        "y": 4.500
+      },
+      "size": {
+        "x": 1.500,
+        "y": 2.000
+      }
+    }
+  }
+}
