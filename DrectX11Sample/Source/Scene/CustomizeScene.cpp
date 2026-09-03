@@ -280,6 +280,174 @@ namespace
 	}
 
 	/// <summary>
+	/// MotionData 内から指定部位のトラックを探す。
+	/// </summary>
+	/// <param name="motionData">検索対象の MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <returns>見つかったトラック。存在しない場合は nullptr。</returns>
+	MotionBoneTrackData* FindMotionTrack(MotionData& motionData, const std::string& boneName)
+	{
+		for (MotionBoneTrackData& track : motionData.boneTracks)
+		{
+			if (track.boneName == boneName)
+			{
+				return &track;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// MotionData 内から指定部位のトラックを探す。
+	/// </summary>
+	/// <param name="motionData">検索対象の MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <returns>見つかったトラック。存在しない場合は nullptr。</returns>
+	const MotionBoneTrackData* FindMotionTrack(const MotionData& motionData, const std::string& boneName)
+	{
+		for (const MotionBoneTrackData& track : motionData.boneTracks)
+		{
+			if (track.boneName == boneName)
+			{
+				return &track;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// 指定トラックから指定フレームのキーフレームを探す。
+	/// </summary>
+	/// <param name="track">検索対象の部位トラック。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>見つかったキーフレーム。存在しない場合は nullptr。</returns>
+	MotionBoneKeyframeData* FindMotionKeyframe(MotionBoneTrackData& track, int frame)
+	{
+		for (MotionBoneKeyframeData& keyframe : track.keyframes)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// 指定トラックから指定フレームのキーフレームを探す。
+	/// </summary>
+	/// <param name="track">検索対象の部位トラック。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>見つかったキーフレーム。存在しない場合は nullptr。</returns>
+	const MotionBoneKeyframeData* FindMotionKeyframe(const MotionBoneTrackData& track, int frame)
+	{
+		for (const MotionBoneKeyframeData& keyframe : track.keyframes)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// 指定部位に回転キーフレームを追加、または既存フレームを上書きする。
+	/// </summary>
+	/// <param name="motionData">編集対象の MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <param name="rotationEulerDegrees">保存するローカル回転角度。</param>
+	void SetMotionRotationKey(MotionData& motionData, const std::string& boneName, int frame, const Vector3& rotationEulerDegrees)
+	{
+		MotionBoneTrackData* targetTrack = FindMotionTrack(motionData, boneName);
+		if (!targetTrack)
+		{
+			MotionBoneTrackData newTrack;
+			newTrack.boneName = boneName;
+			motionData.boneTracks.push_back(newTrack);
+			targetTrack = &motionData.boneTracks.back();
+		}
+
+		MotionBoneKeyframeData* targetKeyframe = FindMotionKeyframe(*targetTrack, frame);
+		if (!targetKeyframe)
+		{
+			MotionBoneKeyframeData newKeyframe;
+			newKeyframe.frame = frame;
+			targetTrack->keyframes.push_back(newKeyframe);
+			targetKeyframe = &targetTrack->keyframes.back();
+		}
+
+		targetKeyframe->hasRotation = true;
+		targetKeyframe->localRotationEulerDegrees = rotationEulerDegrees;
+		targetKeyframe->localRotation = Quaternion::CreateFromYawPitchRoll(
+			XMConvertToRadians(rotationEulerDegrees.y),
+			XMConvertToRadians(rotationEulerDegrees.x),
+			XMConvertToRadians(rotationEulerDegrees.z));
+		targetKeyframe->localRotation.Normalize();
+	}
+
+	/// <summary>
+	/// 既存キーから指定フレーム付近の回転値を取得し、新規全身キー作成時の初期値に使う。
+	/// </summary>
+	/// <param name="motionData">参照する MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>指定フレーム用のローカル回転角度。既存情報がなければ 0。</returns>
+	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame)
+	{
+		const MotionBoneTrackData* track = FindMotionTrack(motionData, boneName);
+		if (!track || track->keyframes.empty())
+		{
+			return Vector3::Zero;
+		}
+
+		const MotionBoneKeyframeData* previousKey = nullptr;
+		const MotionBoneKeyframeData* nextKey = nullptr;
+		for (const MotionBoneKeyframeData& keyframe : track->keyframes)
+		{
+			if (!keyframe.hasRotation)
+			{
+				continue;
+			}
+			if (keyframe.frame <= frame)
+			{
+				previousKey = &keyframe;
+			}
+			if (keyframe.frame >= frame)
+			{
+				nextKey = &keyframe;
+				break;
+			}
+		}
+
+		if (previousKey && previousKey->frame == frame)
+		{
+			return previousKey->localRotationEulerDegrees;
+		}
+		if (!previousKey && nextKey)
+		{
+			return nextKey->localRotationEulerDegrees;
+		}
+		if (previousKey && !nextKey)
+		{
+			return previousKey->localRotationEulerDegrees;
+		}
+		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+		{
+			const float rate = static_cast<float>(frame - previousKey->frame)
+				/ static_cast<float>(nextKey->frame - previousKey->frame);
+			return Vector3::Lerp(previousKey->localRotationEulerDegrees, nextKey->localRotationEulerDegrees, rate);
+		}
+
+		return Vector3::Zero;
+	}
+
+	/// <summary>
 	/// ImGui の入力後に、フレームやダメージが負数にならないよう補正する。
 	/// </summary>
 	/// <param name="attackData">補正する AttackData。</param>
@@ -417,6 +585,9 @@ void CustomizeScene::Draw(Renderer& renderer)
 	case CustomizeMode::AttackEditor:
 		DrawAttackEditor(renderer);
 		break;
+	case CustomizeMode::MotionEditor:
+		DrawMotionEditorScreen(renderer);
+		break;
 	case CustomizeMode::CharacterSlotSelect:
 		DrawCharacterSlotSelect();
 		break;
@@ -512,6 +683,9 @@ void CustomizeScene::NavigateBack()
 		break;
 	case CustomizeMode::AttackEditor:
 		mode = CustomizeMode::AttackSlotSelect;
+		break;
+	case CustomizeMode::MotionEditor:
+		mode = CustomizeMode::AttackEditor;
 		break;
 	case CustomizeMode::CharacterSlotSelect:
 		mode = CustomizeMode::MainMenu;
@@ -642,6 +816,39 @@ void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 	RenderAttackPreview(renderer);
 	DrawAttackPreviewWindow(renderer);
 	DrawAttackEditorWindow();
+}
+
+/// <summary>
+/// 技調整画面から開く、モーション編集用の仮専用画面を描画する。
+/// </summary>
+/// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
+void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
+{
+	EnsureDraftAttackMotionDataId();
+	if (!hasDraftMotion)
+	{
+		LoadDraftMotionFromEditorId();
+	}
+
+	ClampPreviewCurrentFrame();
+	RenderAttackPreview(renderer);
+	DrawAttackPreviewWindow(renderer);
+
+	ImGui::SetNextWindowPos(ImVec2(static_cast<float>(width) * 0.5f, 20.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
+	if (ImGui::Begin("Motion Editor"))
+	{
+		ImGui::Text("Attack: %s", editingAttackDataId.c_str());
+		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
+		DrawMotionEditor();
+
+		ImGui::Separator();
+		if (ImGui::Button("Back To Attack Editor", ImVec2(180.0f, 30.0f)))
+		{
+			mode = CustomizeMode::AttackEditor;
+		}
+	}
+	ImGui::End();
 }
 
 /// <summary>
@@ -784,7 +991,13 @@ void CustomizeScene::DrawAttackEditorWindow()
 
 		DrawHitboxEditor();
 		DrawCancelSettingEditor();
-		DrawMotionEditor();
+		ImGui::Separator();
+		if (ImGui::Button("Open Motion Editor", ImVec2(180.0f, 28.0f)))
+		{
+			EnsureDraftAttackMotionDataId();
+			LoadDraftMotionFromEditorId();
+			mode = CustomizeMode::MotionEditor;
+		}
 		ClampAttackDataValues(draftAttack);
 		ClampPreviewCurrentFrame();
 
@@ -918,16 +1131,6 @@ void CustomizeScene::DrawCancelSettingEditor()
 void CustomizeScene::DrawMotionEditor()
 {
 	ImGui::Separator();
-	if (!ImGui::CollapsingHeader("MotionData", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		return;
-	}
-
-	if (ImGui::Button("Load / Create MotionData", ImVec2(180.0f, 26.0f)))
-	{
-		LoadDraftMotionFromEditorId();
-	}
-
 	if (!hasDraftMotion)
 	{
 		ImGui::TextDisabled("No MotionData loaded.");
@@ -939,65 +1142,88 @@ void CustomizeScene::DrawMotionEditor()
 	ImGui::Text("Motion Total Frames: %d (AttackData)", draftMotion.totalFrames);
 	draftMotion.looping = false;
 	ImGui::Text("Motion Looping: false (Attack Motion)");
-	ImGui::Combo(
+
+	const int actionFrame = GetPreviewActionFrame();
+	const bool canEditCurrentFrame = HasMotionKeyframeAtPreviewFrame();
+	ImGui::Text("Selected Key Frame: %d", std::max(0, actionFrame));
+
+	if (ImGui::Button("Add Whole Body Keyframe", ImVec2(210.0f, 28.0f)))
+	{
+		AddWholeBodyMotionKeyframeAtPreviewFrame();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Delete Current Keyframe", ImVec2(190.0f, 28.0f)))
+	{
+		DeleteWholeBodyMotionKeyframeAtPreviewFrame();
+	}
+
+	ImGui::Separator();
+	ImGui::Text("Pose Edit");
+	if (!canEditCurrentFrame)
+	{
+		ImGui::TextDisabled("Add a keyframe to this frame before editing the pose.");
+	}
+
+	ImGui::BeginDisabled(!canEditCurrentFrame);
+	const int previousBoneIndex = selectedMotionEditorBoneIndex;
+	const bool partChanged = ImGui::Combo(
 		"Target Part",
 		&selectedMotionEditorBoneIndex,
 		MotionEditorBoneNames,
 		static_cast<int>(std::size(MotionEditorBoneNames)));
-	ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &motionKeyRotationEulerDegrees.x, 0.5f);
-
-	ImGui::Text("Key Frame: %d", std::max(0, GetPreviewActionFrame()));
-	if (ImGui::Button("Set Rotation Key At Preview Frame", ImVec2(240.0f, 26.0f)))
+	if (partChanged && previousBoneIndex != selectedMotionEditorBoneIndex && canEditCurrentFrame)
+	{
+		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame);
+	}
+	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &motionKeyRotationEulerDegrees.x, 0.5f))
 	{
 		SetMotionRotationKeyAtPreviewFrame();
 	}
-	ImGui::SameLine();
-	if (ImGui::Button("Save MotionData", ImVec2(160.0f, 26.0f)))
+	ImGui::EndDisabled();
+
+	ImGui::Separator();
+	if (ImGui::Button("Save MotionData", ImVec2(160.0f, 28.0f)))
 	{
 		SaveDraftMotion();
 	}
 
-	ImGui::Text("Tracks: %zu", draftMotion.boneTracks.size());
-	for (size_t trackIndex = 0; trackIndex < draftMotion.boneTracks.size(); ++trackIndex)
+	ImGui::Separator();
+	std::vector<int> keyFrames;
+	for (const MotionBoneTrackData& track : draftMotion.boneTracks)
 	{
-		MotionBoneTrackData& track = draftMotion.boneTracks[trackIndex];
-		ImGui::PushID(static_cast<int>(trackIndex));
-		if (ImGui::TreeNode(track.boneName.c_str()))
+		for (const MotionBoneKeyframeData& keyframe : track.keyframes)
 		{
-			for (size_t keyIndex = 0; keyIndex < track.keyframes.size();)
-			{
-				MotionBoneKeyframeData& keyframe = track.keyframes[keyIndex];
-				ImGui::PushID(static_cast<int>(keyIndex));
-				ImGui::Text(
-					"Frame %d  Rot %.1f / %.1f / %.1f",
-					keyframe.frame,
-					keyframe.localRotationEulerDegrees.x,
-					keyframe.localRotationEulerDegrees.y,
-					keyframe.localRotationEulerDegrees.z);
-				ImGui::SameLine();
-				if (ImGui::SmallButton("Load"))
-				{
-					selectedMotionEditorBoneIndex = FindMotionEditorBoneIndex(track.boneName);
-					motionKeyRotationEulerDegrees = keyframe.localRotationEulerDegrees;
-					previewCurrentFrame = keyframe.frame + 1;
-					ClampPreviewCurrentFrame();
-				}
-				ImGui::SameLine();
-				bool deleted = false;
-				if (ImGui::SmallButton("Delete"))
-				{
-					track.keyframes.erase(track.keyframes.begin() + static_cast<std::ptrdiff_t>(keyIndex));
-					deleted = true;
-				}
-				ImGui::PopID();
-				if (!deleted)
-				{
-					++keyIndex;
-				}
-			}
-			ImGui::TreePop();
+			keyFrames.push_back(keyframe.frame);
+		}
+	}
+	std::sort(keyFrames.begin(), keyFrames.end());
+	keyFrames.erase(std::unique(keyFrames.begin(), keyFrames.end()), keyFrames.end());
+
+	ImGui::Text("Whole Body Keyframes: %zu", keyFrames.size());
+	for (int keyFrame : keyFrames)
+	{
+		ImGui::PushID(keyFrame);
+		const bool selected = keyFrame == actionFrame;
+		if (ImGui::Selectable(("Frame " + std::to_string(keyFrame)).c_str(), selected))
+		{
+			previewPlaying = false;
+			previewCurrentFrame = keyFrame + 1;
+			ClampPreviewCurrentFrame();
+			const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+			motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
+		}
+
+		if (selected)
+		{
+			ImGui::SetItemDefaultFocus();
 		}
 		ImGui::PopID();
+	}
+
+	if (!statusMessage.empty())
+	{
+		ImGui::TextWrapped("%s", statusMessage.c_str());
 	}
 }
 
@@ -1253,6 +1479,7 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 	}
 	ClampAttackDataValues(draftAttack);
 
+	EnsureDraftAttackMotionDataId();
 	CopyDisplayNameToBuffer();
 	CopyMotionDataIdToBuffer();
 	hasDraftMotion = false;
@@ -1287,6 +1514,7 @@ void CustomizeScene::SyncDraftFromEditor()
 	draftAttack.attackDataId = editingAttackDataId;
 	draftAttack.displayName = displayNameBuffer.data();
 	draftAttack.motionDataId = motionDataIdBuffer.data();
+	EnsureDraftAttackMotionDataId();
 	draftAttack.attackKind = selectedCategory == CustomizeAttackCategory::Special
 		? AttackKind::Special
 		: AttackKind::Normal;
@@ -1308,6 +1536,20 @@ void CustomizeScene::SyncDraftFromEditor()
 	}
 
 	ClampAttackDataValues(draftAttack);
+}
+
+/// <summary>
+/// 編集中の技に、スロット単位で一意になる MotionData ID を割り当てる。
+/// </summary>
+void CustomizeScene::EnsureDraftAttackMotionDataId()
+{
+	if (draftAttack.motionDataId.empty() || draftAttack.motionDataId == "debug_right_arm_wave")
+	{
+		draftAttack.motionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
+	}
+
+	motionDataIdBuffer.fill('\0');
+	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", draftAttack.motionDataId.c_str());
 }
 
 /// <summary>
@@ -1394,6 +1636,81 @@ void CustomizeScene::SaveDraftMotion()
 }
 
 /// <summary>
+/// 現在のプレビューフレームに、15部位すべてのキーフレームを追加する。
+/// </summary>
+void CustomizeScene::AddWholeBodyMotionKeyframeAtPreviewFrame()
+{
+	if (!hasDraftMotion)
+	{
+		LoadDraftMotionFromEditorId();
+	}
+	if (!hasDraftMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before adding a keyframe.";
+		return;
+	}
+
+	draftMotion.totalFrames = GetPreviewTotalFrames();
+	for (const char* boneName : MotionEditorBoneNames)
+	{
+		const Vector3 rotation = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
+		SetMotionRotationKey(draftMotion, boneName, keyFrame, rotation);
+	}
+
+	const std::string selectedBoneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+	motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, selectedBoneName, keyFrame);
+	statusMessage = "Added whole body MotionData keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームから、全身キーフレームを削除する。
+/// </summary>
+void CustomizeScene::DeleteWholeBodyMotionKeyframeAtPreviewFrame()
+{
+	if (!hasDraftMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before deleting a keyframe.";
+		return;
+	}
+
+	for (MotionBoneTrackData& track : draftMotion.boneTracks)
+	{
+		track.keyframes.erase(
+			std::remove_if(
+				track.keyframes.begin(),
+				track.keyframes.end(),
+				[keyFrame](const MotionBoneKeyframeData& keyframe)
+				{
+					return keyframe.frame == keyFrame;
+				}),
+			track.keyframes.end());
+	}
+	draftMotion.boneTracks.erase(
+		std::remove_if(
+			draftMotion.boneTracks.begin(),
+			draftMotion.boneTracks.end(),
+			[](const MotionBoneTrackData& track)
+			{
+				return track.keyframes.empty();
+			}),
+		draftMotion.boneTracks.end());
+
+	statusMessage = "Deleted current MotionData keyframe.";
+}
+
+/// <summary>
 /// 現在のプレビュー actionFrame に、指定ボーンのローカル回転キーフレームを追加または上書きする。
 /// </summary>
 void CustomizeScene::SetMotionRotationKeyAtPreviewFrame()
@@ -1420,52 +1737,15 @@ void CustomizeScene::SetMotionRotationKeyAtPreviewFrame()
 		statusMessage = "Select preview frame 1 or later before setting a MotionData key.";
 		return;
 	}
+	if (!HasMotionKeyframeAtPreviewFrame())
+	{
+		statusMessage = "Add a whole body keyframe before editing pose.";
+		return;
+	}
 	draftMotion.totalFrames = GetPreviewTotalFrames();
+	SetMotionRotationKey(draftMotion, boneName, keyFrame, motionKeyRotationEulerDegrees);
 
-	MotionBoneTrackData* targetTrack = nullptr;
-	for (MotionBoneTrackData& track : draftMotion.boneTracks)
-	{
-		if (track.boneName == boneName)
-		{
-			targetTrack = &track;
-			break;
-		}
-	}
-
-	if (!targetTrack)
-	{
-		MotionBoneTrackData newTrack;
-		newTrack.boneName = boneName;
-		draftMotion.boneTracks.push_back(newTrack);
-		targetTrack = &draftMotion.boneTracks.back();
-	}
-
-	MotionBoneKeyframeData* targetKeyframe = nullptr;
-	for (MotionBoneKeyframeData& keyframe : targetTrack->keyframes)
-	{
-		if (keyframe.frame == keyFrame)
-		{
-			targetKeyframe = &keyframe;
-			break;
-		}
-	}
-
-	if (!targetKeyframe)
-	{
-		MotionBoneKeyframeData newKeyframe;
-		newKeyframe.frame = keyFrame;
-		targetTrack->keyframes.push_back(newKeyframe);
-		targetKeyframe = &targetTrack->keyframes.back();
-	}
-
-	targetKeyframe->hasRotation = true;
-	targetKeyframe->localRotationEulerDegrees = motionKeyRotationEulerDegrees;
-	targetKeyframe->localRotation = Quaternion::CreateFromYawPitchRoll(
-		XMConvertToRadians(motionKeyRotationEulerDegrees.y),
-		XMConvertToRadians(motionKeyRotationEulerDegrees.x),
-		XMConvertToRadians(motionKeyRotationEulerDegrees.z));
-	targetKeyframe->localRotation.Normalize();
-
+	MotionBoneTrackData* targetTrack = FindMotionTrack(draftMotion, boneName);
 	std::sort(
 		targetTrack->keyframes.begin(),
 		targetTrack->keyframes.end(),
@@ -1475,6 +1755,34 @@ void CustomizeScene::SetMotionRotationKeyAtPreviewFrame()
 		});
 
 	statusMessage = "Set MotionData keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームに編集可能なキーフレームが存在するか確認する。
+/// </summary>
+/// <returns>現在フレームに少なくとも 1 部位のキーがある場合は true。</returns>
+bool CustomizeScene::HasMotionKeyframeAtPreviewFrame() const
+{
+	if (!hasDraftMotion)
+	{
+		return false;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		return false;
+	}
+
+	for (const MotionBoneTrackData& track : draftMotion.boneTracks)
+	{
+		if (FindMotionKeyframe(track, keyFrame))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /// <summary>
@@ -1810,6 +2118,20 @@ std::string CustomizeScene::BuildAttackDataId(CustomizeAttackCategory category, 
 }
 
 /// <summary>
+/// カテゴリとスロット番号から、assets/MotionData 配下の保存 ID を作る。
+/// </summary>
+/// <param name="category">保存カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>拡張子なしの MotionData ID。</returns>
+std::string CustomizeScene::BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const
+{
+	std::ostringstream stream;
+	stream << CategoryLabels[ToCategoryIndex(category)] << "/slot_";
+	stream << std::setw(2) << std::setfill('0') << slotIndex;
+	return stream.str();
+}
+
+/// <summary>
 /// 未保存スロットを開いた時に使う初期 AttackData を作る。
 /// </summary>
 /// <param name="category">作成する技カテゴリ。</param>
@@ -1824,6 +2146,7 @@ AttackData CustomizeScene::CreateDefaultAttackData(
 	AttackData attackData;
 	attackData.attackDataId = attackDataId;
 	attackData.displayName = std::string(CategoryLabels[ToCategoryIndex(category)]) + " Slot " + std::to_string(slotIndex);
+	attackData.motionDataId = BuildMotionDataId(category, slotIndex);
 	attackData.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
 	attackData.commandId = category == CustomizeAttackCategory::Special ? AttackCommandId::Hadouken : AttackCommandId::None;
 	attackData.usableState = category == CustomizeAttackCategory::Air ? AttackUsableState::Air : AttackUsableState::Ground;
@@ -1879,10 +2202,11 @@ void CustomizeScene::CopyMotionEditorBuffers()
 	{
 		const MotionBoneTrackData& track = draftMotion.boneTracks.front();
 		selectedMotionEditorBoneIndex = FindMotionEditorBoneIndex(track.boneName);
-		if (!track.keyframes.empty() && track.keyframes.front().hasRotation)
-		{
-			motionKeyRotationEulerDegrees = track.keyframes.front().localRotationEulerDegrees;
-		}
+		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(
+			draftMotion,
+			boneName,
+			std::max(0, GetPreviewActionFrame()));
 	}
 }
 

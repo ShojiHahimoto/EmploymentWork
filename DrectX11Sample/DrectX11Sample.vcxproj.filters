@@ -458,6 +458,15 @@
     <None Include="assets\MotionData\debug_right_arm_wave.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
+    <None Include="assets\MotionData\Ground\slot_00.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Ground\slot_01.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Air\slot_00.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
     </None>

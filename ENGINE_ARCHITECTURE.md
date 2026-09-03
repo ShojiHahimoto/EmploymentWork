@@ -470,6 +470,10 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
 - 編集ツール上の部位名は `Head`, `Spine`, `Waist`, `RShoulder`, `LShoulder`, `RElbow`, `LElbow`, `RHand`, `LHand`, `RHipjoint`, `LHipjoint`, `RKnees`, `LKnees`, `RFeet`, `LFeet` の 15 種類を基本とする
 - MotionData には編集用部位名を保存し、MotionSystem がモデルごとの実ボーン名へ解決する
+- MotionData ID は原則として AttackData のカテゴリとスロットに対応させ、`Ground/slot_00` のように技ごとに別ファイルへ保存する
+- モーション編集 UI は「フレーム選択 -> 全身キーフレーム追加 -> 姿勢編集」の順に扱い、キーフレームがないフレームでは姿勢編集を禁止する
+- モーション編集 UI 上ではキーフレームを部位単位ではなく全身単位として見せ、保存時は既存の `boneTracks` 形式へ展開して再生側を壊さない
+- キーフレームが存在するフレームでは、角度入力を変更した時点で下書き MotionData とプレビューへ即時反映する
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
 - 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
 - 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する

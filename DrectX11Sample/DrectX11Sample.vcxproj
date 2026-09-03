@@ -147,7 +147,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Shader\ModelSkinned.hlsl" />
+    <None Include="assets\MotionData\Air\slot_00.json" />
     <None Include="assets\MotionData\debug_right_arm_wave.json" />
+    <None Include="assets\MotionData\Ground\slot_00.json" />
+    <None Include="assets\MotionData\Ground\slot_01.json" />
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json" />
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json" />
     <None Include="packages.config" />

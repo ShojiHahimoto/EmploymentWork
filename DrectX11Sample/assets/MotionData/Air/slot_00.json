@@ -1,0 +1,50 @@
+﻿{
+  "motionDataId": "Air/slot_00",
+  "displayName": "モーション_ジャンプパンチ",
+  "totalFrames": 19,
+  "looping": false,
+  "boneTracks": [
+    {
+      "boneName": "RShoulder",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -70.000 }
+        },
+        {
+          "frame": 10,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -70.000 }
+        },
+        {
+          "frame": 18,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Spine",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 148.500, "y": 213.500, "z": -352.500 }
+        },
+        {
+          "frame": 10,
+          "rotationEulerDegrees": { "x": -133.000, "y": 153.500, "z": -352.500 }
+        },
+        {
+          "frame": 18,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    }
+  ]
+}

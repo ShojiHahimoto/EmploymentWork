@@ -31,6 +31,6 @@ else
 foreach ($file in $files)
 {
 	$text = [System.IO.File]::ReadAllText($file.FullName)
-	$text = $text -replace "`r?`n", "`r`n"
+	$text = $text.Replace("`r`n", "`n").Replace("`r", "`n").Replace("`n", "`r`n")
 	[System.IO.File]::WriteAllText($file.FullName, $text, $utf8Bom)
 }
