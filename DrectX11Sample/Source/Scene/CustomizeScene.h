@@ -20,6 +20,7 @@ enum class CustomizeMode
 	AttackCategorySelect,
 	AttackSlotSelect,
 	AttackEditor,
+	MotionEditor,
 	CharacterSlotSelect,
 	CharacterEditor,
 	AttackPicker
@@ -140,6 +141,7 @@ private:
 	void DrawAttackCategorySelect();
 	void DrawAttackSlotSelect();
 	void DrawAttackEditor(Renderer& renderer);
+	void DrawMotionEditorScreen(Renderer& renderer);
 	void DrawAttackPreviewWindow(Renderer& renderer);
 	void DrawAttackEditorWindow();
 	void DrawHitboxEditor();
@@ -153,9 +155,13 @@ private:
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SaveDraftAttack();
 	void SyncDraftFromEditor();
+	void EnsureDraftAttackMotionDataId();
 	void LoadDraftMotionFromEditorId();
 	void SaveDraftMotion();
+	void AddWholeBodyMotionKeyframeAtPreviewFrame();
+	void DeleteWholeBodyMotionKeyframeAtPreviewFrame();
 	void SetMotionRotationKeyAtPreviewFrame();
+	bool HasMotionKeyframeAtPreviewFrame() const;
 	void SelectCharacterSlot(int slotIndex);
 	void SaveDraftCharacter();
 	void CopyCharacterNameToBuffer();
@@ -180,6 +186,7 @@ private:
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
 	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
+	std::string BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const;
 	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex, const std::string& attackDataId) const;
 	void CopyDisplayNameToBuffer();
 	void CopyMotionDataIdToBuffer();
