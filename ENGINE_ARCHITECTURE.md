@@ -163,6 +163,7 @@ HitResolveSystem
 HitReactionSystem
 BattleResultSystem
 BattleHUDSystem
+MotionSystem
 TransformSystem
 CameraSystem
 DebugSystem
@@ -182,6 +183,7 @@ DebugSystem
 - HitReactionSystem は、HitResolveSystem が確定した被弾反応リクエストを読み、ヒットバック、ガードバック、吹き飛び、ダウンを処理する
 - BattleResultSystem は、KO とラウンドタイマーのタイムアップを確認し、勝敗結果を確定する
 - BattleHUDSystem は、HPバーやラウンドタイマーなどの対戦 HUD 表示状態を更新し、ゲームビューへ描画する
+- MotionSystem は、現在の ActionState / actionFrame / MotionData から GameObject ごとのボーン姿勢を更新し、Renderer へ渡すスキニング行列を作る
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
@@ -452,9 +454,35 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 現段階ではアニメーション再生は行わず、static pose として描画する
 - AnimationClip は bone ごとの position / rotation / scale keyframe を保持できる構造にする
 - ゲーム内で作成するキーフレームアニメーションも、同じ AnimationClip / Channel / Keyframe 構造に保存する
-- AnimationSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource の AnimationClip を参照する
+- MotionSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource や MotionData の AnimationClip / Pose を参照する
 - 2D UI は ModelComponent ではなく、UI タグと用途別 Component を追加して表現する
 - 現段階の HUD は通常の TransformComponent を使い、画面座標用の Transform として扱う
+
+## Animation / Motion
+
+自作モーション機能は、見た目の姿勢制御として扱い、攻撃性能を持つ AttackData と分離する。
+
+- MotionData は AttackData とは別 JSON / 別リソースとして管理する
+- AttackData は将来的に参照用の `motionId` だけを持ち、キーフレーム姿勢そのものは持たない
+- 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
+- MotionData は `motionId`、表示名、総フレーム、キーフレーム一覧を持つ
+- キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
+- 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
+- 対戦開始時または技ロード時に、キーフレーム間を補完した 1F ごとの姿勢をキャッシュする
+- 対戦中は毎フレーム補完計算せず、`actionFrame` からキャッシュ済み姿勢を参照する
+- スキニングは GPU スキニングを基本方針とし、Renderer はボーン行列配列を HLSL へ渡す
+- HLSL はスキニング実装以降、外部 `.hlsl` ファイルを優先して管理する
+- `ModelResource` は共有モデルデータ、初期ボーン階層、bind pose、頂点ウェイト、FBX 由来 AnimationClip を持つ
+- `ModelResource` に GameObject ごとの現在姿勢や再生状態を持たせない
+- GameObject ごとの現在姿勢は `SkeletonPoseComponent` に保持する
+- 再生中モーション ID、再生フレーム、ループ有無などの再生状態は、必要になった段階で `MotionPlayerComponent` など別 Component に持たせる
+- MotionSystem は `ModelComponent`、`SkeletonPoseComponent`、将来の `MotionPlayerComponent` を読み、描画用スキニング行列を更新する
+- 最初は FK で、各ボーンのローカル回転・位置・スケールを直接指定して姿勢を作る
+- IK は FK キーフレーム再生が安定してから追加する
+- IK はまず腕・脚向けの 2 ボーン IK を優先し、首、腰、背中などは FK 操作を基本とする
+- IK 追加時は関節の可動域制限を持たせ、肘や膝が逆に曲がる、関節が破綻するなどの姿勢を防ぐ
+- モーション編集画面は最初 ImGui 数値編集で作り、再生、停止、1F送り、キーフレーム追加・選択・削除を段階的に追加する
+- 3D ギズモ、姿勢プリセット、IK 操作、可動域編集は、スキニング描画と FK キーフレーム保存が安定した後に追加する
 
 ## オブジェクト参照
 

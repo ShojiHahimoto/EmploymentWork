@@ -58,6 +58,8 @@ class ModelResource;
 class Renderer
 {
 public:
+	static constexpr int MaxModelSkinningBoneCount = 256;
+
 	struct RenderTexture
 	{
 		ID3D11Texture2D* texture = nullptr;
@@ -78,6 +80,13 @@ private:
 	{
 		DirectX::SimpleMath::Matrix worldViewProjection;
 		DirectX::SimpleMath::Color color;
+	};
+
+	struct ModelConstantBuffer
+	{
+		DirectX::SimpleMath::Matrix worldViewProjection;
+		DirectX::SimpleMath::Matrix boneMatrices[MaxModelSkinningBoneCount];
+		DirectX::XMINT4 skinningFlags;
 	};
 
 	static D3D_FEATURE_LEVEL m_FeatureLevel;
@@ -140,6 +149,7 @@ private:
 	static HRESULT CreateModelRenderResources();
 	static HRESULT CreateWhiteTextureResource();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
+	static HRESULT CompileShaderFromFile(const std::wstring& path, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static void ReleaseDebugCubeResources();
 	static void ReleaseDebugBoxResources();
 	static void ReleaseModelRenderResources();
@@ -165,7 +175,10 @@ public:
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
-	static bool DrawModel(const ModelResource& model, const DirectX::SimpleMath::Matrix& world);
+	static bool DrawModel(
+		const ModelResource& model,
+		const DirectX::SimpleMath::Matrix& world,
+		const std::vector<DirectX::SimpleMath::Matrix>* skinningMatrices = nullptr);
 	static HRESULT LoadTextureFromFile(const std::string& path, ID3D11ShaderResourceView** textureView);
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);

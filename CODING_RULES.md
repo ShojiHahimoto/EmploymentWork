@@ -18,6 +18,7 @@
 - `.config`
 - `.json`
 - `.md`
+- `.hlsl`
 
 理由:
 

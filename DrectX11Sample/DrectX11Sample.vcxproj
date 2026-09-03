@@ -47,6 +47,7 @@
     <ClCompile Include="Source\System\HitReactionSystem.cpp" />
     <ClCompile Include="Source\System\HitResolveSystem.cpp" />
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
+    <ClCompile Include="Source\System\MotionSystem.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
@@ -79,6 +80,7 @@
     <ClInclude Include="Source\Component\HealthComponent.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
+    <ClInclude Include="Source\Component\SkeletonPoseComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
     <ClInclude Include="Source\Component\VelocityComponent.h" />
@@ -126,6 +128,7 @@
     <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h" />
     <ClInclude Include="Source\System\main.h" />
     <ClInclude Include="Source\System\MovementSystem.h" />
+    <ClInclude Include="Source\System\MotionSystem.h" />
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h" />
     <ClInclude Include="Source\System\PlayerFacingSystem.h" />
     <ClInclude Include="Source\System\PlayerControlSystem.h" />
@@ -137,6 +140,7 @@
     <ClInclude Include="Source\World\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Source\Shader\ModelSkinned.hlsl" />
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json" />
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json" />
     <None Include="packages.config" />

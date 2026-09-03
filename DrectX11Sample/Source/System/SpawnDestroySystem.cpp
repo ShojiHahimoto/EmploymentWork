@@ -7,6 +7,7 @@
 #include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "Data/BattleSetupData.h"
@@ -60,6 +61,11 @@ namespace
 		ModelComponent model;
 		model.resourceKey = modelKey;
 		world.AddComponent<ModelComponent>(objectId, model);
+
+		SkeletonPoseComponent skeletonPose;
+		skeletonPose.enableDebugPose = true;
+		world.AddComponent<SkeletonPoseComponent>(objectId, skeletonPose);
+
 		world.AddComponent<VelocityComponent>(objectId);
 
 		StateComponent state;
@@ -123,6 +129,10 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 			ModelComponent model;
 			model.resourceKey = "Debugman";
 			world.AddComponent<ModelComponent>(objectId, model);
+
+			SkeletonPoseComponent skeletonPose;
+			skeletonPose.enableDebugPose = true;
+			world.AddComponent<SkeletonPoseComponent>(objectId, skeletonPose);
 			break;
 		}
 		case SpawnType::DebugPlayer:

@@ -70,6 +70,9 @@
     <Filter Include="リソース ファイル\CharacterData\CharacterSlot00">
       <UniqueIdentifier>{57c78864-1c34-44d4-b344-475614ba263f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\Shader">
+      <UniqueIdentifier>{7c4efc44-31ff-4b59-a244-6459a4bff18b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -145,6 +148,9 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\InputHistorySystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\MotionSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
@@ -239,6 +245,9 @@
     <ClInclude Include="Source\System\MovementSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\MotionSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -288,6 +297,9 @@
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Component\ModelComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Component\SkeletonPoseComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\GameObject.h">
@@ -419,6 +431,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Source\Shader\ModelSkinned.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
     </None>

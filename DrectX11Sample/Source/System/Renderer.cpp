@@ -5,6 +5,7 @@
 
 #include <WICTextureLoader.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -83,6 +84,8 @@ const char* ModelShaderSource = R"(
 cbuffer TransformBuffer : register(b0)
 {
 	matrix worldViewProjection;
+	matrix boneMatrices[256];
+	int4 skinningFlags;
 };
 
 Texture2D diffuseTexture : register(t0);
@@ -107,8 +110,24 @@ struct PS_INPUT
 PS_INPUT VSMain(VS_INPUT input)
 {
 	PS_INPUT output;
-	output.position = mul(float4(input.position, 1.0f), worldViewProjection);
-	output.normal = normalize(input.normal);
+	float4 localPosition = float4(input.position, 1.0f);
+	float3 localNormal = input.normal;
+
+	if (skinningFlags.x != 0)
+	{
+		uint4 boneIndex = min(input.boneIndices, uint4(255, 255, 255, 255));
+		matrix skinMatrix =
+			boneMatrices[boneIndex.x] * input.boneWeights.x +
+			boneMatrices[boneIndex.y] * input.boneWeights.y +
+			boneMatrices[boneIndex.z] * input.boneWeights.z +
+			boneMatrices[boneIndex.w] * input.boneWeights.w;
+
+		localPosition = mul(localPosition, skinMatrix);
+		localNormal = normalize(mul(float4(localNormal, 0.0f), skinMatrix).xyz);
+	}
+
+	output.position = mul(localPosition, worldViewProjection);
+	output.normal = normalize(localNormal);
 	output.uv = input.uv;
 	return output;
 }
@@ -747,14 +766,40 @@ HRESULT Renderer::CreateModelRenderResources()
 	ID3DBlob* vertexShaderBlob = nullptr;
 	ID3DBlob* pixelShaderBlob = nullptr;
 
-	HRESULT hr = CompileShader(ModelShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob);
+	HRESULT hr = CompileShaderFromFile(L"Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+	if (FAILED(hr))
+	{
+		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+	}
+	if (FAILED(hr))
+	{
+		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+	}
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model vertex shader file compile failed. Use embedded fallback. hr=", static_cast<long>(hr));
+		hr = CompileShader(ModelShaderSource, "VSMain", "vs_5_0", &vertexShaderBlob);
+	}
 	if (FAILED(hr))
 	{
 		DebugLog("[Renderer] Model vertex shader compile failed. hr=", static_cast<long>(hr));
 		return hr;
 	}
 
-	hr = CompileShader(ModelShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob);
+	hr = CompileShaderFromFile(L"Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+	if (FAILED(hr))
+	{
+		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+	}
+	if (FAILED(hr))
+	{
+		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+	}
+	if (FAILED(hr))
+	{
+		DebugLog("[Renderer] Model pixel shader file compile failed. Use embedded fallback. hr=", static_cast<long>(hr));
+		hr = CompileShader(ModelShaderSource, "PSMain", "ps_5_0", &pixelShaderBlob);
+	}
 	if (FAILED(hr))
 	{
 		DebugLog("[Renderer] Model pixel shader compile failed. hr=", static_cast<long>(hr));
@@ -814,7 +859,7 @@ HRESULT Renderer::CreateModelRenderResources()
 	}
 
 	D3D11_BUFFER_DESC constantBufferDesc = {};
-	constantBufferDesc.ByteWidth = sizeof(DebugCubeConstantBuffer);
+	constantBufferDesc.ByteWidth = sizeof(ModelConstantBuffer);
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
@@ -872,6 +917,38 @@ HRESULT Renderer::CreateWhiteTextureResource()
 
 	hr = m_pDevice->CreateShaderResourceView(texture, nullptr, &m_pWhiteTextureView);
 	texture->Release();
+
+	return hr;
+}
+
+/// <summary>
+/// 外部 HLSL ファイルをコンパイルする。
+/// </summary>
+/// <param name="path">読み込む HLSL ファイルパス。</param>
+/// <param name="entryPoint">コンパイルするエントリポイント名。</param>
+/// <param name="target">vs_5_0 などのコンパイルターゲット。</param>
+/// <param name="blob">コンパイル結果の受け取り先。</param>
+/// <returns>コンパイル結果の HRESULT。</returns>
+HRESULT Renderer::CompileShaderFromFile(const std::wstring& path, const char* entryPoint, const char* target, ID3DBlob** blob)
+{
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if defined(_DEBUG)
+	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+	ID3DBlob* errorBlob = nullptr;
+	HRESULT hr = D3DCompileFromFile(
+		path.c_str(),
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		entryPoint,
+		target,
+		flags,
+		0,
+		blob,
+		&errorBlob);
+
+	SAFE_RELEASE(errorBlob);
 
 	return hr;
 }
@@ -995,16 +1072,37 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// </summary>
 /// <param name="model">描画するモデルリソース。</param>
 /// <param name="world">モデルの World 行列。</param>
+/// <param name="skinningMatrices">GPU スキニングに使うボーン行列配列。nullptr の場合は静的モデルとして描画する。</param>
 /// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
-bool Renderer::DrawModel(const ModelResource& model, const Matrix& world)
+bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const std::vector<Matrix>* skinningMatrices)
 {
 	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
 	{
 		return false;
 	}
 
-	DebugCubeConstantBuffer constantBuffer = {};
+	ModelConstantBuffer constantBuffer = {};
 	constantBuffer.worldViewProjection = (world * m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	constantBuffer.skinningFlags = XMINT4(0, 0, 0, 0);
+
+	for (int boneIndex = 0; boneIndex < MaxModelSkinningBoneCount; ++boneIndex)
+	{
+		constantBuffer.boneMatrices[boneIndex] = Matrix::Identity;
+	}
+
+	if (skinningMatrices && !skinningMatrices->empty())
+	{
+		const size_t copyCount = std::min(
+			skinningMatrices->size(),
+			static_cast<size_t>(MaxModelSkinningBoneCount));
+
+		for (size_t boneIndex = 0; boneIndex < copyCount; ++boneIndex)
+		{
+			constantBuffer.boneMatrices[boneIndex] = (*skinningMatrices)[boneIndex].Transpose();
+		}
+
+		constantBuffer.skinningFlags.x = 1;
+	}
 	m_pDeviceContext->UpdateSubresource(m_pModelConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
 
 	m_pDeviceContext->IASetInputLayout(m_pModelInputLayout);
