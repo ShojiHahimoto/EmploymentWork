@@ -463,25 +463,25 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 自作モーション機能は、見た目の姿勢制御として扱い、攻撃性能を持つ AttackData と分離する。
 
 - MotionData は AttackData とは別 JSON / 別リソースとして管理する
-- AttackData は将来的に参照用の `motionId` だけを持ち、キーフレーム姿勢そのものは持たない
+- AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
-- MotionData は `motionId`、表示名、総フレーム、キーフレーム一覧を持つ
+- MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
-- 対戦開始時または技ロード時に、キーフレーム間を補完した 1F ごとの姿勢をキャッシュする
-- 対戦中は毎フレーム補完計算せず、`actionFrame` からキャッシュ済み姿勢を参照する
+- 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
+- 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する
 - スキニングは GPU スキニングを基本方針とし、Renderer はボーン行列配列を HLSL へ渡す
 - HLSL はスキニング実装以降、外部 `.hlsl` ファイルを優先して管理する
 - `ModelResource` は共有モデルデータ、初期ボーン階層、bind pose、頂点ウェイト、FBX 由来 AnimationClip を持つ
 - `ModelResource` に GameObject ごとの現在姿勢や再生状態を持たせない
 - GameObject ごとの現在姿勢は `SkeletonPoseComponent` に保持する
-- 再生中モーション ID、再生フレーム、ループ有無などの再生状態は、必要になった段階で `MotionPlayerComponent` など別 Component に持たせる
-- MotionSystem は `ModelComponent`、`SkeletonPoseComponent`、将来の `MotionPlayerComponent` を読み、描画用スキニング行列を更新する
+- 再生中モーション ID、再生フレーム、ループ有無などの再生状態は `MotionPlayerComponent` に持たせる
+- MotionSystem は `ModelComponent`、`SkeletonPoseComponent`、`MotionPlayerComponent` を読み、描画用スキニング行列を更新する
 - 最初は FK で、各ボーンのローカル回転・位置・スケールを直接指定して姿勢を作る
 - IK は FK キーフレーム再生が安定してから追加する
 - IK はまず腕・脚向けの 2 ボーン IK を優先し、首、腰、背中などは FK 操作を基本とする
 - IK 追加時は関節の可動域制限を持たせ、肘や膝が逆に曲がる、関節が破綻するなどの姿勢を防ぐ
-- モーション編集画面は最初 ImGui 数値編集で作り、再生、停止、1F送り、キーフレーム追加・選択・削除を段階的に追加する
+- モーション編集画面は最初 ImGui 数値編集で作り、MotionData ID、対象ボーン名、現在プレビューフレームへの回転キー追加、保存から段階的に追加する
 - 3D ギズモ、姿勢プリセット、IK 操作、可動域編集は、スキニング描画と FK キーフレーム保存が安定した後に追加する
 
 ## オブジェクト参照

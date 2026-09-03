@@ -73,6 +73,9 @@
     <Filter Include="リソース ファイル\Shader">
       <UniqueIdentifier>{7c4efc44-31ff-4b59-a244-6459a4bff18b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\MotionData">
+      <UniqueIdentifier>{ff70432f-5916-4c01-ae84-a82bc6621e32}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -106,6 +109,12 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\JsonValue.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\MotionDataLoader.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\MotionDataSaver.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleScene.cpp">
@@ -299,6 +308,9 @@
     <ClInclude Include="Source\Component\ModelComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\MotionPlayerComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Component\SkeletonPoseComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
@@ -428,11 +440,23 @@
     <ClInclude Include="Source\Data\JsonValue.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Data\MotionData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\MotionDataLoader.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\MotionDataSaver.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="Source\Shader\ModelSkinned.hlsl">
       <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="assets\MotionData\debug_right_arm_wave.json">
+      <Filter>リソース ファイル\MotionData</Filter>
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>

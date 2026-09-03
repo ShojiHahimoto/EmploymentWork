@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "Component/CameraComponent.h"
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/TransformComponent.h"
 #include "Data/AttackData.h"
 #include "Data/CharacterData.h"
+#include "Data/MotionData.h"
 #include "Scene/Scene.h"
 #include "System/Renderer.h"
 #include "World/World.h"
@@ -103,6 +105,12 @@ private:
 
 	AttackData draftAttack;
 	std::array<char, 128> displayNameBuffer = {};
+	std::array<char, 128> motionDataIdBuffer = {};
+	MotionData draftMotion;
+	bool hasDraftMotion = false;
+	std::array<char, 128> motionDisplayNameBuffer = {};
+	std::array<char, 128> motionBoneNameBuffer = {};
+	DirectX::SimpleMath::Vector3 motionKeyRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 	std::string editingAttackDataId;
 	std::string statusMessage;
 	std::array<std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>, 3> attackSlotSummaries = {};
@@ -120,6 +128,7 @@ private:
 	CameraComponent previewCamera;
 	TransformComponent previewCameraTransform;
 	TransformComponent previewPlayerTransform;
+	SkeletonPoseComponent previewSkeletonPose;
 	int previewCurrentFrame = 0;
 	bool previewPlaying = false;
 
@@ -135,6 +144,7 @@ private:
 	void DrawAttackEditorWindow();
 	void DrawHitboxEditor();
 	void DrawCancelSettingEditor();
+	void DrawMotionEditor();
 	void DrawCharacterSlotSelect();
 	void DrawCharacterEditor();
 	void DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char* label);
@@ -143,6 +153,9 @@ private:
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SaveDraftAttack();
 	void SyncDraftFromEditor();
+	void LoadDraftMotionFromEditorId();
+	void SaveDraftMotion();
+	void SetMotionRotationKeyAtPreviewFrame();
 	void SelectCharacterSlot(int slotIndex);
 	void SaveDraftCharacter();
 	void CopyCharacterNameToBuffer();
@@ -169,6 +182,8 @@ private:
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
 	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex, const std::string& attackDataId) const;
 	void CopyDisplayNameToBuffer();
+	void CopyMotionDataIdToBuffer();
+	void CopyMotionEditorBuffers();
 	std::string BuildCharacterId(int slotIndex) const;
 	std::string BuildCharacterFolderPath(int slotIndex) const;
 	std::string BuildCharacterSlotButtonLabel(int slotIndex) const;

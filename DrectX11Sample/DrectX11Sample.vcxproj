@@ -30,6 +30,8 @@
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
     <ClCompile Include="Source\Data\CharacterDataSaver.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
+    <ClCompile Include="Source\Data\MotionDataLoader.cpp" />
+    <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
@@ -80,6 +82,7 @@
     <ClInclude Include="Source\Component\HealthComponent.h" />
     <ClInclude Include="Source\Component\InputHistoryComponent.h" />
     <ClInclude Include="Source\Component\ModelComponent.h" />
+    <ClInclude Include="Source\Component\MotionPlayerComponent.h" />
     <ClInclude Include="Source\Component\SkeletonPoseComponent.h" />
     <ClInclude Include="Source\Component\StateComponent.h" />
     <ClInclude Include="Source\Component\TransformComponent.h" />
@@ -92,6 +95,9 @@
     <ClInclude Include="Source\Data\CharacterDataLoader.h" />
     <ClInclude Include="Source\Data\CharacterDataSaver.h" />
     <ClInclude Include="Source\Data\JsonValue.h" />
+    <ClInclude Include="Source\Data\MotionData.h" />
+    <ClInclude Include="Source\Data\MotionDataLoader.h" />
+    <ClInclude Include="Source\Data\MotionDataSaver.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
     <ClInclude Include="Source\Input\InputSystem.h" />
@@ -141,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Shader\ModelSkinned.hlsl" />
+    <None Include="assets\MotionData\debug_right_arm_wave.json" />
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json" />
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json" />
     <None Include="packages.config" />

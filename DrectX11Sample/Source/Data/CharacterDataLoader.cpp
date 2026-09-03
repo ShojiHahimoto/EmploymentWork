@@ -790,6 +790,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Ground"));
+	outAttackData.motionDataId = GetString(root, "motionDataId", outAttackData.motionDataId);
 	if (outAttackData.usableState == AttackUsableState::Unknown)
 	{
 		outAttackData.usableState = AttackUsableState::Ground;

@@ -1,6 +1,10 @@
 ﻿#pragma once
 
 #include "Component/SkeletonPoseComponent.h"
+#include "Component/MotionPlayerComponent.h"
+#include "Core/GameObject.h"
+#include "Data/AttackData.h"
+#include "Data/MotionData.h"
 #include "Resource/ModelResource.h"
 
 #include <SimpleMath.h>
@@ -8,6 +12,9 @@
 #include <string>
 
 class World;
+struct CharacterAttackDataComponent;
+struct HitBoxComponent;
+struct StateComponent;
 
 /// <summary>
 /// ModelResource のボーン情報と GameObject ごとの姿勢 Component から、描画用スキニング行列を作る。
@@ -50,8 +57,29 @@ public:
 	/// <param name="model">ボーン階層と offsetMatrix を持つ ModelResource。</param>
 	static void UpdateSkinningMatrices(SkeletonPoseComponent& pose, const ModelResource& model);
 
+	/// <summary>
+	/// 指定 MotionData の指定フレームを SkeletonPoseComponent に反映する。
+	/// </summary>
+	/// <param name="pose">変更する姿勢 Component。</param>
+	/// <param name="motion">適用するモーションデータ。</param>
+	/// <param name="frame">再生する 0 始まりフレーム。</param>
+	/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+	static void ApplyMotionData(
+		SkeletonPoseComponent& pose,
+		const MotionData& motion,
+		int frame,
+		const ModelResource& model);
+
 private:
+	static void SyncMotionPlayerFromState(World& world, GameObjectId objectId, MotionPlayerComponent& player);
+	static const CharacterAssignedAttackData* FindAssignedAttack(
+		const CharacterAttackDataComponent* attackData,
+		const std::string& attackSlotId);
+	static bool IsAttackActionState(PlayerActionState actionState);
 	static void ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelResource& model);
+	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player, const ModelResource& model);
+	static BonePose SampleBoneTrack(const MotionBoneTrackData& track, const BonePose& bindPose, int frame);
+	static void AdvanceMotionFrame(MotionPlayerComponent& player, const MotionData& motion);
 	static void ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResource& model);
 	static DirectX::SimpleMath::Matrix CreateLocalMatrix(const BonePose& pose);
 };

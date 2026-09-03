@@ -1,6 +1,11 @@
 ﻿#include "System/MotionSystem.h"
 
+#include "Component/CharacterAttackDataComponent.h"
+#include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/MotionPlayerComponent.h"
+#include "Component/StateComponent.h"
+#include "Data/MotionData.h"
 #include "World/World.h"
 
 #include <DirectXMath.h>
@@ -36,6 +41,18 @@ void MotionSystem::Update(World& world)
 		if (!pose->initialized || pose->sourceModelKey != modelComponent->resourceKey)
 		{
 			InitializeSkeletonPose(*pose, *model, modelComponent->resourceKey);
+		}
+
+		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
+		if (motionPlayer)
+		{
+			SyncMotionPlayerFromState(world, object.id, *motionPlayer);
+		}
+
+		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
+		{
+			UpdateSkinningMatrices(*pose, *model);
+			continue;
 		}
 
 #if defined(_DEBUG)
@@ -81,6 +98,104 @@ bool MotionSystem::InitializeSkeletonPose(
 	pose.initialized = true;
 
 	return true;
+}
+
+/// <summary>
+/// 現在の PlayerActionState と実行中攻撃スロットから MotionPlayerComponent の再生対象を更新する。
+/// </summary>
+/// <param name="world">State / HitBox / CharacterAttackData を取得する World。</param>
+/// <param name="objectId">同期対象の GameObject ID。</param>
+/// <param name="player">更新する MotionPlayerComponent。</param>
+void MotionSystem::SyncMotionPlayerFromState(
+	World& world,
+	GameObjectId objectId,
+	MotionPlayerComponent& player)
+{
+	const StateComponent* state = world.GetComponent<StateComponent>(objectId);
+	const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
+	const CharacterAttackDataComponent* attackData = world.GetComponent<CharacterAttackDataComponent>(objectId);
+	if (!state)
+	{
+		return;
+	}
+
+	if (!IsAttackActionState(state->currentActionState) || !hitBox || !attackData || hitBox->currentAttack.slotId.empty())
+	{
+		if (player.stateDriven)
+		{
+			player.motionDataId.clear();
+			player.currentFrame = 0;
+			player.playing = false;
+			player.boundActionState = state->currentActionState;
+			player.boundAttackSlotId.clear();
+		}
+		return;
+	}
+
+	const CharacterAssignedAttackData* assignedAttack = FindAssignedAttack(attackData, hitBox->currentAttack.slotId);
+	if (!assignedAttack || assignedAttack->attack.motionDataId.empty())
+	{
+		if (player.stateDriven)
+		{
+			player.motionDataId.clear();
+			player.currentFrame = 0;
+			player.playing = false;
+			player.boundActionState = state->currentActionState;
+			player.boundAttackSlotId = hitBox->currentAttack.slotId;
+		}
+		return;
+	}
+
+	const bool restarted = !player.stateDriven
+		|| player.motionDataId != assignedAttack->attack.motionDataId
+		|| player.boundActionState != state->currentActionState
+		|| player.boundAttackSlotId != hitBox->currentAttack.slotId
+		|| state->actionFrame == 0;
+
+	player.stateDriven = true;
+	player.motionDataId = assignedAttack->attack.motionDataId;
+	player.boundActionState = state->currentActionState;
+	player.boundAttackSlotId = hitBox->currentAttack.slotId;
+	player.looping = false;
+	player.playing = true;
+	player.currentFrame = restarted ? 0 : std::max(0, state->actionFrame);
+}
+
+/// <summary>
+/// CharacterAttackDataComponent から指定 slotId の技データを探す。
+/// </summary>
+/// <param name="attackData">検索対象の CharacterAttackDataComponent。</param>
+/// <param name="attackSlotId">検索する攻撃スロット ID。</param>
+/// <returns>見つかった割り当て技。存在しない場合は nullptr。</returns>
+const CharacterAssignedAttackData* MotionSystem::FindAssignedAttack(
+	const CharacterAttackDataComponent* attackData,
+	const std::string& attackSlotId)
+{
+	if (!attackData || attackSlotId.empty())
+	{
+		return nullptr;
+	}
+
+	for (const CharacterAssignedAttackData& assignedAttack : attackData->attacks)
+	{
+		if (assignedAttack.slotId == attackSlotId)
+		{
+			return &assignedAttack;
+		}
+	}
+
+	return nullptr;
+}
+
+/// <summary>
+/// 指定 ActionState が攻撃中か確認する。
+/// </summary>
+/// <param name="actionState">判定する PlayerActionState。</param>
+/// <returns>地上攻撃または空中攻撃なら true。</returns>
+bool MotionSystem::IsAttackActionState(PlayerActionState actionState)
+{
+	return actionState == PlayerActionState::GroundAttack
+		|| actionState == PlayerActionState::AirAttack;
 }
 
 /// <summary>
@@ -163,6 +278,168 @@ void MotionSystem::ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelR
 		pose.bonePoses[boneIndex].localPosition = bones[boneIndex].bindLocalPosition;
 		pose.bonePoses[boneIndex].localRotation = bones[boneIndex].bindLocalRotation;
 		pose.bonePoses[boneIndex].localScale = bones[boneIndex].bindLocalScale;
+	}
+}
+
+/// <summary>
+/// MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。
+/// </summary>
+/// <param name="pose">変更する姿勢 Component。</param>
+/// <param name="player">再生中モーション ID と現在フレームを持つ Component。</param>
+/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+/// <returns>MotionData を姿勢へ反映できた場合は true。</returns>
+bool MotionSystem::ApplyMotionPlayer(
+	SkeletonPoseComponent& pose,
+	MotionPlayerComponent& player,
+	const ModelResource& model)
+{
+	if (!player.playing || player.motionDataId.empty())
+	{
+		return false;
+	}
+
+	if (!MotionDataManager::LoadMotionData(player.motionDataId))
+	{
+		return false;
+	}
+
+	const MotionData* motion = MotionDataManager::GetMotionData(player.motionDataId);
+	if (!motion)
+	{
+		return false;
+	}
+
+	ApplyMotionData(pose, *motion, player.currentFrame, model);
+	AdvanceMotionFrame(player, *motion);
+	return true;
+}
+
+/// <summary>
+/// 指定 MotionData の指定フレームを SkeletonPoseComponent に反映する。
+/// </summary>
+/// <param name="pose">変更する姿勢 Component。</param>
+/// <param name="motion">適用するモーションデータ。</param>
+/// <param name="frame">再生する 0 始まりフレーム。</param>
+/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+void MotionSystem::ApplyMotionData(
+	SkeletonPoseComponent& pose,
+	const MotionData& motion,
+	int frame,
+	const ModelResource& model)
+{
+	ResetPoseToBindPose(pose, model);
+
+	const std::vector<ModelBone>& bones = model.GetBones();
+	for (const MotionBoneTrackData& track : motion.boneTracks)
+	{
+		const int boneIndex = model.FindBoneIndex(track.boneName);
+		if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.bonePoses.size())
+		{
+			continue;
+		}
+
+		const BonePose bindPose =
+		{
+			bones[boneIndex].bindLocalPosition,
+			bones[boneIndex].bindLocalRotation,
+			bones[boneIndex].bindLocalScale
+		};
+
+		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame);
+	}
+}
+
+/// <summary>
+/// 1 ボーントラックから指定フレームのローカル姿勢を補間して取得する。
+/// </summary>
+/// <param name="track">参照するボーンキーフレーム配列。</param>
+/// <param name="bindPose">未指定チャンネルに使う bind pose。</param>
+/// <param name="frame">取得する 0 始まりフレーム。</param>
+/// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。</returns>
+BonePose MotionSystem::SampleBoneTrack(
+	const MotionBoneTrackData& track,
+	const BonePose& bindPose,
+	int frame)
+{
+	BonePose result = bindPose;
+	if (track.keyframes.empty())
+	{
+		return result;
+	}
+
+	const MotionBoneKeyframeData* previousKey = &track.keyframes.front();
+	const MotionBoneKeyframeData* nextKey = &track.keyframes.back();
+	for (const MotionBoneKeyframeData& keyframe : track.keyframes)
+	{
+		if (keyframe.frame <= frame)
+		{
+			previousKey = &keyframe;
+		}
+
+		if (keyframe.frame >= frame)
+		{
+			nextKey = &keyframe;
+			break;
+		}
+	}
+
+	const int frameSpan = std::max(1, nextKey->frame - previousKey->frame);
+	const float t = std::clamp(static_cast<float>(frame - previousKey->frame) / static_cast<float>(frameSpan), 0.0f, 1.0f);
+
+	if (previousKey->hasPosition && nextKey->hasPosition)
+	{
+		result.localPosition = Vector3::Lerp(previousKey->localPosition, nextKey->localPosition, t);
+	}
+	else if (previousKey->hasPosition)
+	{
+		result.localPosition = previousKey->localPosition;
+	}
+
+	if (previousKey->hasRotation && nextKey->hasRotation)
+	{
+		result.localRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
+		result.localRotation.Normalize();
+	}
+	else if (previousKey->hasRotation)
+	{
+		result.localRotation = previousKey->localRotation;
+	}
+
+	if (previousKey->hasScale && nextKey->hasScale)
+	{
+		result.localScale = Vector3::Lerp(previousKey->localScale, nextKey->localScale, t);
+	}
+	else if (previousKey->hasScale)
+	{
+		result.localScale = previousKey->localScale;
+	}
+
+	return result;
+}
+
+/// <summary>
+/// MotionData の総フレームとループ設定を見て、次フレームの再生位置へ進める。
+/// </summary>
+/// <param name="player">再生フレームを更新する MotionPlayerComponent。</param>
+/// <param name="motion">総フレームとループ設定を持つ MotionData。</param>
+void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const MotionData& motion)
+{
+	const int totalFrames = std::max(1, motion.totalFrames);
+	player.currentFrame += 1;
+
+	if (player.currentFrame < totalFrames)
+	{
+		return;
+	}
+
+	if (player.looping || motion.looping)
+	{
+		player.currentFrame = 0;
+	}
+	else
+	{
+		player.currentFrame = totalFrames - 1;
+		player.playing = false;
 	}
 }
 

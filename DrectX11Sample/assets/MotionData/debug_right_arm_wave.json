@@ -1,0 +1,42 @@
+﻿{
+  "motionDataId": "debug_right_arm_wave",
+  "displayName": "モーション_ジャブ",
+  "totalFrames": 13,
+  "looping": false,
+  "boneTracks": [
+    {
+      "boneName": "mixamorig:RightArm",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 89.000, "y": 0.000, "z": -35.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 35.000 }
+        },
+        {
+          "frame": 59,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -35.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RightArm",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -35.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 35.000 }
+        },
+        {
+          "frame": 59,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -35.000 }
+        }
+      ]
+    }
+  ]
+}

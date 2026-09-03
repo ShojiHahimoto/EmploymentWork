@@ -174,6 +174,8 @@ struct AttackData
 	AttackUsableState usableState = AttackUsableState::Ground;
 	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
 	HitReactionType hitReactionType = HitReactionType::Normal;
+	// 技に対応する MotionData ID。空文字なら現段階ではモーションを再生しない。
+	std::string motionDataId;
 	AttackFrameData frame;
 	// false の場合、cancelSetting の中身は保持するが対戦中のキャンセル判定には使わない。
 	bool canAttackCancel = false;
