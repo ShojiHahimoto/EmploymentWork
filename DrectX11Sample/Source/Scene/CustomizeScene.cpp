@@ -78,6 +78,23 @@ namespace
 		"ReverseYoga",
 		"FullRotate"
 	};
+	constexpr const char* MotionEditorBoneNames[] = {
+		"Head",
+		"Spine",
+		"Waist",
+		"RShoulder",
+		"LShoulder",
+		"RElbow",
+		"LElbow",
+		"RHand",
+		"LHand",
+		"RHipjoint",
+		"LHipjoint",
+		"RKnees",
+		"LKnees",
+		"RFeet",
+		"LFeet"
+	};
 
 	struct AttackPickerItem
 	{
@@ -226,6 +243,40 @@ namespace
 		}
 
 		return 0;
+	}
+
+	/// <summary>
+	/// MotionData のトラック名から編集用部位プルダウンの index を取得する。
+	/// </summary>
+	/// <param name="boneName">MotionData に保存されている部位名または旧実ボーン名。</param>
+	/// <returns>該当するプルダウン index。見つからない場合は RShoulder。</returns>
+	int FindMotionEditorBoneIndex(const std::string& boneName)
+	{
+		for (int index = 0; index < static_cast<int>(std::size(MotionEditorBoneNames)); ++index)
+		{
+			if (boneName == MotionEditorBoneNames[index])
+			{
+				return index;
+			}
+		}
+
+		if (boneName == "mixamorig:RightArm" || boneName == "RightArm")
+		{
+			return 3;
+		}
+
+		return 3;
+	}
+
+	/// <summary>
+	/// 編集用部位プルダウンの index から MotionData に保存する部位名を取得する。
+	/// </summary>
+	/// <param name="index">部位プルダウンの index。</param>
+	/// <returns>MotionData に保存する Head / RShoulder などの部位名。</returns>
+	const char* GetMotionEditorBoneName(int index)
+	{
+		const int clampedIndex = std::clamp(index, 0, static_cast<int>(std::size(MotionEditorBoneNames)) - 1);
+		return MotionEditorBoneNames[clampedIndex];
 	}
 
 	/// <summary>
@@ -884,9 +935,15 @@ void CustomizeScene::DrawMotionEditor()
 	}
 
 	ImGui::InputText("Motion Name", motionDisplayNameBuffer.data(), motionDisplayNameBuffer.size());
-	ImGui::InputInt("Motion Total Frames", &draftMotion.totalFrames);
-	ImGui::Checkbox("Motion Looping", &draftMotion.looping);
-	ImGui::InputText("Target Bone Name", motionBoneNameBuffer.data(), motionBoneNameBuffer.size());
+	draftMotion.totalFrames = GetPreviewTotalFrames();
+	ImGui::Text("Motion Total Frames: %d (AttackData)", draftMotion.totalFrames);
+	draftMotion.looping = false;
+	ImGui::Text("Motion Looping: false (Attack Motion)");
+	ImGui::Combo(
+		"Target Part",
+		&selectedMotionEditorBoneIndex,
+		MotionEditorBoneNames,
+		static_cast<int>(std::size(MotionEditorBoneNames)));
 	ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &motionKeyRotationEulerDegrees.x, 0.5f);
 
 	ImGui::Text("Key Frame: %d", std::max(0, GetPreviewActionFrame()));
@@ -901,6 +958,47 @@ void CustomizeScene::DrawMotionEditor()
 	}
 
 	ImGui::Text("Tracks: %zu", draftMotion.boneTracks.size());
+	for (size_t trackIndex = 0; trackIndex < draftMotion.boneTracks.size(); ++trackIndex)
+	{
+		MotionBoneTrackData& track = draftMotion.boneTracks[trackIndex];
+		ImGui::PushID(static_cast<int>(trackIndex));
+		if (ImGui::TreeNode(track.boneName.c_str()))
+		{
+			for (size_t keyIndex = 0; keyIndex < track.keyframes.size();)
+			{
+				MotionBoneKeyframeData& keyframe = track.keyframes[keyIndex];
+				ImGui::PushID(static_cast<int>(keyIndex));
+				ImGui::Text(
+					"Frame %d  Rot %.1f / %.1f / %.1f",
+					keyframe.frame,
+					keyframe.localRotationEulerDegrees.x,
+					keyframe.localRotationEulerDegrees.y,
+					keyframe.localRotationEulerDegrees.z);
+				ImGui::SameLine();
+				if (ImGui::SmallButton("Load"))
+				{
+					selectedMotionEditorBoneIndex = FindMotionEditorBoneIndex(track.boneName);
+					motionKeyRotationEulerDegrees = keyframe.localRotationEulerDegrees;
+					previewCurrentFrame = keyframe.frame + 1;
+					ClampPreviewCurrentFrame();
+				}
+				ImGui::SameLine();
+				bool deleted = false;
+				if (ImGui::SmallButton("Delete"))
+				{
+					track.keyframes.erase(track.keyframes.begin() + static_cast<std::ptrdiff_t>(keyIndex));
+					deleted = true;
+				}
+				ImGui::PopID();
+				if (!deleted)
+				{
+					++keyIndex;
+				}
+			}
+			ImGui::TreePop();
+		}
+		ImGui::PopID();
+	}
 }
 
 /// <summary>
@@ -1230,8 +1328,6 @@ void CustomizeScene::LoadDraftMotionFromEditorId()
 		draftMotion = MotionData();
 		draftMotion.motionDataId = draftAttack.motionDataId;
 		draftMotion.displayName = draftAttack.motionDataId;
-		draftMotion.totalFrames = std::max(1, GetPreviewTotalFrames());
-		draftMotion.looping = false;
 		statusMessage = "New MotionData draft created.";
 	}
 	else
@@ -1239,6 +1335,8 @@ void CustomizeScene::LoadDraftMotionFromEditorId()
 		statusMessage = "Loaded existing MotionData.";
 	}
 
+	draftMotion.totalFrames = GetPreviewTotalFrames();
+	draftMotion.looping = false;
 	hasDraftMotion = true;
 	CopyMotionEditorBuffers();
 }
@@ -1257,10 +1355,16 @@ void CustomizeScene::SaveDraftMotion()
 	draftAttack.motionDataId = motionDataIdBuffer.data();
 	draftMotion.motionDataId = draftAttack.motionDataId;
 	draftMotion.displayName = motionDisplayNameBuffer.data();
-	draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
+	draftMotion.totalFrames = GetPreviewTotalFrames();
 
 	for (MotionBoneTrackData& track : draftMotion.boneTracks)
 	{
+		const int lastFrame = std::max(0, draftMotion.totalFrames - 1);
+		for (MotionBoneKeyframeData& keyframe : track.keyframes)
+		{
+			keyframe.frame = std::clamp(keyframe.frame, 0, lastFrame);
+		}
+
 		std::sort(
 			track.keyframes.begin(),
 			track.keyframes.end(),
@@ -1269,6 +1373,15 @@ void CustomizeScene::SaveDraftMotion()
 				return left.frame < right.frame;
 			});
 	}
+	draftMotion.boneTracks.erase(
+		std::remove_if(
+			draftMotion.boneTracks.begin(),
+			draftMotion.boneTracks.end(),
+			[](const MotionBoneTrackData& track)
+			{
+				return track.keyframes.empty();
+			}),
+		draftMotion.boneTracks.end());
 
 	if (MotionDataSaver::SaveMotionData(draftMotion.motionDataId, draftMotion))
 	{
@@ -1294,15 +1407,20 @@ void CustomizeScene::SetMotionRotationKeyAtPreviewFrame()
 		return;
 	}
 
-	const std::string boneName = motionBoneNameBuffer.data();
+	const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
 	if (boneName.empty())
 	{
-		statusMessage = "Target Bone Name is empty.";
+		statusMessage = "Target Part is empty.";
 		return;
 	}
 
-	const int keyFrame = std::max(0, GetPreviewActionFrame());
-	draftMotion.totalFrames = std::max(draftMotion.totalFrames, keyFrame + 1);
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before setting a MotionData key.";
+		return;
+	}
+	draftMotion.totalFrames = GetPreviewTotalFrames();
 
 	MotionBoneTrackData* targetTrack = nullptr;
 	for (MotionBoneTrackData& track : draftMotion.boneTracks)
@@ -1748,7 +1866,7 @@ void CustomizeScene::CopyMotionDataIdToBuffer()
 void CustomizeScene::CopyMotionEditorBuffers()
 {
 	motionDisplayNameBuffer.fill('\0');
-	motionBoneNameBuffer.fill('\0');
+	selectedMotionEditorBoneIndex = 3;
 	motionKeyRotationEulerDegrees = Vector3::Zero;
 
 	if (!hasDraftMotion)
@@ -1760,15 +1878,11 @@ void CustomizeScene::CopyMotionEditorBuffers()
 	if (!draftMotion.boneTracks.empty())
 	{
 		const MotionBoneTrackData& track = draftMotion.boneTracks.front();
-		std::snprintf(motionBoneNameBuffer.data(), motionBoneNameBuffer.size(), "%s", track.boneName.c_str());
+		selectedMotionEditorBoneIndex = FindMotionEditorBoneIndex(track.boneName);
 		if (!track.keyframes.empty() && track.keyframes.front().hasRotation)
 		{
 			motionKeyRotationEulerDegrees = track.keyframes.front().localRotationEulerDegrees;
 		}
-	}
-	else
-	{
-		std::snprintf(motionBoneNameBuffer.data(), motionBoneNameBuffer.size(), "%s", "mixamorig:RightArm");
 	}
 }
 

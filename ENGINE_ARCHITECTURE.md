@@ -466,7 +466,10 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
 - MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
+- 攻撃モーションの総フレームは AttackData の総フレームを正とし、MotionData 側で独立して差を持たせない
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
+- 編集ツール上の部位名は `Head`, `Spine`, `Waist`, `RShoulder`, `LShoulder`, `RElbow`, `LElbow`, `RHand`, `LHand`, `RHipjoint`, `LHipjoint`, `RKnees`, `LKnees`, `RFeet`, `LFeet` の 15 種類を基本とする
+- MotionData には編集用部位名を保存し、MotionSystem がモデルごとの実ボーン名へ解決する
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
 - 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
 - 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する

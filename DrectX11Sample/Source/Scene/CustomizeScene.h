@@ -109,7 +109,7 @@ private:
 	MotionData draftMotion;
 	bool hasDraftMotion = false;
 	std::array<char, 128> motionDisplayNameBuffer = {};
-	std::array<char, 128> motionBoneNameBuffer = {};
+	int selectedMotionEditorBoneIndex = 0;
 	DirectX::SimpleMath::Vector3 motionKeyRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 	std::string editingAttackDataId;
 	std::string statusMessage;

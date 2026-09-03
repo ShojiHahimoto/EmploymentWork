@@ -11,11 +11,79 @@
 #include <DirectXMath.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <vector>
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
+
+namespace
+{
+	struct MotionEditorBoneAlias
+	{
+		const char* editorName;
+		std::array<const char*, 3> modelBoneNames;
+	};
+
+	constexpr MotionEditorBoneAlias MotionEditorBoneAliases[] =
+	{
+		{ "Head", { "mixamorig:Head", "Head", "" } },
+		{ "Spine", { "mixamorig:Spine", "mixamorig:Spine1", "Spine" } },
+		{ "Waist", { "mixamorig:Hips", "Hips", "" } },
+		{ "RShoulder", { "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder" } },
+		{ "LShoulder", { "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder" } },
+		{ "RElbow", { "mixamorig:RightForeArm", "RightForeArm", "" } },
+		{ "LElbow", { "mixamorig:LeftForeArm", "LeftForeArm", "" } },
+		{ "RHand", { "mixamorig:RightHand", "RightHand", "" } },
+		{ "LHand", { "mixamorig:LeftHand", "LeftHand", "" } },
+		{ "RHipjoint", { "mixamorig:RightUpLeg", "RightUpLeg", "" } },
+		{ "LHipjoint", { "mixamorig:LeftUpLeg", "LeftUpLeg", "" } },
+		{ "RKnees", { "mixamorig:RightLeg", "RightLeg", "" } },
+		{ "LKnees", { "mixamorig:LeftLeg", "LeftLeg", "" } },
+		{ "RFeet", { "mixamorig:RightFoot", "RightFoot", "" } },
+		{ "LFeet", { "mixamorig:LeftFoot", "LeftFoot", "" } },
+	};
+
+	/// <summary>
+	/// MotionData 上の編集用部位名または実ボーン名を、ModelResource 内のボーン番号へ解決する。
+	/// </summary>
+	/// <param name="model">検索対象の ModelResource。</param>
+	/// <param name="motionBoneName">MotionData に保存されている部位名または実ボーン名。</param>
+	/// <returns>見つかったボーン番号。存在しない場合は -1。</returns>
+	int FindMotionBoneIndex(const ModelResource& model, const std::string& motionBoneName)
+	{
+		const int directBoneIndex = model.FindBoneIndex(motionBoneName);
+		if (directBoneIndex >= 0)
+		{
+			return directBoneIndex;
+		}
+
+		for (const MotionEditorBoneAlias& alias : MotionEditorBoneAliases)
+		{
+			if (motionBoneName != alias.editorName)
+			{
+				continue;
+			}
+
+			for (const char* modelBoneName : alias.modelBoneNames)
+			{
+				if (!modelBoneName || modelBoneName[0] == '\0')
+				{
+					continue;
+				}
+
+				const int aliasedBoneIndex = model.FindBoneIndex(modelBoneName);
+				if (aliasedBoneIndex >= 0)
+				{
+					return aliasedBoneIndex;
+				}
+			}
+		}
+
+		return -1;
+	}
+}
 
 /// <summary>
 /// モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。
@@ -332,7 +400,7 @@ void MotionSystem::ApplyMotionData(
 	const std::vector<ModelBone>& bones = model.GetBones();
 	for (const MotionBoneTrackData& track : motion.boneTracks)
 	{
-		const int boneIndex = model.FindBoneIndex(track.boneName);
+		const int boneIndex = FindMotionBoneIndex(model, track.boneName);
 		if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.bonePoses.size())
 		{
 			continue;
@@ -432,7 +500,7 @@ void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const Motio
 		return;
 	}
 
-	if (player.looping || motion.looping)
+	if (!player.stateDriven && (player.looping || motion.looping))
 	{
 		player.currentFrame = 0;
 	}
