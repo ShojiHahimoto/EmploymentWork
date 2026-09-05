@@ -8,10 +8,6 @@
       "boneName": "RShoulder",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
-        },
-        {
           "frame": 3,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -89.500 }
         },
@@ -28,10 +24,6 @@
     {
       "boneName": "Head",
       "keyframes": [
-        {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
-        },
         {
           "frame": 3,
           "rotationEulerDegrees": { "x": 179.500, "y": 0.000, "z": 0.000 }

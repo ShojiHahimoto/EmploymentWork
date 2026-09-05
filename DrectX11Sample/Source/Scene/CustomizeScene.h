@@ -96,6 +96,7 @@ private:
 	static constexpr int CharacterNameBufferSize = 128;
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
+	static constexpr int MotionEditorBoneCount = 15;
 
 	World world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
@@ -132,6 +133,11 @@ private:
 	SkeletonPoseComponent previewSkeletonPose;
 	int previewCurrentFrame = 0;
 	bool previewPlaying = false;
+	float previewCameraYawDegrees = 0.0f;
+	float previewCameraPitchDegrees = -2.5f;
+	float previewCameraDistance = 14.0f;
+	std::array<DirectX::SimpleMath::Vector3, MotionEditorBoneCount> copiedMotionPoseRotations = {};
+	bool hasCopiedMotionPose = false;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -147,6 +153,7 @@ private:
 	void DrawHitboxEditor();
 	void DrawCancelSettingEditor();
 	void DrawMotionEditor();
+	void DrawMotionTimeline();
 	void DrawCharacterSlotSelect();
 	void DrawCharacterEditor();
 	void DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char* label);
@@ -161,6 +168,9 @@ private:
 	void AddWholeBodyMotionKeyframeAtPreviewFrame();
 	void DeleteWholeBodyMotionKeyframeAtPreviewFrame();
 	void SetMotionRotationKeyAtPreviewFrame();
+	void CopyWholeBodyMotionPoseAtPreviewFrame();
+	void PasteWholeBodyMotionPoseAtPreviewFrame();
+	void ApplyTPosePresetAtPreviewFrame();
 	bool HasMotionKeyframeAtPreviewFrame() const;
 	void SelectCharacterSlot(int slotIndex);
 	void SaveDraftCharacter();
@@ -172,6 +182,7 @@ private:
 	void InitializePreview();
 	void ReleasePreview();
 	void UpdatePreviewPlayback();
+	void UpdatePreviewCameraTransform();
 	void RenderAttackPreview(Renderer& renderer);
 	void DrawPreviewAttackBoxes(Renderer& renderer);
 	void ClampPreviewCurrentFrame();

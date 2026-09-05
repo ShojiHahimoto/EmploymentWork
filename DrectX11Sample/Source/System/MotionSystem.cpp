@@ -451,6 +451,33 @@ BonePose MotionSystem::SampleBoneTrack(
 		}
 	}
 
+	// 最初のキーより前は、プレビュー 0F の Idle 姿勢(bind pose)から最初のキーへ補間する。
+	// これにより、攻撃開始直後に最初のキー姿勢へ瞬間移動せず、自然に入り始める。
+	if (frame < track.keyframes.front().frame)
+	{
+		const MotionBoneKeyframeData& firstKey = track.keyframes.front();
+		const int frameSpan = std::max(1, firstKey.frame + 1);
+		const float t = std::clamp(static_cast<float>(frame + 1) / static_cast<float>(frameSpan), 0.0f, 1.0f);
+
+		if (firstKey.hasPosition)
+		{
+			result.localPosition = Vector3::Lerp(bindPose.localPosition, firstKey.localPosition, t);
+		}
+
+		if (firstKey.hasRotation)
+		{
+			result.localRotation = Quaternion::Slerp(bindPose.localRotation, firstKey.localRotation, t);
+			result.localRotation.Normalize();
+		}
+
+		if (firstKey.hasScale)
+		{
+			result.localScale = Vector3::Lerp(bindPose.localScale, firstKey.localScale, t);
+		}
+
+		return result;
+	}
+
 	const int frameSpan = std::max(1, nextKey->frame - previousKey->frame);
 	const float t = std::clamp(static_cast<float>(frame - previousKey->frame) / static_cast<float>(frameSpan), 0.0f, 1.0f);
 

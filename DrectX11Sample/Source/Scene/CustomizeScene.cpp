@@ -21,6 +21,7 @@
 #include <DirectXMath.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstddef>
 #include <cstdint>
@@ -840,6 +841,11 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 	{
 		ImGui::Text("Attack: %s", editingAttackDataId.c_str());
 		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
+		ImGui::Separator();
+		ImGui::Text("Preview Camera");
+		ImGui::SliderFloat("Camera Yaw", &previewCameraYawDegrees, -180.0f, 180.0f);
+		ImGui::SliderFloat("Camera Pitch", &previewCameraPitchDegrees, -45.0f, 65.0f);
+		ImGui::SliderFloat("Camera Distance", &previewCameraDistance, 5.0f, 30.0f);
 		DrawMotionEditor();
 
 		ImGui::Separator();
@@ -1156,6 +1162,25 @@ void CustomizeScene::DrawMotionEditor()
 	{
 		DeleteWholeBodyMotionKeyframeAtPreviewFrame();
 	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!canEditCurrentFrame);
+	if (ImGui::Button("Copy Pose", ImVec2(100.0f, 28.0f)))
+	{
+		CopyWholeBodyMotionPoseAtPreviewFrame();
+	}
+	ImGui::SameLine();
+	ImGui::BeginDisabled(!hasCopiedMotionPose);
+	if (ImGui::Button("Paste Pose", ImVec2(100.0f, 28.0f)))
+	{
+		PasteWholeBodyMotionPoseAtPreviewFrame();
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if (ImGui::Button("T Pose", ImVec2(90.0f, 28.0f)))
+	{
+		ApplyTPosePresetAtPreviewFrame();
+	}
+	ImGui::EndDisabled();
 
 	ImGui::Separator();
 	ImGui::Text("Pose Edit");
@@ -1188,42 +1213,80 @@ void CustomizeScene::DrawMotionEditor()
 		SaveDraftMotion();
 	}
 
-	ImGui::Separator();
-	std::vector<int> keyFrames;
-	for (const MotionBoneTrackData& track : draftMotion.boneTracks)
-	{
-		for (const MotionBoneKeyframeData& keyframe : track.keyframes)
-		{
-			keyFrames.push_back(keyframe.frame);
-		}
-	}
-	std::sort(keyFrames.begin(), keyFrames.end());
-	keyFrames.erase(std::unique(keyFrames.begin(), keyFrames.end()), keyFrames.end());
-
-	ImGui::Text("Whole Body Keyframes: %zu", keyFrames.size());
-	for (int keyFrame : keyFrames)
-	{
-		ImGui::PushID(keyFrame);
-		const bool selected = keyFrame == actionFrame;
-		if (ImGui::Selectable(("Frame " + std::to_string(keyFrame)).c_str(), selected))
-		{
-			previewPlaying = false;
-			previewCurrentFrame = keyFrame + 1;
-			ClampPreviewCurrentFrame();
-			const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-			motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
-		}
-
-		if (selected)
-		{
-			ImGui::SetItemDefaultFocus();
-		}
-		ImGui::PopID();
-	}
+	DrawMotionTimeline();
 
 	if (!statusMessage.empty())
 	{
 		ImGui::TextWrapped("%s", statusMessage.c_str());
+	}
+}
+
+/// <summary>
+/// モーション編集画面下部に、現在フレームとキーフレーム位置を簡易表示する。
+/// </summary>
+void CustomizeScene::DrawMotionTimeline()
+{
+	ImGui::Separator();
+	ImGui::Text("Timeline");
+
+	const int totalFrames = GetPreviewTotalFrames();
+	for (int previewFrame = 0; previewFrame <= totalFrames; ++previewFrame)
+	{
+		const int actionFrame = previewFrame - 1;
+		bool hasKey = false;
+		if (actionFrame >= 0)
+		{
+			for (const MotionBoneTrackData& track : draftMotion.boneTracks)
+			{
+				if (FindMotionKeyframe(track, actionFrame))
+				{
+					hasKey = true;
+					break;
+				}
+			}
+		}
+
+		ImGui::PushID(previewFrame);
+		std::string label;
+		if (previewFrame == 0)
+		{
+			label = "Idle";
+		}
+		else
+		{
+			label = hasKey ? ("*" + std::to_string(actionFrame)) : std::to_string(actionFrame);
+		}
+
+		const bool selected = previewCurrentFrame == previewFrame;
+		if (selected)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.95f, 0.75f, 0.10f, 0.85f));
+		}
+		else if (hasKey)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.95f, 0.85f));
+		}
+
+		if (ImGui::Button(label.c_str(), ImVec2(46.0f, 28.0f)))
+		{
+			previewPlaying = false;
+			previewCurrentFrame = previewFrame;
+			const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+			motionKeyRotationEulerDegrees = actionFrame >= 0
+				? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
+				: Vector3::Zero;
+		}
+
+		if (selected || hasKey)
+		{
+			ImGui::PopStyleColor();
+		}
+
+		if ((previewFrame + 1) % 10 != 0 && previewFrame < totalFrames)
+		{
+			ImGui::SameLine();
+		}
+		ImGui::PopID();
 	}
 }
 
@@ -1786,6 +1849,78 @@ bool CustomizeScene::HasMotionKeyframeAtPreviewFrame() const
 }
 
 /// <summary>
+/// 現在フレームに存在する全身キーフレームの回転をコピーする。
+/// </summary>
+void CustomizeScene::CopyWholeBodyMotionPoseAtPreviewFrame()
+{
+	if (!HasMotionKeyframeAtPreviewFrame())
+	{
+		statusMessage = "Copy requires a keyframe on the current frame.";
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
+	{
+		const std::string boneName = GetMotionEditorBoneName(boneIndex);
+		copiedMotionPoseRotations[boneIndex] = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
+	}
+
+	hasCopiedMotionPose = true;
+	statusMessage = "Copied whole body pose.";
+}
+
+/// <summary>
+/// コピー済み全身姿勢を、現在フレームに存在する全身キーフレームへ貼り付ける。
+/// </summary>
+void CustomizeScene::PasteWholeBodyMotionPoseAtPreviewFrame()
+{
+	if (!hasCopiedMotionPose)
+	{
+		statusMessage = "No copied pose.";
+		return;
+	}
+	if (!HasMotionKeyframeAtPreviewFrame())
+	{
+		statusMessage = "Paste requires a keyframe on the current frame.";
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
+	{
+		const std::string boneName = GetMotionEditorBoneName(boneIndex);
+		SetMotionRotationKey(draftMotion, boneName, keyFrame, copiedMotionPoseRotations[boneIndex]);
+	}
+
+	const std::string selectedBoneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+	motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, selectedBoneName, keyFrame);
+	statusMessage = "Pasted whole body pose.";
+}
+
+/// <summary>
+/// 現在フレームに存在する全身キーフレームへ、仮の T ポーズ回転を適用する。
+/// </summary>
+void CustomizeScene::ApplyTPosePresetAtPreviewFrame()
+{
+	if (!HasMotionKeyframeAtPreviewFrame())
+	{
+		statusMessage = "T Pose requires a keyframe on the current frame.";
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
+	{
+		const std::string boneName = GetMotionEditorBoneName(boneIndex);
+		SetMotionRotationKey(draftMotion, boneName, keyFrame, Vector3::Zero);
+	}
+
+	motionKeyRotationEulerDegrees = Vector3::Zero;
+	statusMessage = "Applied T Pose preset.";
+}
+
+/// <summary>
 /// 技調整プレビュー用のモデル、カメラ、RenderTexture を初期化する。
 /// </summary>
 void CustomizeScene::InitializePreview()
@@ -1806,8 +1941,7 @@ void CustomizeScene::InitializePreview()
 	TransformSystem::SetLocalScale(previewPlayerTransform, Vector3(0.05f, 0.05f, 0.05f));
 	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
 
-	TransformSystem::SetLocalPosition(previewCameraTransform, Vector3(0.0f, 4.0f, -12.0f));
-	TransformSystem::SetLocalEulerRotationDegrees(previewCameraTransform, Vector3(0.0f, 0.0f, 0.0f));
+	UpdatePreviewCameraTransform();
 	TransformSystem::SetLocalScale(previewCameraTransform, Vector3::One);
 	TransformSystem::UpdateWorldTransform(previewCameraTransform);
 
@@ -1835,7 +1969,8 @@ void CustomizeScene::ReleasePreview()
 /// </summary>
 void CustomizeScene::UpdatePreviewPlayback()
 {
-	if (mode != CustomizeMode::AttackEditor || !previewPlaying)
+	const bool isPreviewMode = mode == CustomizeMode::AttackEditor || mode == CustomizeMode::MotionEditor;
+	if (!isPreviewMode || !previewPlaying)
 	{
 		return;
 	}
@@ -1846,6 +1981,37 @@ void CustomizeScene::UpdatePreviewPlayback()
 		previewCurrentFrame = GetPreviewTotalFrames();
 		previewPlaying = false;
 	}
+
+	const int actionFrame = GetPreviewActionFrame();
+	if (actionFrame >= 0)
+	{
+		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame);
+	}
+}
+
+/// <summary>
+/// プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。
+/// </summary>
+void CustomizeScene::UpdatePreviewCameraTransform()
+{
+	previewCameraPitchDegrees = std::clamp(previewCameraPitchDegrees, -45.0f, 65.0f);
+	previewCameraDistance = std::clamp(previewCameraDistance, 5.0f, 30.0f);
+
+	const Vector3 targetPosition = TransformSystem::GetLocalPosition(previewPlayerTransform) + Vector3(0.0f, 4.0f, 0.0f);
+	const float yawRadians = XMConvertToRadians(previewCameraYawDegrees);
+	const float pitchRadians = XMConvertToRadians(previewCameraPitchDegrees);
+	const float cosPitch = std::cos(pitchRadians);
+	const Vector3 forward(
+		std::sin(yawRadians) * cosPitch,
+		std::sin(pitchRadians),
+		std::cos(yawRadians) * cosPitch);
+
+	const Vector3 cameraPosition = targetPosition - forward * previewCameraDistance;
+	TransformSystem::SetLocalPosition(previewCameraTransform, cameraPosition);
+	TransformSystem::SetLocalEulerRotationDegrees(
+		previewCameraTransform,
+		Vector3(previewCameraPitchDegrees, previewCameraYawDegrees, 0.0f));
 }
 
 /// <summary>
@@ -1862,6 +2028,7 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 	const float clearColor[4] = { 0.04f, 0.045f, 0.06f, 1.0f };
 	Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
 
+	UpdatePreviewCameraTransform();
 	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
 	TransformSystem::UpdateWorldTransform(previewCameraTransform);
 	CameraSystem::Update(previewCamera, previewCameraTransform);
@@ -1957,6 +2124,12 @@ void CustomizeScene::StepPreviewFrame(int frameDelta)
 	previewPlaying = false;
 	previewCurrentFrame += frameDelta;
 	ClampPreviewCurrentFrame();
+
+	const int actionFrame = GetPreviewActionFrame();
+	const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
+	motionKeyRotationEulerDegrees = actionFrame >= 0
+		? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
+		: Vector3::Zero;
 }
 
 /// <summary>
