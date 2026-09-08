@@ -102,7 +102,7 @@ PlayerActionDecision StateUpdateSystem::DecideNextAction(
 	if (state.currentActionState == PlayerActionState::AirHitstun)
 	{
 		return state.isGrounded
-			? PlayerActionDecision{ PlayerActionState::Down, true }
+			? PlayerActionDecision{ PlayerActionState::Down, true, "", false, -1, DownMotionType::AirToDown }
 			: PlayerActionDecision{ PlayerActionState::AirHitstun, false };
 	}
 
@@ -829,6 +829,7 @@ void StateUpdateSystem::ApplyActionState(
 			state.currentActionState,
 			state.isGrounded,
 			previousCameraYFollowMode);
+		state.downMotionType = decision.downMotionType;
 		state.actionFrame = 0;
 		state.actionDurationFrames = 0;
 

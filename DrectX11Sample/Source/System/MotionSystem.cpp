@@ -21,6 +21,12 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
+	constexpr const char* CommonDownMotionDataId = "Common/Down";
+	constexpr const char* CommonAirToDownMotionDataId = "Common/AirToDown";
+	constexpr int DefaultCommonBlendFrames = 3;
+	constexpr int JumpLoopBlendFrames = 2;
+	constexpr int DownBlendFrames = 4;
+	constexpr int NoMotionBlendFrames = 0;
 
 	struct MotionEditorBoneAlias
 	{
@@ -116,7 +122,7 @@ void MotionSystem::Update(World& world)
 		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
 		if (motionPlayer)
 		{
-			SyncMotionPlayerFromState(world, object.id, *motionPlayer);
+			SyncMotionPlayerFromState(world, object.id, *motionPlayer, *pose);
 		}
 
 		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
@@ -179,7 +185,8 @@ bool MotionSystem::InitializeSkeletonPose(
 void MotionSystem::SyncMotionPlayerFromState(
 	World& world,
 	GameObjectId objectId,
-	MotionPlayerComponent& player)
+	MotionPlayerComponent& player,
+	const SkeletonPoseComponent& currentPose)
 {
 	const StateComponent* state = world.GetComponent<StateComponent>(objectId);
 	const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
@@ -191,7 +198,7 @@ void MotionSystem::SyncMotionPlayerFromState(
 
 	if (!IsAttackActionState(state->currentActionState))
 	{
-		const char* commonMotionDataId = GetCommonMotionDataId(state->currentActionState);
+		const char* commonMotionDataId = GetCommonMotionDataId(*state);
 		if (!commonMotionDataId || commonMotionDataId[0] == '\0')
 		{
 			if (player.stateDriven)
@@ -199,6 +206,8 @@ void MotionSystem::SyncMotionPlayerFromState(
 				player.motionDataId.clear();
 				player.currentFrame = 0;
 				player.playing = false;
+				player.blending = false;
+				player.blendFromBonePoses.clear();
 				player.boundActionState = state->currentActionState;
 				player.boundAttackSlotId.clear();
 			}
@@ -208,6 +217,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 		const bool restarted = !player.stateDriven
 			|| player.motionDataId != commonMotionDataId
 			|| player.boundActionState != state->currentActionState;
+		if (restarted)
+		{
+			StartMotionBlend(player, currentPose, player.boundActionState, state->currentActionState);
+		}
 
 		player.stateDriven = true;
 		player.motionDataId = commonMotionDataId;
@@ -226,6 +239,8 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.motionDataId.clear();
 			player.currentFrame = 0;
 			player.playing = false;
+			player.blending = false;
+			player.blendFromBonePoses.clear();
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId.clear();
 		}
@@ -240,6 +255,8 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.motionDataId.clear();
 			player.currentFrame = 0;
 			player.playing = false;
+			player.blending = false;
+			player.blendFromBonePoses.clear();
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId = hitBox->currentAttack.slotId;
 		}
@@ -251,6 +268,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 		|| player.boundActionState != state->currentActionState
 		|| player.boundAttackSlotId != hitBox->currentAttack.slotId
 		|| state->actionFrame == 0;
+	if (restarted)
+	{
+		StartMotionBlend(player, currentPose, player.boundActionState, state->currentActionState);
+	}
 
 	player.stateDriven = true;
 	player.motionDataId = assignedAttack->attack.motionDataId;
@@ -290,11 +311,11 @@ const CharacterAssignedAttackData* MotionSystem::FindAssignedAttack(
 /// <summary>
 /// PlayerActionState に対応する汎用 MotionData ID を取得する。
 /// </summary>
-/// <param name="actionState">確認する PlayerActionState。</param>
+/// <param name="state">確認する PlayerActionState と補助状態。</param>
 /// <returns>Common Motion の ID。未対応の場合は空文字。</returns>
-const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
+const char* MotionSystem::GetCommonMotionDataId(const StateComponent& state)
 {
-	switch (actionState)
+	switch (state.currentActionState)
 	{
 	case PlayerActionState::Idle:
 		return CommonIdleMotionDataId;
@@ -326,7 +347,9 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 	case PlayerActionState::Hitstun:
 		return "Common/Hitstun";
 	case PlayerActionState::Down:
-		return "Common/Down";
+		return state.downMotionType == DownMotionType::AirToDown
+			? CommonAirToDownMotionDataId
+			: CommonDownMotionDataId;
 	case PlayerActionState::WakeUp:
 		return "Common/Wakeup";
 	case PlayerActionState::GroundAttack:
@@ -334,6 +357,73 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 	default:
 		return "";
 	}
+}
+
+/// <summary>
+/// モーション遷移時に何フレームかけて前フレーム姿勢から遷移先姿勢へ混ぜるかを取得する。
+/// </summary>
+/// <param name="previousActionState">遷移前の PlayerActionState。</param>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+/// <returns>ブレンドするフレーム数。0 の場合は即時切り替え。</returns>
+int MotionSystem::GetMotionBlendFrames(PlayerActionState previousActionState, PlayerActionState nextActionState)
+{
+	if (previousActionState == nextActionState)
+	{
+		return NoMotionBlendFrames;
+	}
+
+	switch (nextActionState)
+	{
+	case PlayerActionState::GroundAttack:
+	case PlayerActionState::AirAttack:
+	case PlayerActionState::Hitstun:
+	case PlayerActionState::AirHitstun:
+	case PlayerActionState::VerticalJumpStartup:
+	case PlayerActionState::FrontJumpStartup:
+	case PlayerActionState::BackJumpStartup:
+		return NoMotionBlendFrames;
+	case PlayerActionState::Down:
+		return DownBlendFrames;
+	case PlayerActionState::VerticalJump:
+	case PlayerActionState::FrontJump:
+	case PlayerActionState::BackJump:
+	case PlayerActionState::Fall:
+		return JumpLoopBlendFrames;
+	default:
+		return DefaultCommonBlendFrames;
+	}
+}
+
+/// <summary>
+/// モーション切り替え直前に表示されていた姿勢を保存し、必要ならブレンドを開始する。
+/// </summary>
+/// <param name="player">ブレンド情報を書き込む MotionPlayerComponent。</param>
+/// <param name="currentPose">遷移直前に SkeletonPoseComponent が保持していた表示中姿勢。</param>
+/// <param name="previousActionState">遷移前の PlayerActionState。</param>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+void MotionSystem::StartMotionBlend(
+	MotionPlayerComponent& player,
+	const SkeletonPoseComponent& currentPose,
+	PlayerActionState previousActionState,
+	PlayerActionState nextActionState)
+{
+	const int blendFrames = player.stateDriven
+		? GetMotionBlendFrames(previousActionState, nextActionState)
+		: NoMotionBlendFrames;
+
+	if (blendFrames <= 0 || currentPose.bonePoses.empty())
+	{
+		player.blending = false;
+		player.blendFrame = 0;
+		player.blendDurationFrames = 0;
+		player.blendFromBonePoses.clear();
+		return;
+	}
+
+	player.blending = true;
+	player.blendFrame = 0;
+	player.blendDurationFrames = blendFrames;
+	player.blendFromBonePoses = currentPose.bonePoses;
 }
 
 /// <summary>
@@ -469,6 +559,7 @@ bool MotionSystem::ApplyMotionPlayer(
 	}
 
 	SkeletonPoseComponent idleBasePose;
+	SkeletonPoseComponent transitionBasePose;
 	const SkeletonPoseComponent* basePose = nullptr;
 	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
 	{
@@ -479,8 +570,26 @@ bool MotionSystem::ApplyMotionPlayer(
 			basePose = &idleBasePose;
 		}
 	}
+	else if (player.blending && player.blendFromBonePoses.size() == pose.bonePoses.size())
+	{
+		transitionBasePose.bonePoses = player.blendFromBonePoses;
+		basePose = &transitionBasePose;
+	}
 
 	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
+	if (player.blending)
+	{
+		BlendBonePoses(pose, player.blendFromBonePoses, player.blendFrame, player.blendDurationFrames);
+		++player.blendFrame;
+		if (player.blendFrame >= player.blendDurationFrames)
+		{
+			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
+			player.blendFromBonePoses.clear();
+		}
+	}
+
 	AdvanceMotionFrame(player, *motion);
 	return true;
 }
@@ -710,6 +819,41 @@ BonePose MotionSystem::SampleBoneTrack(
 	}
 
 	return result;
+}
+
+/// <summary>
+/// 遷移先として計算済みの姿勢を、遷移直前姿勢から指定フレーム数で補間する。
+/// </summary>
+/// <param name="targetPose">遷移先姿勢が入っている SkeletonPoseComponent。ここへブレンド後姿勢を書き戻す。</param>
+/// <param name="blendFromBonePoses">遷移直前に画面へ出ていたボーン姿勢配列。</param>
+/// <param name="blendFrame">ブレンド開始からの経過フレーム。</param>
+/// <param name="blendDurationFrames">ブレンドに使う総フレーム数。</param>
+void MotionSystem::BlendBonePoses(
+	SkeletonPoseComponent& targetPose,
+	const std::vector<BonePose>& blendFromBonePoses,
+	int blendFrame,
+	int blendDurationFrames)
+{
+	if (blendDurationFrames <= 0 || blendFromBonePoses.size() != targetPose.bonePoses.size())
+	{
+		return;
+	}
+
+	const float blendRate = std::clamp(
+		static_cast<float>(blendFrame + 1) / static_cast<float>(blendDurationFrames),
+		0.0f,
+		1.0f);
+
+	for (size_t boneIndex = 0; boneIndex < targetPose.bonePoses.size(); ++boneIndex)
+	{
+		BonePose& target = targetPose.bonePoses[boneIndex];
+		const BonePose& from = blendFromBonePoses[boneIndex];
+
+		target.localPosition = Vector3::Lerp(from.localPosition, target.localPosition, blendRate);
+		target.localRotation = Quaternion::Slerp(from.localRotation, target.localRotation, blendRate);
+		target.localRotation.Normalize();
+		target.localScale = Vector3::Lerp(from.localScale, target.localScale, blendRate);
+	}
 }
 
 /// <summary>

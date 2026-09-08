@@ -97,6 +97,7 @@ namespace
 		"JumpLoop",
 		"Hitstun",
 		"AirHitstun",
+		"AirToDown",
 		"Down",
 		"Wakeup"
 	};
@@ -124,6 +125,16 @@ namespace
 		std::string displayName;
 		AttackData attackData;
 	};
+
+	/// <summary>
+	/// MotionData ID が攻撃モーション用の保存領域を指しているか確認する。
+	/// </summary>
+	/// <param name="motionDataId">確認する MotionData ID。</param>
+	/// <returns>Attack/ から始まる場合は true。</returns>
+	bool IsAttackMotionDataId(const std::string& motionDataId)
+	{
+		return motionDataId.rfind("Attack/", 0) == 0;
+	}
 
 	/// <summary>
 	/// 編集対象の AttackData ID から JSON ファイルのパスを作る。
@@ -894,7 +905,7 @@ void CustomizeScene::DrawCommonMotionSelect()
 /// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
 void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 {
-	draftAttack.motionDataId = motionDataIdBuffer.data();
+	EnsureDraftAttackMotionDataId();
 	ClampPreviewCurrentFrame();
 	RenderAttackPreview(renderer);
 	DrawAttackPreviewWindow(renderer);
@@ -1033,7 +1044,7 @@ void CustomizeScene::DrawAttackEditorWindow()
 	{
 		ImGui::Text("Slot: %s", editingAttackDataId.c_str());
 		ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
-		ImGui::InputText("MotionData ID", motionDataIdBuffer.data(), motionDataIdBuffer.size());
+		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
 
 		ImGui::Separator();
 		ImGui::InputInt("Damage", &draftAttack.damage);
@@ -1756,7 +1767,8 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 	const std::string oldSlotMotionDataId = BuildAttackDataId(selectedCategory, selectedSlotIndex);
 	if (draftAttack.motionDataId.empty()
 		|| draftAttack.motionDataId == "debug_right_arm_wave"
-		|| draftAttack.motionDataId == oldSlotMotionDataId)
+		|| draftAttack.motionDataId == oldSlotMotionDataId
+		|| !IsAttackMotionDataId(draftAttack.motionDataId))
 	{
 		draftAttack.motionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
 	}
@@ -1826,6 +1838,7 @@ void CustomizeScene::SaveDraftMotion()
 	else
 	{
 		draftAttack.motionDataId = motionDataIdBuffer.data();
+		EnsureDraftAttackMotionDataId();
 		draftMotion.motionDataId = draftAttack.motionDataId;
 	}
 	draftMotion.displayName = motionDisplayNameBuffer.data();

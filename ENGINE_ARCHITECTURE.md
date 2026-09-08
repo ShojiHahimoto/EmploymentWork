@@ -469,6 +469,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - MotionData は AttackData とは別 JSON / 別リソースとして管理する
 - 攻撃モーションは `assets/MotionData/Attack/Ground/slot_00.json` のように `Attack` 配下へ保存する
 - 汎用モーションは `assets/MotionData/Common/Idle.json` のように `Common` 配下へ保存する
+- 攻撃モーションの `motionDataId` は `Attack/` から始め、`Common/Idle` などの汎用モーション ID を攻撃に割り当ててはいけない
+- CustomizeScene の攻撃編集では、攻撃 MotionData ID が空、旧ID、`Common/` 系などの攻撃外IDだった場合、スロットに対応する `Attack/<Category>/slot_XX` へ正規化する
 - AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
 - MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
@@ -491,7 +493,14 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 地上下入力は `Crouch` として扱い、`Common/Crouch` を再生する。下斜め入力 1 / 3 は横歩きではなくしゃがみを優先する
 - 攻撃 MotionData は `Common/Idle` を下地姿勢として扱い、最初のキーフレーム以前や未指定部位が T ポーズへ戻らないようにする
 - モーション編集プレビューの 0F は攻撃ボタン入力前の Idle として扱い、`Common/Idle` の 0F 姿勢を表示する
-- 視覚専用の短いモーションブレンドは保存分類と編集導線が安定した後に追加する
+- モーション遷移ブレンドは、前ステートの最終フレームではなく、遷移直前の前フレームに画面へ出ていた `SkeletonPoseComponent::bonePoses` を開始姿勢として使う
+- 攻撃、Hitstun、AirHitstun、JumpStartup へ入る遷移は視認性を優先してブレンドしない
+- Idle / Walk / Crouch / Guard / CrouchGuard / WakeUp などの汎用姿勢へ入る遷移は短いブレンドを許可する
+- `Down` は例外的にブレンド対象とし、AirHitstun から接地して Down に入る時に一瞬立ち姿勢へ戻らないようにする
+- `Down` はゲームロジック上の共通状態として扱い、地上ダウンと空中被弾着地ダウンのような「入り方」の違いは `DownMotionType` で見た目だけ分岐する
+- `AirHitstun` から接地して `Down` へ入る場合、通常被弾、Burst、HardBurst のいずれでも `Common/AirToDown` を再生する
+- `Common/AirToDown` は空中被弾姿勢から地面に倒れる専用モーションとして扱い、`Common/Down` の先頭姿勢へ無理にブレンドして立ち姿勢を経由しないようにする
+- ブレンドフレーム数は `MotionSystem.cpp` 上部の定数で管理し、後から簡単に調整できるようにする
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
 - 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
 - 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する

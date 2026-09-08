@@ -98,7 +98,7 @@ private:
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
 	static constexpr int MotionEditorBoneCount = 15;
-	static constexpr int CommonMotionSlotCount = 12;
+	static constexpr int CommonMotionSlotCount = 13;
 
 	World world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
