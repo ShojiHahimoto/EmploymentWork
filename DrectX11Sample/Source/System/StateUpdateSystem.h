@@ -77,6 +77,7 @@ private:
 		const VelocityComponent& velocity,
 		const InputHistoryFrame& inputFrame,
 		const CommandBufferComponent* commandBuffer);
+	static bool HasCrouchDirection(int direction);
 	static bool HasHorizontalMoveDirection(int direction);
 	static bool IsJumpStartupAction(PlayerActionState actionState);
 	static PlayerActionState ConvertJumpStartupToJump(PlayerActionState actionState);

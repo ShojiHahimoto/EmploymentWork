@@ -39,6 +39,7 @@ namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
 	constexpr const char* CharacterDataRootPath = "assets/CharacterData";
+	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
 	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
 	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
 	constexpr float PreviewBoxDepth = 0.08f;
@@ -78,6 +79,19 @@ namespace
 		"Yoga",
 		"ReverseYoga",
 		"FullRotate"
+	};
+	constexpr const char* CommonMotionLabels[] = {
+		"Idle",
+		"WalkForward",
+		"WalkBack",
+		"Crouch",
+		"Guard",
+		"JumpStart",
+		"JumpLoop",
+		"Hitstun",
+		"AirHitstun",
+		"Down",
+		"Wakeup"
 	};
 	constexpr const char* MotionEditorBoneNames[] = {
 		"Head",
@@ -589,6 +603,9 @@ void CustomizeScene::Draw(Renderer& renderer)
 	case CustomizeMode::MotionEditor:
 		DrawMotionEditorScreen(renderer);
 		break;
+	case CustomizeMode::CommonMotionSelect:
+		DrawCommonMotionSelect();
+		break;
 	case CustomizeMode::CharacterSlotSelect:
 		DrawCharacterSlotSelect();
 		break;
@@ -686,7 +703,10 @@ void CustomizeScene::NavigateBack()
 		mode = CustomizeMode::AttackSlotSelect;
 		break;
 	case CustomizeMode::MotionEditor:
-		mode = CustomizeMode::AttackEditor;
+		mode = editingCommonMotion ? CustomizeMode::CommonMotionSelect : CustomizeMode::AttackEditor;
+		break;
+	case CustomizeMode::CommonMotionSelect:
+		mode = CustomizeMode::MainMenu;
 		break;
 	case CustomizeMode::CharacterSlotSelect:
 		mode = CustomizeMode::MainMenu;
@@ -721,6 +741,11 @@ void CustomizeScene::DrawMainMenu()
 		{
 			RefreshCharacterSlotSummaries();
 			mode = CustomizeMode::CharacterSlotSelect;
+		}
+
+		if (ImGui::Button("Common Motion Editor", ImVec2(220.0f, 32.0f)))
+		{
+			mode = CustomizeMode::CommonMotionSelect;
 		}
 
 		ImGui::Separator();
@@ -807,6 +832,34 @@ void CustomizeScene::DrawAttackSlotSelect()
 }
 
 /// <summary>
+/// 汎用モーションを選択し、MotionData 単体の編集画面へ入る。
+/// </summary>
+void CustomizeScene::DrawCommonMotionSelect()
+{
+	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(420.0f, 460.0f), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Common Motion Select"))
+	{
+		for (int slotIndex = 0; slotIndex < CommonMotionSlotCount; ++slotIndex)
+		{
+			ImGui::PushID(slotIndex);
+			if (ImGui::Button(CommonMotionLabels[slotIndex], ImVec2(260.0f, 32.0f)))
+			{
+				SelectCommonMotionSlot(slotIndex);
+			}
+			ImGui::PopID();
+		}
+
+		ImGui::Separator();
+		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
+		{
+			NavigateBack();
+		}
+	}
+	ImGui::End();
+}
+
+/// <summary>
 /// 技調整画面全体を描画する。
 /// </summary>
 /// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
@@ -825,7 +878,10 @@ void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 /// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
 void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 {
-	EnsureDraftAttackMotionDataId();
+	if (!editingCommonMotion)
+	{
+		EnsureDraftAttackMotionDataId();
+	}
 	if (!hasDraftMotion)
 	{
 		LoadDraftMotionFromEditorId();
@@ -839,7 +895,14 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
 	if (ImGui::Begin("Motion Editor"))
 	{
-		ImGui::Text("Attack: %s", editingAttackDataId.c_str());
+		if (editingCommonMotion)
+		{
+			ImGui::Text("Common Motion: %s", CommonMotionLabels[selectedCommonMotionIndex]);
+		}
+		else
+		{
+			ImGui::Text("Attack: %s", editingAttackDataId.c_str());
+		}
 		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
 		ImGui::Separator();
 		ImGui::Text("Preview Camera");
@@ -849,9 +912,9 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 		DrawMotionEditor();
 
 		ImGui::Separator();
-		if (ImGui::Button("Back To Attack Editor", ImVec2(180.0f, 30.0f)))
+		if (ImGui::Button(editingCommonMotion ? "Back To Common Motion Select" : "Back To Attack Editor", ImVec2(240.0f, 30.0f)))
 		{
-			mode = CustomizeMode::AttackEditor;
+			mode = editingCommonMotion ? CustomizeMode::CommonMotionSelect : CustomizeMode::AttackEditor;
 		}
 	}
 	ImGui::End();
@@ -1144,10 +1207,20 @@ void CustomizeScene::DrawMotionEditor()
 	}
 
 	ImGui::InputText("Motion Name", motionDisplayNameBuffer.data(), motionDisplayNameBuffer.size());
-	draftMotion.totalFrames = GetPreviewTotalFrames();
-	ImGui::Text("Motion Total Frames: %d (AttackData)", draftMotion.totalFrames);
-	draftMotion.looping = false;
-	ImGui::Text("Motion Looping: false (Attack Motion)");
+	if (editingCommonMotion)
+	{
+		ImGui::InputInt("Motion Total Frames", &draftMotion.totalFrames);
+		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
+		ImGui::Checkbox("Motion Looping", &draftMotion.looping);
+		ClampPreviewCurrentFrame();
+	}
+	else
+	{
+		draftMotion.totalFrames = GetPreviewTotalFrames();
+		ImGui::Text("Motion Total Frames: %d (AttackData)", draftMotion.totalFrames);
+		draftMotion.looping = false;
+		ImGui::Text("Motion Looping: false (Attack Motion)");
+	}
 
 	const int actionFrame = GetPreviewActionFrame();
 	const bool canEditCurrentFrame = HasMotionKeyframeAtPreviewFrame();
@@ -1503,6 +1576,8 @@ void CustomizeScene::DrawAttackPicker()
 /// <param name="slotIndex">カテゴリ内スロット番号。</param>
 void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slotIndex)
 {
+	editingCommonMotion = false;
+	editingCommonMotionId.clear();
 	selectedCategory = category;
 	selectedSlotIndex = slotIndex;
 	editingAttackDataId = BuildAttackDataId(category, slotIndex);
@@ -1554,6 +1629,34 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 }
 
 /// <summary>
+/// 汎用モーションを MotionData 単体の編集対象として読み込む。
+/// </summary>
+/// <param name="slotIndex">CommonMotionLabels 配列上の番号。</param>
+void CustomizeScene::SelectCommonMotionSlot(int slotIndex)
+{
+	editingCommonMotion = true;
+	selectedCommonMotionIndex = std::clamp(slotIndex, 0, CommonMotionSlotCount - 1);
+	editingCommonMotionId = BuildCommonMotionDataId(selectedCommonMotionIndex);
+
+	draftAttack = AttackData();
+	draftAttack.frame.startup = 2;
+	draftAttack.frame.active = 1;
+	draftAttack.frame.recovery = 27;
+	draftAttack.motionDataId = editingCommonMotionId;
+	editingAttackDataId.clear();
+
+	motionDataIdBuffer.fill('\0');
+	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", editingCommonMotionId.c_str());
+	hasDraftMotion = false;
+	draftMotion = MotionData();
+	LoadDraftMotionFromEditorId();
+	CopyMotionEditorBuffers();
+	previewCurrentFrame = 0;
+	previewPlaying = false;
+	mode = CustomizeMode::MotionEditor;
+}
+
+/// <summary>
 /// 編集中の draft を JSON として保存する。
 /// </summary>
 void CustomizeScene::SaveDraftAttack()
@@ -1574,6 +1677,11 @@ void CustomizeScene::SaveDraftAttack()
 /// </summary>
 void CustomizeScene::SyncDraftFromEditor()
 {
+	if (editingCommonMotion)
+	{
+		return;
+	}
+
 	draftAttack.attackDataId = editingAttackDataId;
 	draftAttack.displayName = displayNameBuffer.data();
 	draftAttack.motionDataId = motionDataIdBuffer.data();
@@ -1606,7 +1714,15 @@ void CustomizeScene::SyncDraftFromEditor()
 /// </summary>
 void CustomizeScene::EnsureDraftAttackMotionDataId()
 {
-	if (draftAttack.motionDataId.empty() || draftAttack.motionDataId == "debug_right_arm_wave")
+	if (editingCommonMotion)
+	{
+		return;
+	}
+
+	const std::string oldSlotMotionDataId = BuildAttackDataId(selectedCategory, selectedSlotIndex);
+	if (draftAttack.motionDataId.empty()
+		|| draftAttack.motionDataId == "debug_right_arm_wave"
+		|| draftAttack.motionDataId == oldSlotMotionDataId)
 	{
 		draftAttack.motionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
 	}
@@ -1620,19 +1736,23 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 /// </summary>
 void CustomizeScene::LoadDraftMotionFromEditorId()
 {
-	draftAttack.motionDataId = motionDataIdBuffer.data();
-	if (draftAttack.motionDataId.empty())
+	const std::string motionDataId = GetEditingMotionDataId();
+	if (motionDataId.empty())
 	{
 		statusMessage = "MotionData ID is empty.";
 		hasDraftMotion = false;
 		return;
 	}
 
-	if (!MotionDataLoader::LoadMotionData(draftAttack.motionDataId, draftMotion))
+	if (!MotionDataLoader::LoadMotionData(motionDataId, draftMotion))
 	{
 		draftMotion = MotionData();
-		draftMotion.motionDataId = draftAttack.motionDataId;
-		draftMotion.displayName = draftAttack.motionDataId;
+		draftMotion.motionDataId = motionDataId;
+		draftMotion.displayName = editingCommonMotion
+			? CommonMotionLabels[selectedCommonMotionIndex]
+			: motionDataId;
+		draftMotion.totalFrames = editingCommonMotion ? 30 : GetPreviewTotalFrames();
+		draftMotion.looping = editingCommonMotion;
 		statusMessage = "New MotionData draft created.";
 	}
 	else
@@ -1640,8 +1760,15 @@ void CustomizeScene::LoadDraftMotionFromEditorId()
 		statusMessage = "Loaded existing MotionData.";
 	}
 
-	draftMotion.totalFrames = GetPreviewTotalFrames();
-	draftMotion.looping = false;
+	if (editingCommonMotion)
+	{
+		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
+	}
+	else
+	{
+		draftMotion.totalFrames = GetPreviewTotalFrames();
+		draftMotion.looping = false;
+	}
 	hasDraftMotion = true;
 	CopyMotionEditorBuffers();
 }
@@ -1657,10 +1784,26 @@ void CustomizeScene::SaveDraftMotion()
 		return;
 	}
 
-	draftAttack.motionDataId = motionDataIdBuffer.data();
-	draftMotion.motionDataId = draftAttack.motionDataId;
+	if (editingCommonMotion)
+	{
+		editingCommonMotionId = motionDataIdBuffer.data();
+		draftMotion.motionDataId = editingCommonMotionId;
+	}
+	else
+	{
+		draftAttack.motionDataId = motionDataIdBuffer.data();
+		draftMotion.motionDataId = draftAttack.motionDataId;
+	}
 	draftMotion.displayName = motionDisplayNameBuffer.data();
-	draftMotion.totalFrames = GetPreviewTotalFrames();
+	if (editingCommonMotion)
+	{
+		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
+	}
+	else
+	{
+		draftMotion.totalFrames = GetPreviewTotalFrames();
+		draftMotion.looping = false;
+	}
 
 	for (MotionBoneTrackData& track : draftMotion.boneTracks)
 	{
@@ -1978,8 +2121,15 @@ void CustomizeScene::UpdatePreviewPlayback()
 	++previewCurrentFrame;
 	if (previewCurrentFrame >= GetPreviewTotalFrames())
 	{
-		previewCurrentFrame = GetPreviewTotalFrames();
-		previewPlaying = false;
+		if (editingCommonMotion && draftMotion.looping)
+		{
+			previewCurrentFrame = 1;
+		}
+		else
+		{
+			previewCurrentFrame = GetPreviewTotalFrames();
+			previewPlaying = false;
+		}
 	}
 
 	const int actionFrame = GetPreviewActionFrame();
@@ -2039,21 +2189,45 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 	if (previewModel && previewSkeletonPose.initialized)
 	{
 		const int actionFrame = GetPreviewActionFrame();
-		if (!draftAttack.motionDataId.empty() && actionFrame >= 0)
+		const std::string motionDataId = GetEditingMotionDataId();
+		const MotionData* idleMotion = nullptr;
+		SkeletonPoseComponent idleBasePose;
+		const SkeletonPoseComponent* basePose = nullptr;
+		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
+		{
+			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+		}
+
+		if (actionFrame < 0)
+		{
+			if (idleMotion)
+			{
+				MotionSystem::ApplyMotionData(previewSkeletonPose, *idleMotion, 0, *previewModel);
+				MotionSystem::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
+				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
+			}
+		}
+		else if (!motionDataId.empty())
 		{
 			const MotionData* motion = nullptr;
-			if (hasDraftMotion && draftMotion.motionDataId == draftAttack.motionDataId)
+			if (hasDraftMotion && draftMotion.motionDataId == motionDataId)
 			{
 				motion = &draftMotion;
 			}
-			else if (MotionDataManager::LoadMotionData(draftAttack.motionDataId))
+			else if (MotionDataManager::LoadMotionData(motionDataId))
 			{
-				motion = MotionDataManager::GetMotionData(draftAttack.motionDataId);
+				motion = MotionDataManager::GetMotionData(motionDataId);
 			}
 
 			if (motion)
 			{
-				MotionSystem::ApplyMotionData(previewSkeletonPose, *motion, actionFrame, *previewModel);
+				if (idleMotion && motionDataId.rfind("Attack/", 0) == 0)
+				{
+					MotionSystem::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
+					basePose = &idleBasePose;
+				}
+
+				MotionSystem::ApplyMotionData(previewSkeletonPose, *motion, actionFrame, *previewModel, basePose);
 				MotionSystem::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
 				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
 			}
@@ -2138,6 +2312,11 @@ void CustomizeScene::StepPreviewFrame(int frameDelta)
 /// <returns>AttackBox を表示するフレームなら true。</returns>
 bool CustomizeScene::IsPreviewAttackActive() const
 {
+	if (editingCommonMotion)
+	{
+		return false;
+	}
+
 	const int actionFrame = GetPreviewActionFrame();
 	return IsAttackFrameActive(draftAttack.frame, actionFrame);
 }
@@ -2148,6 +2327,11 @@ bool CustomizeScene::IsPreviewAttackActive() const
 /// <returns>最低 1F を保証した総フレーム数。プレビュー表示では 0F Idle を含めて 0..この値まで表示する。</returns>
 int CustomizeScene::GetPreviewTotalFrames() const
 {
+	if (editingCommonMotion)
+	{
+		return std::max(1, draftMotion.totalFrames);
+	}
+
 	return GetAttackTotalFrames(draftAttack.frame);
 }
 
@@ -2170,6 +2354,10 @@ const char* CustomizeScene::GetPreviewPhaseText() const
 	{
 		return "Idle";
 	}
+	if (editingCommonMotion)
+	{
+		return draftMotion.looping ? "Common Loop Motion" : "Common Motion";
+	}
 
 	const int actionFrame = GetPreviewActionFrame();
 	const int activeStartFrame = GetAttackActiveStartFrame(draftAttack.frame);
@@ -2190,6 +2378,20 @@ const char* CustomizeScene::GetPreviewPhaseText() const
 	}
 
 	return "End";
+}
+
+/// <summary>
+/// 現在の編集対象から、読み書きする MotionData ID を取得する。
+/// </summary>
+/// <returns>Common 編集中は Common ID、Attack 編集中は AttackData の motionDataId。</returns>
+std::string CustomizeScene::GetEditingMotionDataId() const
+{
+	if (editingCommonMotion)
+	{
+		return editingCommonMotionId.empty() ? std::string(motionDataIdBuffer.data()) : editingCommonMotionId;
+	}
+
+	return draftAttack.motionDataId;
 }
 
 /// <summary>
@@ -2299,9 +2501,20 @@ std::string CustomizeScene::BuildAttackDataId(CustomizeAttackCategory category, 
 std::string CustomizeScene::BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const
 {
 	std::ostringstream stream;
-	stream << CategoryLabels[ToCategoryIndex(category)] << "/slot_";
+	stream << "Attack/" << CategoryLabels[ToCategoryIndex(category)] << "/slot_";
 	stream << std::setw(2) << std::setfill('0') << slotIndex;
 	return stream.str();
+}
+
+/// <summary>
+/// 汎用モーション番号から、assets/MotionData 配下の保存 ID を作る。
+/// </summary>
+/// <param name="slotIndex">CommonMotionLabels 配列上の番号。</param>
+/// <returns>Common/Idle のような MotionData ID。</returns>
+std::string CustomizeScene::BuildCommonMotionDataId(int slotIndex) const
+{
+	const int clampedSlotIndex = std::clamp(slotIndex, 0, CommonMotionSlotCount - 1);
+	return std::string("Common/") + CommonMotionLabels[clampedSlotIndex];
 }
 
 /// <summary>

@@ -147,10 +147,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Shader\ModelSkinned.hlsl" />
-    <None Include="assets\MotionData\Air\slot_00.json" />
+    <None Include="assets\MotionData\Attack\Air\slot_00.json" />
+    <None Include="assets\MotionData\Attack\Ground\slot_00.json" />
+    <None Include="assets\MotionData\Attack\Ground\slot_01.json" />
+    <None Include="assets\MotionData\Common\AirHitstun.json" />
+    <None Include="assets\MotionData\Common\Crouch.json" />
+    <None Include="assets\MotionData\Common\Down.json" />
+    <None Include="assets\MotionData\Common\Guard.json" />
+    <None Include="assets\MotionData\Common\Hitstun.json" />
+    <None Include="assets\MotionData\Common\Idle.json" />
+    <None Include="assets\MotionData\Common\JumpLoop.json" />
+    <None Include="assets\MotionData\Common\JumpStart.json" />
+    <None Include="assets\MotionData\Common\Wakeup.json" />
+    <None Include="assets\MotionData\Common\WalkBack.json" />
+    <None Include="assets\MotionData\Common\WalkForward.json" />
     <None Include="assets\MotionData\debug_right_arm_wave.json" />
-    <None Include="assets\MotionData\Ground\slot_00.json" />
-    <None Include="assets\MotionData\Ground\slot_01.json" />
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json" />
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json" />
     <None Include="packages.config" />

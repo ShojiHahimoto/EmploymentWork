@@ -4,7 +4,7 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Ground",
-  "motionDataId": "Ground/slot_00",
+  "motionDataId": "Attack/Ground/slot_00",
   "damage": 300,
   "hitstunFrames": 14,
   "guardstunFrames": 9,

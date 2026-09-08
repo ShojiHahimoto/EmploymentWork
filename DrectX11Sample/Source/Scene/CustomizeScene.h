@@ -21,6 +21,7 @@ enum class CustomizeMode
 	AttackSlotSelect,
 	AttackEditor,
 	MotionEditor,
+	CommonMotionSelect,
 	CharacterSlotSelect,
 	CharacterEditor,
 	AttackPicker
@@ -97,6 +98,7 @@ private:
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
 	static constexpr int MotionEditorBoneCount = 15;
+	static constexpr int CommonMotionSlotCount = 11;
 
 	World world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
@@ -113,6 +115,9 @@ private:
 	std::array<char, 128> motionDisplayNameBuffer = {};
 	int selectedMotionEditorBoneIndex = 0;
 	DirectX::SimpleMath::Vector3 motionKeyRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
+	bool editingCommonMotion = false;
+	int selectedCommonMotionIndex = 0;
+	std::string editingCommonMotionId;
 	std::string editingAttackDataId;
 	std::string statusMessage;
 	std::array<std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>, 3> attackSlotSummaries = {};
@@ -146,6 +151,7 @@ private:
 	void DrawMainMenu();
 	void DrawAttackCategorySelect();
 	void DrawAttackSlotSelect();
+	void DrawCommonMotionSelect();
 	void DrawAttackEditor(Renderer& renderer);
 	void DrawMotionEditorScreen(Renderer& renderer);
 	void DrawAttackPreviewWindow(Renderer& renderer);
@@ -160,6 +166,7 @@ private:
 	void DrawAttackPicker();
 
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
+	void SelectCommonMotionSlot(int slotIndex);
 	void SaveDraftAttack();
 	void SyncDraftFromEditor();
 	void EnsureDraftAttackMotionDataId();
@@ -192,12 +199,14 @@ private:
 	int GetPreviewTotalFrames() const;
 	int GetPreviewActionFrame() const;
 	const char* GetPreviewPhaseText() const;
+	std::string GetEditingMotionDataId() const;
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
 	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
 	std::string BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const;
+	std::string BuildCommonMotionDataId(int slotIndex) const;
 	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex, const std::string& attackDataId) const;
 	void CopyDisplayNameToBuffer();
 	void CopyMotionDataIdToBuffer();

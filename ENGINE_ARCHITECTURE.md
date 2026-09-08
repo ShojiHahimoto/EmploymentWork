@@ -190,7 +190,7 @@ DebugSystem
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`Crouch`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -463,6 +463,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 自作モーション機能は、見た目の姿勢制御として扱い、攻撃性能を持つ AttackData と分離する。
 
 - MotionData は AttackData とは別 JSON / 別リソースとして管理する
+- 攻撃モーションは `assets/MotionData/Attack/Ground/slot_00.json` のように `Attack` 配下へ保存する
+- 汎用モーションは `assets/MotionData/Common/Idle.json` のように `Common` 配下へ保存する
 - AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
 - MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
@@ -470,13 +472,22 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
 - 編集ツール上の部位名は `Head`, `Spine`, `Waist`, `RShoulder`, `LShoulder`, `RElbow`, `LElbow`, `RHand`, `LHand`, `RHipjoint`, `LHipjoint`, `RKnees`, `LKnees`, `RFeet`, `LFeet` の 15 種類を基本とする
 - MotionData には編集用部位名を保存し、MotionSystem がモデルごとの実ボーン名へ解決する
-- MotionData ID は原則として AttackData のカテゴリとスロットに対応させ、`Ground/slot_00` のように技ごとに別ファイルへ保存する
+- 攻撃 MotionData ID は AttackData のカテゴリとスロットに対応させ、`Attack/Ground/slot_00` のように技ごとに別ファイルへ保存する
 - モーション編集 UI は「フレーム選択 -> 全身キーフレーム追加 -> 姿勢編集」の順に扱い、キーフレームがないフレームでは姿勢編集を禁止する
 - モーション編集 UI 上ではキーフレームを部位単位ではなく全身単位として見せ、保存時は既存の `boneTracks` 形式へ展開して再生側を壊さない
 - キーフレームが存在するフレームでは、角度入力を変更した時点で下書き MotionData とプレビューへ即時反映する
 - 全身姿勢コピー / ペーストは、コピー元とペースト先の両方にキーフレームが存在する場合のみ許可する
 - モーション編集用プレビューカメラは、キャラクターを中心点として yaw / pitch / distance で回り込むオービットカメラとする
 - T ポーズなどのプリセットは、現在フレームに存在する全身キーフレームへ適用する編集補助として扱う
+- Common Motion Editor は開発者用の汎用モーション編集入口として扱い、総フレームとループ有無を MotionData 側で編集できる
+- Attack Motion Editor は AttackData から開き、総フレームは AttackData 側、ループは false 固定にする
+- `looping == true` の MotionData は、最後のキーフレームから次ループの最初のキーフレームへ自動補間し、最終フレームと 0F を手動で完全一致させる必要をなくす
+- PlayerActionState が攻撃以外の場合は MotionSystem が `Common/Idle`, `Common/WalkForward`, `Common/JumpLoop` などの汎用 MotionData を再生する
+- `AirHitstun` は空中にいる状態でもジャンプではなく被弾状態なので、`Common/JumpLoop` ではなく `Common/AirHitstun` を再生する
+- 地上下入力は `Crouch` として扱い、`Common/Crouch` を再生する。下斜め入力 1 / 3 は横歩きではなくしゃがみを優先する
+- 攻撃 MotionData は `Common/Idle` を下地姿勢として扱い、最初のキーフレーム以前や未指定部位が T ポーズへ戻らないようにする
+- モーション編集プレビューの 0F は攻撃ボタン入力前の Idle として扱い、`Common/Idle` の 0F 姿勢を表示する
+- 視覚専用の短いモーションブレンドは保存分類と編集導線が安定した後に追加する
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
 - 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
 - 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する

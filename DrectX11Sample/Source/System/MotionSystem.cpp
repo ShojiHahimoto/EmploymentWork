@@ -20,6 +20,8 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
+	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
+
 	struct MotionEditorBoneAlias
 	{
 		const char* editorName;
@@ -187,7 +189,37 @@ void MotionSystem::SyncMotionPlayerFromState(
 		return;
 	}
 
-	if (!IsAttackActionState(state->currentActionState) || !hitBox || !attackData || hitBox->currentAttack.slotId.empty())
+	if (!IsAttackActionState(state->currentActionState))
+	{
+		const char* commonMotionDataId = GetCommonMotionDataId(state->currentActionState);
+		if (!commonMotionDataId || commonMotionDataId[0] == '\0')
+		{
+			if (player.stateDriven)
+			{
+				player.motionDataId.clear();
+				player.currentFrame = 0;
+				player.playing = false;
+				player.boundActionState = state->currentActionState;
+				player.boundAttackSlotId.clear();
+			}
+			return;
+		}
+
+		const bool restarted = !player.stateDriven
+			|| player.motionDataId != commonMotionDataId
+			|| player.boundActionState != state->currentActionState;
+
+		player.stateDriven = true;
+		player.motionDataId = commonMotionDataId;
+		player.boundActionState = state->currentActionState;
+		player.boundAttackSlotId.clear();
+		player.looping = false;
+		player.playing = true;
+		player.currentFrame = restarted ? 0 : std::max(0, player.currentFrame);
+		return;
+	}
+
+	if (!hitBox || !attackData || hitBox->currentAttack.slotId.empty())
 	{
 		if (player.stateDriven)
 		{
@@ -253,6 +285,61 @@ const CharacterAssignedAttackData* MotionSystem::FindAssignedAttack(
 	}
 
 	return nullptr;
+}
+
+/// <summary>
+/// PlayerActionState に対応する汎用 MotionData ID を取得する。
+/// </summary>
+/// <param name="actionState">確認する PlayerActionState。</param>
+/// <returns>Common Motion の ID。未対応の場合は空文字。</returns>
+const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
+{
+	switch (actionState)
+	{
+	case PlayerActionState::Idle:
+		return CommonIdleMotionDataId;
+	case PlayerActionState::Crouch:
+		return "Common/Crouch";
+	case PlayerActionState::FrontWalk:
+		return "Common/WalkForward";
+	case PlayerActionState::BackWalk:
+		return "Common/WalkBack";
+	case PlayerActionState::VerticalJumpStartup:
+	case PlayerActionState::FrontJumpStartup:
+	case PlayerActionState::BackJumpStartup:
+		return "Common/JumpStart";
+	case PlayerActionState::VerticalJump:
+	case PlayerActionState::FrontJump:
+	case PlayerActionState::BackJump:
+	case PlayerActionState::Fall:
+		return "Common/JumpLoop";
+	case PlayerActionState::AirHitstun:
+		return "Common/AirHitstun";
+	case PlayerActionState::LandingRecovery:
+		return CommonIdleMotionDataId;
+	case PlayerActionState::Hitstun:
+		return "Common/Hitstun";
+	case PlayerActionState::Guardstun:
+		return "Common/Guard";
+	case PlayerActionState::Down:
+		return "Common/Down";
+	case PlayerActionState::WakeUp:
+		return "Common/Wakeup";
+	case PlayerActionState::GroundAttack:
+	case PlayerActionState::AirAttack:
+	default:
+		return "";
+	}
+}
+
+/// <summary>
+/// MotionData ID が攻撃モーション用の保存領域を指しているかを判定する。
+/// </summary>
+/// <param name="motionDataId">確認する MotionData ID。</param>
+/// <returns>Attack/ から始まる攻撃モーションの場合は true。</returns>
+bool MotionSystem::IsAttackMotionDataId(const std::string& motionDataId)
+{
+	return motionDataId.rfind("Attack/", 0) == 0;
 }
 
 /// <summary>
@@ -377,7 +464,19 @@ bool MotionSystem::ApplyMotionPlayer(
 		return false;
 	}
 
-	ApplyMotionData(pose, *motion, player.currentFrame, model);
+	SkeletonPoseComponent idleBasePose;
+	const SkeletonPoseComponent* basePose = nullptr;
+	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
+	{
+		const MotionData* idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+		if (idleMotion)
+		{
+			ApplyMotionData(idleBasePose, *idleMotion, 0, model);
+			basePose = &idleBasePose;
+		}
+	}
+
+	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
 	AdvanceMotionFrame(player, *motion);
 	return true;
 }
@@ -395,9 +494,30 @@ void MotionSystem::ApplyMotionData(
 	int frame,
 	const ModelResource& model)
 {
-	ResetPoseToBindPose(pose, model);
+	ApplyMotionData(pose, motion, frame, model, nullptr);
+}
 
-	const std::vector<ModelBone>& bones = model.GetBones();
+/// <summary>
+/// 指定 MotionData を、別姿勢を下地にして SkeletonPoseComponent へ反映する。
+/// </summary>
+/// <param name="pose">変更する姿勢 Component。</param>
+/// <param name="motion">適用するモーションデータ。</param>
+/// <param name="frame">再生する 0 始まりフレーム。</param>
+/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
+void MotionSystem::ApplyMotionData(
+	SkeletonPoseComponent& pose,
+	const MotionData& motion,
+	int frame,
+	const ModelResource& model,
+	const SkeletonPoseComponent* basePose)
+{
+	ResetPoseToBindPose(pose, model);
+	if (basePose && basePose->bonePoses.size() == pose.bonePoses.size())
+	{
+		pose.bonePoses = basePose->bonePoses;
+	}
+
 	for (const MotionBoneTrackData& track : motion.boneTracks)
 	{
 		const int boneIndex = FindMotionBoneIndex(model, track.boneName);
@@ -408,12 +528,12 @@ void MotionSystem::ApplyMotionData(
 
 		const BonePose bindPose =
 		{
-			bones[boneIndex].bindLocalPosition,
-			bones[boneIndex].bindLocalRotation,
-			bones[boneIndex].bindLocalScale
+			pose.bonePoses[boneIndex].localPosition,
+			pose.bonePoses[boneIndex].localRotation,
+			pose.bonePoses[boneIndex].localScale
 		};
 
-		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame);
+		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame, motion.totalFrames, motion.looping);
 	}
 }
 
@@ -423,11 +543,15 @@ void MotionSystem::ApplyMotionData(
 /// <param name="track">参照するボーンキーフレーム配列。</param>
 /// <param name="bindPose">未指定チャンネルに使う bind pose。</param>
 /// <param name="frame">取得する 0 始まりフレーム。</param>
+/// <param name="totalFrames">ループ境界補間に使う MotionData の総フレーム。</param>
+/// <param name="looping">最後のキーから最初のキーへ補間する場合は true。</param>
 /// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。</returns>
 BonePose MotionSystem::SampleBoneTrack(
 	const MotionBoneTrackData& track,
 	const BonePose& bindPose,
-	int frame)
+	int frame,
+	int totalFrames,
+	bool looping)
 {
 	BonePose result = bindPose;
 	if (track.keyframes.empty())
@@ -435,8 +559,18 @@ BonePose MotionSystem::SampleBoneTrack(
 		return result;
 	}
 
-	const MotionBoneKeyframeData* previousKey = &track.keyframes.front();
-	const MotionBoneKeyframeData* nextKey = &track.keyframes.back();
+	const int clampedTotalFrames = std::max(1, totalFrames);
+	if (looping)
+	{
+		frame %= clampedTotalFrames;
+		if (frame < 0)
+		{
+			frame += clampedTotalFrames;
+		}
+	}
+
+	const MotionBoneKeyframeData* previousKey = nullptr;
+	const MotionBoneKeyframeData* nextKey = nullptr;
 	for (const MotionBoneKeyframeData& keyframe : track.keyframes)
 	{
 		if (keyframe.frame <= frame)
@@ -451,7 +585,69 @@ BonePose MotionSystem::SampleBoneTrack(
 		}
 	}
 
-	// 最初のキーより前は、プレビュー 0F の Idle 姿勢(bind pose)から最初のキーへ補間する。
+	if (looping)
+	{
+		if (!previousKey)
+		{
+			previousKey = &track.keyframes.back();
+		}
+		if (!nextKey)
+		{
+			nextKey = &track.keyframes.front();
+		}
+
+		const bool crossesLoop = previousKey->frame > nextKey->frame;
+		const int frameSpan = crossesLoop
+			? std::max(1, (clampedTotalFrames - previousKey->frame) + nextKey->frame)
+			: std::max(1, nextKey->frame - previousKey->frame);
+		const int frameOffset = crossesLoop && frame < nextKey->frame
+			? (clampedTotalFrames - previousKey->frame) + frame
+			: frame - previousKey->frame;
+		const float t = previousKey == nextKey
+			? 0.0f
+			: std::clamp(static_cast<float>(frameOffset) / static_cast<float>(frameSpan), 0.0f, 1.0f);
+
+		if (previousKey->hasPosition && nextKey->hasPosition)
+		{
+			result.localPosition = Vector3::Lerp(previousKey->localPosition, nextKey->localPosition, t);
+		}
+		else if (previousKey->hasPosition)
+		{
+			result.localPosition = previousKey->localPosition;
+		}
+
+		if (previousKey->hasRotation && nextKey->hasRotation)
+		{
+			result.localRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
+			result.localRotation.Normalize();
+		}
+		else if (previousKey->hasRotation)
+		{
+			result.localRotation = previousKey->localRotation;
+		}
+
+		if (previousKey->hasScale && nextKey->hasScale)
+		{
+			result.localScale = Vector3::Lerp(previousKey->localScale, nextKey->localScale, t);
+		}
+		else if (previousKey->hasScale)
+		{
+			result.localScale = previousKey->localScale;
+		}
+
+		return result;
+	}
+
+	if (!previousKey)
+	{
+		previousKey = &track.keyframes.front();
+	}
+	if (!nextKey)
+	{
+		nextKey = &track.keyframes.back();
+	}
+
+	// 最初のキーより前は、下地姿勢から最初のキーへ補間する。
 	// これにより、攻撃開始直後に最初のキー姿勢へ瞬間移動せず、自然に入り始める。
 	if (frame < track.keyframes.front().frame)
 	{
@@ -527,7 +723,7 @@ void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const Motio
 		return;
 	}
 
-	if (!player.stateDriven && (player.looping || motion.looping))
+	if (player.looping || motion.looping)
 	{
 		player.currentFrame = 0;
 	}

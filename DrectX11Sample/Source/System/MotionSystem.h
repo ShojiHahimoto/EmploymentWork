@@ -70,15 +70,37 @@ public:
 		int frame,
 		const ModelResource& model);
 
+	/// <summary>
+	/// 指定 MotionData を、別姿勢を下地にして SkeletonPoseComponent へ反映する。
+	/// </summary>
+	/// <param name="pose">変更する姿勢 Component。</param>
+	/// <param name="motion">適用するモーションデータ。</param>
+	/// <param name="frame">再生する 0 始まりフレーム。</param>
+	/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+	/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
+	static void ApplyMotionData(
+		SkeletonPoseComponent& pose,
+		const MotionData& motion,
+		int frame,
+		const ModelResource& model,
+		const SkeletonPoseComponent* basePose);
+
 private:
 	static void SyncMotionPlayerFromState(World& world, GameObjectId objectId, MotionPlayerComponent& player);
 	static const CharacterAssignedAttackData* FindAssignedAttack(
 		const CharacterAttackDataComponent* attackData,
 		const std::string& attackSlotId);
+	static const char* GetCommonMotionDataId(PlayerActionState actionState);
+	static bool IsAttackMotionDataId(const std::string& motionDataId);
 	static bool IsAttackActionState(PlayerActionState actionState);
 	static void ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelResource& model);
 	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player, const ModelResource& model);
-	static BonePose SampleBoneTrack(const MotionBoneTrackData& track, const BonePose& bindPose, int frame);
+	static BonePose SampleBoneTrack(
+		const MotionBoneTrackData& track,
+		const BonePose& bindPose,
+		int frame,
+		int totalFrames,
+		bool looping);
 	static void AdvanceMotionFrame(MotionPlayerComponent& player, const MotionData& motion);
 	static void ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResource& model);
 	static DirectX::SimpleMath::Matrix CreateLocalMatrix(const BonePose& pose);

@@ -458,13 +458,46 @@
     <None Include="assets\MotionData\debug_right_arm_wave.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
-    <None Include="assets\MotionData\Ground\slot_00.json">
+    <None Include="assets\MotionData\Attack\Ground\slot_00.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
-    <None Include="assets\MotionData\Ground\slot_01.json">
+    <None Include="assets\MotionData\Attack\Ground\slot_01.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
-    <None Include="assets\MotionData\Air\slot_00.json">
+    <None Include="assets\MotionData\Attack\Air\slot_00.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Idle.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\WalkForward.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\WalkBack.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Crouch.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Guard.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\JumpStart.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\JumpLoop.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Hitstun.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\AirHitstun.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Down.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\MotionData\Common\Wakeup.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">

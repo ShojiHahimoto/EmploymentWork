@@ -416,6 +416,11 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 		};
 	}
 
+	if (HasCrouchDirection(inputFrame.direction))
+	{
+		return { PlayerActionState::Crouch, false };
+	}
+
 	if (HasHorizontalMoveDirection(inputFrame.direction))
 	{
 		if ((inputFrame.direction == 4 && state.facingDirection == FacingDirection::Left)
@@ -431,6 +436,16 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 	}
 
 	return { PlayerActionState::Idle, false };
+}
+
+/// <summary>
+/// テンキー方向がしゃがみ入力を含むか判定する。
+/// </summary>
+/// <param name="direction">判定するテンキー方向。</param>
+/// <returns>1 / 2 / 3 の下方向成分を含む入力なら true。</returns>
+bool StateUpdateSystem::HasCrouchDirection(int direction)
+{
+	return direction == 1 || direction == 2 || direction == 3;
 }
 
 /// <summary>

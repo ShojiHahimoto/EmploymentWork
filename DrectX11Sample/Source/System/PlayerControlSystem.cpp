@@ -141,6 +141,7 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		break;
 
 	case PlayerActionState::Idle:
+	case PlayerActionState::Crouch:
 	case PlayerActionState::GroundAttack:
 	case PlayerActionState::LandingRecovery:
 	case PlayerActionState::Hitstun:

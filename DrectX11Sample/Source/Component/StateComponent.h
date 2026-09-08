@@ -5,6 +5,7 @@
 enum class PlayerActionState
 {
 	Idle,						//待機
+	Crouch,						//しゃがみ
 	FrontWalk,					//前歩き
 	BackWalk,					//後ろ歩き
 	VerticalJumpStartup,		//垂直ジャンプ以降中
