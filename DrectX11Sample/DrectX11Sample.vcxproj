@@ -152,6 +152,7 @@
     <None Include="assets\MotionData\Attack\Ground\slot_01.json" />
     <None Include="assets\MotionData\Common\AirHitstun.json" />
     <None Include="assets\MotionData\Common\Crouch.json" />
+    <None Include="assets\MotionData\Common\CrouchGuard.json" />
     <None Include="assets\MotionData\Common\Down.json" />
     <None Include="assets\MotionData\Common\Guard.json" />
     <None Include="assets\MotionData\Common\Hitstun.json" />

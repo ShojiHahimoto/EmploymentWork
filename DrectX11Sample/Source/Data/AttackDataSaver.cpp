@@ -99,15 +99,34 @@ namespace
 	const char* ToAttackUsableStateText(AttackUsableState value)
 	{
 		switch (value)
-	{
-	case AttackUsableState::Ground:
-		return "Ground";
-	case AttackUsableState::Air:
-		return "Air";
-	default:
-		return "Ground";
+		{
+		case AttackUsableState::Ground:
+			return "Ground";
+		case AttackUsableState::Air:
+			return "Air";
+		default:
+			return "Ground";
+		}
 	}
-}
+
+	/// <summary>
+	/// AttackHeight を JSON 保存用の文字列へ変換する。
+	/// </summary>
+	/// <param name="value">保存する AttackHeight。</param>
+	/// <returns>JSON に書く文字列。</returns>
+	const char* ToAttackHeightText(AttackHeight value)
+	{
+		switch (value)
+		{
+		case AttackHeight::Mid:
+			return "Mid";
+		case AttackHeight::Low:
+			return "Low";
+		case AttackHeight::High:
+		default:
+			return "High";
+		}
+	}
 
 	/// <summary>
 	/// HitReactionType を JSON 保存用の文字列へ変換する。
@@ -176,6 +195,7 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	json << "  \"attackKind\": \"" << ToAttackKindText(attackData.attackKind) << "\",\n";
 	json << "  \"commandId\": \"" << ToAttackCommandIdText(attackData.commandId) << "\",\n";
 	json << "  \"usableState\": \"" << ToAttackUsableStateText(attackData.usableState) << "\",\n";
+	json << "  \"attackHeight\": \"" << ToAttackHeightText(attackData.attackHeight) << "\",\n";
 	json << "  \"motionDataId\": \"" << EscapeJsonString(attackData.motionDataId) << "\",\n";
 	json << "  \"damage\": " << attackData.damage << ",\n";
 	json << "  \"hitstunFrames\": " << attackData.hitstunFrames << ",\n";

@@ -32,31 +32,76 @@ namespace
 	}
 
 	/// <summary>
-	/// Guardstun 以外の状態で、後ろ入力による通常ガードを受け付けてよいか確認する。
+	/// ガード硬直以外の状態で、後ろ入力による通常ガードを受け付けてよいか確認する。
 	/// </summary>
 	/// <param name="actionState">防御側の現在 ActionState。</param>
-	/// <returns>Idle / FrontWalk / BackWalk なら true。</returns>
+	/// <returns>Idle / Crouch / 歩き / 将来用ガード姿勢なら true。</returns>
 	bool CanGuardByActionState(PlayerActionState actionState)
 	{
 		return actionState == PlayerActionState::Idle
+			|| actionState == PlayerActionState::Crouch
+			|| actionState == PlayerActionState::StandGuard
+			|| actionState == PlayerActionState::CrouchGuard
 			|| actionState == PlayerActionState::FrontWalk
 			|| actionState == PlayerActionState::BackWalk;
 	}
 
 	/// <summary>
-	/// 現在の向きに対して、テンキー方向が後ろ入力になっているか確認する。
+	/// 現在の向きに対して、テンキー方向から立ち/しゃがみガード種別を取得する。
 	/// </summary>
 	/// <param name="facingDirection">防御側の現在向き。</param>
 	/// <param name="direction">InputHistoryFrame に保存されたテンキー方向。</param>
-	/// <returns>右向きなら 4 / 1、左向きなら 6 / 3 の場合 true。</returns>
-	bool IsHoldingBackDirection(FacingDirection facingDirection, int direction)
+	/// <returns>ガード入力があれば GuardType。なければ None。</returns>
+	GuardType GetGuardTypeFromDirection(FacingDirection facingDirection, int direction)
 	{
 		if (facingDirection == FacingDirection::Right)
 		{
-			return direction == 4 || direction == 1;
+			if (direction == 4)
+			{
+				return GuardType::Stand;
+			}
+			if (direction == 1)
+			{
+				return GuardType::Crouch;
+			}
+			return GuardType::None;
 		}
 
-		return direction == 6 || direction == 3;
+		if (direction == 6)
+		{
+			return GuardType::Stand;
+		}
+		if (direction == 3)
+		{
+			return GuardType::Crouch;
+		}
+
+		return GuardType::None;
+	}
+
+	/// <summary>
+	/// 攻撃属性とガード姿勢の組み合わせから、ガード可能か判定する。
+	/// </summary>
+	/// <param name="attackHeight">攻撃側の上段/中段/下段属性。</param>
+	/// <param name="guardType">防御側の立ち/しゃがみガード種別。</param>
+	/// <returns>組み合わせ上ガード可能なら true。</returns>
+	bool CanGuardAttackHeight(AttackHeight attackHeight, GuardType guardType)
+	{
+		if (guardType == GuardType::None)
+		{
+			return false;
+		}
+
+		switch (attackHeight)
+		{
+		case AttackHeight::Mid:
+			return guardType == GuardType::Stand;
+		case AttackHeight::Low:
+			return guardType == GuardType::Crouch;
+		case AttackHeight::High:
+		default:
+			return true;
+		}
 	}
 
 	/// <summary>
@@ -77,33 +122,47 @@ namespace
 	}
 
 	/// <summary>
-	/// 今回の攻撃接触をガードとして解決できるか確認する。
+	/// 今回の攻撃接触をどのガード種別として解決できるか確認する。
 	/// </summary>
 	/// <param name="world">防御側 Component を取得する World。</param>
 	/// <param name="result">HitCollisionSystem が収集した攻撃接触結果。</param>
-	/// <returns>ガード成立なら true。</returns>
-	bool ShouldResolveAsGuard(World& world, const HitCollisionResult& result)
+	/// <returns>ガード成立時の GuardType。不成立なら None。</returns>
+	GuardType ResolveGuardType(World& world, const HitCollisionResult& result)
 	{
 		const StateComponent* state = world.GetComponent<StateComponent>(result.defenderId);
 		if (!state)
 		{
-			return false;
+			return GuardType::None;
 		}
 
 		// ガード硬直中は後ろ入力の有無に関係なく連続ガードとして扱う。
-		if (state->currentActionState == PlayerActionState::Guardstun)
+		if (state->currentActionState == PlayerActionState::StandGuardstun)
 		{
-			return true;
+			return CanGuardAttackHeight(result.attackHeight, GuardType::Stand)
+				? GuardType::Stand
+				: GuardType::None;
+		}
+		if (state->currentActionState == PlayerActionState::CrouchGuardstun)
+		{
+			return CanGuardAttackHeight(result.attackHeight, GuardType::Crouch)
+				? GuardType::Crouch
+				: GuardType::None;
 		}
 
 		if (!state->isGrounded || !CanGuardByActionState(state->currentActionState))
 		{
-			return false;
+			return GuardType::None;
 		}
 
 		const InputHistoryComponent* inputHistory = world.GetComponent<InputHistoryComponent>(result.defenderId);
 		const InputHistoryFrame* inputFrame = GetLatestInputHistoryFrame(inputHistory);
-		return inputFrame && IsHoldingBackDirection(state->facingDirection, inputFrame->direction);
+		if (!inputFrame)
+		{
+			return GuardType::None;
+		}
+
+		const GuardType guardType = GetGuardTypeFromDirection(state->facingDirection, inputFrame->direction);
+		return CanGuardAttackHeight(result.attackHeight, guardType) ? guardType : GuardType::None;
 	}
 
 	/// <summary>
@@ -138,7 +197,8 @@ void HitResolveSystem::Update(World& world)
 
 	for (const HitCollisionResult& result : results)
 	{
-		const bool guarded = ShouldResolveAsGuard(world, result);
+		const GuardType guardType = ResolveGuardType(world, result);
+		const bool guarded = guardType != GuardType::None;
 		const int resolvedDamage = guarded ? CalculateGuardDamage(result.damage) : result.damage;
 		const StateComponent* defenderState = world.GetComponent<StateComponent>(result.defenderId);
 		const bool defenderWasGrounded = defenderState ? defenderState->isGrounded : true;
@@ -162,7 +222,7 @@ void HitResolveSystem::Update(World& world)
 		ApplyDamage(world, result.defenderId, resolvedDamage);
 		if (guarded)
 		{
-			ApplyGuardstun(world, result.defenderId, result.guardstunFrames);
+			ApplyGuardstun(world, result.defenderId, result.guardstunFrames, guardType);
 		}
 		else
 		{
@@ -260,14 +320,21 @@ void HitResolveSystem::ApplyHitstun(World& world, GameObjectId defenderId, int h
 /// </summary>
 /// <param name="world">防御側 Component を取得する World。</param>
 /// <param name="defenderId">防御側 GameObject ID。</param>
-/// <param name="guardstunFrames">Guardstun を維持するフレーム数。</param>
-void HitResolveSystem::ApplyGuardstun(World& world, GameObjectId defenderId, int guardstunFrames)
+/// <param name="guardstunFrames">ガード硬直を維持するフレーム数。</param>
+/// <param name="guardType">立ち/しゃがみのどちらのガード硬直に入れるか。</param>
+void HitResolveSystem::ApplyGuardstun(
+	World& world,
+	GameObjectId defenderId,
+	int guardstunFrames,
+	GuardType guardType)
 {
 	StateComponent* state = world.GetComponent<StateComponent>(defenderId);
 	if (state)
 	{
 		state->cameraYFollowMode = CameraYFollowMode::None;
-		state->currentActionState = PlayerActionState::Guardstun;
+		state->currentActionState = guardType == GuardType::Crouch
+			? PlayerActionState::CrouchGuardstun
+			: PlayerActionState::StandGuardstun;
 		state->actionFrame = 0;
 		state->guardstunDurationFrames = guardstunFrames;
 		state->hitstunRequested = false;

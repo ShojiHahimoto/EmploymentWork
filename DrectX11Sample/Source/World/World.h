@@ -52,6 +52,7 @@ struct HitCollisionResult
 	int damage = 10;
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;
+	AttackHeight attackHeight = AttackHeight::High;
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackUsableState attackUsableState = AttackUsableState::Ground;
 	int hitboxIndex = -1;

@@ -479,6 +479,9 @@
     <None Include="assets\MotionData\Common\Crouch.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>
+    <None Include="assets\MotionData\Common\CrouchGuard.json">
+      <Filter>リソース ファイル\MotionData</Filter>
+    </None>
     <None Include="assets\MotionData\Common\Guard.json">
       <Filter>リソース ファイル\MotionData</Filter>
     </None>

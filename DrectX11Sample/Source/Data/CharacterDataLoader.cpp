@@ -389,6 +389,28 @@ namespace
 	}
 
 	/// <summary>
+	/// JSON の attackHeight 文字列を AttackHeight に変換する。
+	/// </summary>
+	/// <param name="text">High / Mid / Low などの文字列。</param>
+	/// <returns>対応する AttackHeight。不明な場合は Unknown。</returns>
+	AttackHeight ParseAttackHeight(const std::string& text)
+	{
+		if (text == "High")
+		{
+			return AttackHeight::High;
+		}
+		if (text == "Mid")
+		{
+			return AttackHeight::Mid;
+		}
+		if (text == "Low")
+		{
+			return AttackHeight::Low;
+		}
+		return AttackHeight::Unknown;
+	}
+
+	/// <summary>
 	/// JSON の button 文字列を AttackButtonId に変換する。
 	/// </summary>
 	/// <param name="text">AttackA / AttackB / AttackX / AttackY などの文字列。</param>
@@ -790,6 +812,11 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	outAttackData.attackKind = ParseAttackKind(GetString(root, "attackKind", "Normal"));
 	outAttackData.commandId = ParseAttackCommandId(GetString(root, "commandId", "None"));
 	outAttackData.usableState = ParseAttackUsableState(GetString(root, "usableState", "Ground"));
+	outAttackData.attackHeight = ParseAttackHeight(GetString(root, "attackHeight", "High"));
+	if (outAttackData.attackHeight == AttackHeight::Unknown)
+	{
+		outAttackData.attackHeight = AttackHeight::High;
+	}
 	outAttackData.motionDataId = GetString(root, "motionDataId", outAttackData.motionDataId);
 	if (outAttackData.usableState == AttackUsableState::Unknown)
 	{

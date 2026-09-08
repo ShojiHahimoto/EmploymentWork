@@ -81,7 +81,8 @@ namespace
 		const StateComponent* state = world.GetComponent<StateComponent>(playerId);
 		return state
 			&& (state->currentActionState == PlayerActionState::Hitstun
-				|| state->currentActionState == PlayerActionState::Guardstun
+				|| state->currentActionState == PlayerActionState::StandGuardstun
+				|| state->currentActionState == PlayerActionState::CrouchGuardstun
 				|| state->currentActionState == PlayerActionState::AirHitstun
 				|| state->currentActionState == PlayerActionState::Down);
 	}

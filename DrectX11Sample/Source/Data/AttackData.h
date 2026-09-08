@@ -39,6 +39,14 @@ enum class AttackUsableState
 	Unknown
 };
 
+enum class AttackHeight
+{
+	High,
+	Mid,
+	Low,
+	Unknown
+};
+
 enum class HitReactionType
 {
 	Normal,
@@ -164,7 +172,7 @@ struct AttackData
 	int damage = 10;
 	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
 	int hitstunFrames = 30;
-	// この攻撃がガードされた相手を Guardstun に固定するフレーム数。
+	// この攻撃がガードされた相手を立ち/しゃがみガード硬直に固定するフレーム数。
 	int guardstunFrames = 30;
 	// 通常攻撃か必殺技か。入力候補の作成と編集画面で使う。
 	AttackKind attackKind = AttackKind::Normal;
@@ -172,6 +180,8 @@ struct AttackData
 	AttackCommandId commandId = AttackCommandId::None;
 	// Ground / Air のどちらで発動できるか。
 	AttackUsableState usableState = AttackUsableState::Ground;
+	// 上段 / 中段 / 下段の攻撃属性。未記載 JSON は High として扱う。
+	AttackHeight attackHeight = AttackHeight::High;
 	// ヒット時にどの被弾反応を起こすか。細かい距離や速度は HitReactionSystem 側の共通設定で扱う。
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	// 技に対応する MotionData ID。空文字なら現段階ではモーションを再生しない。

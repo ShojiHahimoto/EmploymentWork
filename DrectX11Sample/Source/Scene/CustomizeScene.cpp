@@ -57,6 +57,12 @@ namespace
 		AttackUsableState::Air
 	};
 	constexpr const char* UsableStateLabels[] = { "Ground", "Air" };
+	constexpr AttackHeight AttackHeightValues[] = {
+		AttackHeight::High,
+		AttackHeight::Mid,
+		AttackHeight::Low
+	};
+	constexpr const char* AttackHeightLabels[] = { "High", "Mid", "Low" };
 	constexpr HitReactionType HitReactionValues[] = {
 		HitReactionType::Normal,
 		HitReactionType::Down,
@@ -86,6 +92,7 @@ namespace
 		"WalkBack",
 		"Crouch",
 		"Guard",
+		"CrouchGuard",
 		"JumpStart",
 		"JumpLoop",
 		"Hitstun",
@@ -216,6 +223,24 @@ namespace
 		for (int index = 0; index < static_cast<int>(std::size(UsableStateValues)); ++index)
 		{
 			if (UsableStateValues[index] == value)
+			{
+				return index;
+			}
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// AttackHeight の現在値が Combo 配列の何番目かを取得する。
+	/// </summary>
+	/// <param name="value">検索する AttackHeight。</param>
+	/// <returns>Combo 用 index。</returns>
+	int FindAttackHeightIndex(AttackHeight value)
+	{
+		for (int index = 0; index < static_cast<int>(std::size(AttackHeightValues)); ++index)
+		{
+			if (AttackHeightValues[index] == value)
 			{
 				return index;
 			}
@@ -480,10 +505,14 @@ namespace
 		}
 		if (attackData.usableState == AttackUsableState::Air)
 		{
-			attackData.hitReactionType = HitReactionType::Normal;
-		}
+		attackData.hitReactionType = HitReactionType::Normal;
+	}
+	if (attackData.attackHeight == AttackHeight::Unknown)
+	{
+		attackData.attackHeight = AttackHeight::High;
+	}
 
-		for (AttackHitboxData& hitbox : attackData.hitboxes)
+	for (AttackHitboxData& hitbox : attackData.hitboxes)
 		{
 			hitbox.size.x = std::max(0.0f, hitbox.size.x);
 			hitbox.size.y = std::max(0.0f, hitbox.size.y);
@@ -1010,6 +1039,11 @@ void CustomizeScene::DrawAttackEditorWindow()
 		ImGui::InputInt("Damage", &draftAttack.damage);
 		ImGui::InputInt("Hitstun Frames", &draftAttack.hitstunFrames);
 		ImGui::InputInt("Guardstun Frames", &draftAttack.guardstunFrames);
+		int attackHeightIndex = FindAttackHeightIndex(draftAttack.attackHeight);
+		if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
+		{
+			draftAttack.attackHeight = AttackHeightValues[attackHeightIndex];
+		}
 
 		ImGui::Separator();
 		ImGui::InputInt("Startup", &draftAttack.frame.startup);
@@ -2536,6 +2570,7 @@ AttackData CustomizeScene::CreateDefaultAttackData(
 	attackData.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
 	attackData.commandId = category == CustomizeAttackCategory::Special ? AttackCommandId::Hadouken : AttackCommandId::None;
 	attackData.usableState = category == CustomizeAttackCategory::Air ? AttackUsableState::Air : AttackUsableState::Ground;
+	attackData.attackHeight = AttackHeight::High;
 	attackData.damage = 100;
 	attackData.hitstunFrames = 30;
 	attackData.guardstunFrames = 30;

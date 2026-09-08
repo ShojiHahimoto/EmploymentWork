@@ -300,6 +300,12 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 		return CommonIdleMotionDataId;
 	case PlayerActionState::Crouch:
 		return "Common/Crouch";
+	case PlayerActionState::StandGuard:
+	case PlayerActionState::StandGuardstun:
+		return "Common/Guard";
+	case PlayerActionState::CrouchGuard:
+	case PlayerActionState::CrouchGuardstun:
+		return "Common/CrouchGuard";
 	case PlayerActionState::FrontWalk:
 		return "Common/WalkForward";
 	case PlayerActionState::BackWalk:
@@ -319,8 +325,6 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 		return CommonIdleMotionDataId;
 	case PlayerActionState::Hitstun:
 		return "Common/Hitstun";
-	case PlayerActionState::Guardstun:
-		return "Common/Guard";
 	case PlayerActionState::Down:
 		return "Common/Down";
 	case PlayerActionState::WakeUp:

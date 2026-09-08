@@ -190,7 +190,7 @@ DebugSystem
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`Crouch`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`Crouch`、`StandGuard`、`CrouchGuard`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`StandGuardstun`、`CrouchGuardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -249,7 +249,7 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
 - AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
 - HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
-- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / Guardstun` を確定する
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / StandGuardstun / CrouchGuardstun` を確定する
 - HitResolveSystem はヒット/ガード確定後に `HitReactionRequest` を World へ積み、座標や Velocity は直接変更しない
 - HitReactionSystem は `HitReactionRequest` を読み、通常ヒットバックやガードバックは 1 フレームの即時座標補正として処理する
 - 通常ヒットバックやガードバックで防御側が壁に到達して下がりきれない場合、不足分を攻撃側へ返して 2 Player 間の距離を確保する
@@ -261,10 +261,14 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
 - `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
-- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::Guardstun` を維持するフレーム数として扱う
+- `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
+- ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持するフレーム数として扱う
 - ガード時は本来ダメージの 1/10 を HP へ適用する
-- 通常ガードは地上の `Idle / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立し、`Guardstun` 中は入力に関係なく連続ガードとして扱う
-- HPバーのダメージ蓄積表示は `Hitstun / Guardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
+- 通常ガードは地上の `Idle / Crouch / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立する。右向き `4` / 左向き `6` は立ちガード、右向き `1` / 左向き `3` はしゃがみガードとして扱う
+- `StandGuard / CrouchGuard` は将来の事前ガード姿勢用ステートとして先に定義しておく。現段階では通常入力だけで常時このステートへ遷移させる処理は入れない
+- `StandGuardstun / CrouchGuardstun` 中は入力に関係なく同じガード姿勢で連続ガード判定を行う
+- HPバーのダメージ蓄積表示は `Hitstun / StandGuardstun / CrouchGuardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。

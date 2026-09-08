@@ -49,6 +49,8 @@ bool PlayerFacingSystem::ShouldUpdateFacing(const StateComponent& state)
 
 	if (state.currentActionState == PlayerActionState::Idle
 		|| state.currentActionState == PlayerActionState::Crouch
+		|| state.currentActionState == PlayerActionState::StandGuard
+		|| state.currentActionState == PlayerActionState::CrouchGuard
 		|| state.currentActionState == PlayerActionState::FrontWalk
 		|| state.currentActionState == PlayerActionState::BackWalk
 		|| state.currentActionState == PlayerActionState::VerticalJumpStartup
