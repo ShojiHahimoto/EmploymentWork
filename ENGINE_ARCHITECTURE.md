@@ -163,6 +163,7 @@ HitResolveSystem
 HitReactionSystem
 BattleResultSystem
 BattleHUDSystem
+MotionSystem
 TransformSystem
 CameraSystem
 DebugSystem
@@ -182,13 +183,14 @@ DebugSystem
 - HitReactionSystem は、HitResolveSystem が確定した被弾反応リクエストを読み、ヒットバック、ガードバック、吹き飛び、ダウンを処理する
 - BattleResultSystem は、KO とラウンドタイマーのタイムアップを確認し、勝敗結果を確定する
 - BattleHUDSystem は、HPバーやラウンドタイマーなどの対戦 HUD 表示状態を更新し、ゲームビューへ描画する
+- MotionSystem は、現在の ActionState / actionFrame / MotionData から GameObject ごとのボーン姿勢を更新し、Renderer へ渡すスキニング行列を作る
 - TransformSystem は、描画やカメラ用の world キャッシュを更新する
 - CameraSystem は、カメラ Transform から View / Projection を更新する
 - DebugSystem は Debug ビルドや検証用途に限定し、バトル結果の確定責務を持たせない
 
 StateUpdateSystem は、Player タグと Velocity / State を持つ GameObject を対象にする。
 InputHistoryComponent がある場合はテンキー方向、ジャンプを読み、CommandBufferComponent がある場合は攻撃候補を読み、ない場合は中立入力として扱う。
-現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`Guardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
+現段階では入力履歴、接地状態、Y 速度を見て、`Idle`、`Crouch`、`StandGuard`、`CrouchGuard`、`FrontWalk`、`BackWalk`、`VerticalJumpStartup`、`FrontJumpStartup`、`BackJumpStartup`、`VerticalJump`、`FrontJump`、`BackJump`、`Fall`、`GroundAttack`、`AirAttack`、`LandingRecovery`、`Hitstun`、`StandGuardstun`、`CrouchGuardstun`、`AirHitstun`、`Down`、`WakeUp` を含む `PlayerActionState` を確定する。
 Player の向きは、World に登録された相手 Player の Transform と自分の Transform の X 座標比較で決める。
 自分が左、相手が右なら右向き、自分が右、相手が左なら左向きとする。
 空中にいる間は対面方向を更新しない。
@@ -247,7 +249,7 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - HitCollisionSystem は `currentAttack.slotId`、`actionFrame`、`CharacterAttackDataComponent` から現在有効な AttackBox を計算する
 - AttackBox と相手の HurtBox を 2D AABB で判定し、当たった事実だけを World の一時結果バッファへ保存する
 - HitCollisionSystem は `StateComponent` や `currentAttack.hasHit` を直接変更しない
-- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / Guardstun` を確定する
+- HitResolveSystem は一時結果バッファを読み、攻撃側の `currentAttack.hasHit` と防御側の `PlayerActionState::Hitstun / StandGuardstun / CrouchGuardstun` を確定する
 - HitResolveSystem はヒット/ガード確定後に `HitReactionRequest` を World へ積み、座標や Velocity は直接変更しない
 - HitReactionSystem は `HitReactionRequest` を読み、通常ヒットバックやガードバックは 1 フレームの即時座標補正として処理する
 - 通常ヒットバックやガードバックで防御側が壁に到達して下がりきれない場合、不足分を攻撃側へ返して 2 Player 間の距離を確保する
@@ -259,10 +261,14 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
 - `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
-- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::Guardstun` を維持するフレーム数として扱う
+- `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
+- ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持するフレーム数として扱う
 - ガード時は本来ダメージの 1/10 を HP へ適用する
-- 通常ガードは地上の `Idle / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立し、`Guardstun` 中は入力に関係なく連続ガードとして扱う
-- HPバーのダメージ蓄積表示は `Hitstun / Guardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
+- 通常ガードは地上の `Idle / Crouch / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立する。右向き `4` / 左向き `6` は立ちガード、右向き `1` / 左向き `3` はしゃがみガードとして扱う
+- `StandGuard / CrouchGuard` は将来の事前ガード姿勢用ステートとして先に定義しておく。現段階では通常入力だけで常時このステートへ遷移させる処理は入れない
+- `StandGuardstun / CrouchGuardstun` 中は入力に関係なく同じガード姿勢で連続ガード判定を行う
+- HPバーのダメージ蓄積表示は `Hitstun / StandGuardstun / CrouchGuardstun / AirHitstun / Down / WakeUp` 中に停止し、硬直解除後に現在HPへ追いつく
 - 1vs1 前提でも、結果バッファ内では処理対象を明確にするため attacker / defender の GameObjectId を持つ
 
 BattleResultSystem は HitResolveSystem の後に実行し、同一フレームで KO とタイムアップが重なった場合は KO 判定を優先する。
@@ -452,9 +458,56 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 現段階ではアニメーション再生は行わず、static pose として描画する
 - AnimationClip は bone ごとの position / rotation / scale keyframe を保持できる構造にする
 - ゲーム内で作成するキーフレームアニメーションも、同じ AnimationClip / Channel / Keyframe 構造に保存する
-- AnimationSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource の AnimationClip を参照する
+- MotionSystem を追加する場合は、再生状態を別 Component に持たせ、ModelResource や MotionData の AnimationClip / Pose を参照する
 - 2D UI は ModelComponent ではなく、UI タグと用途別 Component を追加して表現する
 - 現段階の HUD は通常の TransformComponent を使い、画面座標用の Transform として扱う
+
+## Animation / Motion
+
+自作モーション機能は、見た目の姿勢制御として扱い、攻撃性能を持つ AttackData と分離する。
+
+- MotionData は AttackData とは別 JSON / 別リソースとして管理する
+- 攻撃モーションは `assets/MotionData/Attack/Ground/slot_00.json` のように `Attack` 配下へ保存する
+- 汎用モーションは `assets/MotionData/Common/Idle.json` のように `Common` 配下へ保存する
+- AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
+- 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
+- MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
+- 攻撃モーションの総フレームは AttackData の総フレームを正とし、MotionData 側で独立して差を持たせない
+- キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
+- 編集ツール上の部位名は `Head`, `Spine`, `Waist`, `RShoulder`, `LShoulder`, `RElbow`, `LElbow`, `RHand`, `LHand`, `RHipjoint`, `LHipjoint`, `RKnees`, `LKnees`, `RFeet`, `LFeet` の 15 種類を基本とする
+- MotionData には編集用部位名を保存し、MotionSystem がモデルごとの実ボーン名へ解決する
+- 攻撃 MotionData ID は AttackData のカテゴリとスロットに対応させ、`Attack/Ground/slot_00` のように技ごとに別ファイルへ保存する
+- モーション編集 UI は「フレーム選択 -> 全身キーフレーム追加 -> 姿勢編集」の順に扱い、キーフレームがないフレームでは姿勢編集を禁止する
+- モーション編集 UI 上ではキーフレームを部位単位ではなく全身単位として見せ、保存時は既存の `boneTracks` 形式へ展開して再生側を壊さない
+- キーフレームが存在するフレームでは、角度入力を変更した時点で下書き MotionData とプレビューへ即時反映する
+- 全身姿勢コピー / ペーストは、コピー元とペースト先の両方にキーフレームが存在する場合のみ許可する
+- モーション編集用プレビューカメラは、キャラクターを中心点として yaw / pitch / distance で回り込むオービットカメラとする
+- T ポーズなどのプリセットは、現在フレームに存在する全身キーフレームへ適用する編集補助として扱う
+- Common Motion Editor は開発者用の汎用モーション編集入口として扱い、総フレームとループ有無を MotionData 側で編集できる
+- Attack Motion Editor は AttackData から開き、総フレームは AttackData 側、ループは false 固定にする
+- `looping == true` の MotionData は、最後のキーフレームから次ループの最初のキーフレームへ自動補間し、最終フレームと 0F を手動で完全一致させる必要をなくす
+- PlayerActionState が攻撃以外の場合は MotionSystem が `Common/Idle`, `Common/WalkForward`, `Common/JumpLoop` などの汎用 MotionData を再生する
+- `AirHitstun` は空中にいる状態でもジャンプではなく被弾状態なので、`Common/JumpLoop` ではなく `Common/AirHitstun` を再生する
+- 地上下入力は `Crouch` として扱い、`Common/Crouch` を再生する。下斜め入力 1 / 3 は横歩きではなくしゃがみを優先する
+- 攻撃 MotionData は `Common/Idle` を下地姿勢として扱い、最初のキーフレーム以前や未指定部位が T ポーズへ戻らないようにする
+- モーション編集プレビューの 0F は攻撃ボタン入力前の Idle として扱い、`Common/Idle` の 0F 姿勢を表示する
+- 視覚専用の短いモーションブレンドは保存分類と編集導線が安定した後に追加する
+- 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
+- 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
+- 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する
+- スキニングは GPU スキニングを基本方針とし、Renderer はボーン行列配列を HLSL へ渡す
+- HLSL はスキニング実装以降、外部 `.hlsl` ファイルを優先して管理する
+- `ModelResource` は共有モデルデータ、初期ボーン階層、bind pose、頂点ウェイト、FBX 由来 AnimationClip を持つ
+- `ModelResource` に GameObject ごとの現在姿勢や再生状態を持たせない
+- GameObject ごとの現在姿勢は `SkeletonPoseComponent` に保持する
+- 再生中モーション ID、再生フレーム、ループ有無などの再生状態は `MotionPlayerComponent` に持たせる
+- MotionSystem は `ModelComponent`、`SkeletonPoseComponent`、`MotionPlayerComponent` を読み、描画用スキニング行列を更新する
+- 最初は FK で、各ボーンのローカル回転・位置・スケールを直接指定して姿勢を作る
+- IK は FK キーフレーム再生が安定してから追加する
+- IK はまず腕・脚向けの 2 ボーン IK を優先し、首、腰、背中などは FK 操作を基本とする
+- IK 追加時は関節の可動域制限を持たせ、肘や膝が逆に曲がる、関節が破綻するなどの姿勢を防ぐ
+- モーション編集画面は最初 ImGui 数値編集で作り、MotionData ID、対象ボーン名、現在プレビューフレームへの回転キー追加、保存から段階的に追加する
+- 3D ギズモ、姿勢プリセット、IK 操作、可動域編集は、スキニング描画と FK キーフレーム保存が安定した後に追加する
 
 ## オブジェクト参照
 

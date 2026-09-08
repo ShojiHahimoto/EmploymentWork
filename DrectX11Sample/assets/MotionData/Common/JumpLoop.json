@@ -1,0 +1,143 @@
+﻿{
+  "motionDataId": "Common/JumpLoop",
+  "displayName": "JumpLoop",
+  "totalFrames": 30,
+  "looping": true,
+  "boneTracks": [
+    {
+      "boneName": "Head",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 32.000, "y": -5.500, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Spine",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -41.000, "y": -20.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Waist",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RShoulder",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -60.500, "y": 99.500, "z": -50.500 }
+        }
+      ]
+    },
+    {
+      "boneName": "LShoulder",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -47.000, "y": 8.000, "z": -37.500 }
+        }
+      ]
+    },
+    {
+      "boneName": "RElbow",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -5.000, "y": -86.000, "z": -25.500 }
+        }
+      ]
+    },
+    {
+      "boneName": "LElbow",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -3.500, "y": 39.000, "z": 1.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RHand",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LHand",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RHipjoint",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -44.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LHipjoint",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -98.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RKnees",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 142.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LKnees",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 123.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RFeet",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LFeet",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": -24.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    }
+  ]
+}

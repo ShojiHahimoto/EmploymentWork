@@ -6,6 +6,7 @@
 #include "Component/HealthGaugeComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
@@ -25,6 +26,7 @@
 #include "System/HitResolveSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
+#include "System/MotionSystem.h"
 #include "System/PlayerInvincibilitySystem.h"
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
@@ -35,6 +37,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 using namespace DirectX::SimpleMath;
 
@@ -163,6 +166,7 @@ void BattleScene::RunSystems()
 	PlayerInvincibilitySystem::Update(world);
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
+	MotionSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())
@@ -237,7 +241,11 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 				const ModelResource* model = ModelResourceManager::GetModel(modelComponent->resourceKey);
 				if (model)
 				{
-					if (renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform)))
+					const SkeletonPoseComponent* pose = world.GetComponent<SkeletonPoseComponent>(object.id);
+					const std::vector<Matrix>* skinningMatrices =
+						pose && pose->initialized ? &pose->skinningMatrices : nullptr;
+
+					if (renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform), skinningMatrices))
 					{
 						continue;
 					}
@@ -294,6 +302,7 @@ void BattleScene::RunInitialWorldSetup()
 	SpawnDestroySystem::Update(world);
 	BattleCameraSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
+	MotionSystem::Update(world);
 	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 
 	if (world.HasActiveCamera())

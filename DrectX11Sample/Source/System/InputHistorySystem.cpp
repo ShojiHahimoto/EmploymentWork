@@ -63,6 +63,7 @@ void InputHistorySystem::UpdateInputHistory(World& world, GameObjectId objectId,
 		facingDirection,
 		inputHistory->nextFrameNumber,
 		previousFrame);
+	UpdateDisplayHistory(*inputHistory, inputHistory->frames[writeIndex]);
 	inputHistory->latestFrameIndex = writeIndex;
 	inputHistory->storedFrameCount = std::min(
 		inputHistory->storedFrameCount + 1,
@@ -112,6 +113,51 @@ InputHistoryFrame InputHistorySystem::BuildHistoryFrame(
 		&& frame.attackPressMask == previousFrame->attackPressMask;
 
 	return frame;
+}
+
+/// <summary>
+/// 入力表示用の圧縮履歴を、今フレームの入力内容で更新する。
+/// </summary>
+/// <param name="inputHistory">表示用履歴を保持する InputHistoryComponent。</param>
+/// <param name="frame">今フレームの入力履歴。</param>
+void InputHistorySystem::UpdateDisplayHistory(InputHistoryComponent& inputHistory, const InputHistoryFrame& frame)
+{
+	if (inputHistory.displayEntryCount > 0
+		&& IsSameDisplayInput(inputHistory.displayEntries[0], frame))
+	{
+		inputHistory.displayEntries[0].holdFrames = std::min(
+			inputHistory.displayEntries[0].holdFrames + 1,
+			InputHistoryComponent::MaxDisplayHoldFrames);
+		return;
+	}
+
+	const int newEntryCount = std::min(
+		inputHistory.displayEntryCount + 1,
+		InputHistoryComponent::DisplayHistoryEntryCount);
+	for (int index = newEntryCount - 1; index > 0; --index)
+	{
+		inputHistory.displayEntries[static_cast<size_t>(index)] =
+			inputHistory.displayEntries[static_cast<size_t>(index - 1)];
+	}
+
+	InputDisplayHistoryEntry entry;
+	entry.direction = frame.direction;
+	entry.attackPressMask = frame.attackPressMask;
+	entry.holdFrames = 1;
+	inputHistory.displayEntries[0] = entry;
+	inputHistory.displayEntryCount = newEntryCount;
+}
+
+/// <summary>
+/// 表示履歴の先頭項目と今フレーム入力が、画面表示上同じ内容か確認する。
+/// </summary>
+/// <param name="entry">比較する表示履歴項目。</param>
+/// <param name="frame">今フレームの入力履歴。</param>
+/// <returns>方向と攻撃 Press の組み合わせが一致していれば true。</returns>
+bool InputHistorySystem::IsSameDisplayInput(const InputDisplayHistoryEntry& entry, const InputHistoryFrame& frame)
+{
+	return entry.direction == frame.direction
+		&& entry.attackPressMask == frame.attackPressMask;
 }
 
 /// <summary>

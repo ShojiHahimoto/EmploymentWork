@@ -1,0 +1,383 @@
+﻿{
+  "motionDataId": "Attack/Ground/slot_01",
+  "displayName": "モーション_ストレート",
+  "totalFrames": 31,
+  "looping": false,
+  "boneTracks": [
+    {
+      "boneName": "RShoulder",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": -17.167, "z": 38.333 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": -22.000, "z": -42.500 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": -22.000, "z": -42.500 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": -22.000, "z": -42.500 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Head",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": -6.833, "y": -22.500, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 11.500, "y": 46.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 11.500, "y": 46.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 11.500, "y": 46.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 12.000, "y": -5.500, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Spine",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 11.000, "y": 22.500, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": -23.000, "y": -20.500, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": -23.000, "y": -20.500, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": -23.000, "y": -20.500, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "Waist",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LShoulder",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": -43.667, "y": -11.333, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": -65.500, "y": -17.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": -65.500, "y": -17.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": -65.500, "y": -17.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+        }
+      ]
+    },
+    {
+      "boneName": "RElbow",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 40.500, "z": -69.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LElbow",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 81.667 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 122.500 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 122.500 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 122.500 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RHand",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LHand",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RHipjoint",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 21.333, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 32.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 32.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 32.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 13.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LHipjoint",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": -20.667, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": -31.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": -31.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": -31.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -23.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RKnees",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 9.500, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LKnees",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 23.667, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 35.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 35.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 35.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 22.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "RFeet",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": -6.333, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": -9.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": -9.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": -9.500, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    },
+    {
+      "boneName": "LFeet",
+      "keyframes": [
+        {
+          "frame": 6,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 9,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 13,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 20,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 30,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    }
+  ]
+}

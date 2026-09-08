@@ -192,6 +192,7 @@ namespace
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
+			result.attackHeight = assignedAttack.attack.attackHeight;
 			result.attackUsableState = assignedAttack.attack.usableState;
 			// 空中技はリアクションタイプを持たず、常に Normal として扱う。
 			result.hitReactionType = assignedAttack.attack.usableState == AttackUsableState::Air

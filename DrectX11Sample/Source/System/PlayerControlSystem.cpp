@@ -141,10 +141,14 @@ PlayerControlFrameResult PlayerControlSystem::ExecuteCurrentAction(
 		break;
 
 	case PlayerActionState::Idle:
+	case PlayerActionState::Crouch:
+	case PlayerActionState::StandGuard:
+	case PlayerActionState::CrouchGuard:
 	case PlayerActionState::GroundAttack:
 	case PlayerActionState::LandingRecovery:
 	case PlayerActionState::Hitstun:
-	case PlayerActionState::Guardstun:
+	case PlayerActionState::StandGuardstun:
+	case PlayerActionState::CrouchGuardstun:
 	case PlayerActionState::Down:
 	case PlayerActionState::WakeUp:
 		// 現段階の攻撃・着地硬直・地上被弾・ガード・ダウン系は、横移動を止める。

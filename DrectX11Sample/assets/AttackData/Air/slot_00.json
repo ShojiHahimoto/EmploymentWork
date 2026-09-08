@@ -4,6 +4,7 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Air",
+  "motionDataId": "Attack/Air/slot_00",
   "damage": 500,
   "hitstunFrames": 15,
   "guardstunFrames": 10,

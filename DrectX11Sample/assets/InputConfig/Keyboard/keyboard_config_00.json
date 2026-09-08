@@ -1,0 +1,16 @@
+﻿{
+  "version": 1,
+  "configId": "keyboard_config_00",
+  "configName": "スペースジャンプ",
+  "deviceType": "Keyboard",
+  "bindings": {
+    "moveUp": "Space",
+    "moveDown": "S",
+    "moveLeft": "A",
+    "moveRight": "D",
+    "attackA": "H",
+    "attackB": "J",
+    "attackX": "Y",
+    "attackY": "U"
+  }
+}

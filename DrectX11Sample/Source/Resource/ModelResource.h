@@ -53,6 +53,12 @@ struct ModelBone
 {
 	std::string name;
 	int parentIndex = -1;
+	// モデル読み込み時点の親基準ローカル姿勢。GameObject ごとの現在姿勢は SkeletonPoseComponent 側に持つ。
+	DirectX::SimpleMath::Vector3 bindLocalPosition = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Quaternion bindLocalRotation = DirectX::SimpleMath::Quaternion::Identity;
+	DirectX::SimpleMath::Vector3 bindLocalScale = DirectX::SimpleMath::Vector3::One;
+	DirectX::SimpleMath::Matrix bindLocalMatrix = DirectX::SimpleMath::Matrix::Identity;
+	// 頂点を bind pose のボーン空間へ戻す行列。最終スキニング行列の作成に使う。
 	DirectX::SimpleMath::Matrix offsetMatrix = DirectX::SimpleMath::Matrix::Identity;
 };
 
@@ -95,6 +101,7 @@ public:
 	const std::vector<ModelMaterial>& GetMaterials() const;
 	const std::vector<ModelBone>& GetBones() const;
 	const std::vector<ModelAnimationClip>& GetAnimationClips() const;
+	int FindBoneIndex(const std::string& boneName) const;
 
 private:
 	std::vector<ModelMesh> meshes;

@@ -1,4 +1,4 @@
-param(
+﻿param(
 	[string[]]$Paths = @()
 )
 
@@ -8,7 +8,7 @@ $utf8Bom = New-Object System.Text.UTF8Encoding($true)
 
 if ($Paths.Count -eq 0)
 {
-	$extensions = @(".cpp", ".h", ".hpp", ".sln", ".vcxproj", ".filters", ".config", ".md", ".json")
+	$extensions = @(".cpp", ".h", ".hpp", ".sln", ".vcxproj", ".filters", ".config", ".md", ".json", ".hlsl")
 	$files = Get-ChildItem -LiteralPath $root -Recurse -File |
 		Where-Object {
 			$extensions -contains $_.Extension -and
@@ -31,6 +31,6 @@ else
 foreach ($file in $files)
 {
 	$text = [System.IO.File]::ReadAllText($file.FullName)
-	$text = $text -replace "`r?`n", "`r`n"
+	$text = $text.Replace("`r`n", "`n").Replace("`r", "`n").Replace("`n", "`r`n")
 	[System.IO.File]::WriteAllText($file.FullName, $text, $utf8Bom)
 }

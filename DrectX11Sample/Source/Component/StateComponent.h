@@ -4,24 +4,28 @@
 
 enum class PlayerActionState
 {
-	Idle,
-	FrontWalk,
-	BackWalk,
-	VerticalJumpStartup,
-	FrontJumpStartup,
-	BackJumpStartup,
-	VerticalJump,
-	FrontJump,
-	BackJump,
-	Fall,
-	GroundAttack,
-	AirAttack,
-	LandingRecovery,
-	Hitstun,
-	Guardstun,
-	AirHitstun,
-	Down,
-	WakeUp,
+	Idle,						//待機
+	Crouch,						//しゃがみ
+	StandGuard,					//立ちガード姿勢
+	CrouchGuard,				//しゃがみガード姿勢
+	FrontWalk,					//前歩き
+	BackWalk,					//後ろ歩き
+	VerticalJumpStartup,		//垂直ジャンプ以降中
+	FrontJumpStartup,			//前ジャンプ中
+	BackJumpStartup,			//後ろジャンプ中
+	VerticalJump,				//垂直ジャンプ
+	FrontJump,					//前ジャンプ
+	BackJump,					//後ろジャンプ
+	Fall,						//落下
+	GroundAttack,				//地上攻撃
+	AirAttack,					//空中攻撃
+	LandingRecovery,			//着地硬直
+	Hitstun,					//ヒット硬直
+	StandGuardstun,				//立ちガード硬直
+	CrouchGuardstun,			//しゃがみガード硬直
+	AirHitstun,					//空中ヒット硬直
+	Down,						//ダウン
+	WakeUp,						//起き上がり
 };
 
 // 対面方向
@@ -72,6 +76,6 @@ struct StateComponent : public Component
 	bool hitstunRequested = false;
 	// 現在の Hitstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int hitstunDurationFrames = 30;
-	// 現在の Guardstun を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
+	// 現在の立ち/しゃがみガード硬直を何フレーム維持するか。HitResolveSystem が AttackData から設定する。
 	int guardstunDurationFrames = 30;
 };

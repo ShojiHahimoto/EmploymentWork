@@ -1,0 +1,107 @@
+﻿#pragma once
+
+#include "Component/SkeletonPoseComponent.h"
+#include "Component/MotionPlayerComponent.h"
+#include "Core/GameObject.h"
+#include "Data/AttackData.h"
+#include "Data/MotionData.h"
+#include "Resource/ModelResource.h"
+
+#include <SimpleMath.h>
+
+#include <string>
+
+class World;
+struct CharacterAttackDataComponent;
+struct HitBoxComponent;
+struct StateComponent;
+
+/// <summary>
+/// ModelResource のボーン情報と GameObject ごとの姿勢 Component から、描画用スキニング行列を作る。
+/// </summary>
+class MotionSystem
+{
+public:
+	static void Update(World& world);
+
+	/// <summary>
+	/// SkeletonPoseComponent を ModelResource の bind pose で初期化する。
+	/// </summary>
+	/// <param name="pose">初期化する GameObject ごとの姿勢 Component。</param>
+	/// <param name="model">初期ボーン姿勢を持つ ModelResource。</param>
+	/// <param name="modelKey">初期化元として記録する ModelResource キー。</param>
+	/// <returns>初期化できた場合は true。</returns>
+	static bool InitializeSkeletonPose(
+		SkeletonPoseComponent& pose,
+		const ModelResource& model,
+		const std::string& modelKey);
+
+	/// <summary>
+	/// 指定ボーンのローカル回転を Euler 角 degree で設定する。
+	/// </summary>
+	/// <param name="pose">変更する GameObject ごとの姿勢 Component。</param>
+	/// <param name="model">ボーン名検索に使う ModelResource。</param>
+	/// <param name="boneName">変更するボーン名。</param>
+	/// <param name="eulerDegrees">設定するローカル Euler 回転。</param>
+	/// <returns>対象ボーンが見つかり設定できた場合は true。</returns>
+	static bool SetBoneLocalEulerRotationDegrees(
+		SkeletonPoseComponent& pose,
+		const ModelResource& model,
+		const std::string& boneName,
+		const DirectX::SimpleMath::Vector3& eulerDegrees);
+
+	/// <summary>
+	/// 現在のローカルボーン姿勢から、親子階層反映済みのスキニング行列を更新する。
+	/// </summary>
+	/// <param name="pose">計算結果を書き込む姿勢 Component。</param>
+	/// <param name="model">ボーン階層と offsetMatrix を持つ ModelResource。</param>
+	static void UpdateSkinningMatrices(SkeletonPoseComponent& pose, const ModelResource& model);
+
+	/// <summary>
+	/// 指定 MotionData の指定フレームを SkeletonPoseComponent に反映する。
+	/// </summary>
+	/// <param name="pose">変更する姿勢 Component。</param>
+	/// <param name="motion">適用するモーションデータ。</param>
+	/// <param name="frame">再生する 0 始まりフレーム。</param>
+	/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+	static void ApplyMotionData(
+		SkeletonPoseComponent& pose,
+		const MotionData& motion,
+		int frame,
+		const ModelResource& model);
+
+	/// <summary>
+	/// 指定 MotionData を、別姿勢を下地にして SkeletonPoseComponent へ反映する。
+	/// </summary>
+	/// <param name="pose">変更する姿勢 Component。</param>
+	/// <param name="motion">適用するモーションデータ。</param>
+	/// <param name="frame">再生する 0 始まりフレーム。</param>
+	/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+	/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
+	static void ApplyMotionData(
+		SkeletonPoseComponent& pose,
+		const MotionData& motion,
+		int frame,
+		const ModelResource& model,
+		const SkeletonPoseComponent* basePose);
+
+private:
+	static void SyncMotionPlayerFromState(World& world, GameObjectId objectId, MotionPlayerComponent& player);
+	static const CharacterAssignedAttackData* FindAssignedAttack(
+		const CharacterAttackDataComponent* attackData,
+		const std::string& attackSlotId);
+	static const char* GetCommonMotionDataId(PlayerActionState actionState);
+	static bool IsAttackMotionDataId(const std::string& motionDataId);
+	static bool IsAttackActionState(PlayerActionState actionState);
+	static void ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelResource& model);
+	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player, const ModelResource& model);
+	static BonePose SampleBoneTrack(
+		const MotionBoneTrackData& track,
+		const BonePose& bindPose,
+		int frame,
+		int totalFrames,
+		bool looping);
+	static void AdvanceMotionFrame(MotionPlayerComponent& player, const MotionData& motion);
+	static void ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResource& model);
+	static DirectX::SimpleMath::Matrix CreateLocalMatrix(const BonePose& pose);
+};

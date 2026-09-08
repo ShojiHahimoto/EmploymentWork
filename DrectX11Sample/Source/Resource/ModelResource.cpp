@@ -152,6 +152,9 @@ namespace
 		ModelBone bone;
 		bone.name = node->mName.C_Str();
 		bone.parentIndex = parentIndex;
+		bone.bindLocalMatrix = ConvertAssimpMatrix(node->mTransformation);
+		bone.bindLocalMatrix.Decompose(bone.bindLocalScale, bone.bindLocalRotation, bone.bindLocalPosition);
+		bone.bindLocalRotation.Normalize();
 		bones.push_back(bone);
 		boneIndexByName[bone.name] = static_cast<uint32_t>(currentIndex);
 
@@ -773,6 +776,24 @@ const std::vector<ModelBone>& ModelResource::GetBones() const
 const std::vector<ModelAnimationClip>& ModelResource::GetAnimationClips() const
 {
 	return animationClips;
+}
+
+/// <summary>
+/// ボーン名から ModelResource 内のボーン番号を検索する。
+/// </summary>
+/// <param name="boneName">検索するボーン名。</param>
+/// <returns>見つかったボーン番号。存在しない場合は -1。</returns>
+int ModelResource::FindBoneIndex(const std::string& boneName) const
+{
+	for (size_t index = 0; index < bones.size(); ++index)
+	{
+		if (bones[index].name == boneName)
+		{
+			return static_cast<int>(index);
+		}
+	}
+
+	return -1;
 }
 
 /// <summary>

@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include "Component/CameraComponent.h"
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/TransformComponent.h"
 #include "Data/AttackData.h"
 #include "Data/CharacterData.h"
+#include "Data/MotionData.h"
 #include "Scene/Scene.h"
 #include "System/Renderer.h"
 #include "World/World.h"
@@ -18,6 +20,8 @@ enum class CustomizeMode
 	AttackCategorySelect,
 	AttackSlotSelect,
 	AttackEditor,
+	MotionEditor,
+	CommonMotionSelect,
 	CharacterSlotSelect,
 	CharacterEditor,
 	AttackPicker
@@ -93,6 +97,8 @@ private:
 	static constexpr int CharacterNameBufferSize = 128;
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
+	static constexpr int MotionEditorBoneCount = 15;
+	static constexpr int CommonMotionSlotCount = 12;
 
 	World world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
@@ -103,6 +109,15 @@ private:
 
 	AttackData draftAttack;
 	std::array<char, 128> displayNameBuffer = {};
+	std::array<char, 128> motionDataIdBuffer = {};
+	MotionData draftMotion;
+	bool hasDraftMotion = false;
+	std::array<char, 128> motionDisplayNameBuffer = {};
+	int selectedMotionEditorBoneIndex = 0;
+	DirectX::SimpleMath::Vector3 motionKeyRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
+	bool editingCommonMotion = false;
+	int selectedCommonMotionIndex = 0;
+	std::string editingCommonMotionId;
 	std::string editingAttackDataId;
 	std::string statusMessage;
 	std::array<std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>, 3> attackSlotSummaries = {};
@@ -120,8 +135,14 @@ private:
 	CameraComponent previewCamera;
 	TransformComponent previewCameraTransform;
 	TransformComponent previewPlayerTransform;
+	SkeletonPoseComponent previewSkeletonPose;
 	int previewCurrentFrame = 0;
 	bool previewPlaying = false;
+	float previewCameraYawDegrees = 0.0f;
+	float previewCameraPitchDegrees = -2.5f;
+	float previewCameraDistance = 14.0f;
+	std::array<DirectX::SimpleMath::Vector3, MotionEditorBoneCount> copiedMotionPoseRotations = {};
+	bool hasCopiedMotionPose = false;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -130,19 +151,34 @@ private:
 	void DrawMainMenu();
 	void DrawAttackCategorySelect();
 	void DrawAttackSlotSelect();
+	void DrawCommonMotionSelect();
 	void DrawAttackEditor(Renderer& renderer);
+	void DrawMotionEditorScreen(Renderer& renderer);
 	void DrawAttackPreviewWindow(Renderer& renderer);
 	void DrawAttackEditorWindow();
 	void DrawHitboxEditor();
 	void DrawCancelSettingEditor();
+	void DrawMotionEditor();
+	void DrawMotionTimeline();
 	void DrawCharacterSlotSelect();
 	void DrawCharacterEditor();
 	void DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char* label);
 	void DrawAttackPicker();
 
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
+	void SelectCommonMotionSlot(int slotIndex);
 	void SaveDraftAttack();
 	void SyncDraftFromEditor();
+	void EnsureDraftAttackMotionDataId();
+	void LoadDraftMotionFromEditorId();
+	void SaveDraftMotion();
+	void AddWholeBodyMotionKeyframeAtPreviewFrame();
+	void DeleteWholeBodyMotionKeyframeAtPreviewFrame();
+	void SetMotionRotationKeyAtPreviewFrame();
+	void CopyWholeBodyMotionPoseAtPreviewFrame();
+	void PasteWholeBodyMotionPoseAtPreviewFrame();
+	void ApplyTPosePresetAtPreviewFrame();
+	bool HasMotionKeyframeAtPreviewFrame() const;
 	void SelectCharacterSlot(int slotIndex);
 	void SaveDraftCharacter();
 	void CopyCharacterNameToBuffer();
@@ -153,6 +189,7 @@ private:
 	void InitializePreview();
 	void ReleasePreview();
 	void UpdatePreviewPlayback();
+	void UpdatePreviewCameraTransform();
 	void RenderAttackPreview(Renderer& renderer);
 	void DrawPreviewAttackBoxes(Renderer& renderer);
 	void ClampPreviewCurrentFrame();
@@ -162,13 +199,18 @@ private:
 	int GetPreviewTotalFrames() const;
 	int GetPreviewActionFrame() const;
 	const char* GetPreviewPhaseText() const;
+	std::string GetEditingMotionDataId() const;
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
 	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
+	std::string BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const;
+	std::string BuildCommonMotionDataId(int slotIndex) const;
 	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex, const std::string& attackDataId) const;
 	void CopyDisplayNameToBuffer();
+	void CopyMotionDataIdToBuffer();
+	void CopyMotionEditorBuffers();
 	std::string BuildCharacterId(int slotIndex) const;
 	std::string BuildCharacterFolderPath(int slotIndex) const;
 	std::string BuildCharacterSlotButtonLabel(int slotIndex) const;

@@ -20,7 +20,7 @@ public:
 	static void Update(World& world, int screenWidth, int screenHeight);
 
 	/// <summary>
-	/// HPバーとラウンドタイマーをゲームビューへ 2D 描画する。
+	/// HPバー、ラウンドタイマー、入力履歴をゲームビューへ 2D 描画する。
 	/// </summary>
 	/// <param name="world">BattleTimerComponent と HealthGaugeComponent を保持する World。</param>
 	/// <param name="screenWidth">現在の描画幅。</param>

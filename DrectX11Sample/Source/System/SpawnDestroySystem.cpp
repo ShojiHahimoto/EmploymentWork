@@ -7,6 +7,8 @@
 #include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/MotionPlayerComponent.h"
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "Data/BattleSetupData.h"
@@ -60,6 +62,15 @@ namespace
 		ModelComponent model;
 		model.resourceKey = modelKey;
 		world.AddComponent<ModelComponent>(objectId, model);
+
+		SkeletonPoseComponent skeletonPose;
+		skeletonPose.enableDebugPose = false;
+		world.AddComponent<SkeletonPoseComponent>(objectId, skeletonPose);
+
+		MotionPlayerComponent motionPlayer;
+		motionPlayer.playing = false;
+		world.AddComponent<MotionPlayerComponent>(objectId, motionPlayer);
+
 		world.AddComponent<VelocityComponent>(objectId);
 
 		StateComponent state;
@@ -123,6 +134,16 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 			ModelComponent model;
 			model.resourceKey = "Debugman";
 			world.AddComponent<ModelComponent>(objectId, model);
+
+			SkeletonPoseComponent skeletonPose;
+			skeletonPose.enableDebugPose = false;
+			world.AddComponent<SkeletonPoseComponent>(objectId, skeletonPose);
+
+			MotionPlayerComponent motionPlayer;
+			motionPlayer.motionDataId = "debug_right_arm_wave";
+			motionPlayer.looping = true;
+			motionPlayer.playing = true;
+			world.AddComponent<MotionPlayerComponent>(objectId, motionPlayer);
 			break;
 		}
 		case SpawnType::DebugPlayer:

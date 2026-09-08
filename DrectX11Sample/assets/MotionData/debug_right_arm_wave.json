@@ -1,0 +1,29 @@
+﻿{
+  "motionDataId": "debug_right_arm_wave",
+  "displayName": "モーション_ジャブ",
+  "totalFrames": 19,
+  "looping": false,
+  "boneTracks": [
+    {
+      "boneName": "RShoulder",
+      "keyframes": [
+        {
+          "frame": 0,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        },
+        {
+          "frame": 3,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -89.500 }
+        },
+        {
+          "frame": 5,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": -89.500 }
+        },
+        {
+          "frame": 12,
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+        }
+      ]
+    }
+  ]
+}
