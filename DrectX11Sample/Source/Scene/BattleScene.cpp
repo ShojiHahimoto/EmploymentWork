@@ -6,6 +6,7 @@
 #include "Component/HealthGaugeComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
 #include "Input/InputSystem.h"
@@ -244,8 +245,14 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 					const SkeletonPoseComponent* pose = world.GetComponent<SkeletonPoseComponent>(object.id);
 					const std::vector<Matrix>* skinningMatrices =
 						pose && pose->initialized ? &pose->skinningMatrices : nullptr;
+					const MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
+					Matrix modelWorld = TransformSystem::GetWorldMatrix(*transform);
+					if (motionPlayer && motionPlayer->visualRootOffset != Vector3::Zero)
+					{
+						modelWorld = modelWorld * Matrix::CreateTranslation(motionPlayer->visualRootOffset);
+					}
 
-					if (renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform), skinningMatrices))
+					if (renderer.DrawModel(*model, modelWorld, skinningMatrices))
 					{
 						continue;
 					}

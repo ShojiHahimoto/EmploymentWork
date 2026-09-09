@@ -3,6 +3,7 @@
   "displayName": "Attack/Special/slot_00",
   "totalFrames": 29,
   "looping": false,
+  "rootOffsetKeys": [],
   "boneTracks": [
     {
       "boneName": "Head",

@@ -85,6 +85,19 @@ bool MotionDataSaver::SaveMotionData(const std::string& motionDataId, const Moti
 	json << "  \"displayName\": \"" << EscapeJsonString(motionData.displayName) << "\",\n";
 	json << "  \"totalFrames\": " << motionData.totalFrames << ",\n";
 	json << "  \"looping\": " << (motionData.looping ? "true" : "false") << ",\n";
+	json << "  \"rootOffsetKeys\": [";
+	for (size_t keyIndex = 0; keyIndex < motionData.rootOffsetKeys.size(); ++keyIndex)
+	{
+		const MotionRootOffsetKeyData& keyframe = motionData.rootOffsetKeys[keyIndex];
+		json << (keyIndex == 0 ? "\n" : ",\n");
+		json << "    {\n";
+		json << "      \"frame\": " << keyframe.frame << ",\n";
+		json << "      \"offset\": ";
+		WriteVector3(json, "      ", keyframe.offset);
+		json << "\n";
+		json << "    }";
+	}
+	json << (motionData.rootOffsetKeys.empty() ? "],\n" : "\n  ],\n");
 	json << "  \"boneTracks\": [";
 	for (size_t trackIndex = 0; trackIndex < motionData.boneTracks.size(); ++trackIndex)
 	{

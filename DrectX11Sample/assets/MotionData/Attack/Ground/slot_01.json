@@ -3,6 +3,7 @@
   "displayName": "モーション_ストレート",
   "totalFrames": 31,
   "looping": false,
+  "rootOffsetKeys": [],
   "boneTracks": [
     {
       "boneName": "RShoulder",

@@ -473,6 +473,12 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - CustomizeScene の攻撃編集では、攻撃 MotionData ID が空、旧ID、`Common/` 系などの攻撃外IDだった場合、スロットに対応する `Attack/<Category>/slot_XX` へ正規化する
 - AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
+- 攻撃中に実座標が変わる踏み込みや移動は `AttackData::movementKeys` として保存し、MotionData の姿勢キーとは分ける
+- `movementKeys` は攻撃開始位置から見た相対 offset をフレームごとに持ち、MovementSystem が「今フレーム offset - 前フレーム offset」の差分だけ Transform へ反映する
+- `movementKeys.offset.x` は前方向を正、`offset.y` は上方向を正として保存し、左右反転は攻撃開始時の `actionStartFacingDirection` で行う
+- 攻撃の実移動は Transform を動かすため、PushBox / HurtBox / AttackBox / カメラ / 壁判定も同じ位置へ追従する
+- 攻撃中の見た目と判定のズレを避けるため、ユーザーが作る攻撃の大きな前後移動を MotionData 側の見た目オフセットだけで表現しない
+- 編集場所は Motion Editor 内に置くが、姿勢キーフレームと攻撃移動キーフレームは別のキーとして扱い、片方だけを追加・編集できるようにする
 - MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
 - 攻撃モーションの総フレームは AttackData の総フレームを正とし、MotionData 側で独立して差を持たせない
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する

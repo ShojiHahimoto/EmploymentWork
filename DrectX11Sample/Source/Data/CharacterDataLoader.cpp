@@ -3,6 +3,7 @@
 #include "Data/JsonValue.h"
 #include "System/Debugger.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <vector>
@@ -718,6 +719,48 @@ namespace
 			outHitboxes.push_back(hitbox);
 		}
 	}
+
+	/// <summary>
+	/// AttackData JSON から攻撃中の実移動キーフレームを読み込む。
+	/// </summary>
+	/// <param name="root">AttackData JSON の root Object。</param>
+	/// <param name="outMovementKeys">読み込んだ移動キーの書き込み先。</param>
+	void LoadMovementKeysFromJson(const JsonValue& root, std::vector<AttackMovementKeyData>& outMovementKeys)
+	{
+		outMovementKeys.clear();
+		const JsonValue* movementKeys = root.Find("movementKeys");
+		if (!movementKeys || !movementKeys->IsArray())
+		{
+			return;
+		}
+
+		for (const JsonValue& keyValue : movementKeys->AsArray())
+		{
+			if (!keyValue.IsObject())
+			{
+				continue;
+			}
+
+			AttackMovementKeyData key;
+			key.frame = GetInt(keyValue, "frame", key.frame);
+
+			const JsonValue* offset = keyValue.Find("offset");
+			if (offset && offset->IsObject())
+			{
+				key.offset = GetVector2(*offset, key.offset);
+			}
+
+			outMovementKeys.push_back(key);
+		}
+
+		std::sort(
+			outMovementKeys.begin(),
+			outMovementKeys.end(),
+			[](const AttackMovementKeyData& left, const AttackMovementKeyData& right)
+			{
+				return left.frame < right.frame;
+			});
+	}
 }
 
 bool CharacterDataLoader::LoadCharacterData(const std::string& characterFolderPath, CharacterData& outCharacterData)
@@ -830,5 +873,6 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	LoadAttackFrameFromJson(root, outAttackData.frame);
 	LoadCancelSettingFromJson(root, outAttackData);
 	LoadHitboxesFromJson(root, outAttackData.hitboxes);
+	LoadMovementKeysFromJson(root, outAttackData.movementKeys);
 	return true;
 }

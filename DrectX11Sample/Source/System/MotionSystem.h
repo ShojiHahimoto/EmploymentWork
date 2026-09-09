@@ -111,6 +111,9 @@ private:
 		int frame,
 		int totalFrames,
 		bool looping);
+	static DirectX::SimpleMath::Vector3 SampleRootOffset(
+		const MotionData& motion,
+		int frame);
 	static void BlendBonePoses(
 		SkeletonPoseComponent& targetPose,
 		const std::vector<BonePose>& blendFromBonePoses,

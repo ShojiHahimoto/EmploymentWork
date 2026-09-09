@@ -115,6 +115,8 @@ private:
 	std::array<char, 128> motionDisplayNameBuffer = {};
 	int selectedMotionEditorBoneIndex = 0;
 	DirectX::SimpleMath::Vector3 motionKeyRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector2 attackMovementKeyOffset = DirectX::SimpleMath::Vector2::Zero;
+	DirectX::SimpleMath::Vector3 motionRootOffsetKey = DirectX::SimpleMath::Vector3::Zero;
 	bool editingCommonMotion = false;
 	int selectedCommonMotionIndex = 0;
 	std::string editingCommonMotionId;
@@ -175,10 +177,18 @@ private:
 	void AddWholeBodyMotionKeyframeAtPreviewFrame();
 	void DeleteWholeBodyMotionKeyframeAtPreviewFrame();
 	void SetMotionRotationKeyAtPreviewFrame();
+	void AddAttackMovementKeyframeAtPreviewFrame();
+	void DeleteAttackMovementKeyframeAtPreviewFrame();
+	void SetAttackMovementKeyAtPreviewFrame();
+	void AddMotionRootOffsetKeyframeAtPreviewFrame();
+	void DeleteMotionRootOffsetKeyframeAtPreviewFrame();
+	void SetMotionRootOffsetKeyAtPreviewFrame();
 	void CopyWholeBodyMotionPoseAtPreviewFrame();
 	void PasteWholeBodyMotionPoseAtPreviewFrame();
 	void ApplyTPosePresetAtPreviewFrame();
 	bool HasMotionKeyframeAtPreviewFrame() const;
+	bool HasAttackMovementKeyframeAtPreviewFrame() const;
+	bool HasMotionRootOffsetKeyframeAtPreviewFrame() const;
 	void SelectCharacterSlot(int slotIndex);
 	void SaveDraftCharacter();
 	void CopyCharacterNameToBuffer();

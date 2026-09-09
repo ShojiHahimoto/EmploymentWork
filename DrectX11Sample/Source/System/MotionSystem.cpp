@@ -577,6 +577,9 @@ bool MotionSystem::ApplyMotionPlayer(
 	}
 
 	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
+	player.visualRootOffset = IsAttackMotionDataId(player.motionDataId)
+		? Vector3::Zero
+		: SampleRootOffset(*motion, player.currentFrame);
 	if (player.blending)
 	{
 		BlendBonePoses(pose, player.blendFromBonePoses, player.blendFrame, player.blendDurationFrames);
@@ -819,6 +822,103 @@ BonePose MotionSystem::SampleBoneTrack(
 	}
 
 	return result;
+}
+
+/// <summary>
+/// MotionData の全身見た目オフセットキーから、指定フレームの描画用オフセットを補間する。
+/// </summary>
+/// <param name="motion">参照する MotionData。</param>
+/// <param name="frame">取得する 0 始まりフレーム。</param>
+/// <returns>Transform には反映しない、モデル描画だけに使うオフセット。</returns>
+Vector3 MotionSystem::SampleRootOffset(const MotionData& motion, int frame)
+{
+	if (motion.rootOffsetKeys.empty())
+	{
+		return Vector3::Zero;
+	}
+
+	const int clampedTotalFrames = std::max(1, motion.totalFrames);
+	if (motion.looping)
+	{
+		frame %= clampedTotalFrames;
+		if (frame < 0)
+		{
+			frame += clampedTotalFrames;
+		}
+	}
+
+	const MotionRootOffsetKeyData* previousKey = nullptr;
+	const MotionRootOffsetKeyData* nextKey = nullptr;
+	for (const MotionRootOffsetKeyData& keyframe : motion.rootOffsetKeys)
+	{
+		if (keyframe.frame <= frame)
+		{
+			previousKey = &keyframe;
+		}
+
+		if (keyframe.frame >= frame)
+		{
+			nextKey = &keyframe;
+			break;
+		}
+	}
+
+	if (!previousKey && nextKey)
+	{
+		if (nextKey->frame <= 0)
+		{
+			return nextKey->offset;
+		}
+
+		const float t = std::clamp(
+			static_cast<float>(frame) / static_cast<float>(nextKey->frame),
+			0.0f,
+			1.0f);
+		return Vector3::Lerp(Vector3::Zero, nextKey->offset, t);
+	}
+	if (motion.looping && previousKey && !nextKey)
+	{
+		const MotionRootOffsetKeyData& firstKey = motion.rootOffsetKeys.front();
+		int frameSpan = (clampedTotalFrames - previousKey->frame) + firstKey.frame;
+		int frameOffset = frame - previousKey->frame;
+		if (frameSpan <= 0)
+		{
+			return previousKey->offset;
+		}
+
+		const float t = std::clamp(
+			static_cast<float>(frameOffset) / static_cast<float>(frameSpan),
+			0.0f,
+			1.0f);
+		return Vector3::Lerp(previousKey->offset, firstKey.offset, t);
+	}
+	if (previousKey && !nextKey)
+	{
+		return previousKey->offset;
+	}
+	if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+	{
+		int frameSpan = nextKey->frame - previousKey->frame;
+		int frameOffset = frame - previousKey->frame;
+		if (motion.looping && nextKey->frame < previousKey->frame)
+		{
+			frameSpan = (clampedTotalFrames - previousKey->frame) + nextKey->frame;
+			frameOffset = frame >= previousKey->frame
+				? frame - previousKey->frame
+				: (clampedTotalFrames - previousKey->frame) + frame;
+		}
+
+		const float t = frameSpan > 0
+			? std::clamp(static_cast<float>(frameOffset) / static_cast<float>(frameSpan), 0.0f, 1.0f)
+			: 0.0f;
+		return Vector3::Lerp(previousKey->offset, nextKey->offset, t);
+	}
+	if (previousKey)
+	{
+		return previousKey->offset;
+	}
+
+	return Vector3::Zero;
 }
 
 /// <summary>

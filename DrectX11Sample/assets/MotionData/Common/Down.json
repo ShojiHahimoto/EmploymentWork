@@ -3,6 +3,12 @@
   "displayName": "Down",
   "totalFrames": 30,
   "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 20,
+      "offset": { "x": 0.000, "y": -4.100, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

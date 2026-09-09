@@ -3,6 +3,12 @@
   "displayName": "AirToDown",
   "totalFrames": 30,
   "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 0,
+      "offset": { "x": 0.000, "y": -4.200, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

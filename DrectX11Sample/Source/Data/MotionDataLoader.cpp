@@ -300,6 +300,46 @@ namespace
 
 		return !outTrack.keyframes.empty();
 	}
+
+	/// <summary>
+	/// 汎用モーションの全身見た目オフセットキーを JSON から読み込む。
+	/// </summary>
+	/// <param name="root">MotionData JSON の root object。</param>
+	/// <param name="outKeys">読み込んだ rootOffsetKeys の書き込み先。</param>
+	void LoadRootOffsetKeysFromJson(const JsonValue& root, std::vector<MotionRootOffsetKeyData>& outKeys)
+	{
+		const JsonValue* keyValues = root.Find("rootOffsetKeys");
+		if (!keyValues || !keyValues->IsArray())
+		{
+			return;
+		}
+
+		outKeys.clear();
+		for (const JsonValue& keyValue : keyValues->AsArray())
+		{
+			if (!keyValue.IsObject())
+			{
+				continue;
+			}
+
+			MotionRootOffsetKeyData key;
+			key.frame = std::max(0, GetInt(keyValue, "frame", key.frame));
+			const JsonValue* offset = keyValue.Find("offset");
+			if (offset && offset->IsObject())
+			{
+				key.offset = GetVector3(*offset, key.offset);
+			}
+			outKeys.push_back(key);
+		}
+
+		std::sort(
+			outKeys.begin(),
+			outKeys.end(),
+			[](const MotionRootOffsetKeyData& left, const MotionRootOffsetKeyData& right)
+			{
+				return left.frame < right.frame;
+			});
+	}
 }
 
 bool MotionDataLoader::LoadMotionData(const std::string& motionDataId, MotionData& outMotionData)
@@ -335,6 +375,7 @@ bool MotionDataLoader::LoadMotionData(const std::string& motionDataId, MotionDat
 			}
 		}
 	}
+	LoadRootOffsetKeysFromJson(root, outMotionData.rootOffsetKeys);
 
 	DebugLog(
 		"[MotionData] Load result: ",

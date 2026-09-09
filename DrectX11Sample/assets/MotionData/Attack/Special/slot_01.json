@@ -3,6 +3,7 @@
   "displayName": "ヘッドバッド",
   "totalFrames": 39,
   "looping": false,
+  "rootOffsetKeys": [],
   "boneTracks": [
     {
       "boneName": "Head",

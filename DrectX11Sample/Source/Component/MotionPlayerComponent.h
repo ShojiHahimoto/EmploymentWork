@@ -45,4 +45,7 @@ struct MotionPlayerComponent : public Component
 
 	// 現在モーション遷移ブレンド中なら true。
 	bool blending = false;
+
+	// 汎用モーションの見た目だけに加える全身オフセット。Transform と当たり判定は動かさない。
+	DirectX::SimpleMath::Vector3 visualRootOffset = DirectX::SimpleMath::Vector3::Zero;
 };
