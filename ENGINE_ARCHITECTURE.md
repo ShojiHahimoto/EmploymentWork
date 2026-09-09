@@ -459,6 +459,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `ModelComponent` は GameObject が参照する `resourceKey` のみを持つ
 - 同じモデルを複数 GameObject が使う場合でも、モデル本体は共有する
 - FBX と同階層に置いた diffuse texture は Material 情報から読み込み、Mesh ごとに適用する
+- FBX 内に埋め込まれた diffuse texture は Assimp の embedded texture として読み込み、外部ファイルがないモデルでも Material ごとに適用する
+- Material が持つテクスチャ参照は `embedded texture -> 外部ファイル -> 同階層 diffuse fallback` の順に試し、既存の外部テクスチャ読み込みと競合しないようにする
 - FBX 側に diffuse texture 参照がない場合は、同階層の `*diffuse*.png` を fallback として探す
 - 頂点には将来のスケルタルアニメーション用に bone index / bone weight を持たせる
 - 現段階ではアニメーション再生は行わず、static pose として描画する
@@ -583,6 +585,21 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - 例として `startup=4 / active=3 / recovery=7` の場合、内部は `0〜2 Startup / 3〜5 Active / 6〜12 Recovery`、プレビュー表示は `0 Idle / 1〜3 Startup / 4〜6 Active / 7〜13 Recovery` とする
 - 本格的なモーション再生やキーフレームアニメーション編集は、保存形式とプレビュー導線が安定した後に追加する
 - 将来の専用 UI 化やプレビュー再生を追加しても、保存形式と Loader 互換性を壊さない
+
+### Effect
+
+ヒット火花、ガード火花、土煙、風、飛び道具演出などは Effect として扱う。
+
+- Effect は `assets/EffectData` 配下の JSON を EffectData として読み込む
+- EffectData は複数 Emitter を持てる。複数粒子をまとめて 1 つの演出として扱う
+- 対戦中のヒット/ガードなどの結果確定 System は Effect を直接生成せず、World に EffectSpawnRequest を積む
+- EffectSpawnRequest は SpawnDestroySystem がフレーム境界で Effect GameObject に変換する
+- Effect GameObject は `GameObjectTag::Effect` と `EffectComponent` を持つ
+- EffectSystem は粒子生成、粒子更新、再生終了時の削除リクエストだけを担当する
+- EffectRenderSystem は 3D モデル描画から分離し、板ポリゴン粒子や将来のテクスチャパーティクル描画を担当する
+- ヒットストップ中も EffectSystem / EffectRenderSystem は止めない。停止対象はプレイヤーや飛び道具などの対戦オブジェクトであり、演出、HUD、タイマー、音は止めない
+- 現段階の Effect はワールド固定位置に発生する。追従エフェクトは `followTargetId` を予約しておき、必要になった段階で拡張する
+- 素材なしの Effect は白テクスチャを色で染めて描画し、素材付き Effect は `texturePath` に画像パスを指定する
 
 ## 禁止事項
 

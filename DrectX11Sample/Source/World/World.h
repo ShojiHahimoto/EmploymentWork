@@ -57,10 +57,20 @@ struct DestroyRequest
 	GameObjectId targetId = INVALID_GAME_OBJECT_ID;
 };
 
+struct EffectSpawnRequest
+{
+	std::string effectDataId;
+	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
+	float facingSign = 1.0f;
+	GameObjectId followTargetId = INVALID_GAME_OBJECT_ID;
+	bool followTarget = false;
+};
+
 struct HitCollisionResult
 {
 	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
 	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
+	DirectX::SimpleMath::Vector3 hitPosition = DirectX::SimpleMath::Vector3::Zero;
 	std::string attackSlotId;
 	std::string attackDataId;
 	std::string attackDisplayName;
@@ -134,11 +144,19 @@ public:
 		const DirectX::SimpleMath::Vector3& rotationDegrees,
 		const std::string& characterFolderPath = "");
 	void RequestDestroy(GameObjectId objectId);
+	void RequestEffectSpawn(
+		const std::string& effectDataId,
+		const DirectX::SimpleMath::Vector3& position,
+		float facingSign,
+		GameObjectId followTargetId = INVALID_GAME_OBJECT_ID,
+		bool followTarget = false);
 
 	const std::vector<SpawnRequest>& GetSpawnRequests() const;
 	const std::vector<DestroyRequest>& GetDestroyRequests() const;
+	const std::vector<EffectSpawnRequest>& GetEffectSpawnRequests() const;
 	void ClearSpawnRequests();
 	void ClearDestroyRequests();
+	void ClearEffectSpawnRequests();
 
 	void AddHitCollisionResult(const HitCollisionResult& result);
 	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
@@ -169,6 +187,7 @@ private:
 	std::vector<GameObject> gameObjects;
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
+	std::vector<EffectSpawnRequest> effectSpawnRequests;
 	std::vector<HitCollisionResult> hitCollisionResults;
 	std::vector<HitReactionRequest> hitReactionRequests;
 	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };

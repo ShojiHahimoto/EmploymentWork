@@ -57,6 +57,7 @@ void World::Clear()
 	gameObjects.clear();
 	spawnRequests.clear();
 	destroyRequests.clear();
+	effectSpawnRequests.clear();
 	hitCollisionResults.clear();
 	hitReactionRequests.clear();
 	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
@@ -235,6 +236,35 @@ void World::RequestDestroy(GameObjectId objectId)
 }
 
 /// <summary>
+/// フレーム終端で生成するエフェクト GameObject のリクエストを追加する。
+/// </summary>
+/// <param name="effectDataId">読み込む EffectData ID。</param>
+/// <param name="position">エフェクトを発生させるワールド座標。</param>
+/// <param name="facingSign">右向きなら +1、左向きなら -1。横方向の反転に使う。</param>
+/// <param name="followTargetId">追従させる対象 GameObject ID。現段階では予約値。</param>
+/// <param name="followTarget">追従エフェクトとして扱う場合は true。</param>
+void World::RequestEffectSpawn(
+	const std::string& effectDataId,
+	const DirectX::SimpleMath::Vector3& position,
+	float facingSign,
+	GameObjectId followTargetId,
+	bool followTarget)
+{
+	if (effectDataId.empty())
+	{
+		return;
+	}
+
+	EffectSpawnRequest request;
+	request.effectDataId = effectDataId;
+	request.position = position;
+	request.facingSign = facingSign >= 0.0f ? 1.0f : -1.0f;
+	request.followTargetId = followTargetId;
+	request.followTarget = followTarget;
+	effectSpawnRequests.push_back(request);
+}
+
+/// <summary>
 /// 蓄積されている生成リクエストを取得する。
 /// </summary>
 /// <returns>読み取り専用の生成リクエスト配列。</returns>
@@ -253,6 +283,15 @@ const std::vector<DestroyRequest>& World::GetDestroyRequests() const
 }
 
 /// <summary>
+/// 蓄積されているエフェクト生成リクエストを取得する。
+/// </summary>
+/// <returns>読み取り専用のエフェクト生成リクエスト配列。</returns>
+const std::vector<EffectSpawnRequest>& World::GetEffectSpawnRequests() const
+{
+	return effectSpawnRequests;
+}
+
+/// <summary>
 /// 生成リクエストをすべて破棄する。
 /// </summary>
 void World::ClearSpawnRequests()
@@ -266,6 +305,14 @@ void World::ClearSpawnRequests()
 void World::ClearDestroyRequests()
 {
 	destroyRequests.clear();
+}
+
+/// <summary>
+/// エフェクト生成リクエストをすべて破棄する。
+/// </summary>
+void World::ClearEffectSpawnRequests()
+{
+	effectSpawnRequests.clear();
 }
 
 /// <summary>

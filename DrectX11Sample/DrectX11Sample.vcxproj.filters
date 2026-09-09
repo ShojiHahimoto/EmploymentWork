@@ -76,6 +76,9 @@
     <Filter Include="リソース ファイル\MotionData">
       <UniqueIdentifier>{ff70432f-5916-4c01-ae84-a82bc6621e32}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\EffectData">
+      <UniqueIdentifier>{481fc841-eebf-498f-bd46-28248f7beb1d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -106,6 +109,9 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\CharacterDataSaver.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\EffectDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\JsonValue.cpp">
@@ -178,6 +184,12 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\EmbedResolveSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\EffectRenderSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\EffectSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\HitCollisionSystem.cpp">
@@ -335,6 +347,9 @@
     <ClInclude Include="Source\Component\CommandBufferComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\EffectComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\CameraSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -348,6 +363,12 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\EmbedResolveSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\EffectRenderSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\EffectSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\HitCollisionSystem.h">
@@ -441,6 +462,12 @@
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\CharacterDataSaver.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\EffectData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\EffectDataLoader.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\JsonValue.h">
@@ -544,6 +571,12 @@
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
+    </None>
+    <None Include="assets\EffectData\GuardSpark.json">
+      <Filter>リソース ファイル\EffectData</Filter>
+    </None>
+    <None Include="assets\EffectData\HitSpark.json">
+      <Filter>リソース ファイル\EffectData</Filter>
     </None>
   </ItemGroup>
 </Project>

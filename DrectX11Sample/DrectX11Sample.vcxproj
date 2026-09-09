@@ -29,6 +29,7 @@
     <ClCompile Include="Source\Data\BattleSetupData.cpp" />
     <ClCompile Include="Source\Data\CharacterDataLoader.cpp" />
     <ClCompile Include="Source\Data\CharacterDataSaver.cpp" />
+    <ClCompile Include="Source\Data\EffectDataLoader.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Data\MotionDataLoader.cpp" />
     <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
@@ -44,6 +45,8 @@
     <ClCompile Include="Source\System\Debugger.cpp" />
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp" />
     <ClCompile Include="Source\System\EmbedResolveSystem.cpp" />
+    <ClCompile Include="Source\System\EffectRenderSystem.cpp" />
+    <ClCompile Include="Source\System\EffectSystem.cpp" />
     <ClCompile Include="Source\System\Game.cpp" />
     <ClCompile Include="Source\System\HitCollisionSystem.cpp" />
     <ClCompile Include="Source\System\HitReactionSystem.cpp" />
@@ -78,6 +81,7 @@
     <ClInclude Include="Source\Component\CharacterParameterComponent.h" />
     <ClInclude Include="Source\Component\CommandBufferComponent.h" />
     <ClInclude Include="Source\Component\Component.h" />
+    <ClInclude Include="Source\Component\EffectComponent.h" />
     <ClInclude Include="Source\Component\HitBoxComponent.h" />
     <ClInclude Include="Source\Component\HealthGaugeComponent.h" />
     <ClInclude Include="Source\Component\HealthComponent.h" />
@@ -95,6 +99,8 @@
     <ClInclude Include="Source\Data\CharacterData.h" />
     <ClInclude Include="Source\Data\CharacterDataLoader.h" />
     <ClInclude Include="Source\Data\CharacterDataSaver.h" />
+    <ClInclude Include="Source\Data\EffectData.h" />
+    <ClInclude Include="Source\Data\EffectDataLoader.h" />
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Data\MotionData.h" />
     <ClInclude Include="Source\Data\MotionDataLoader.h" />
@@ -120,6 +126,8 @@
     <ClInclude Include="Source\System\Debugger.h" />
     <ClInclude Include="Source\System\DebugImGuiSystem.h" />
     <ClInclude Include="Source\System\EmbedResolveSystem.h" />
+    <ClInclude Include="Source\System\EffectRenderSystem.h" />
+    <ClInclude Include="Source\System\EffectSystem.h" />
     <ClInclude Include="Source\System\Game.h" />
     <ClInclude Include="Source\System\HitCollisionSystem.h" />
     <ClInclude Include="Source\System\HitReactionSystem.h" />
@@ -149,6 +157,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\Shader\ModelSkinned.hlsl" />
+    <None Include="assets\EffectData\GuardSpark.json" />
+    <None Include="assets\EffectData\HitSpark.json" />
     <None Include="assets\MotionData\Attack\Air\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_01.json" />

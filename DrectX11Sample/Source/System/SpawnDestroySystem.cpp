@@ -3,6 +3,7 @@
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CharacterParameterComponent.h"
 #include "Component/CommandBufferComponent.h"
+#include "Component/EffectComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
@@ -13,6 +14,7 @@
 #include "Component/VelocityComponent.h"
 #include "Data/BattleSetupData.h"
 #include "Data/CharacterDataLoader.h"
+#include "Data/EffectDataLoader.h"
 #include "System/TransformSystem.h"
 #include "World/World.h"
 
@@ -106,6 +108,7 @@ void SpawnDestroySystem::Update(World& world)
 {
 	ApplyDestroyRequests(world);
 	ApplySpawnRequests(world);
+	ApplyEffectSpawnRequests(world);
 }
 
 /// <summary>
@@ -177,6 +180,53 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 	}
 
 	world.ClearSpawnRequests();
+}
+
+/// <summary>
+/// World に蓄積された EffectSpawnRequest を処理し、EffectComponent を持つ GameObject を生成する。
+/// </summary>
+/// <param name="world">エフェクト生成リクエストと GameObject を保持する World。</param>
+void SpawnDestroySystem::ApplyEffectSpawnRequests(World& world)
+{
+	const std::vector<EffectSpawnRequest> effectSpawnRequests = world.GetEffectSpawnRequests();
+
+	for (const EffectSpawnRequest& request : effectSpawnRequests)
+	{
+		if (!EffectDataManager::LoadEffectData(request.effectDataId))
+		{
+			continue;
+		}
+
+		const EffectData* effectData = EffectDataManager::GetEffectData(request.effectDataId);
+		if (!effectData)
+		{
+			continue;
+		}
+
+		const GameObjectId objectId = world.CreateTransform("Effect:" + effectData->displayName);
+		if (GameObject* object = world.GetGameObject(objectId))
+		{
+			object->tag = GameObjectTag::Effect;
+		}
+
+		TransformComponent* transform = world.GetTransform(objectId);
+		if (transform)
+		{
+			TransformSystem::SetLocalPosition(*transform, request.position);
+			TransformSystem::SetLocalScale(*transform, Vector3::One);
+		}
+
+		EffectComponent effect;
+		effect.effectData = *effectData;
+		effect.facingSign = request.facingSign >= 0.0f ? 1.0f : -1.0f;
+		effect.spawnWorldPosition = request.position;
+		effect.followTargetId = request.followTargetId;
+		effect.followTarget = request.followTarget;
+		effect.emittedEmitters.assign(effect.effectData.emitters.size(), false);
+		world.AddComponent<EffectComponent>(objectId, effect);
+	}
+
+	world.ClearEffectSpawnRequests();
 }
 
 /// <summary>

@@ -1,0 +1,45 @@
+﻿{
+  "attackDataId": "Special/slot_04",
+  "displayName": "ぼくのかんがえたさいきょうのわざ",
+  "attackKind": "Special",
+  "commandId": "Yoga",
+  "usableState": "Ground",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Special/slot_04",
+  "damage": 1800,
+  "hitstunFrames": 50,
+  "guardstunFrames": 30,
+  "hitReactionType": "HardBurst",
+  "frame": {
+    "startup": 10,
+    "active": 10,
+    "recovery": 15
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.500,
+        "y": 5.700
+      },
+      "size": {
+        "x": 3.100,
+        "y": 3.500
+      }
+    }
+  ],
+  "movementKeys": [
+    {
+      "frame": 9,
+      "offset": {
+        "x": 0.000,
+        "y": 0.000
+      }
+    }
+  ]
+}

@@ -9,6 +9,7 @@
 #include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
+#include "Data/EffectDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
 #include "Scene/ResultScene.h"
@@ -22,6 +23,8 @@
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
 #include "System/EmbedResolveSystem.h"
+#include "System/EffectRenderSystem.h"
+#include "System/EffectSystem.h"
 #include "System/HitCollisionSystem.h"
 #include "System/HitReactionSystem.h"
 #include "System/HitResolveSystem.h"
@@ -143,6 +146,8 @@ void BattleScene::Exit()
 	Renderer::ReleaseRenderTexture(sceneViewRenderTexture);
 #endif
 	Renderer::ReleaseTexture(hudNumberTexture);
+	EffectRenderSystem::ReleaseResources();
+	EffectDataManager::UnloadAll();
 	world.Clear();
 }
 
@@ -182,6 +187,7 @@ void BattleScene::RunSystems()
 	}
 
 	BattleResultSystem::Update(world);
+	EffectSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 
 	if (hitStopActive)
@@ -215,6 +221,7 @@ void BattleScene::Draw(Renderer& renderer)
 
 	const CameraComponent& camera = world.GetActiveCamera();
 	DrawWorldWithCamera(renderer, camera);
+	EffectRenderSystem::Draw(world, camera);
 
 #if defined(_DEBUG)
 	DrawDebugSceneView(renderer);
@@ -247,7 +254,7 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 			continue;
 		}
 
-		if (object.tag == GameObjectTag::UI)
+		if (object.tag == GameObjectTag::UI || object.tag == GameObjectTag::Effect)
 		{
 			continue;
 		}
