@@ -189,6 +189,9 @@
     <ClCompile Include="Source\System\HitResolveSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\HitStopSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -354,6 +357,9 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\HitResolveSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\HitStopSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\BattleScene.h">

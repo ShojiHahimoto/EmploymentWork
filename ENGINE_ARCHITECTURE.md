@@ -260,6 +260,12 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - `Burst` と `HardBurst` の防御側が着地した場合は `Down` へ遷移する
 - 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
 - `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
+- ヒットストップは World がバトル全体の一時状態として保持し、HitResolveSystem がヒット/ガード/相打ち確定時に要求する
+- ヒットストップ段階は現段階では `Guard / NormalAttack / SpecialAttack / Clash` を使い分け、停止フレームは `HitStopFrameSettings` の共通設定で管理する
+- ヒットストップ中は PlayerFacing / StateUpdate / PlayerControl / Movement / BattleCamera / EmbedResolve / PlayerInvincibility / HitCollision / HitResolve / HitReaction / Motion / Transform など、対戦オブジェクトの状態・位置・判定・姿勢更新を止める
+- ヒットストップ中も InputHistory / CommandInput / BattleResult / BattleHUD / Debug 表示は止めない
+- ヒットストップ中も入力履歴とコマンド候補の登録は進めるが、成立済みコマンド候補の有効期限はヒットストップ 1F ごとに 1F 延長し、停止中に先行入力だけが期限切れしないようにする
+- ラウンドタイマー、SE/BGM、エフェクトなどの演出系はヒットストップで止めない方針とする
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
 - `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
 - ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる

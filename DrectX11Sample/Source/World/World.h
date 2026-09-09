@@ -28,6 +28,21 @@ enum class BattleResult
 	Draw,
 };
 
+enum class HitStopLevel
+{
+	None,
+	Guard,
+	NormalAttack,
+	SpecialAttack,
+	Clash,
+};
+
+struct HitStopState
+{
+	int remainingFrames = 0;
+	HitStopLevel level = HitStopLevel::None;
+};
+
 struct SpawnRequest
 {
 	SpawnType type = SpawnType::DebugCube;
@@ -52,6 +67,7 @@ struct HitCollisionResult
 	int damage = 10;
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;
+	AttackKind attackKind = AttackKind::Normal;
 	AttackHeight attackHeight = AttackHeight::High;
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackUsableState attackUsableState = AttackUsableState::Ground;
@@ -141,6 +157,12 @@ public:
 	bool HasBattleResult() const;
 	void ClearBattleResult();
 
+	void RequestHitStop(HitStopLevel level, int frames);
+	void AdvanceHitStopFrame();
+	bool IsHitStopActive() const;
+	const HitStopState& GetHitStopState() const;
+	void ClearHitStop();
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
@@ -151,6 +173,7 @@ private:
 	std::vector<HitReactionRequest> hitReactionRequests;
 	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
 	BattleResult battleResult = BattleResult::None;
+	HitStopState hitStopState;
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;

@@ -38,6 +38,7 @@ public:
 private:
 	static void UpdatePlayerCommandBuffer(World& world, GameObjectId objectId);
 	static void RemoveExpiredCommands(CommandBufferComponent& commandBuffer, int currentFrameNumber);
+	static void ExtendBufferedCommandExpiry(CommandBufferComponent& commandBuffer);
 	static void RegisterCommandsFromLatestInput(
 		CommandBufferComponent& commandBuffer,
 		const InputHistoryComponent& inputHistory,

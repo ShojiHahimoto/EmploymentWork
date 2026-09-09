@@ -48,6 +48,7 @@
     <ClCompile Include="Source\System\HitCollisionSystem.cpp" />
     <ClCompile Include="Source\System\HitReactionSystem.cpp" />
     <ClCompile Include="Source\System\HitResolveSystem.cpp" />
+    <ClCompile Include="Source\System\HitStopSystem.cpp" />
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\MotionSystem.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
@@ -123,6 +124,7 @@
     <ClInclude Include="Source\System\HitCollisionSystem.h" />
     <ClInclude Include="Source\System\HitReactionSystem.h" />
     <ClInclude Include="Source\System\HitResolveSystem.h" />
+    <ClInclude Include="Source\System\HitStopSystem.h" />
     <ClInclude Include="Source\System\InputHistorySystem.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h" />
     <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h" />

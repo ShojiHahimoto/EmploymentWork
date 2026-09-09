@@ -61,6 +61,7 @@ void World::Clear()
 	hitReactionRequests.clear();
 	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
 	battleResult = BattleResult::None;
+	hitStopState = {};
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
 }
@@ -407,6 +408,70 @@ bool World::HasBattleResult() const
 void World::ClearBattleResult()
 {
 	battleResult = BattleResult::None;
+}
+
+/// <summary>
+/// ヒット/ガード/相打ち確定後、対戦オブジェクトを止めるヒットストップを予約する。
+/// </summary>
+/// <param name="level">今回発生させるヒットストップの段階。</param>
+/// <param name="frames">停止させるフレーム数。</param>
+void World::RequestHitStop(HitStopLevel level, int frames)
+{
+	if (level == HitStopLevel::None || frames <= 0)
+	{
+		return;
+	}
+
+	// 同一フレームで複数ヒットした場合は、長いヒットストップを優先して残す。
+	if (frames >= hitStopState.remainingFrames)
+	{
+		hitStopState.level = level;
+		hitStopState.remainingFrames = frames;
+	}
+}
+
+/// <summary>
+/// 現在発生中のヒットストップを 1 フレーム進める。
+/// </summary>
+void World::AdvanceHitStopFrame()
+{
+	if (hitStopState.remainingFrames <= 0)
+	{
+		hitStopState = {};
+		return;
+	}
+
+	--hitStopState.remainingFrames;
+	if (hitStopState.remainingFrames <= 0)
+	{
+		hitStopState = {};
+	}
+}
+
+/// <summary>
+/// 対戦オブジェクトを止めるヒットストップ中か確認する。
+/// </summary>
+/// <returns>残りヒットストップフレームがあれば true。</returns>
+bool World::IsHitStopActive() const
+{
+	return hitStopState.remainingFrames > 0;
+}
+
+/// <summary>
+/// 現在のヒットストップ状態を取得する。
+/// </summary>
+/// <returns>ヒットストップの残りフレーム数と段階。</returns>
+const HitStopState& World::GetHitStopState() const
+{
+	return hitStopState;
+}
+
+/// <summary>
+/// Scene 終了やリセット時にヒットストップ状態を破棄する。
+/// </summary>
+void World::ClearHitStop()
+{
+	hitStopState = {};
 }
 
 /// <summary>

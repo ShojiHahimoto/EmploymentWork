@@ -25,6 +25,7 @@
 #include "System/HitCollisionSystem.h"
 #include "System/HitReactionSystem.h"
 #include "System/HitResolveSystem.h"
+#include "System/HitStopSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
 #include "System/MotionSystem.h"
@@ -152,23 +153,41 @@ void BattleScene::RunSystems()
 #endif
 
 	SpawnDestroySystem::Update(world);
-	PlayerFacingSystem::Update(world);
+	const bool hitStopActive = world.IsHitStopActive();
+
+	if (!hitStopActive)
+	{
+		PlayerFacingSystem::Update(world);
+	}
+
 	InputHistorySystem::Update(world);
 	CommandInputSystem::Update(world);
-	StateUpdateSystem::Update(world);
-	PlayerControlSystem::Update(world);
-	MovementSystem::Update(world);
-	BattleCameraSystem::Update(world);
-	EmbedResolveSystem::Update(world);
-	PlayerInvincibilitySystem::Update(world);
-	HitCollisionSystem::Update(world);
-	HitResolveSystem::Update(world);
-	HitReactionSystem::Update(world);
-	PlayerInvincibilitySystem::Update(world);
+
+	// ヒットストップ中は対戦オブジェクトの状態・移動・判定・モーションだけを止める。
+	// 入力履歴、タイマー、HUD、Debug 表示は止めず、硬直明けの先行入力や演出確認を保つ。
+	if (!hitStopActive)
+	{
+		StateUpdateSystem::Update(world);
+		PlayerControlSystem::Update(world);
+		MovementSystem::Update(world);
+		BattleCameraSystem::Update(world);
+		EmbedResolveSystem::Update(world);
+		PlayerInvincibilitySystem::Update(world);
+		HitCollisionSystem::Update(world);
+		HitResolveSystem::Update(world);
+		HitReactionSystem::Update(world);
+		PlayerInvincibilitySystem::Update(world);
+		MotionSystem::Update(world);
+		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+	}
+
 	BattleResultSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
-	MotionSystem::Update(world);
-	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+
+	if (hitStopActive)
+	{
+		HitStopSystem::Update(world);
+	}
 
 	if (world.HasActiveCamera())
 	{

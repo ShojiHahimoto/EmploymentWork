@@ -6,6 +6,7 @@
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
 #include "System/Debugger.h"
+#include "System/HitStopSystem.h"
 #include "World/World.h"
 
 #include <vector>
@@ -179,6 +180,28 @@ namespace
 
 		return damage / GuardDamageDivisor;
 	}
+
+	/// <summary>
+	/// 同一フレーム内に攻撃側と防御側が入れ替わったヒット結果があるか確認する。
+	/// </summary>
+	/// <param name="results">HitCollisionSystem が収集した同一フレームのヒット結果一覧。</param>
+	/// <param name="target">相打ち判定したいヒット結果。</param>
+	/// <returns>target と逆向きのヒット結果があれば true。</returns>
+	bool HasMutualHitResult(
+		const std::vector<HitCollisionResult>& results,
+		const HitCollisionResult& target)
+	{
+		for (const HitCollisionResult& result : results)
+		{
+			if (result.attackerId == target.defenderId
+				&& result.defenderId == target.attackerId)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 }
 
 void HitResolveSystem::Update(World& world)
@@ -199,6 +222,7 @@ void HitResolveSystem::Update(World& world)
 	{
 		const GuardType guardType = ResolveGuardType(world, result);
 		const bool guarded = guardType != GuardType::None;
+		const bool mutualHit = !guarded && HasMutualHitResult(results, result);
 		const int resolvedDamage = guarded ? CalculateGuardDamage(result.damage) : result.damage;
 		const StateComponent* defenderState = world.GetComponent<StateComponent>(result.defenderId);
 		const bool defenderWasGrounded = defenderState ? defenderState->isGrounded : true;
@@ -220,6 +244,7 @@ void HitResolveSystem::Update(World& world)
 			result.hitboxIndex);
 
 		ApplyDamage(world, result.defenderId, resolvedDamage);
+		HitStopSystem::RequestFromResolvedHit(world, result, guarded, mutualHit);
 		if (guarded)
 		{
 			ApplyGuardstun(world, result.defenderId, result.guardstunFrames, guardType);
