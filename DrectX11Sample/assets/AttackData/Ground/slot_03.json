@@ -4,6 +4,8 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Ground",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Ground/slot_03",
   "damage": 800,
   "hitstunFrames": 26,
   "guardstunFrames": 20,
@@ -30,5 +32,6 @@
         "y": 3.300
       }
     }
-  ]
+  ],
+  "movementKeys": []
 }

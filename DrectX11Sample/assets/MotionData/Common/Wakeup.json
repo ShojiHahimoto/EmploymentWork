@@ -3,6 +3,24 @@
   "displayName": "Wakeup",
   "totalFrames": 30,
   "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 0,
+      "offset": { "x": 0.000, "y": -4.100, "z": 0.000 }
+    },
+    {
+      "frame": 8,
+      "offset": { "x": 0.000, "y": -1.769, "z": 0.000 }
+    },
+    {
+      "frame": 17,
+      "offset": { "x": 0.000, "y": -0.061, "z": 0.000 }
+    },
+    {
+      "frame": 29,
+      "offset": { "x": 0.000, "y": 0.000, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

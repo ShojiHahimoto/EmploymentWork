@@ -156,6 +156,16 @@ namespace
 	}
 
 	/// <summary>
+	/// MotionData ID から JSON ファイルの保存先パスを作る。
+	/// </summary>
+	/// <param name="motionDataId">assets/MotionData から見た拡張子なしのモーション ID。</param>
+	/// <returns>読み書き対象の MotionData JSON ファイルパス。</returns>
+	std::filesystem::path BuildMotionDataPath(const std::string& motionDataId)
+	{
+		return std::filesystem::path("assets/MotionData") / (motionDataId + ".json");
+	}
+
+	/// <summary>
 	/// CustomizeAttackCategory を配列アクセス用の番号へ変換する。
 	/// </summary>
 	/// <param name="category">変換するカテゴリ。</param>
@@ -2152,13 +2162,30 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 		return;
 	}
 
-	const std::string oldSlotMotionDataId = BuildAttackDataId(selectedCategory, selectedSlotIndex);
+	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
+	const std::string previousMotionDataId = draftAttack.motionDataId;
 	if (draftAttack.motionDataId.empty()
 		|| draftAttack.motionDataId == "debug_right_arm_wave"
-		|| draftAttack.motionDataId == oldSlotMotionDataId
-		|| !IsAttackMotionDataId(draftAttack.motionDataId))
+		|| draftAttack.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex)
+		|| !IsAttackMotionDataId(draftAttack.motionDataId)
+		|| draftAttack.motionDataId != expectedMotionDataId)
 	{
-		draftAttack.motionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
+		const std::filesystem::path expectedPath = BuildMotionDataPath(expectedMotionDataId);
+		if (!previousMotionDataId.empty()
+			&& previousMotionDataId != expectedMotionDataId
+			&& IsAttackMotionDataId(previousMotionDataId)
+			&& !std::filesystem::exists(expectedPath))
+		{
+			MotionData copiedMotion;
+			if (MotionDataLoader::LoadMotionData(previousMotionDataId, copiedMotion))
+			{
+				copiedMotion.motionDataId = expectedMotionDataId;
+				MotionDataSaver::SaveMotionData(expectedMotionDataId, copiedMotion);
+				MotionDataManager::UnloadAll();
+			}
+		}
+
+		draftAttack.motionDataId = expectedMotionDataId;
 	}
 
 	motionDataIdBuffer.fill('\0');
