@@ -30,6 +30,7 @@
 #include <iomanip>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -108,6 +109,37 @@ namespace
 		std::string displayName;
 		AttackData attackData;
 	};
+
+	struct CustomizePreviewLayout
+	{
+		int splitX = 1;
+		int previewBottom = 1;
+		RECT previewRegion = {};
+		ImVec2 origin = ImVec2(0.0f, 0.0f);
+		ImGuiID viewportId = 0;
+		ImGuiWindowFlags fixedFlags = 0;
+	};
+
+	/// <summary>
+	/// カスタマイズ画面共通の左プレビュー・右編集欄レイアウトを計算する。
+	/// </summary>
+	/// <param name="width">現在のクライアント幅。</param>
+	/// <param name="height">現在のクライアント高さ。</param>
+	/// <returns>プレビュー矩形と固定 ImGui ウィンドウ用情報。</returns>
+	CustomizePreviewLayout CreateCustomizePreviewLayout(int width, int height)
+	{
+		CustomizePreviewLayout layout;
+		layout.splitX = std::max(1, width / 2);
+		layout.previewBottom = std::max(1, height - 140);
+		layout.previewRegion = { 0, 0, layout.splitX, layout.previewBottom };
+
+		const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+		layout.origin = mainViewport->Pos;
+		layout.viewportId = mainViewport->ID;
+		layout.fixedFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+			| ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings;
+		return layout;
+	}
 
 	/// <summary>
 	/// MotionData ID が攻撃モーション用の保存領域を指しているか確認する。
@@ -1174,22 +1206,45 @@ void CustomizeScene::DrawCommonMotionSelect()
 }
 
 /// <summary>
-/// 技調整画面全体を描画する。
+/// 本体左側に3Dプレビュー、右側に技パラメータ編集画面を描画する。
 /// </summary>
-/// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
+/// <param name="renderer">本体のプレビュー矩形へ描画する Renderer。</param>
 void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 {
 	EnsureDraftAttackMotionDataId();
 	ClampPreviewCurrentFrame();
-	RenderAttackPreview(renderer);
-	DrawAttackPreviewWindow(renderer);
-	DrawAttackEditorWindow();
+
+	// モーション作成画面と同じ表示規則にして、左側の本体ウィンドウ上に直接プレビューする。
+	const CustomizePreviewLayout layout = CreateCustomizePreviewLayout(width, height);
+
+	ImGui::SetNextWindowViewport(layout.viewportId);
+	ImGui::SetNextWindowPos(ImVec2(layout.origin.x, layout.origin.y + layout.previewBottom), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
+	if (ImGui::Begin("Attack Playback", nullptr, layout.fixedFlags))
+	{
+		ImGui::Text("Editing: %s", editingAttackDataId.c_str());
+		ImGui::Text("Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
+		ImGui::Text("Phase: %s", GetPreviewPhaseText());
+		DrawPreviewPlaybackControls();
+	}
+	ImGui::End();
+
+	ImGui::SetNextWindowViewport(layout.viewportId);
+	ImGui::SetNextWindowPos(ImVec2(layout.origin.x + layout.splitX, layout.origin.y), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(std::max(1, width - layout.splitX)), static_cast<float>(std::max(1, height))), ImGuiCond_Always);
+	if (ImGui::Begin("Attack Parameters", nullptr, layout.fixedFlags))
+	{
+		DrawAttackEditorControls();
+	}
+	ImGui::End();
+
+	RenderAttackPreview(renderer, &layout.previewRegion);
 }
 
 /// <summary>
-/// 技調整画面から開く、モーション編集用の仮専用画面を描画する。
+/// 本体左側に3Dプレビュー、右側に固定したモーション編集画面を描画する。
 /// </summary>
-/// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
+/// <param name="renderer">本体のプレビュー矩形へ描画する Renderer。</param>
 void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 {
 	if (!editingCommonMotion)
@@ -1202,12 +1257,22 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 	}
 
 	ClampPreviewCurrentFrame();
-	RenderAttackPreview(renderer);
-	DrawAttackPreviewWindow(renderer);
-
-	ImGui::SetNextWindowPos(ImVec2(static_cast<float>(width) * 0.5f, 20.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
-	if (ImGui::Begin("Motion Editor"))
+	// 左側は本体バックバッファ。ImGui は操作欄だけに限定し、3D領域を覆わない。
+	const CustomizePreviewLayout layout = CreateCustomizePreviewLayout(width, height);
+	ImGui::SetNextWindowViewport(layout.viewportId);
+	ImGui::SetNextWindowPos(ImVec2(layout.origin.x, layout.origin.y + layout.previewBottom), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
+	if (ImGui::Begin("Motion Playback", nullptr, layout.fixedFlags))
+	{
+		ImGui::Text("Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
+		ImGui::Text("Phase: %s", GetPreviewPhaseText());
+		DrawPreviewPlaybackControls();
+	}
+	ImGui::End();
+	ImGui::SetNextWindowViewport(layout.viewportId);
+	ImGui::SetNextWindowPos(ImVec2(layout.origin.x + layout.splitX, layout.origin.y), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(std::max(1, width - layout.splitX)), static_cast<float>(std::max(1, height))), ImGuiCond_Always);
+	if (ImGui::Begin("Motion Editor", nullptr, layout.fixedFlags))
 	{
 		if (editingCommonMotion)
 		{
@@ -1232,6 +1297,8 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 		}
 	}
 	ImGui::End();
+	// 数値変更・フレーム移動と同じ描画フレームに姿勢を反映する。
+	RenderAttackPreview(renderer, &layout.previewRegion);
 }
 
 /// <summary>
@@ -1254,7 +1321,7 @@ void CustomizeScene::DrawAttackPreviewWindow(Renderer& renderer)
 		if (previewRenderTexture.shaderResourceView)
 		{
 			const ImVec2 availableSize = ImGui::GetContentRegionAvail();
-			const float reservedControlHeight = 48.0f;
+			const float reservedControlHeight = 80.0f;
 			const float textureAspect = static_cast<float>(PreviewTextureWidth) / static_cast<float>(PreviewTextureHeight);
 			ImVec2 imageSize(
 				std::max(1.0f, availableSize.x),
@@ -1280,31 +1347,42 @@ void CustomizeScene::DrawAttackPreviewWindow(Renderer& renderer)
 			ImGui::TextWrapped("Preview RenderTexture is not available.");
 		}
 
-		if (ImGui::Button("Play", ImVec2(72.0f, 28.0f)))
-		{
-			if (previewCurrentFrame >= GetPreviewTotalFrames())
-			{
-				previewCurrentFrame = 0;
-			}
-			previewPlaying = true;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Stop", ImVec2(72.0f, 28.0f)))
-		{
-			previewPlaying = false;
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("< 1F", ImVec2(72.0f, 28.0f)))
-		{
-			StepPreviewFrame(-1);
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("1F >", ImVec2(72.0f, 28.0f)))
-		{
-			StepPreviewFrame(1);
-		}
+		DrawPreviewPlaybackControls();
 	}
 	ImGui::End();
+}
+
+/// <summary>
+/// プレビュー再生と1フレーム送り・戻しの共通操作を描画する。
+/// </summary>
+void CustomizeScene::DrawPreviewPlaybackControls()
+{
+	if (ImGui::Button("Play", ImVec2(72.0f, 28.0f)))
+	{
+		if (previewCurrentFrame >= GetPreviewTotalFrames())
+		{
+			previewCurrentFrame = 0;
+		}
+		previewPlaying = true;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Stop", ImVec2(72.0f, 28.0f)))
+	{
+		previewPlaying = false;
+	}
+	if (ImGui::GetContentRegionAvail().x >= 320.0f)
+	{
+		ImGui::SameLine();
+	}
+	if (ImGui::Button("< 1F", ImVec2(72.0f, 28.0f)))
+	{
+		StepPreviewFrame(-1);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("1F >", ImVec2(72.0f, 28.0f)))
+	{
+		StepPreviewFrame(1);
+	}
 }
 
 /// <summary>
@@ -1316,96 +1394,104 @@ void CustomizeScene::DrawAttackEditorWindow()
 	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
 	if (ImGui::Begin("Attack Parameters"))
 	{
-		ImGui::Text("Slot: %s", editingAttackDataId.c_str());
-		ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
-		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
-
-		ImGui::Separator();
-		ImGui::InputInt("Damage", &draftAttack.damage);
-		ImGui::InputInt("Hitstun Frames", &draftAttack.hitstunFrames);
-		ImGui::InputInt("Guardstun Frames", &draftAttack.guardstunFrames);
-		int attackHeightIndex = FindAttackHeightIndex(draftAttack.attackHeight);
-		if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
-		{
-			draftAttack.attackHeight = AttackHeightValues[attackHeightIndex];
-		}
-
-		ImGui::Separator();
-		ImGui::InputInt("Startup", &draftAttack.frame.startup);
-		ImGui::InputInt("Active", &draftAttack.frame.active);
-		ImGui::InputInt("Recovery", &draftAttack.frame.recovery);
-
-		ImGui::Separator();
-		if (selectedCategory == CustomizeAttackCategory::Special)
-		{
-			int usableIndex = FindUsableStateIndex(draftAttack.usableState);
-			if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
-			{
-				draftAttack.usableState = UsableStateValues[usableIndex];
-			}
-		}
-		else
-		{
-			draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
-			ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draftAttack.usableState));
-		}
-
-		if (draftAttack.usableState == AttackUsableState::Air)
-		{
-			draftAttack.hitReactionType = HitReactionType::Normal;
-			ImGui::Text("Hit Reaction: Normal (Fixed for Air)");
-		}
-		else
-		{
-			int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
-			if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
-			{
-				draftAttack.hitReactionType = HitReactionValues[reactionIndex];
-			}
-		}
-
-		if (selectedCategory == CustomizeAttackCategory::Special)
-		{
-			int commandIndex = FindCommandIndex(draftAttack.commandId);
-			if (ImGui::Combo("Command", &commandIndex, CommandLabels, static_cast<int>(std::size(CommandLabels))))
-			{
-				draftAttack.commandId = CommandValues[commandIndex];
-			}
-		}
-		else
-		{
-			draftAttack.commandId = AttackCommandId::None;
-		}
-
-		DrawHitboxEditor();
-		DrawCancelSettingEditor();
-		ImGui::Separator();
-		if (ImGui::Button("Open Motion Editor", ImVec2(180.0f, 28.0f)))
-		{
-			EnsureDraftAttackMotionDataId();
-			LoadDraftMotionFromEditorId();
-			mode = CustomizeMode::MotionEditor;
-		}
-		ClampAttackDataValues(draftAttack);
-		ClampPreviewCurrentFrame();
-
-		ImGui::Separator();
-		if (ImGui::Button("Save", ImVec2(120.0f, 30.0f)))
-		{
-			SaveDraftAttack();
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
-		{
-			NavigateBack();
-		}
-
-		if (!statusMessage.empty())
-		{
-			ImGui::TextWrapped("%s", statusMessage.c_str());
-		}
+		DrawAttackEditorControls();
 	}
 	ImGui::End();
+}
+
+/// <summary>
+/// 技パラメータ編集の中身を描画する。
+/// </summary>
+void CustomizeScene::DrawAttackEditorControls()
+{
+	ImGui::Text("Slot: %s", editingAttackDataId.c_str());
+	ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
+	ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
+
+	ImGui::Separator();
+	ImGui::InputInt("Damage", &draftAttack.damage);
+	ImGui::InputInt("Hitstun Frames", &draftAttack.hitstunFrames);
+	ImGui::InputInt("Guardstun Frames", &draftAttack.guardstunFrames);
+	int attackHeightIndex = FindAttackHeightIndex(draftAttack.attackHeight);
+	if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
+	{
+		draftAttack.attackHeight = AttackHeightValues[attackHeightIndex];
+	}
+
+	ImGui::Separator();
+	ImGui::InputInt("Startup", &draftAttack.frame.startup);
+	ImGui::InputInt("Active", &draftAttack.frame.active);
+	ImGui::InputInt("Recovery", &draftAttack.frame.recovery);
+
+	ImGui::Separator();
+	if (selectedCategory == CustomizeAttackCategory::Special)
+	{
+		int usableIndex = FindUsableStateIndex(draftAttack.usableState);
+		if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
+		{
+			draftAttack.usableState = UsableStateValues[usableIndex];
+		}
+	}
+	else
+	{
+		draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
+		ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draftAttack.usableState));
+	}
+
+	if (draftAttack.usableState == AttackUsableState::Air)
+	{
+		draftAttack.hitReactionType = HitReactionType::Normal;
+		ImGui::Text("Hit Reaction: Normal (Fixed for Air)");
+	}
+	else
+	{
+		int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
+		if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
+		{
+			draftAttack.hitReactionType = HitReactionValues[reactionIndex];
+		}
+	}
+
+	if (selectedCategory == CustomizeAttackCategory::Special)
+	{
+		int commandIndex = FindCommandIndex(draftAttack.commandId);
+		if (ImGui::Combo("Command", &commandIndex, CommandLabels, static_cast<int>(std::size(CommandLabels))))
+		{
+			draftAttack.commandId = CommandValues[commandIndex];
+		}
+	}
+	else
+	{
+		draftAttack.commandId = AttackCommandId::None;
+	}
+
+	DrawHitboxEditor();
+	DrawCancelSettingEditor();
+	ImGui::Separator();
+	if (ImGui::Button("Open Motion Editor", ImVec2(180.0f, 28.0f)))
+	{
+		EnsureDraftAttackMotionDataId();
+		LoadDraftMotionFromEditorId();
+		mode = CustomizeMode::MotionEditor;
+	}
+	ClampAttackDataValues(draftAttack);
+	ClampPreviewCurrentFrame();
+
+	ImGui::Separator();
+	if (ImGui::Button("Save", ImVec2(120.0f, 30.0f)))
+	{
+		SaveDraftAttack();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
+	{
+		NavigateBack();
+	}
+
+	if (!statusMessage.empty())
+	{
+		ImGui::TextWrapped("%s", statusMessage.c_str());
+	}
 }
 
 /// <summary>
@@ -2833,18 +2919,36 @@ void CustomizeScene::UpdatePreviewCameraTransform()
 }
 
 /// <summary>
-/// プレビュー用カメラでモデルと現在フレームの AttackBox を RenderTexture へ描画する。
+/// プレビュー用カメラでモデルを描画する。本体矩形が渡された場合はバックバッファへ直接描画する。
 /// </summary>
 /// <param name="renderer">描画に使う Renderer。</param>
-void CustomizeScene::RenderAttackPreview(Renderer& renderer)
+/// <param name="region">本体の描画矩形。nullptr の場合は従来の RenderTexture。</param>
+void CustomizeScene::RenderAttackPreview(Renderer& renderer, const RECT* region)
 {
-	if (!previewRenderTexture.renderTargetView)
+	if (!region && !previewRenderTexture.renderTargetView)
 	{
 		return;
 	}
 
-	const float clearColor[4] = { 0.04f, 0.045f, 0.06f, 1.0f };
-	Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
+	const Color defaultClearColor = Renderer::GetDefaultClearColor();
+	const float clearColor[4] = {
+		defaultClearColor.x,
+		defaultClearColor.y,
+		defaultClearColor.z,
+		defaultClearColor.w
+	};
+	std::optional<Renderer::ScopedRenderRegion> regionScope;
+	if (region)
+	{
+		regionScope.emplace(*region);
+		CameraSystem::SetAspectRatio(previewCamera,
+			static_cast<float>(region->right - region->left) / static_cast<float>(region->bottom - region->top));
+	}
+	else
+	{
+		Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
+		CameraSystem::SetAspectRatio(previewCamera, static_cast<float>(PreviewTextureWidth) / PreviewTextureHeight);
+	}
 
 	const int previewActionFrame = GetPreviewActionFrame();
 	const Vector2 previewMovementOffset = !editingCommonMotion && previewActionFrame >= 0
@@ -2947,7 +3051,10 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 	}
 
 	DrawPreviewAttackBoxes(renderer);
-	Renderer::RestoreBackBuffer();
+	if (!region)
+	{
+		Renderer::RestoreBackBuffer();
+	}
 }
 
 /// <summary>

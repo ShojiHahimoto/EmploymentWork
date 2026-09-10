@@ -158,7 +158,9 @@ private:
 	void DrawAttackEditor(Renderer& renderer);
 	void DrawMotionEditorScreen(Renderer& renderer);
 	void DrawAttackPreviewWindow(Renderer& renderer);
+	void DrawPreviewPlaybackControls();
 	void DrawAttackEditorWindow();
+	void DrawAttackEditorControls();
 	void DrawHitboxEditor();
 	void DrawCancelSettingEditor();
 	void DrawMotionEditor();
@@ -201,7 +203,7 @@ private:
 	void ReleasePreview();
 	void UpdatePreviewPlayback();
 	void UpdatePreviewCameraTransform();
-	void RenderAttackPreview(Renderer& renderer);
+	void RenderAttackPreview(Renderer& renderer, const RECT* region = nullptr);
 	void DrawPreviewAttackBoxes(Renderer& renderer);
 	void ClampPreviewCurrentFrame();
 	void StepPreviewFrame(int frameDelta);
