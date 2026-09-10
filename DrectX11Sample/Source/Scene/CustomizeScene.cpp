@@ -7,6 +7,7 @@
 #include "Data/MotionData.h"
 #include "Data/MotionDataLoader.h"
 #include "Data/MotionDataSaver.h"
+#include "Data/MotionSkeletonDefinition.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Resource/ModelResource.h"
@@ -14,7 +15,7 @@
 #include "Scene/TitleScene.h"
 #include "System/CameraSystem.h"
 #include "System/Debugger.h"
-#include "System/MotionSystem.h"
+#include "System/MotionPose.h"
 #include "System/TransformSystem.h"
 #include "System/imgui-docking/imgui.h"
 
@@ -101,24 +102,6 @@ namespace
 		"Down",
 		"Wakeup"
 	};
-	constexpr const char* MotionEditorBoneNames[] = {
-		"Head",
-		"Spine",
-		"Waist",
-		"RShoulder",
-		"LShoulder",
-		"RElbow",
-		"LElbow",
-		"RHand",
-		"LHand",
-		"RHipjoint",
-		"LHipjoint",
-		"RKnees",
-		"LKnees",
-		"RFeet",
-		"LFeet"
-	};
-
 	struct AttackPickerItem
 	{
 		std::string attackDataId;
@@ -322,20 +305,13 @@ namespace
 	/// <returns>該当するプルダウン index。見つからない場合は RShoulder。</returns>
 	int FindMotionEditorBoneIndex(const std::string& boneName)
 	{
-		for (int index = 0; index < static_cast<int>(std::size(MotionEditorBoneNames)); ++index)
+		const int bodyPartIndex = MotionSkeleton::FindBodyPartIndex(boneName);
+		if (bodyPartIndex >= 0)
 		{
-			if (boneName == MotionEditorBoneNames[index])
-			{
-				return index;
-			}
+			return bodyPartIndex;
 		}
 
-		if (boneName == "mixamorig:RightArm" || boneName == "RightArm")
-		{
-			return 3;
-		}
-
-		return 3;
+		return static_cast<int>(MotionBodyPart::RShoulder);
 	}
 
 	/// <summary>
@@ -345,8 +321,7 @@ namespace
 	/// <returns>MotionData に保存する Head / RShoulder などの部位名。</returns>
 	const char* GetMotionEditorBoneName(int index)
 	{
-		const int clampedIndex = std::clamp(index, 0, static_cast<int>(std::size(MotionEditorBoneNames)) - 1);
-		return MotionEditorBoneNames[clampedIndex];
+		return MotionSkeleton::GetBodyPartName(index);
 	}
 
 	/// <summary>
@@ -1610,11 +1585,24 @@ void CustomizeScene::DrawMotionEditor()
 
 	ImGui::BeginDisabled(!canEditCurrentFrame);
 	const int previousBoneIndex = selectedMotionEditorBoneIndex;
-	const bool partChanged = ImGui::Combo(
-		"Target Part",
-		&selectedMotionEditorBoneIndex,
-		MotionEditorBoneNames,
-		static_cast<int>(std::size(MotionEditorBoneNames)));
+	bool partChanged = false;
+	if (ImGui::BeginCombo("Target Part", GetMotionEditorBoneName(selectedMotionEditorBoneIndex)))
+	{
+		for (int bodyPartIndex = 0; bodyPartIndex < MotionEditorBoneCount; ++bodyPartIndex)
+		{
+			const bool isSelected = selectedMotionEditorBoneIndex == bodyPartIndex;
+			if (ImGui::Selectable(GetMotionEditorBoneName(bodyPartIndex), isSelected))
+			{
+				selectedMotionEditorBoneIndex = bodyPartIndex;
+				partChanged = true;
+			}
+			if (isSelected)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+		}
+		ImGui::EndCombo();
+	}
 	if (partChanged && previousBoneIndex != selectedMotionEditorBoneIndex && canEditCurrentFrame)
 	{
 		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
@@ -2344,8 +2332,9 @@ void CustomizeScene::AddWholeBodyMotionKeyframeAtPreviewFrame()
 	}
 
 	draftMotion.totalFrames = GetPreviewTotalFrames();
-	for (const char* boneName : MotionEditorBoneNames)
+	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
+		const char* boneName = GetMotionEditorBoneName(boneIndex);
 		const Vector3 rotation = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
 		SetMotionRotationKey(draftMotion, boneName, keyFrame, rotation);
 	}
@@ -2753,7 +2742,7 @@ void CustomizeScene::InitializePreview()
 		Renderer::GetDevice());
 	if (const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey))
 	{
-		MotionSystem::InitializeSkeletonPose(previewSkeletonPose, *previewModel, PreviewModelKey);
+		MotionPose::InitializeSkeletonPose(previewSkeletonPose, *previewModel, PreviewModelKey);
 	}
 
 	TransformSystem::SetLocalPosition(previewPlayerTransform, GetPreviewPlayerBasePosition());
@@ -2878,23 +2867,23 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 
 	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
 	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
-	SkeletonPoseComponent ghostSkeletonPose;
+	SkeletonPose ghostSkeletonPose;
 	const std::vector<Matrix>* ghostSkinningMatrices = nullptr;
 	if (previewModel && previewSkeletonPose.initialized)
 	{
 		const int actionFrame = GetPreviewActionFrame();
 		const std::string motionDataId = GetEditingMotionDataId();
 		const MotionData* idleMotion = nullptr;
-		SkeletonPoseComponent idleBasePose;
-		const SkeletonPoseComponent* basePose = nullptr;
+		SkeletonPose idleBasePose;
+		const SkeletonPose* basePose = nullptr;
 		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
 		{
 			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
 		}
 		if (idleMotion)
 		{
-			MotionSystem::ApplyMotionData(ghostSkeletonPose, *idleMotion, 0, *previewModel);
-			MotionSystem::UpdateSkinningMatrices(ghostSkeletonPose, *previewModel);
+			MotionPose::ApplyMotionData(ghostSkeletonPose, *idleMotion, 0, *previewModel);
+			MotionPose::UpdateSkinningMatrices(ghostSkeletonPose, *previewModel);
 			ghostSkinningMatrices = &ghostSkeletonPose.skinningMatrices;
 		}
 
@@ -2902,8 +2891,8 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 		{
 			if (idleMotion)
 			{
-				MotionSystem::ApplyMotionData(previewSkeletonPose, *idleMotion, 0, *previewModel);
-				MotionSystem::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
+				MotionPose::ApplyMotionData(previewSkeletonPose, *idleMotion, 0, *previewModel);
+				MotionPose::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
 				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
 			}
 		}
@@ -2923,12 +2912,12 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 			{
 				if (idleMotion && motionDataId.rfind("Attack/", 0) == 0)
 				{
-					MotionSystem::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
+					MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
 					basePose = &idleBasePose;
 				}
 
-				MotionSystem::ApplyMotionData(previewSkeletonPose, *motion, actionFrame, *previewModel, basePose);
-				MotionSystem::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
+				MotionPose::ApplyMotionData(previewSkeletonPose, *motion, actionFrame, *previewModel, basePose);
+				MotionPose::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
 				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
 			}
 		}

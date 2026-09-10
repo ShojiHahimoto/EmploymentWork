@@ -1,11 +1,12 @@
 ﻿#pragma once
 
 #include "Component/CameraComponent.h"
-#include "Component/SkeletonPoseComponent.h"
+#include "Data/SkeletonPose.h"
 #include "Component/TransformComponent.h"
 #include "Data/AttackData.h"
 #include "Data/CharacterData.h"
 #include "Data/MotionData.h"
+#include "Data/MotionSkeletonDefinition.h"
 #include "Scene/Scene.h"
 #include "System/Renderer.h"
 #include "World/World.h"
@@ -97,7 +98,7 @@ private:
 	static constexpr int CharacterNameBufferSize = 128;
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
-	static constexpr int MotionEditorBoneCount = 15;
+	static constexpr int MotionEditorBoneCount = MotionBodyPartCount;
 	static constexpr int CommonMotionSlotCount = 13;
 
 	World world;
@@ -137,7 +138,7 @@ private:
 	CameraComponent previewCamera;
 	TransformComponent previewCameraTransform;
 	TransformComponent previewPlayerTransform;
-	SkeletonPoseComponent previewSkeletonPose;
+	SkeletonPose previewSkeletonPose;
 	int previewCurrentFrame = 0;
 	bool previewPlaying = false;
 	float previewCameraYawDegrees = 0.0f;

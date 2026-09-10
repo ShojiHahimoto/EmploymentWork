@@ -11,7 +11,6 @@
 #include <DirectXMath.h>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <vector>
 
@@ -63,69 +62,6 @@ namespace
 		}
 	}
 
-	struct MotionEditorBoneAlias
-	{
-		const char* editorName;
-		std::array<const char*, 3> modelBoneNames;
-	};
-
-	constexpr MotionEditorBoneAlias MotionEditorBoneAliases[] =
-	{
-		{ "Head", { "mixamorig:Head", "Head", "" } },
-		{ "Spine", { "mixamorig:Spine", "mixamorig:Spine1", "Spine" } },
-		{ "Waist", { "mixamorig:Hips", "Hips", "" } },
-		{ "RShoulder", { "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder" } },
-		{ "LShoulder", { "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder" } },
-		{ "RElbow", { "mixamorig:RightForeArm", "RightForeArm", "" } },
-		{ "LElbow", { "mixamorig:LeftForeArm", "LeftForeArm", "" } },
-		{ "RHand", { "mixamorig:RightHand", "RightHand", "" } },
-		{ "LHand", { "mixamorig:LeftHand", "LeftHand", "" } },
-		{ "RHipjoint", { "mixamorig:RightUpLeg", "RightUpLeg", "" } },
-		{ "LHipjoint", { "mixamorig:LeftUpLeg", "LeftUpLeg", "" } },
-		{ "RKnees", { "mixamorig:RightLeg", "RightLeg", "" } },
-		{ "LKnees", { "mixamorig:LeftLeg", "LeftLeg", "" } },
-		{ "RFeet", { "mixamorig:RightFoot", "RightFoot", "" } },
-		{ "LFeet", { "mixamorig:LeftFoot", "LeftFoot", "" } },
-	};
-
-	/// <summary>
-	/// MotionData 上の編集用部位名または実ボーン名を、ModelResource 内のボーン番号へ解決する。
-	/// </summary>
-	/// <param name="model">検索対象の ModelResource。</param>
-	/// <param name="motionBoneName">MotionData に保存されている部位名または実ボーン名。</param>
-	/// <returns>見つかったボーン番号。存在しない場合は -1。</returns>
-	int FindMotionBoneIndex(const ModelResource& model, const std::string& motionBoneName)
-	{
-		const int directBoneIndex = model.FindBoneIndex(motionBoneName);
-		if (directBoneIndex >= 0)
-		{
-			return directBoneIndex;
-		}
-
-		for (const MotionEditorBoneAlias& alias : MotionEditorBoneAliases)
-		{
-			if (motionBoneName != alias.editorName)
-			{
-				continue;
-			}
-
-			for (const char* modelBoneName : alias.modelBoneNames)
-			{
-				if (!modelBoneName || modelBoneName[0] == '\0')
-				{
-					continue;
-				}
-
-				const int aliasedBoneIndex = model.FindBoneIndex(modelBoneName);
-				if (aliasedBoneIndex >= 0)
-				{
-					return aliasedBoneIndex;
-				}
-			}
-		}
-
-		return -1;
-	}
 }
 
 /// <summary>
@@ -151,7 +87,7 @@ void MotionSystem::Update(World& world)
 
 		if (!pose->initialized || pose->sourceModelKey != modelComponent->resourceKey)
 		{
-			InitializeSkeletonPose(*pose, *model, modelComponent->resourceKey);
+			MotionPose::InitializeSkeletonPose(*pose, *model, modelComponent->resourceKey);
 		}
 
 		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
@@ -162,7 +98,7 @@ void MotionSystem::Update(World& world)
 
 		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
 		{
-			UpdateSkinningMatrices(*pose, *model);
+			MotionPose::UpdateSkinningMatrices(*pose, *model);
 			continue;
 		}
 
@@ -173,43 +109,10 @@ void MotionSystem::Update(World& world)
 		}
 #endif
 
-		UpdateSkinningMatrices(*pose, *model);
+		MotionPose::UpdateSkinningMatrices(*pose, *model);
 	}
 }
 
-/// <summary>
-/// ModelResource の bind pose を GameObject ごとの現在姿勢へコピーする。
-/// </summary>
-/// <param name="pose">初期化する姿勢 Component。</param>
-/// <param name="model">初期ボーン姿勢を持つ ModelResource。</param>
-/// <param name="modelKey">初期化元として記録するモデルキー。</param>
-/// <returns>ボーンが存在し、初期化できた場合は true。</returns>
-bool MotionSystem::InitializeSkeletonPose(
-	SkeletonPoseComponent& pose,
-	const ModelResource& model,
-	const std::string& modelKey)
-{
-	const std::vector<ModelBone>& bones = model.GetBones();
-	if (bones.empty())
-	{
-		pose.sourceModelKey.clear();
-		pose.bonePoses.clear();
-		pose.boneWorldMatrices.clear();
-		pose.skinningMatrices.clear();
-		pose.initialized = false;
-		return false;
-	}
-
-	pose.sourceModelKey = modelKey;
-	pose.bonePoses.resize(bones.size());
-	pose.boneWorldMatrices.assign(bones.size(), Matrix::Identity);
-	pose.skinningMatrices.assign(bones.size(), Matrix::Identity);
-	ResetPoseToBindPose(pose, model);
-	UpdateSkinningMatrices(pose, model);
-	pose.initialized = true;
-
-	return true;
-}
 
 /// <summary>
 /// 現在の PlayerActionState と実行中攻撃スロットから MotionPlayerComponent の再生対象を更新する。
@@ -476,88 +379,8 @@ bool MotionSystem::IsAttackActionState(PlayerActionState actionState)
 		|| actionState == PlayerActionState::AirAttack;
 }
 
-/// <summary>
-/// モーション編集やデバッグ確認用に、指定ボーンのローカル回転を直接設定する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
-/// <param name="model">ボーン名検索に使う ModelResource。</param>
-/// <param name="boneName">対象ボーン名。</param>
-/// <param name="eulerDegrees">degree 単位のローカル Euler 回転。</param>
-/// <returns>対象ボーンが見つかり、姿勢を変更できた場合は true。</returns>
-bool MotionSystem::SetBoneLocalEulerRotationDegrees(
-	SkeletonPoseComponent& pose,
-	const ModelResource& model,
-	const std::string& boneName,
-	const Vector3& eulerDegrees)
-{
-	const int boneIndex = model.FindBoneIndex(boneName);
-	if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.bonePoses.size())
-	{
-		return false;
-	}
 
-	const float pitch = XMConvertToRadians(eulerDegrees.x);
-	const float yaw = XMConvertToRadians(eulerDegrees.y);
-	const float roll = XMConvertToRadians(eulerDegrees.z);
-	pose.bonePoses[boneIndex].localRotation = Quaternion::CreateFromYawPitchRoll(yaw, pitch, roll);
-	pose.bonePoses[boneIndex].localRotation.Normalize();
 
-	return true;
-}
-
-/// <summary>
-/// 現在ローカル姿勢から親子階層を反映した行列を作り、Renderer 用のスキニング行列を更新する。
-/// </summary>
-/// <param name="pose">計算結果を書き込む姿勢 Component。</param>
-/// <param name="model">親子階層と offsetMatrix を持つ ModelResource。</param>
-void MotionSystem::UpdateSkinningMatrices(SkeletonPoseComponent& pose, const ModelResource& model)
-{
-	const std::vector<ModelBone>& bones = model.GetBones();
-	if (bones.empty() || pose.bonePoses.size() != bones.size())
-	{
-		return;
-	}
-
-	pose.boneWorldMatrices.assign(bones.size(), Matrix::Identity);
-	pose.skinningMatrices.assign(bones.size(), Matrix::Identity);
-
-	for (size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex)
-	{
-		const Matrix localMatrix = CreateLocalMatrix(pose.bonePoses[boneIndex]);
-		const int parentIndex = bones[boneIndex].parentIndex;
-
-		if (parentIndex >= 0 && static_cast<size_t>(parentIndex) < pose.boneWorldMatrices.size())
-		{
-			pose.boneWorldMatrices[boneIndex] = localMatrix * pose.boneWorldMatrices[parentIndex];
-		}
-		else
-		{
-			pose.boneWorldMatrices[boneIndex] = localMatrix;
-		}
-
-		// offsetMatrix は bind pose の逆変換、boneWorldMatrices は現在姿勢。
-		// 頂点は bind 空間 -> bone 空間 -> 現在姿勢の順に変換される。
-		pose.skinningMatrices[boneIndex] = bones[boneIndex].offsetMatrix * pose.boneWorldMatrices[boneIndex];
-	}
-}
-
-/// <summary>
-/// 現在姿勢をモデル読み込み時の bind pose へ戻す。
-/// </summary>
-/// <param name="pose">リセットする姿勢 Component。</param>
-/// <param name="model">bind pose を持つ ModelResource。</param>
-void MotionSystem::ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelResource& model)
-{
-	const std::vector<ModelBone>& bones = model.GetBones();
-	pose.bonePoses.resize(bones.size());
-
-	for (size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex)
-	{
-		pose.bonePoses[boneIndex].localPosition = bones[boneIndex].bindLocalPosition;
-		pose.bonePoses[boneIndex].localRotation = bones[boneIndex].bindLocalRotation;
-		pose.bonePoses[boneIndex].localScale = bones[boneIndex].bindLocalScale;
-	}
-}
 
 /// <summary>
 /// MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。
@@ -587,15 +410,15 @@ bool MotionSystem::ApplyMotionPlayer(
 		return false;
 	}
 
-	SkeletonPoseComponent idleBasePose;
-	SkeletonPoseComponent transitionBasePose;
-	const SkeletonPoseComponent* basePose = nullptr;
+	SkeletonPose idleBasePose;
+	SkeletonPose transitionBasePose;
+	const SkeletonPose* basePose = nullptr;
 	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
 	{
 		const MotionData* idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
 		if (idleMotion)
 		{
-			ApplyMotionData(idleBasePose, *idleMotion, 0, model);
+			MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, model);
 			basePose = &idleBasePose;
 		}
 	}
@@ -605,7 +428,7 @@ bool MotionSystem::ApplyMotionPlayer(
 		basePose = &transitionBasePose;
 	}
 
-	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
+	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
 	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
 		? Vector3::Zero
 		: SampleRootOffset(*motion, player.currentFrame);
@@ -633,232 +456,8 @@ bool MotionSystem::ApplyMotionPlayer(
 	return true;
 }
 
-/// <summary>
-/// 指定 MotionData の指定フレームを SkeletonPoseComponent に反映する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
-/// <param name="motion">適用するモーションデータ。</param>
-/// <param name="frame">再生する 0 始まりフレーム。</param>
-/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-void MotionSystem::ApplyMotionData(
-	SkeletonPoseComponent& pose,
-	const MotionData& motion,
-	int frame,
-	const ModelResource& model)
-{
-	ApplyMotionData(pose, motion, frame, model, nullptr);
-}
 
-/// <summary>
-/// 指定 MotionData を、別姿勢を下地にして SkeletonPoseComponent へ反映する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
-/// <param name="motion">適用するモーションデータ。</param>
-/// <param name="frame">再生する 0 始まりフレーム。</param>
-/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
-void MotionSystem::ApplyMotionData(
-	SkeletonPoseComponent& pose,
-	const MotionData& motion,
-	int frame,
-	const ModelResource& model,
-	const SkeletonPoseComponent* basePose)
-{
-	ResetPoseToBindPose(pose, model);
-	if (basePose && basePose->bonePoses.size() == pose.bonePoses.size())
-	{
-		pose.bonePoses = basePose->bonePoses;
-	}
 
-	for (const MotionBoneTrackData& track : motion.boneTracks)
-	{
-		const int boneIndex = FindMotionBoneIndex(model, track.boneName);
-		if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.bonePoses.size())
-		{
-			continue;
-		}
-
-		const BonePose bindPose =
-		{
-			pose.bonePoses[boneIndex].localPosition,
-			pose.bonePoses[boneIndex].localRotation,
-			pose.bonePoses[boneIndex].localScale
-		};
-
-		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame, motion.totalFrames, motion.looping);
-	}
-}
-
-/// <summary>
-/// 1 ボーントラックから指定フレームのローカル姿勢を補間して取得する。
-/// </summary>
-/// <param name="track">参照するボーンキーフレーム配列。</param>
-/// <param name="bindPose">未指定チャンネルに使う bind pose。</param>
-/// <param name="frame">取得する 0 始まりフレーム。</param>
-/// <param name="totalFrames">ループ境界補間に使う MotionData の総フレーム。</param>
-/// <param name="looping">最後のキーから最初のキーへ補間する場合は true。</param>
-/// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。</returns>
-BonePose MotionSystem::SampleBoneTrack(
-	const MotionBoneTrackData& track,
-	const BonePose& bindPose,
-	int frame,
-	int totalFrames,
-	bool looping)
-{
-	BonePose result = bindPose;
-	if (track.keyframes.empty())
-	{
-		return result;
-	}
-
-	const int clampedTotalFrames = std::max(1, totalFrames);
-	if (looping)
-	{
-		frame %= clampedTotalFrames;
-		if (frame < 0)
-		{
-			frame += clampedTotalFrames;
-		}
-	}
-
-	const MotionBoneKeyframeData* previousKey = nullptr;
-	const MotionBoneKeyframeData* nextKey = nullptr;
-	for (const MotionBoneKeyframeData& keyframe : track.keyframes)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
-
-	if (looping)
-	{
-		if (!previousKey)
-		{
-			previousKey = &track.keyframes.back();
-		}
-		if (!nextKey)
-		{
-			nextKey = &track.keyframes.front();
-		}
-
-		const bool crossesLoop = previousKey->frame > nextKey->frame;
-		const int frameSpan = crossesLoop
-			? std::max(1, (clampedTotalFrames - previousKey->frame) + nextKey->frame)
-			: std::max(1, nextKey->frame - previousKey->frame);
-		const int frameOffset = crossesLoop && frame < nextKey->frame
-			? (clampedTotalFrames - previousKey->frame) + frame
-			: frame - previousKey->frame;
-		const float t = previousKey == nextKey
-			? 0.0f
-			: std::clamp(static_cast<float>(frameOffset) / static_cast<float>(frameSpan), 0.0f, 1.0f);
-
-		if (previousKey->hasPosition && nextKey->hasPosition)
-		{
-			result.localPosition = Vector3::Lerp(previousKey->localPosition, nextKey->localPosition, t);
-		}
-		else if (previousKey->hasPosition)
-		{
-			result.localPosition = previousKey->localPosition;
-		}
-
-		if (previousKey->hasRotation && nextKey->hasRotation)
-		{
-			result.localRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
-			result.localRotation.Normalize();
-		}
-		else if (previousKey->hasRotation)
-		{
-			result.localRotation = previousKey->localRotation;
-		}
-
-		if (previousKey->hasScale && nextKey->hasScale)
-		{
-			result.localScale = Vector3::Lerp(previousKey->localScale, nextKey->localScale, t);
-		}
-		else if (previousKey->hasScale)
-		{
-			result.localScale = previousKey->localScale;
-		}
-
-		return result;
-	}
-
-	if (!previousKey)
-	{
-		previousKey = &track.keyframes.front();
-	}
-	if (!nextKey)
-	{
-		nextKey = &track.keyframes.back();
-	}
-
-	// 最初のキーより前は、下地姿勢から最初のキーへ補間する。
-	// これにより、攻撃開始直後に最初のキー姿勢へ瞬間移動せず、自然に入り始める。
-	if (frame < track.keyframes.front().frame)
-	{
-		const MotionBoneKeyframeData& firstKey = track.keyframes.front();
-		const int frameSpan = std::max(1, firstKey.frame + 1);
-		const float t = std::clamp(static_cast<float>(frame + 1) / static_cast<float>(frameSpan), 0.0f, 1.0f);
-
-		if (firstKey.hasPosition)
-		{
-			result.localPosition = Vector3::Lerp(bindPose.localPosition, firstKey.localPosition, t);
-		}
-
-		if (firstKey.hasRotation)
-		{
-			result.localRotation = Quaternion::Slerp(bindPose.localRotation, firstKey.localRotation, t);
-			result.localRotation.Normalize();
-		}
-
-		if (firstKey.hasScale)
-		{
-			result.localScale = Vector3::Lerp(bindPose.localScale, firstKey.localScale, t);
-		}
-
-		return result;
-	}
-
-	const int frameSpan = std::max(1, nextKey->frame - previousKey->frame);
-	const float t = std::clamp(static_cast<float>(frame - previousKey->frame) / static_cast<float>(frameSpan), 0.0f, 1.0f);
-
-	if (previousKey->hasPosition && nextKey->hasPosition)
-	{
-		result.localPosition = Vector3::Lerp(previousKey->localPosition, nextKey->localPosition, t);
-	}
-	else if (previousKey->hasPosition)
-	{
-		result.localPosition = previousKey->localPosition;
-	}
-
-	if (previousKey->hasRotation && nextKey->hasRotation)
-	{
-		result.localRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
-		result.localRotation.Normalize();
-	}
-	else if (previousKey->hasRotation)
-	{
-		result.localRotation = previousKey->localRotation;
-	}
-
-	if (previousKey->hasScale && nextKey->hasScale)
-	{
-		result.localScale = Vector3::Lerp(previousKey->localScale, nextKey->localScale, t);
-	}
-	else if (previousKey->hasScale)
-	{
-		result.localScale = previousKey->localScale;
-	}
-
-	return result;
-}
 
 /// <summary>
 /// MotionData の全身見た目オフセットキーから、指定フレームの描画用オフセットを補間する。
@@ -1025,7 +624,7 @@ void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const Motio
 /// <param name="model">右腕ボーン名を検索する ModelResource。</param>
 void MotionSystem::ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResource& model)
 {
-	ResetPoseToBindPose(pose, model);
+	MotionPose::ResetPoseToBindPose(pose, model);
 
 	const std::vector<std::string> rightArmCandidates =
 	{
@@ -1062,16 +661,4 @@ void MotionSystem::ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResour
 	BonePose& bonePose = pose.bonePoses[targetBoneIndex];
 	bonePose.localRotation = bonePose.localRotation * addRotation;
 	bonePose.localRotation.Normalize();
-}
-
-/// <summary>
-/// 1 ボーン分のローカル姿勢を行列へ変換する。
-/// </summary>
-/// <param name="pose">行列化するローカル姿勢。</param>
-/// <returns>Scale、Rotation、Translation を合成したローカル行列。</returns>
-Matrix MotionSystem::CreateLocalMatrix(const BonePose& pose)
-{
-	return Matrix::CreateScale(pose.localScale)
-		* Matrix::CreateFromQuaternion(pose.localRotation)
-		* Matrix::CreateTranslation(pose.localPosition);
 }

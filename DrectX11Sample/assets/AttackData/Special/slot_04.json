@@ -6,6 +6,7 @@
   "usableState": "Ground",
   "attackHeight": "High",
   "motionDataId": "Attack/Special/slot_04",
+  "hitSoundId": "",
   "damage": 1800,
   "hitstunFrames": 50,
   "guardstunFrames": 30,

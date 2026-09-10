@@ -32,6 +32,7 @@
     <ClCompile Include="Source\Data\EffectDataLoader.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Data\MotionDataLoader.cpp" />
+    <ClCompile Include="Source\Data\MotionSkeletonDefinition.cpp" />
     <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
@@ -54,6 +55,7 @@
     <ClCompile Include="Source\System\HitStopSystem.cpp" />
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\MotionSystem.cpp" />
+    <ClCompile Include="Source\System\MotionPose.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
@@ -105,6 +107,7 @@
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Data\MotionData.h" />
     <ClInclude Include="Source\Data\MotionDataLoader.h" />
+    <ClInclude Include="Source\Data\MotionSkeletonDefinition.h" />
     <ClInclude Include="Source\Data\MotionDataSaver.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
@@ -146,6 +149,8 @@
     <ClInclude Include="Source\System\main.h" />
     <ClInclude Include="Source\System\MovementSystem.h" />
     <ClInclude Include="Source\System\MotionSystem.h" />
+    <ClInclude Include="Source\System\MotionPose.h" />
+    <ClInclude Include="Source\Data\SkeletonPose.h" />
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h" />
     <ClInclude Include="Source\System\PlayerFacingSystem.h" />
     <ClInclude Include="Source\System\PlayerControlSystem.h" />
