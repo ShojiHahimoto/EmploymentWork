@@ -7,6 +7,7 @@
 #include "Core/GameObject.h"
 #include "System/Debugger.h"
 #include "System/HitStopSystem.h"
+#include "System/SoundManager.h"
 #include "World/World.h"
 
 #include <vector>
@@ -16,6 +17,16 @@ namespace
 	constexpr int GuardDamageDivisor = 10;
 	constexpr const char* HitSparkEffectDataId = "HitSpark";
 	constexpr const char* GuardSparkEffectDataId = "GuardSpark";
+
+	/// <summary>
+	/// AttackData に SE 指定がない場合に使う既定ヒット SE を取得する。
+	/// </summary>
+	/// <param name="attackKind">通常攻撃か必殺技か。</param>
+	/// <returns>SoundManager に登録する音源 ID。</returns>
+	const char* GetDefaultHitSoundId(AttackKind attackKind)
+	{
+		return attackKind == AttackKind::Special ? SoundIds::HitHard : SoundIds::HitNormal;
+	}
 
 	/// <summary>
 	/// ログ表示用に GameObject 名を取得する。
@@ -274,6 +285,8 @@ void HitResolveSystem::Update(World& world)
 		}
 		else
 		{
+			SoundManager::GetInstance().PlaySE(
+				result.hitSoundId.empty() ? GetDefaultHitSoundId(result.attackKind) : result.hitSoundId);
 			ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 		}
 

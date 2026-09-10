@@ -37,6 +37,9 @@ struct MotionPlayerComponent : public Component
 	// モーション遷移直前に画面へ出ていた姿勢。ブレンド元として使う。
 	std::vector<BonePose> blendFromBonePoses;
 
+	// モーション遷移直前に画面へ出ていた全身見た目オフセット。姿勢と同じブレンド率で補間する。
+	DirectX::SimpleMath::Vector3 blendFromRootOffset = DirectX::SimpleMath::Vector3::Zero;
+
 	// ブレンド開始から何フレーム進んだか。
 	int blendFrame = 0;
 

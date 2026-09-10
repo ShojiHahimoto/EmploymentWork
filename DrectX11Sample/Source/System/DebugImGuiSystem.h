@@ -21,6 +21,7 @@ public:
 	static void DrawWorldInspector(World& world);
 	static void DrawSpawnWindow(World& world);
 	static void DrawHitBoxDebugWindow();
+	static void DrawSoundDebugWindow();
 	static bool ShouldDrawHitBoxes();
 	static bool DrawSceneView(ID3D11ShaderResourceView* sceneTextureView, int textureWidth, int textureHeight);
 

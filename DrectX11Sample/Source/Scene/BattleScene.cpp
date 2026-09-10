@@ -36,6 +36,7 @@
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
+#include "System/SoundManager.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
@@ -124,6 +125,7 @@ void BattleScene::Enter()
 		Vector3(20.0f, 32.0f, 0.0f));
 
 	InitializeBattleHUD();
+	InitializeBattleSounds();
 
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
@@ -148,6 +150,7 @@ void BattleScene::Exit()
 	Renderer::ReleaseTexture(hudNumberTexture);
 	EffectRenderSystem::ReleaseResources();
 	EffectDataManager::UnloadAll();
+	SoundManager::GetInstance().StopBGM();
 	world.Clear();
 }
 
@@ -325,6 +328,18 @@ void BattleScene::InitializeBattleHUD()
 	{
 		DebugLog("[BattleHUD] Number texture load failed. hr=", static_cast<long>(hr));
 	}
+}
+
+/// <summary>
+/// BattleScene で使う BGM と既定ヒット SE を読み込み、バトル BGM をループ再生する。
+/// </summary>
+void BattleScene::InitializeBattleSounds()
+{
+	SoundManager& soundManager = SoundManager::GetInstance();
+	soundManager.LoadBGM(SoundIds::BattleBgm01, "assets/Sound/BGM/BGM_Battle01_maou_.wav", true);
+	soundManager.LoadSE(SoundIds::HitNormal, "assets/Sound/SE/Battle/SE_Hit_Normal_maou.wav");
+	soundManager.LoadSE(SoundIds::HitHard, "assets/Sound/SE/Battle/SE_Hit_Hard_maou.wav");
+	soundManager.PlayBGM(SoundIds::BattleBgm01);
 }
 
 /// <summary>

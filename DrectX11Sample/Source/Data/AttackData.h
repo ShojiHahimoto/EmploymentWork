@@ -197,6 +197,8 @@ struct AttackData
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	// 技に対応する MotionData ID。空文字なら現段階ではモーションを再生しない。
 	std::string motionDataId;
+	// ヒット時に鳴らす SoundManager の音源 ID。空なら技種別に応じた既定SEを使う。
+	std::string hitSoundId;
 	AttackFrameData frame;
 	// false の場合、cancelSetting の中身は保持するが対戦中のキャンセル判定には使わない。
 	bool canAttackCancel = false;

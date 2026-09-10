@@ -197,6 +197,7 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	json << "  \"usableState\": \"" << ToAttackUsableStateText(attackData.usableState) << "\",\n";
 	json << "  \"attackHeight\": \"" << ToAttackHeightText(attackData.attackHeight) << "\",\n";
 	json << "  \"motionDataId\": \"" << EscapeJsonString(attackData.motionDataId) << "\",\n";
+	json << "  \"hitSoundId\": \"" << EscapeJsonString(attackData.hitSoundId) << "\",\n";
 	json << "  \"damage\": " << attackData.damage << ",\n";
 	json << "  \"hitstunFrames\": " << attackData.hitstunFrames << ",\n";
 	json << "  \"guardstunFrames\": " << attackData.guardstunFrames << ",\n";

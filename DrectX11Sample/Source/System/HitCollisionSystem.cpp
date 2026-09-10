@@ -215,6 +215,7 @@ namespace
 			result.attackSlotId = assignedAttack.slotId;
 			result.attackDataId = assignedAttack.attack.attackDataId;
 			result.attackDisplayName = assignedAttack.attack.displayName;
+			result.hitSoundId = assignedAttack.attack.hitSoundId;
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.guardstunFrames = assignedAttack.attack.guardstunFrames;

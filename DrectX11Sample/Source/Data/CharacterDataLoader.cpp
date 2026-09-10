@@ -861,6 +861,7 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 		outAttackData.attackHeight = AttackHeight::High;
 	}
 	outAttackData.motionDataId = GetString(root, "motionDataId", outAttackData.motionDataId);
+	outAttackData.hitSoundId = GetString(root, "hitSoundId", outAttackData.hitSoundId);
 	if (outAttackData.usableState == AttackUsableState::Unknown)
 	{
 		outAttackData.usableState = AttackUsableState::Ground;

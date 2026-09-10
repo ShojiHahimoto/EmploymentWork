@@ -24,9 +24,44 @@ namespace
 	constexpr const char* CommonDownMotionDataId = "Common/Down";
 	constexpr const char* CommonAirToDownMotionDataId = "Common/AirToDown";
 	constexpr int DefaultCommonBlendFrames = 3;
-	constexpr int JumpLoopBlendFrames = 2;
-	constexpr int DownBlendFrames = 4;
 	constexpr int NoMotionBlendFrames = 0;
+
+	/// <summary>
+	/// 遷移先 ActionState がモーションブレンド対象か確認する。
+	/// </summary>
+	/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+	/// <returns>ブレンド対象なら true。</returns>
+	bool ShouldBlendIntoActionState(PlayerActionState nextActionState)
+	{
+		switch (nextActionState)
+		{
+		case PlayerActionState::Idle:
+		case PlayerActionState::Crouch:
+		case PlayerActionState::StandGuard:
+		case PlayerActionState::CrouchGuard:
+		case PlayerActionState::FrontWalk:
+		case PlayerActionState::BackWalk:
+		case PlayerActionState::VerticalJumpStartup:
+		case PlayerActionState::FrontJumpStartup:
+		case PlayerActionState::BackJumpStartup:
+		case PlayerActionState::VerticalJump:
+		case PlayerActionState::FrontJump:
+		case PlayerActionState::BackJump:
+		case PlayerActionState::Fall:
+		case PlayerActionState::GroundAttack:
+		case PlayerActionState::AirAttack:
+		case PlayerActionState::LandingRecovery:
+		case PlayerActionState::Hitstun:
+		case PlayerActionState::StandGuardstun:
+		case PlayerActionState::CrouchGuardstun:
+		case PlayerActionState::AirHitstun:
+		case PlayerActionState::Down:
+		case PlayerActionState::WakeUp:
+			return true;
+		default:
+			return true;
+		}
+	}
 
 	struct MotionEditorBoneAlias
 	{
@@ -207,7 +242,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 				player.currentFrame = 0;
 				player.playing = false;
 				player.blending = false;
+				player.blendFrame = 0;
+				player.blendDurationFrames = 0;
 				player.blendFromBonePoses.clear();
+				player.blendFromRootOffset = Vector3::Zero;
 				player.boundActionState = state->currentActionState;
 				player.boundAttackSlotId.clear();
 			}
@@ -240,7 +278,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.currentFrame = 0;
 			player.playing = false;
 			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
 			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId.clear();
 		}
@@ -256,7 +297,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.currentFrame = 0;
 			player.playing = false;
 			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
 			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId = hitBox->currentAttack.slotId;
 		}
@@ -372,26 +416,9 @@ int MotionSystem::GetMotionBlendFrames(PlayerActionState previousActionState, Pl
 		return NoMotionBlendFrames;
 	}
 
-	switch (nextActionState)
-	{
-	case PlayerActionState::GroundAttack:
-	case PlayerActionState::AirAttack:
-	case PlayerActionState::Hitstun:
-	case PlayerActionState::AirHitstun:
-	case PlayerActionState::VerticalJumpStartup:
-	case PlayerActionState::FrontJumpStartup:
-	case PlayerActionState::BackJumpStartup:
-		return NoMotionBlendFrames;
-	case PlayerActionState::Down:
-		return DownBlendFrames;
-	case PlayerActionState::VerticalJump:
-	case PlayerActionState::FrontJump:
-	case PlayerActionState::BackJump:
-	case PlayerActionState::Fall:
-		return JumpLoopBlendFrames;
-	default:
-		return DefaultCommonBlendFrames;
-	}
+	// 現段階ではゲームの手触りを優先し、攻撃・ジャンプ・被弾・ガードを含む全モーションをブレンド対象にする。
+	// 視認性を優先したい状態が出た場合は、ShouldBlendIntoActionState で対象 State だけ false にする。
+	return ShouldBlendIntoActionState(nextActionState) ? DefaultCommonBlendFrames : NoMotionBlendFrames;
 }
 
 /// <summary>
@@ -417,6 +444,7 @@ void MotionSystem::StartMotionBlend(
 		player.blendFrame = 0;
 		player.blendDurationFrames = 0;
 		player.blendFromBonePoses.clear();
+		player.blendFromRootOffset = Vector3::Zero;
 		return;
 	}
 
@@ -424,6 +452,7 @@ void MotionSystem::StartMotionBlend(
 	player.blendFrame = 0;
 	player.blendDurationFrames = blendFrames;
 	player.blendFromBonePoses = currentPose.bonePoses;
+	player.blendFromRootOffset = player.visualRootOffset;
 }
 
 /// <summary>
@@ -577,11 +606,17 @@ bool MotionSystem::ApplyMotionPlayer(
 	}
 
 	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
-	player.visualRootOffset = IsAttackMotionDataId(player.motionDataId)
+	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
 		? Vector3::Zero
 		: SampleRootOffset(*motion, player.currentFrame);
+	player.visualRootOffset = targetRootOffset;
 	if (player.blending)
 	{
+		const float blendRate = std::clamp(
+			static_cast<float>(player.blendFrame + 1) / static_cast<float>(player.blendDurationFrames),
+			0.0f,
+			1.0f);
+		player.visualRootOffset = Vector3::Lerp(player.blendFromRootOffset, targetRootOffset, blendRate);
 		BlendBonePoses(pose, player.blendFromBonePoses, player.blendFrame, player.blendDurationFrames);
 		++player.blendFrame;
 		if (player.blendFrame >= player.blendDurationFrames)
@@ -590,6 +625,7 @@ bool MotionSystem::ApplyMotionPlayer(
 			player.blendFrame = 0;
 			player.blendDurationFrames = 0;
 			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
 		}
 	}
 

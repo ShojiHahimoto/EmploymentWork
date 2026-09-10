@@ -5,6 +5,7 @@
 #include "Input/InputSystem.h"
 #include "System/Application.h"
 #include "System/DebugImGuiSystem.h"
+#include "System/SoundManager.h"
 
 #include <memory>
 
@@ -22,6 +23,7 @@ void Game::Init()
 		Renderer::GetDeviceContext());
 
 	Input::InputSystem::Initialize();
+	SoundManager::GetInstance().Initialize();
 
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	// エントリーシーン設定箇所
@@ -39,6 +41,7 @@ void Game::Update()
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RunSystems();
 	sceneManager.ApplyPendingSceneChange();
+	SoundManager::GetInstance().Update();
 }
 
 void Game::Draw()
@@ -51,6 +54,7 @@ void Game::Draw()
 	renderer.DrawStart();
 	DebugImGuiSystem::BeginFrame();
 	SceneManager::GetInstance().Draw(renderer);
+	DebugImGuiSystem::DrawSoundDebugWindow();
 	DebugImGuiSystem::Render();
 	renderer.DrawEnd();
 }
@@ -75,6 +79,7 @@ void Game::Uninit()
 {
 	SceneManager::GetInstance().Shutdown();
 	Input::InputSystem::Shutdown();
+	SoundManager::GetInstance().Shutdown();
 	DebugImGuiSystem::Shutdown();
 	rendererInitialized = false;
 

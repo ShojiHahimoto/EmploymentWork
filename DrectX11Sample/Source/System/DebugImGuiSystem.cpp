@@ -9,6 +9,7 @@
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "System/Debugger.h"
+#include "System/SoundManager.h"
 #include "System/TransformSystem.h"
 
 #include <cstdint>
@@ -531,6 +532,55 @@ void DebugImGuiSystem::DrawHitBoxDebugWindow()
 		ImGui::Text("AttackBox");
 		ImGui::SameLine();
 		ImGui::ColorButton("AttackBoxColor", ImVec4(1.0f, 0.0f, 0.0f, 0.32f), ImGuiColorEditFlags_NoTooltip);
+	}
+
+	ImGui::End();
+#endif
+}
+
+/// <summary>
+/// SoundManager のマスター / BGM / SE 音量を調整し、設定ファイルへ保存するデバッグウィンドウを描画する。
+/// </summary>
+void DebugImGuiSystem::DrawSoundDebugWindow()
+{
+#if defined(_DEBUG)
+	if (!initialized)
+	{
+		return;
+	}
+
+	SoundManager& soundManager = SoundManager::GetInstance();
+	float masterVolume = soundManager.GetMasterVolume();
+	float bgmVolume = soundManager.GetBGMVolume();
+	float seVolume = soundManager.GetSEVolume();
+
+	ImGui::SetNextWindowPos(ImVec2(460.0f, 360.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(320.0f, 160.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("Sound Settings"))
+	{
+		if (ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.0f))
+		{
+			soundManager.SetMasterVolume(masterVolume);
+		}
+		if (ImGui::SliderFloat("BGM Volume", &bgmVolume, 0.0f, 1.0f))
+		{
+			soundManager.SetBGMVolume(bgmVolume);
+		}
+		if (ImGui::SliderFloat("SE Volume", &seVolume, 0.0f, 1.0f))
+		{
+			soundManager.SetSEVolume(seVolume);
+		}
+
+		if (ImGui::Button("Save"))
+		{
+			soundManager.SaveAudioSettings();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Reload"))
+		{
+			soundManager.LoadAudioSettings();
+		}
 	}
 
 	ImGui::End();

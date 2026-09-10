@@ -74,6 +74,7 @@ struct HitCollisionResult
 	std::string attackSlotId;
 	std::string attackDataId;
 	std::string attackDisplayName;
+	std::string hitSoundId;
 	int damage = 10;
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;

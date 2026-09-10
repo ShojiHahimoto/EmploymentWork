@@ -67,6 +67,7 @@
     <ClCompile Include="Source\System\PlayerFacingSystem.cpp" />
     <ClCompile Include="Source\System\PlayerControlSystem.cpp" />
     <ClCompile Include="Source\System\Renderer.cpp" />
+    <ClCompile Include="Source\System\SoundManager.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
     <ClCompile Include="Source\System\StateUpdateSystem.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="Source\System\PlayerFacingSystem.h" />
     <ClInclude Include="Source\System\PlayerControlSystem.h" />
     <ClInclude Include="Source\System\Renderer.h" />
+    <ClInclude Include="Source\System\SoundManager.h" />
     <ClInclude Include="Source\System\SpawnDestroySystem.h" />
     <ClInclude Include="Source\System\StateUpdateSystem.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />
@@ -159,6 +161,10 @@
     <None Include="Source\Shader\ModelSkinned.hlsl" />
     <None Include="assets\EffectData\GuardSpark.json" />
     <None Include="assets\EffectData\HitSpark.json" />
+    <None Include="assets\Sound\BGM\BGM_Battle01_maou_.wav" />
+    <None Include="assets\Sound\SE\Battle\SE_Hit_Hard_maou.wav" />
+    <None Include="assets\Sound\SE\Battle\SE_Hit_Normal_maou.wav" />
+    <None Include="assets\Settings\AudioSettings.json" />
     <None Include="assets\MotionData\Attack\Air\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_01.json" />
@@ -255,6 +261,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>xaudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -273,6 +280,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>xaudio2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -290,7 +298,7 @@
       <EntryPointSymbol>
       </EntryPointSymbol>
       <AdditionalLibraryDirectories>C:\assimp\5.2.5\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>xaudio2.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "C:\assimp\5.2.5\bin\assimp-vc143-mtd.dll" "$(OutDir)assimp-vc143-mtd.dll"</Command>
@@ -313,7 +321,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\assimp\5.2.5\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>xaudio2.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "C:\assimp\5.2.5\bin\assimp-vc143-mtd.dll" "$(OutDir)assimp-vc143-mtd.dll"</Command>
