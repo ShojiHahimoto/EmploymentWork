@@ -4,6 +4,8 @@
   "attackKind": "Special",
   "commandId": "Shoryuu",
   "usableState": "Ground",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Special/slot_01",
   "damage": 2000,
   "hitstunFrames": 30,
   "guardstunFrames": 26,
@@ -17,7 +19,7 @@
   "cancelSetting": {
     "startFrame": 19,
     "endFrame": 38,
-    "cancelTypes": ["Jump"]
+    "cancelTypes": ["Jump", "Special"]
   },
   "hitboxes": [
     {
@@ -28,6 +30,22 @@
       "size": {
         "x": 3.350,
         "y": 3.250
+      }
+    }
+  ],
+  "movementKeys": [
+    {
+      "frame": 9,
+      "offset": {
+        "x": 0.000,
+        "y": 0.000
+      }
+    },
+    {
+      "frame": 14,
+      "offset": {
+        "x": 0.650,
+        "y": 0.000
       }
     }
   ]

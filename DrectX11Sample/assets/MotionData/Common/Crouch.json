@@ -2,7 +2,13 @@
   "motionDataId": "Common/Crouch",
   "displayName": "Crouch",
   "totalFrames": 20,
-  "looping": true,
+  "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 0,
+      "offset": { "x": 0.000, "y": -2.000, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

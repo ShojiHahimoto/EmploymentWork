@@ -6,8 +6,10 @@
 #include "Component/HealthGaugeComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
+#include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
+#include "Data/EffectDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
 #include "Scene/ResultScene.h"
@@ -21,9 +23,12 @@
 #include "System/DebugImGuiSystem.h"
 #include "System/Debugger.h"
 #include "System/EmbedResolveSystem.h"
+#include "System/EffectRenderSystem.h"
+#include "System/EffectSystem.h"
 #include "System/HitCollisionSystem.h"
 #include "System/HitReactionSystem.h"
 #include "System/HitResolveSystem.h"
+#include "System/HitStopSystem.h"
 #include "System/InputHistorySystem.h"
 #include "System/MovementSystem.h"
 #include "System/MotionSystem.h"
@@ -31,6 +36,7 @@
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
 #include "System/Renderer.h"
+#include "System/SoundManager.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
@@ -119,6 +125,7 @@ void BattleScene::Enter()
 		Vector3(20.0f, 32.0f, 0.0f));
 
 	InitializeBattleHUD();
+	InitializeBattleSounds();
 
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
@@ -141,6 +148,9 @@ void BattleScene::Exit()
 	Renderer::ReleaseRenderTexture(sceneViewRenderTexture);
 #endif
 	Renderer::ReleaseTexture(hudNumberTexture);
+	EffectRenderSystem::ReleaseResources();
+	EffectDataManager::UnloadAll();
+	SoundManager::GetInstance().StopBGM();
 	world.Clear();
 }
 
@@ -151,23 +161,42 @@ void BattleScene::RunSystems()
 #endif
 
 	SpawnDestroySystem::Update(world);
-	PlayerFacingSystem::Update(world);
+	const bool hitStopActive = world.IsHitStopActive();
+
+	if (!hitStopActive)
+	{
+		PlayerFacingSystem::Update(world);
+	}
+
 	InputHistorySystem::Update(world);
 	CommandInputSystem::Update(world);
-	StateUpdateSystem::Update(world);
-	PlayerControlSystem::Update(world);
-	MovementSystem::Update(world);
-	BattleCameraSystem::Update(world);
-	EmbedResolveSystem::Update(world);
-	PlayerInvincibilitySystem::Update(world);
-	HitCollisionSystem::Update(world);
-	HitResolveSystem::Update(world);
-	HitReactionSystem::Update(world);
-	PlayerInvincibilitySystem::Update(world);
+
+	// ヒットストップ中は対戦オブジェクトの状態・移動・判定・モーションだけを止める。
+	// 入力履歴、タイマー、HUD、Debug 表示は止めず、硬直明けの先行入力や演出確認を保つ。
+	if (!hitStopActive)
+	{
+		StateUpdateSystem::Update(world);
+		PlayerControlSystem::Update(world);
+		MovementSystem::Update(world);
+		BattleCameraSystem::Update(world);
+		EmbedResolveSystem::Update(world);
+		PlayerInvincibilitySystem::Update(world);
+		HitCollisionSystem::Update(world);
+		HitResolveSystem::Update(world);
+		HitReactionSystem::Update(world);
+		PlayerInvincibilitySystem::Update(world);
+		MotionSystem::Update(world);
+		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+	}
+
 	BattleResultSystem::Update(world);
+	EffectSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
-	MotionSystem::Update(world);
-	TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+
+	if (hitStopActive)
+	{
+		HitStopSystem::Update(world);
+	}
 
 	if (world.HasActiveCamera())
 	{
@@ -195,6 +224,7 @@ void BattleScene::Draw(Renderer& renderer)
 
 	const CameraComponent& camera = world.GetActiveCamera();
 	DrawWorldWithCamera(renderer, camera);
+	EffectRenderSystem::Draw(world, camera);
 
 #if defined(_DEBUG)
 	DrawDebugSceneView(renderer);
@@ -227,7 +257,7 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 			continue;
 		}
 
-		if (object.tag == GameObjectTag::UI)
+		if (object.tag == GameObjectTag::UI || object.tag == GameObjectTag::Effect)
 		{
 			continue;
 		}
@@ -244,8 +274,14 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 					const SkeletonPoseComponent* pose = world.GetComponent<SkeletonPoseComponent>(object.id);
 					const std::vector<Matrix>* skinningMatrices =
 						pose && pose->initialized ? &pose->skinningMatrices : nullptr;
+					const MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
+					Matrix modelWorld = TransformSystem::GetWorldMatrix(*transform);
+					if (motionPlayer && motionPlayer->visualRootOffset != Vector3::Zero)
+					{
+						modelWorld = modelWorld * Matrix::CreateTranslation(motionPlayer->visualRootOffset);
+					}
 
-					if (renderer.DrawModel(*model, TransformSystem::GetWorldMatrix(*transform), skinningMatrices))
+					if (renderer.DrawModel(*model, modelWorld, skinningMatrices))
 					{
 						continue;
 					}
@@ -292,6 +328,18 @@ void BattleScene::InitializeBattleHUD()
 	{
 		DebugLog("[BattleHUD] Number texture load failed. hr=", static_cast<long>(hr));
 	}
+}
+
+/// <summary>
+/// BattleScene で使う BGM と既定ヒット SE を読み込み、バトル BGM をループ再生する。
+/// </summary>
+void BattleScene::InitializeBattleSounds()
+{
+	SoundManager& soundManager = SoundManager::GetInstance();
+	soundManager.LoadBGM(SoundIds::BattleBgm01, "assets/Sound/BGM/BGM_Battle01_maou_.wav", true);
+	soundManager.LoadSE(SoundIds::HitNormal, "assets/Sound/SE/Battle/SE_Hit_Normal_maou.wav");
+	soundManager.LoadSE(SoundIds::HitHard, "assets/Sound/SE/Battle/SE_Hit_Hard_maou.wav");
+	soundManager.PlayBGM(SoundIds::BattleBgm01);
 }
 
 /// <summary>

@@ -197,6 +197,7 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	json << "  \"usableState\": \"" << ToAttackUsableStateText(attackData.usableState) << "\",\n";
 	json << "  \"attackHeight\": \"" << ToAttackHeightText(attackData.attackHeight) << "\",\n";
 	json << "  \"motionDataId\": \"" << EscapeJsonString(attackData.motionDataId) << "\",\n";
+	json << "  \"hitSoundId\": \"" << EscapeJsonString(attackData.hitSoundId) << "\",\n";
 	json << "  \"damage\": " << attackData.damage << ",\n";
 	json << "  \"hitstunFrames\": " << attackData.hitstunFrames << ",\n";
 	json << "  \"guardstunFrames\": " << attackData.guardstunFrames << ",\n";
@@ -245,7 +246,20 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 		json << "\n";
 		json << "    }";
 	}
-	json << (attackData.hitboxes.empty() ? "]\n" : "\n  ]\n");
+	json << (attackData.hitboxes.empty() ? "],\n" : "\n  ],\n");
+	json << "  \"movementKeys\": [";
+	for (size_t index = 0; index < attackData.movementKeys.size(); ++index)
+	{
+		const AttackMovementKeyData& key = attackData.movementKeys[index];
+		json << (index == 0 ? "\n" : ",\n");
+		json << "    {\n";
+		json << "      \"frame\": " << key.frame << ",\n";
+		json << "      \"offset\": ";
+		WriteVector2(json, "      ", key.offset);
+		json << "\n";
+		json << "    }";
+	}
+	json << (attackData.movementKeys.empty() ? "]\n" : "\n  ]\n");
 	json << "}\n";
 
 	std::ofstream file(savePath, std::ios::binary);

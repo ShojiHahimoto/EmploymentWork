@@ -260,6 +260,12 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - `Burst` と `HardBurst` の防御側が着地した場合は `Down` へ遷移する
 - 空中で追撃された場合は、技ごとのタイプより弱めの空中再打ち上げを優先して使う
 - `Down / WakeUp` 中、または接地済みの `AirHitstun` は攻撃を受けない
+- ヒットストップは World がバトル全体の一時状態として保持し、HitResolveSystem がヒット/ガード/相打ち確定時に要求する
+- ヒットストップ段階は現段階では `Guard / NormalAttack / SpecialAttack / Clash` を使い分け、停止フレームは `HitStopFrameSettings` の共通設定で管理する
+- ヒットストップ中は PlayerFacing / StateUpdate / PlayerControl / Movement / BattleCamera / EmbedResolve / PlayerInvincibility / HitCollision / HitResolve / HitReaction / Motion / Transform など、対戦オブジェクトの状態・位置・判定・姿勢更新を止める
+- ヒットストップ中も InputHistory / CommandInput / BattleResult / BattleHUD / Debug 表示は止めない
+- ヒットストップ中も入力履歴とコマンド候補の登録は進めるが、成立済みコマンド候補の有効期限はヒットストップ 1F ごとに 1F 延長し、停止中に先行入力だけが期限切れしないようにする
+- ラウンドタイマー、SE/BGM、エフェクトなどの演出系はヒットストップで止めない方針とする
 - `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
 - `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
 - ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる
@@ -453,6 +459,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `ModelComponent` は GameObject が参照する `resourceKey` のみを持つ
 - 同じモデルを複数 GameObject が使う場合でも、モデル本体は共有する
 - FBX と同階層に置いた diffuse texture は Material 情報から読み込み、Mesh ごとに適用する
+- FBX 内に埋め込まれた diffuse texture は Assimp の embedded texture として読み込み、外部ファイルがないモデルでも Material ごとに適用する
+- Material が持つテクスチャ参照は `embedded texture -> 外部ファイル -> 同階層 diffuse fallback` の順に試し、既存の外部テクスチャ読み込みと競合しないようにする
 - FBX 側に diffuse texture 参照がない場合は、同階層の `*diffuse*.png` を fallback として探す
 - 頂点には将来のスケルタルアニメーション用に bone index / bone weight を持たせる
 - 現段階ではアニメーション再生は行わず、static pose として描画する
@@ -469,8 +477,16 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - MotionData は AttackData とは別 JSON / 別リソースとして管理する
 - 攻撃モーションは `assets/MotionData/Attack/Ground/slot_00.json` のように `Attack` 配下へ保存する
 - 汎用モーションは `assets/MotionData/Common/Idle.json` のように `Common` 配下へ保存する
+- 攻撃モーションの `motionDataId` は `Attack/` から始め、`Common/Idle` などの汎用モーション ID を攻撃に割り当ててはいけない
+- CustomizeScene の攻撃編集では、攻撃 MotionData ID が空、旧ID、`Common/` 系などの攻撃外IDだった場合、スロットに対応する `Attack/<Category>/slot_XX` へ正規化する
 - AttackData は参照用の `motionDataId` だけを持ち、キーフレーム姿勢そのものは持たない
 - 攻撃判定、ダメージ、硬直、キャンセル、ガード、リアクションは AttackData / HitBox / State 系で扱い、MotionData へ混ぜない
+- 攻撃中に実座標が変わる踏み込みや移動は `AttackData::movementKeys` として保存し、MotionData の姿勢キーとは分ける
+- `movementKeys` は攻撃開始位置から見た相対 offset をフレームごとに持ち、MovementSystem が「今フレーム offset - 前フレーム offset」の差分だけ Transform へ反映する
+- `movementKeys.offset.x` は前方向を正、`offset.y` は上方向を正として保存し、左右反転は攻撃開始時の `actionStartFacingDirection` で行う
+- 攻撃の実移動は Transform を動かすため、PushBox / HurtBox / AttackBox / カメラ / 壁判定も同じ位置へ追従する
+- 攻撃中の見た目と判定のズレを避けるため、ユーザーが作る攻撃の大きな前後移動を MotionData 側の見た目オフセットだけで表現しない
+- 編集場所は Motion Editor 内に置くが、姿勢キーフレームと攻撃移動キーフレームは別のキーとして扱い、片方だけを追加・編集できるようにする
 - MotionData は `motionDataId`、表示名、総フレーム、ループ有無、キーフレーム一覧を持つ
 - 攻撃モーションの総フレームは AttackData の総フレームを正とし、MotionData 側で独立して差を持たせない
 - キーフレームはフレーム番号と、その時点の全ボーンまたは編集対象ボーンのローカル姿勢を保存する
@@ -491,7 +507,14 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 地上下入力は `Crouch` として扱い、`Common/Crouch` を再生する。下斜め入力 1 / 3 は横歩きではなくしゃがみを優先する
 - 攻撃 MotionData は `Common/Idle` を下地姿勢として扱い、最初のキーフレーム以前や未指定部位が T ポーズへ戻らないようにする
 - モーション編集プレビューの 0F は攻撃ボタン入力前の Idle として扱い、`Common/Idle` の 0F 姿勢を表示する
-- 視覚専用の短いモーションブレンドは保存分類と編集導線が安定した後に追加する
+- モーション遷移ブレンドは、前ステートの最終フレームではなく、遷移直前の前フレームに画面へ出ていた `SkeletonPoseComponent::bonePoses` を開始姿勢として使う
+- 攻撃、Hitstun、AirHitstun、JumpStartup へ入る遷移は視認性を優先してブレンドしない
+- Idle / Walk / Crouch / Guard / CrouchGuard / WakeUp などの汎用姿勢へ入る遷移は短いブレンドを許可する
+- `Down` は例外的にブレンド対象とし、AirHitstun から接地して Down に入る時に一瞬立ち姿勢へ戻らないようにする
+- `Down` はゲームロジック上の共通状態として扱い、地上ダウンと空中被弾着地ダウンのような「入り方」の違いは `DownMotionType` で見た目だけ分岐する
+- `AirHitstun` から接地して `Down` へ入る場合、通常被弾、Burst、HardBurst のいずれでも `Common/AirToDown` を再生する
+- `Common/AirToDown` は空中被弾姿勢から地面に倒れる専用モーションとして扱い、`Common/Down` の先頭姿勢へ無理にブレンドして立ち姿勢を経由しないようにする
+- ブレンドフレーム数は `MotionSystem.cpp` 上部の定数で管理し、後から簡単に調整できるようにする
 - 補完は位置を線形補間、回転を Quaternion Slerp、スケールを線形補間で扱う
 - 初期実装では MotionSystem がキーフレーム間を補間し、必要になった最適化段階で 1F ごとの姿勢キャッシュへ移行する
 - 姿勢キャッシュ導入後は、対戦中に毎フレーム補間計算せず、`actionFrame` からキャッシュ済み姿勢を参照する
@@ -562,6 +585,21 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - 例として `startup=4 / active=3 / recovery=7` の場合、内部は `0〜2 Startup / 3〜5 Active / 6〜12 Recovery`、プレビュー表示は `0 Idle / 1〜3 Startup / 4〜6 Active / 7〜13 Recovery` とする
 - 本格的なモーション再生やキーフレームアニメーション編集は、保存形式とプレビュー導線が安定した後に追加する
 - 将来の専用 UI 化やプレビュー再生を追加しても、保存形式と Loader 互換性を壊さない
+
+### Effect
+
+ヒット火花、ガード火花、土煙、風、飛び道具演出などは Effect として扱う。
+
+- Effect は `assets/EffectData` 配下の JSON を EffectData として読み込む
+- EffectData は複数 Emitter を持てる。複数粒子をまとめて 1 つの演出として扱う
+- 対戦中のヒット/ガードなどの結果確定 System は Effect を直接生成せず、World に EffectSpawnRequest を積む
+- EffectSpawnRequest は SpawnDestroySystem がフレーム境界で Effect GameObject に変換する
+- Effect GameObject は `GameObjectTag::Effect` と `EffectComponent` を持つ
+- EffectSystem は粒子生成、粒子更新、再生終了時の削除リクエストだけを担当する
+- EffectRenderSystem は 3D モデル描画から分離し、板ポリゴン粒子や将来のテクスチャパーティクル描画を担当する
+- ヒットストップ中も EffectSystem / EffectRenderSystem は止めない。停止対象はプレイヤーや飛び道具などの対戦オブジェクトであり、演出、HUD、タイマー、音は止めない
+- 現段階の Effect はワールド固定位置に発生する。追従エフェクトは `followTargetId` を予約しておき、必要になった段階で拡張する
+- 素材なしの Effect は白テクスチャを色で染めて描画し、素材付き Effect は `texturePath` に画像パスを指定する
 
 ## 禁止事項
 

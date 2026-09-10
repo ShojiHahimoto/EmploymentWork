@@ -1,0 +1,46 @@
+﻿{
+  "effectDataId": "GuardSpark",
+  "displayName": "GuardSpark",
+  "totalFrames": 16,
+  "loop": false,
+  "emitters": [
+    {
+      "startFrame": 0,
+      "emitCount": 10,
+      "particleLifeFrames": 10,
+      "texturePath": "",
+      "blendMode": "Additive",
+      "depthEnabled": false,
+      "baseOffset": { "x": -0.05, "y": 0.1, "z": -0.1 },
+      "spawnRange": { "x": 0.12, "y": 0.18 },
+      "velocityMin": { "x": -0.16, "y": -0.04 },
+      "velocityMax": { "x": 0.04, "y": 0.14 },
+      "acceleration": { "x": 0.0, "y": -0.004 },
+      "startScale": 2.32,
+      "endScale": 0.02,
+      "startColor": { "r": 0.35, "g": 0.8, "b": 1.0, "a": 0.9 },
+      "endColor": { "r": 0.08, "g": 0.18, "b": 1.0, "a": 0.0 },
+      "angularVelocityMin": -14.0,
+      "angularVelocityMax": 14.0
+    },
+    {
+      "startFrame": 1,
+      "emitCount": 3,
+      "particleLifeFrames": 12,
+      "texturePath": "",
+      "blendMode": "Alpha",
+      "depthEnabled": false,
+      "baseOffset": { "x": -0.08, "y": 0.1, "z": -0.12 },
+      "spawnRange": { "x": 0.04, "y": 0.06 },
+      "velocityMin": { "x": -0.02, "y": 0.0 },
+      "velocityMax": { "x": 0.02, "y": 0.04 },
+      "acceleration": { "x": 0.0, "y": 0.0 },
+      "startScale": 0.55,
+      "endScale": 0.75,
+      "startColor": { "r": 0.55, "g": 0.85, "b": 1.0, "a": 0.22 },
+      "endColor": { "r": 0.15, "g": 0.35, "b": 1.0, "a": 0.0 },
+      "angularVelocityMin": -2.0,
+      "angularVelocityMax": 2.0
+    }
+  ]
+}

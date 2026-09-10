@@ -4,6 +4,7 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Ground",
+  "attackHeight": "Mid",
   "motionDataId": "Attack/Ground/slot_01",
   "damage": 800,
   "hitstunFrames": 25,
@@ -29,6 +30,22 @@
       "size": {
         "x": 4.050,
         "y": 2.350
+      }
+    }
+  ],
+  "movementKeys": [
+    {
+      "frame": 6,
+      "offset": {
+        "x": 0.000,
+        "y": 0.000
+      }
+    },
+    {
+      "frame": 9,
+      "offset": {
+        "x": 2.000,
+        "y": 0.000
       }
     }
   ]

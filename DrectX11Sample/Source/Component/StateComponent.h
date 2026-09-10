@@ -43,6 +43,13 @@ enum class CameraYFollowMode
 	Ignore
 };
 
+// Down 状態へ入った経路に応じて、見た目用のダウンモーションを選ぶ。
+enum class DownMotionType
+{
+	Default,
+	AirToDown
+};
+
 struct StateComponent : public Component
 {
 	// StateUpdateSystem が確定した、今フレームの最終行動。
@@ -58,6 +65,10 @@ struct StateComponent : public Component
 	// バトルカメラの Y 追従対象かどうか。
 	// 通常ジャンプ由来の空中移動は追い、バーストなどの被弾吹き飛びは追わない。
 	CameraYFollowMode cameraYFollowMode = CameraYFollowMode::None;
+
+	// Down 状態の再生モーション種別。
+	// ゲームロジック上は同じ Down のまま、空中被弾着地などの見た目だけを切り替える。
+	DownMotionType downMotionType = DownMotionType::Default;
 
 	// currentActionState に入ってからの経過フレーム。
 	// StateUpdateSystem が State 遷移と合わせて更新する。

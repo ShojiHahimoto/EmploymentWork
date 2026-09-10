@@ -160,6 +160,17 @@ struct AttackHitboxData
 };
 
 /// <summary>
+/// 攻撃開始位置から見た、技性能としての実移動オフセットを保持する。
+/// </summary>
+struct AttackMovementKeyData
+{
+	// 攻撃開始フレームを 0 とする内部 actionFrame。
+	int frame = 0;
+	// 前方向を +X、上方向を +Y として保存する攻撃開始位置からの相対移動量。
+	DirectX::SimpleMath::Vector2 offset = DirectX::SimpleMath::Vector2::Zero;
+};
+
+/// <summary>
 /// assets/AttackData 配下の JSON 1 つに対応する技データ。
 /// </summary>
 struct AttackData
@@ -186,11 +197,15 @@ struct AttackData
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	// 技に対応する MotionData ID。空文字なら現段階ではモーションを再生しない。
 	std::string motionDataId;
+	// ヒット時に鳴らす SoundManager の音源 ID。空なら技種別に応じた既定SEを使う。
+	std::string hitSoundId;
 	AttackFrameData frame;
 	// false の場合、cancelSetting の中身は保持するが対戦中のキャンセル判定には使わない。
 	bool canAttackCancel = false;
 	AttackCancelSettingData cancelSetting;
 	std::vector<AttackHitboxData> hitboxes;
+	// 技中に Transform を実際に動かす移動キー。姿勢用 MotionData とは分けて管理する。
+	std::vector<AttackMovementKeyData> movementKeys;
 };
 
 /// <summary>

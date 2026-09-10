@@ -86,6 +86,7 @@ cbuffer TransformBuffer : register(b0)
 	matrix worldViewProjection;
 	matrix boneMatrices[256];
 	int4 skinningFlags;
+	float4 modelColor;
 };
 
 Texture2D diffuseTexture : register(t0);
@@ -136,7 +137,7 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 {
 	float light = saturate(dot(normalize(input.normal), normalize(float3(0.3f, 0.8f, -0.5f))));
 	float4 baseColor = diffuseTexture.Sample(diffuseSampler, input.uv);
-	return baseColor * float4(0.35f + light * 0.55f, 0.38f + light * 0.45f, 0.42f + light * 0.35f, 1.0f);
+	return baseColor * modelColor * float4(0.35f + light * 0.55f, 0.38f + light * 0.45f, 0.42f + light * 0.35f, 1.0f);
 }
 )";
 
@@ -1076,6 +1077,25 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
 bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const std::vector<Matrix>* skinningMatrices)
 {
+	return DrawModel(model, world, Color(1.0f, 1.0f, 1.0f, 1.0f), false, skinningMatrices);
+}
+
+/// <summary>
+/// ModelResource の各 Mesh を、指定色を乗算しながら描画する。
+/// </summary>
+/// <param name="model">描画するモデルリソース。</param>
+/// <param name="world">モデルの World 行列。</param>
+/// <param name="color">モデル色。alpha が 1 未満なら半透明合成する。</param>
+/// <param name="disableDepth">true の場合、比較用ゴーストなどとして深度を無効化して描画する。</param>
+/// <param name="skinningMatrices">GPU スキニングに使うボーン行列配列。nullptr の場合は静的モデルとして描画する。</param>
+/// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
+bool Renderer::DrawModel(
+	const ModelResource& model,
+	const Matrix& world,
+	const Color& color,
+	bool disableDepth,
+	const std::vector<Matrix>* skinningMatrices)
+{
 	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
 	{
 		return false;
@@ -1084,6 +1104,7 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const 
 	ModelConstantBuffer constantBuffer = {};
 	constantBuffer.worldViewProjection = (world * m_ViewMatrix * m_ProjectionMatrix).Transpose();
 	constantBuffer.skinningFlags = XMINT4(0, 0, 0, 0);
+	constantBuffer.modelColor = color;
 
 	for (int boneIndex = 0; boneIndex < MaxModelSkinningBoneCount; ++boneIndex)
 	{
@@ -1111,9 +1132,20 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const 
 	m_pDeviceContext->VSSetShader(m_pModelVertexShader, nullptr, 0);
 	m_pDeviceContext->VSSetConstantBuffers(0, 1, &m_pModelConstantBuffer);
 	m_pDeviceContext->PSSetShader(m_pModelPixelShader, nullptr, 0);
+	m_pDeviceContext->PSSetConstantBuffers(0, 1, &m_pModelConstantBuffer);
 	m_pDeviceContext->PSSetSamplers(0, 1, &m_pModelSamplerState);
 
 	const std::vector<ModelMaterial>& materials = model.GetMaterials();
+	const bool needsAlphaBlend = color.w < 0.999f;
+	const float blendFactor[4] = {};
+	if (disableDepth)
+	{
+		m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	}
+	if (needsAlphaBlend)
+	{
+		m_pDeviceContext->OMSetBlendState(m_BlendState[BS_ALPHABLEND], blendFactor, 0xffffffff);
+	}
 
 	bool drewMesh = false;
 	for (const ModelMesh& mesh : model.GetMeshes())
@@ -1137,6 +1169,15 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const 
 
 		m_pDeviceContext->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
 		drewMesh = true;
+	}
+
+	if (needsAlphaBlend)
+	{
+		m_pDeviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
+	}
+	if (disableDepth)
+	{
+		m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
 	}
 
 	return drewMesh;

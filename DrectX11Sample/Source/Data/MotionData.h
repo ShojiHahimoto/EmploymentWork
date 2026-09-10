@@ -40,6 +40,18 @@ struct MotionBoneTrackData
 };
 
 /// <summary>
+/// 汎用モーションの見た目だけをずらす全身オフセットキーを保持する。
+/// </summary>
+struct MotionRootOffsetKeyData
+{
+	// モーション開始を 0 としたキーフレーム番号。
+	int frame = 0;
+
+	// プレイヤー本体座標ではなく、モデル描画だけに加える見た目用オフセット。
+	DirectX::SimpleMath::Vector3 offset = DirectX::SimpleMath::Vector3::Zero;
+};
+
+/// <summary>
 /// assets/MotionData 配下の JSON 1 つに対応する自作モーションデータ。
 /// </summary>
 struct MotionData
@@ -49,6 +61,7 @@ struct MotionData
 	int totalFrames = 1;
 	bool looping = false;
 	std::vector<MotionBoneTrackData> boneTracks;
+	std::vector<MotionRootOffsetKeyData> rootOffsetKeys;
 };
 
 class MotionDataManager

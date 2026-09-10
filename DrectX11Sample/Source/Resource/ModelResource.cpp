@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
+#include <vector>
 
 using namespace DirectX::SimpleMath;
 
@@ -285,13 +286,144 @@ namespace
 	}
 
 	/// <summary>
+	/// 圧縮済みの埋め込みテクスチャを WIC 経由で ShaderResourceView に変換する。
+	/// </summary>
+	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
+	/// <param name="embeddedTexture">Assimp が保持している埋め込みテクスチャ。</param>
+	/// <param name="textureView">作成した ShaderResourceView の受け取り先。</param>
+	/// <returns>DirectX API の HRESULT。</returns>
+	HRESULT CreateCompressedEmbeddedTextureView(
+		ID3D11Device* device,
+		const aiTexture& embeddedTexture,
+		ID3D11ShaderResourceView** textureView)
+	{
+		return DirectX::CreateWICTextureFromMemory(
+			device,
+			reinterpret_cast<const uint8_t*>(embeddedTexture.pcData),
+			embeddedTexture.mWidth,
+			nullptr,
+			textureView);
+	}
+
+	/// <summary>
+	/// raw texel の埋め込みテクスチャを DirectX11 Texture2D と ShaderResourceView に変換する。
+	/// </summary>
+	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
+	/// <param name="embeddedTexture">Assimp が保持している埋め込みテクスチャ。</param>
+	/// <param name="textureView">作成した ShaderResourceView の受け取り先。</param>
+	/// <returns>DirectX API の HRESULT。</returns>
+	HRESULT CreateRawEmbeddedTextureView(
+		ID3D11Device* device,
+		const aiTexture& embeddedTexture,
+		ID3D11ShaderResourceView** textureView)
+	{
+		if (embeddedTexture.mWidth == 0 || embeddedTexture.mHeight == 0 || !embeddedTexture.pcData)
+		{
+			return E_INVALIDARG;
+		}
+
+		const size_t pixelCount = static_cast<size_t>(embeddedTexture.mWidth) * static_cast<size_t>(embeddedTexture.mHeight);
+		std::vector<uint8_t> rgbaPixels(pixelCount * 4);
+		for (size_t pixelIndex = 0; pixelIndex < pixelCount; ++pixelIndex)
+		{
+			const aiTexel& source = embeddedTexture.pcData[pixelIndex];
+			const size_t destinationIndex = pixelIndex * 4;
+			rgbaPixels[destinationIndex] = source.r;
+			rgbaPixels[destinationIndex + 1] = source.g;
+			rgbaPixels[destinationIndex + 2] = source.b;
+			rgbaPixels[destinationIndex + 3] = source.a;
+		}
+
+		D3D11_TEXTURE2D_DESC textureDesc = {};
+		textureDesc.Width = embeddedTexture.mWidth;
+		textureDesc.Height = embeddedTexture.mHeight;
+		textureDesc.MipLevels = 1;
+		textureDesc.ArraySize = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.Usage = D3D11_USAGE_DEFAULT;
+		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		D3D11_SUBRESOURCE_DATA textureData = {};
+		textureData.pSysMem = rgbaPixels.data();
+		textureData.SysMemPitch = embeddedTexture.mWidth * 4;
+
+		ID3D11Texture2D* texture = nullptr;
+		HRESULT hr = device->CreateTexture2D(&textureDesc, &textureData, &texture);
+		if (FAILED(hr))
+		{
+			return hr;
+		}
+
+		hr = device->CreateShaderResourceView(texture, nullptr, textureView);
+		texture->Release();
+		return hr;
+	}
+
+	/// <summary>
+	/// FBX 内に埋め込まれた diffuse テクスチャを読み込み、Material に ShaderResourceView を設定する。
+	/// </summary>
+	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
+	/// <param name="scene">埋め込みテクスチャを保持している Assimp Scene。</param>
+	/// <param name="material">テクスチャ情報を書き込む Material。</param>
+	/// <param name="texturePath">Assimp Material が持つテクスチャ参照。</param>
+	/// <param name="textureCache">同一テクスチャを共有するためのキャッシュ。</param>
+	/// <returns>埋め込みテクスチャを読み込めた場合は true。</returns>
+	bool LoadEmbeddedDiffuseTexture(
+		ID3D11Device* device,
+		const aiScene& scene,
+		ModelMaterial& material,
+		const aiString& texturePath,
+		std::unordered_map<std::string, ID3D11ShaderResourceView*>& textureCache)
+	{
+		const aiTexture* embeddedTexture = scene.GetEmbeddedTexture(texturePath.C_Str());
+		if (!embeddedTexture)
+		{
+			return false;
+		}
+
+		const std::string textureKey = std::string("embedded:") + texturePath.C_Str();
+		const auto cachedTexture = textureCache.find(textureKey);
+		if (cachedTexture != textureCache.end())
+		{
+			material.diffuseTexturePath = textureKey;
+			material.diffuseTextureView = cachedTexture->second;
+			if (material.diffuseTextureView)
+			{
+				material.diffuseTextureView->AddRef();
+				return true;
+			}
+
+			return false;
+		}
+
+		ID3D11ShaderResourceView* textureView = nullptr;
+		const HRESULT hr = embeddedTexture->mHeight == 0
+			? CreateCompressedEmbeddedTextureView(device, *embeddedTexture, &textureView)
+			: CreateRawEmbeddedTextureView(device, *embeddedTexture, &textureView);
+
+		if (SUCCEEDED(hr) && textureView)
+		{
+			material.diffuseTexturePath = textureKey;
+			material.diffuseTextureView = textureView;
+			textureCache[textureKey] = textureView;
+			DebugLog("[Model] Embedded texture loaded: ", textureKey);
+			return true;
+		}
+
+		DebugLog("[Model] Embedded texture load failed: ", textureKey, " hr=", static_cast<long>(hr));
+		return false;
+	}
+
+	/// <summary>
 	/// diffuse テクスチャを読み込み、Material に ShaderResourceView を設定する。
 	/// </summary>
 	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
 	/// <param name="material">テクスチャ情報を書き込む Material。</param>
 	/// <param name="texturePath">読み込むテクスチャパス。</param>
 	/// <param name="textureCache">同一テクスチャを共有するためのキャッシュ。</param>
-	void LoadDiffuseTexture(
+	/// <returns>外部テクスチャを読み込めた場合は true。</returns>
+	bool LoadDiffuseTexture(
 		ID3D11Device* device,
 		ModelMaterial& material,
 		const std::filesystem::path& texturePath,
@@ -299,7 +431,7 @@ namespace
 	{
 		if (texturePath.empty())
 		{
-			return;
+			return false;
 		}
 
 		material.diffuseTexturePath = texturePath.string();
@@ -310,8 +442,10 @@ namespace
 			if (material.diffuseTextureView)
 			{
 				material.diffuseTextureView->AddRef();
+				return true;
 			}
-			return;
+
+			return false;
 		}
 
 		const std::wstring widePath = ToWideString(material.diffuseTexturePath);
@@ -325,10 +459,12 @@ namespace
 		{
 			textureCache[material.diffuseTexturePath] = material.diffuseTextureView;
 			DebugLog("[Model] Texture loaded: ", material.diffuseTexturePath);
+			return true;
 		}
 		else
 		{
 			DebugLog("[Model] Texture load failed: ", material.diffuseTexturePath, " hr=", static_cast<long>(hr));
+			return false;
 		}
 	}
 
@@ -362,12 +498,24 @@ namespace
 			aiString texturePath;
 			if (sourceMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
 			{
-				LoadDiffuseTexture(
+				if (LoadEmbeddedDiffuseTexture(
+					device,
+					scene,
+					materials[materialIndex],
+					texturePath,
+					textureCache))
+				{
+					continue;
+				}
+
+				if (LoadDiffuseTexture(
 					device,
 					materials[materialIndex],
 					ResolveTexturePath(modelPath, texturePath),
-					textureCache);
-				continue;
+					textureCache))
+				{
+					continue;
+				}
 			}
 
 			aiString materialName;

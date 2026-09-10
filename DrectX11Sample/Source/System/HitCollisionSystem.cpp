@@ -66,6 +66,24 @@ namespace
 	}
 
 	/// <summary>
+	/// 2 つの AABB が重なっている領域の中心座標を取得する。
+	/// </summary>
+	/// <param name="a">比較する AABB。</param>
+	/// <param name="b">比較する AABB。</param>
+	/// <returns>X/Y 平面上の重なり領域中心。</returns>
+	Vector2 GetOverlapCenter(const Aabb2D& a, const Aabb2D& b)
+	{
+		const float overlapMinX = std::max(a.minX, b.minX);
+		const float overlapMaxX = std::min(a.maxX, b.maxX);
+		const float overlapMinY = std::max(a.minY, b.minY);
+		const float overlapMaxY = std::min(a.maxY, b.maxY);
+
+		return Vector2(
+			(overlapMinX + overlapMaxX) * 0.5f,
+			(overlapMinY + overlapMaxY) * 0.5f);
+	}
+
+	/// <summary>
 	/// 現在の ActionState が攻撃判定を出せる状態か確認する。
 	/// </summary>
 	/// <param name="state">確認する PlayerActionState。</param>
@@ -183,15 +201,25 @@ namespace
 				continue;
 			}
 
+			const Vector2 overlapCenter = GetOverlapCenter(attackBoxAabb, hurtBoxAabb);
+			const Vector3 attackerPosition = TransformSystem::GetLocalPosition(*attackerTransform);
+			const Vector3 defenderPosition = TransformSystem::GetLocalPosition(*defenderTransform);
+
 			HitCollisionResult result;
 			result.attackerId = attacker.id;
 			result.defenderId = defender.id;
+			result.hitPosition = Vector3(
+				overlapCenter.x,
+				overlapCenter.y,
+				(attackerPosition.z + defenderPosition.z) * 0.5f - 0.2f);
 			result.attackSlotId = assignedAttack.slotId;
 			result.attackDataId = assignedAttack.attack.attackDataId;
 			result.attackDisplayName = assignedAttack.attack.displayName;
+			result.hitSoundId = assignedAttack.attack.hitSoundId;
 			result.damage = assignedAttack.attack.damage;
 			result.hitstunFrames = assignedAttack.attack.hitstunFrames;
 			result.guardstunFrames = assignedAttack.attack.guardstunFrames;
+			result.attackKind = assignedAttack.attack.attackKind;
 			result.attackHeight = assignedAttack.attack.attackHeight;
 			result.attackUsableState = assignedAttack.attack.usableState;
 			// 空中技はリアクションタイプを持たず、常に Normal として扱う。

@@ -1,10 +1,16 @@
 ﻿#pragma once
 
+#include "Data/AttackData.h"
+
 #include <SimpleMath.h>
+
+#include <string>
 
 struct StateComponent;
 struct TransformComponent;
 struct VelocityComponent;
+struct CharacterAttackDataComponent;
+struct HitBoxComponent;
 class World;
 
 class MovementSystem
@@ -23,6 +29,11 @@ public:
 
 private:
 	static void ApplyAirGravity(World& world);
+	static void ApplyAttackMovement(World& world);
 	static void ApplyVelocityToTransform(World& world);
 	static bool ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state);
+	static DirectX::SimpleMath::Vector2 SampleAttackMovementOffset(const AttackData& attack, int actionFrame);
+	static const CharacterAssignedAttackData* FindAssignedAttack(
+		const CharacterAttackDataComponent* attackData,
+		const std::string& attackSlotId);
 };

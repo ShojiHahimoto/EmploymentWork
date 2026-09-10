@@ -21,6 +21,47 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
+	constexpr const char* CommonDownMotionDataId = "Common/Down";
+	constexpr const char* CommonAirToDownMotionDataId = "Common/AirToDown";
+	constexpr int DefaultCommonBlendFrames = 3;
+	constexpr int NoMotionBlendFrames = 0;
+
+	/// <summary>
+	/// 遷移先 ActionState がモーションブレンド対象か確認する。
+	/// </summary>
+	/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+	/// <returns>ブレンド対象なら true。</returns>
+	bool ShouldBlendIntoActionState(PlayerActionState nextActionState)
+	{
+		switch (nextActionState)
+		{
+		case PlayerActionState::Idle:
+		case PlayerActionState::Crouch:
+		case PlayerActionState::StandGuard:
+		case PlayerActionState::CrouchGuard:
+		case PlayerActionState::FrontWalk:
+		case PlayerActionState::BackWalk:
+		case PlayerActionState::VerticalJumpStartup:
+		case PlayerActionState::FrontJumpStartup:
+		case PlayerActionState::BackJumpStartup:
+		case PlayerActionState::VerticalJump:
+		case PlayerActionState::FrontJump:
+		case PlayerActionState::BackJump:
+		case PlayerActionState::Fall:
+		case PlayerActionState::GroundAttack:
+		case PlayerActionState::AirAttack:
+		case PlayerActionState::LandingRecovery:
+		case PlayerActionState::Hitstun:
+		case PlayerActionState::StandGuardstun:
+		case PlayerActionState::CrouchGuardstun:
+		case PlayerActionState::AirHitstun:
+		case PlayerActionState::Down:
+		case PlayerActionState::WakeUp:
+			return true;
+		default:
+			return true;
+		}
+	}
 
 	struct MotionEditorBoneAlias
 	{
@@ -116,7 +157,7 @@ void MotionSystem::Update(World& world)
 		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
 		if (motionPlayer)
 		{
-			SyncMotionPlayerFromState(world, object.id, *motionPlayer);
+			SyncMotionPlayerFromState(world, object.id, *motionPlayer, *pose);
 		}
 
 		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
@@ -179,7 +220,8 @@ bool MotionSystem::InitializeSkeletonPose(
 void MotionSystem::SyncMotionPlayerFromState(
 	World& world,
 	GameObjectId objectId,
-	MotionPlayerComponent& player)
+	MotionPlayerComponent& player,
+	const SkeletonPoseComponent& currentPose)
 {
 	const StateComponent* state = world.GetComponent<StateComponent>(objectId);
 	const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(objectId);
@@ -191,7 +233,7 @@ void MotionSystem::SyncMotionPlayerFromState(
 
 	if (!IsAttackActionState(state->currentActionState))
 	{
-		const char* commonMotionDataId = GetCommonMotionDataId(state->currentActionState);
+		const char* commonMotionDataId = GetCommonMotionDataId(*state);
 		if (!commonMotionDataId || commonMotionDataId[0] == '\0')
 		{
 			if (player.stateDriven)
@@ -199,6 +241,11 @@ void MotionSystem::SyncMotionPlayerFromState(
 				player.motionDataId.clear();
 				player.currentFrame = 0;
 				player.playing = false;
+				player.blending = false;
+				player.blendFrame = 0;
+				player.blendDurationFrames = 0;
+				player.blendFromBonePoses.clear();
+				player.blendFromRootOffset = Vector3::Zero;
 				player.boundActionState = state->currentActionState;
 				player.boundAttackSlotId.clear();
 			}
@@ -208,6 +255,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 		const bool restarted = !player.stateDriven
 			|| player.motionDataId != commonMotionDataId
 			|| player.boundActionState != state->currentActionState;
+		if (restarted)
+		{
+			StartMotionBlend(player, currentPose, player.boundActionState, state->currentActionState);
+		}
 
 		player.stateDriven = true;
 		player.motionDataId = commonMotionDataId;
@@ -226,6 +277,11 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.motionDataId.clear();
 			player.currentFrame = 0;
 			player.playing = false;
+			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
+			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId.clear();
 		}
@@ -240,6 +296,11 @@ void MotionSystem::SyncMotionPlayerFromState(
 			player.motionDataId.clear();
 			player.currentFrame = 0;
 			player.playing = false;
+			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
+			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
 			player.boundActionState = state->currentActionState;
 			player.boundAttackSlotId = hitBox->currentAttack.slotId;
 		}
@@ -251,6 +312,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 		|| player.boundActionState != state->currentActionState
 		|| player.boundAttackSlotId != hitBox->currentAttack.slotId
 		|| state->actionFrame == 0;
+	if (restarted)
+	{
+		StartMotionBlend(player, currentPose, player.boundActionState, state->currentActionState);
+	}
 
 	player.stateDriven = true;
 	player.motionDataId = assignedAttack->attack.motionDataId;
@@ -290,11 +355,11 @@ const CharacterAssignedAttackData* MotionSystem::FindAssignedAttack(
 /// <summary>
 /// PlayerActionState に対応する汎用 MotionData ID を取得する。
 /// </summary>
-/// <param name="actionState">確認する PlayerActionState。</param>
+/// <param name="state">確認する PlayerActionState と補助状態。</param>
 /// <returns>Common Motion の ID。未対応の場合は空文字。</returns>
-const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
+const char* MotionSystem::GetCommonMotionDataId(const StateComponent& state)
 {
-	switch (actionState)
+	switch (state.currentActionState)
 	{
 	case PlayerActionState::Idle:
 		return CommonIdleMotionDataId;
@@ -326,7 +391,9 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 	case PlayerActionState::Hitstun:
 		return "Common/Hitstun";
 	case PlayerActionState::Down:
-		return "Common/Down";
+		return state.downMotionType == DownMotionType::AirToDown
+			? CommonAirToDownMotionDataId
+			: CommonDownMotionDataId;
 	case PlayerActionState::WakeUp:
 		return "Common/Wakeup";
 	case PlayerActionState::GroundAttack:
@@ -334,6 +401,58 @@ const char* MotionSystem::GetCommonMotionDataId(PlayerActionState actionState)
 	default:
 		return "";
 	}
+}
+
+/// <summary>
+/// モーション遷移時に何フレームかけて前フレーム姿勢から遷移先姿勢へ混ぜるかを取得する。
+/// </summary>
+/// <param name="previousActionState">遷移前の PlayerActionState。</param>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+/// <returns>ブレンドするフレーム数。0 の場合は即時切り替え。</returns>
+int MotionSystem::GetMotionBlendFrames(PlayerActionState previousActionState, PlayerActionState nextActionState)
+{
+	if (previousActionState == nextActionState)
+	{
+		return NoMotionBlendFrames;
+	}
+
+	// 現段階ではゲームの手触りを優先し、攻撃・ジャンプ・被弾・ガードを含む全モーションをブレンド対象にする。
+	// 視認性を優先したい状態が出た場合は、ShouldBlendIntoActionState で対象 State だけ false にする。
+	return ShouldBlendIntoActionState(nextActionState) ? DefaultCommonBlendFrames : NoMotionBlendFrames;
+}
+
+/// <summary>
+/// モーション切り替え直前に表示されていた姿勢を保存し、必要ならブレンドを開始する。
+/// </summary>
+/// <param name="player">ブレンド情報を書き込む MotionPlayerComponent。</param>
+/// <param name="currentPose">遷移直前に SkeletonPoseComponent が保持していた表示中姿勢。</param>
+/// <param name="previousActionState">遷移前の PlayerActionState。</param>
+/// <param name="nextActionState">遷移後の PlayerActionState。</param>
+void MotionSystem::StartMotionBlend(
+	MotionPlayerComponent& player,
+	const SkeletonPoseComponent& currentPose,
+	PlayerActionState previousActionState,
+	PlayerActionState nextActionState)
+{
+	const int blendFrames = player.stateDriven
+		? GetMotionBlendFrames(previousActionState, nextActionState)
+		: NoMotionBlendFrames;
+
+	if (blendFrames <= 0 || currentPose.bonePoses.empty())
+	{
+		player.blending = false;
+		player.blendFrame = 0;
+		player.blendDurationFrames = 0;
+		player.blendFromBonePoses.clear();
+		player.blendFromRootOffset = Vector3::Zero;
+		return;
+	}
+
+	player.blending = true;
+	player.blendFrame = 0;
+	player.blendDurationFrames = blendFrames;
+	player.blendFromBonePoses = currentPose.bonePoses;
+	player.blendFromRootOffset = player.visualRootOffset;
 }
 
 /// <summary>
@@ -469,6 +588,7 @@ bool MotionSystem::ApplyMotionPlayer(
 	}
 
 	SkeletonPoseComponent idleBasePose;
+	SkeletonPoseComponent transitionBasePose;
 	const SkeletonPoseComponent* basePose = nullptr;
 	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
 	{
@@ -479,8 +599,36 @@ bool MotionSystem::ApplyMotionPlayer(
 			basePose = &idleBasePose;
 		}
 	}
+	else if (player.blending && player.blendFromBonePoses.size() == pose.bonePoses.size())
+	{
+		transitionBasePose.bonePoses = player.blendFromBonePoses;
+		basePose = &transitionBasePose;
+	}
 
 	ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
+	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
+		? Vector3::Zero
+		: SampleRootOffset(*motion, player.currentFrame);
+	player.visualRootOffset = targetRootOffset;
+	if (player.blending)
+	{
+		const float blendRate = std::clamp(
+			static_cast<float>(player.blendFrame + 1) / static_cast<float>(player.blendDurationFrames),
+			0.0f,
+			1.0f);
+		player.visualRootOffset = Vector3::Lerp(player.blendFromRootOffset, targetRootOffset, blendRate);
+		BlendBonePoses(pose, player.blendFromBonePoses, player.blendFrame, player.blendDurationFrames);
+		++player.blendFrame;
+		if (player.blendFrame >= player.blendDurationFrames)
+		{
+			player.blending = false;
+			player.blendFrame = 0;
+			player.blendDurationFrames = 0;
+			player.blendFromBonePoses.clear();
+			player.blendFromRootOffset = Vector3::Zero;
+		}
+	}
+
 	AdvanceMotionFrame(player, *motion);
 	return true;
 }
@@ -710,6 +858,138 @@ BonePose MotionSystem::SampleBoneTrack(
 	}
 
 	return result;
+}
+
+/// <summary>
+/// MotionData の全身見た目オフセットキーから、指定フレームの描画用オフセットを補間する。
+/// </summary>
+/// <param name="motion">参照する MotionData。</param>
+/// <param name="frame">取得する 0 始まりフレーム。</param>
+/// <returns>Transform には反映しない、モデル描画だけに使うオフセット。</returns>
+Vector3 MotionSystem::SampleRootOffset(const MotionData& motion, int frame)
+{
+	if (motion.rootOffsetKeys.empty())
+	{
+		return Vector3::Zero;
+	}
+
+	const int clampedTotalFrames = std::max(1, motion.totalFrames);
+	if (motion.looping)
+	{
+		frame %= clampedTotalFrames;
+		if (frame < 0)
+		{
+			frame += clampedTotalFrames;
+		}
+	}
+
+	const MotionRootOffsetKeyData* previousKey = nullptr;
+	const MotionRootOffsetKeyData* nextKey = nullptr;
+	for (const MotionRootOffsetKeyData& keyframe : motion.rootOffsetKeys)
+	{
+		if (keyframe.frame <= frame)
+		{
+			previousKey = &keyframe;
+		}
+
+		if (keyframe.frame >= frame)
+		{
+			nextKey = &keyframe;
+			break;
+		}
+	}
+
+	if (!previousKey && nextKey)
+	{
+		if (nextKey->frame <= 0)
+		{
+			return nextKey->offset;
+		}
+
+		const float t = std::clamp(
+			static_cast<float>(frame) / static_cast<float>(nextKey->frame),
+			0.0f,
+			1.0f);
+		return Vector3::Lerp(Vector3::Zero, nextKey->offset, t);
+	}
+	if (motion.looping && previousKey && !nextKey)
+	{
+		const MotionRootOffsetKeyData& firstKey = motion.rootOffsetKeys.front();
+		int frameSpan = (clampedTotalFrames - previousKey->frame) + firstKey.frame;
+		int frameOffset = frame - previousKey->frame;
+		if (frameSpan <= 0)
+		{
+			return previousKey->offset;
+		}
+
+		const float t = std::clamp(
+			static_cast<float>(frameOffset) / static_cast<float>(frameSpan),
+			0.0f,
+			1.0f);
+		return Vector3::Lerp(previousKey->offset, firstKey.offset, t);
+	}
+	if (previousKey && !nextKey)
+	{
+		return previousKey->offset;
+	}
+	if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+	{
+		int frameSpan = nextKey->frame - previousKey->frame;
+		int frameOffset = frame - previousKey->frame;
+		if (motion.looping && nextKey->frame < previousKey->frame)
+		{
+			frameSpan = (clampedTotalFrames - previousKey->frame) + nextKey->frame;
+			frameOffset = frame >= previousKey->frame
+				? frame - previousKey->frame
+				: (clampedTotalFrames - previousKey->frame) + frame;
+		}
+
+		const float t = frameSpan > 0
+			? std::clamp(static_cast<float>(frameOffset) / static_cast<float>(frameSpan), 0.0f, 1.0f)
+			: 0.0f;
+		return Vector3::Lerp(previousKey->offset, nextKey->offset, t);
+	}
+	if (previousKey)
+	{
+		return previousKey->offset;
+	}
+
+	return Vector3::Zero;
+}
+
+/// <summary>
+/// 遷移先として計算済みの姿勢を、遷移直前姿勢から指定フレーム数で補間する。
+/// </summary>
+/// <param name="targetPose">遷移先姿勢が入っている SkeletonPoseComponent。ここへブレンド後姿勢を書き戻す。</param>
+/// <param name="blendFromBonePoses">遷移直前に画面へ出ていたボーン姿勢配列。</param>
+/// <param name="blendFrame">ブレンド開始からの経過フレーム。</param>
+/// <param name="blendDurationFrames">ブレンドに使う総フレーム数。</param>
+void MotionSystem::BlendBonePoses(
+	SkeletonPoseComponent& targetPose,
+	const std::vector<BonePose>& blendFromBonePoses,
+	int blendFrame,
+	int blendDurationFrames)
+{
+	if (blendDurationFrames <= 0 || blendFromBonePoses.size() != targetPose.bonePoses.size())
+	{
+		return;
+	}
+
+	const float blendRate = std::clamp(
+		static_cast<float>(blendFrame + 1) / static_cast<float>(blendDurationFrames),
+		0.0f,
+		1.0f);
+
+	for (size_t boneIndex = 0; boneIndex < targetPose.bonePoses.size(); ++boneIndex)
+	{
+		BonePose& target = targetPose.bonePoses[boneIndex];
+		const BonePose& from = blendFromBonePoses[boneIndex];
+
+		target.localPosition = Vector3::Lerp(from.localPosition, target.localPosition, blendRate);
+		target.localRotation = Quaternion::Slerp(from.localRotation, target.localRotation, blendRate);
+		target.localRotation.Normalize();
+		target.localScale = Vector3::Lerp(from.localScale, target.localScale, blendRate);
+	}
 }
 
 /// <summary>

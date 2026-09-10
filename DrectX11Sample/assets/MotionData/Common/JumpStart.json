@@ -3,6 +3,12 @@
   "displayName": "JumpStart",
   "totalFrames": 5,
   "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 4,
+      "offset": { "x": 0.000, "y": -2.400, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

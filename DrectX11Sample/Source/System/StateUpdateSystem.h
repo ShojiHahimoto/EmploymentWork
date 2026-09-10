@@ -27,6 +27,9 @@ struct PlayerActionDecision
 	// CommandBufferComponent から選んだ候補を、攻撃開始時に消費するための識別情報。
 	bool consumeCommand = false;
 	int commandAcceptedFrame = -1;
+
+	// Down へ遷移する場合だけ、どの入り方のダウンモーションを使うか指定する。
+	DownMotionType downMotionType = DownMotionType::Default;
 };
 
 class StateUpdateSystem

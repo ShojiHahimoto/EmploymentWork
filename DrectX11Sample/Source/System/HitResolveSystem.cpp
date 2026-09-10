@@ -6,6 +6,8 @@
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
 #include "System/Debugger.h"
+#include "System/HitStopSystem.h"
+#include "System/SoundManager.h"
 #include "World/World.h"
 
 #include <vector>
@@ -13,6 +15,18 @@
 namespace
 {
 	constexpr int GuardDamageDivisor = 10;
+	constexpr const char* HitSparkEffectDataId = "HitSpark";
+	constexpr const char* GuardSparkEffectDataId = "GuardSpark";
+
+	/// <summary>
+	/// AttackData に SE 指定がない場合に使う既定ヒット SE を取得する。
+	/// </summary>
+	/// <param name="attackKind">通常攻撃か必殺技か。</param>
+	/// <returns>SoundManager に登録する音源 ID。</returns>
+	const char* GetDefaultHitSoundId(AttackKind attackKind)
+	{
+		return attackKind == AttackKind::Special ? SoundIds::HitHard : SoundIds::HitNormal;
+	}
 
 	/// <summary>
 	/// ログ表示用に GameObject 名を取得する。
@@ -179,6 +193,45 @@ namespace
 
 		return damage / GuardDamageDivisor;
 	}
+
+	/// <summary>
+	/// 同一フレーム内に攻撃側と防御側が入れ替わったヒット結果があるか確認する。
+	/// </summary>
+	/// <param name="results">HitCollisionSystem が収集した同一フレームのヒット結果一覧。</param>
+	/// <param name="target">相打ち判定したいヒット結果。</param>
+	/// <returns>target と逆向きのヒット結果があれば true。</returns>
+	bool HasMutualHitResult(
+		const std::vector<HitCollisionResult>& results,
+		const HitCollisionResult& target)
+	{
+		for (const HitCollisionResult& result : results)
+		{
+			if (result.attackerId == target.defenderId
+				&& result.defenderId == target.attackerId)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// 攻撃側の向きから、エフェクトの横反転に使う符号を取得する。
+	/// </summary>
+	/// <param name="world">攻撃側 StateComponent を取得する World。</param>
+	/// <param name="attackerId">攻撃側 GameObject ID。</param>
+	/// <returns>右向きなら +1、左向きなら -1。</returns>
+	float GetEffectFacingSign(const World& world, GameObjectId attackerId)
+	{
+		const StateComponent* state = world.GetComponent<StateComponent>(attackerId);
+		if (!state)
+		{
+			return 1.0f;
+		}
+
+		return state->facingDirection == FacingDirection::Right ? 1.0f : -1.0f;
+	}
 }
 
 void HitResolveSystem::Update(World& world)
@@ -199,6 +252,7 @@ void HitResolveSystem::Update(World& world)
 	{
 		const GuardType guardType = ResolveGuardType(world, result);
 		const bool guarded = guardType != GuardType::None;
+		const bool mutualHit = !guarded && HasMutualHitResult(results, result);
 		const int resolvedDamage = guarded ? CalculateGuardDamage(result.damage) : result.damage;
 		const StateComponent* defenderState = world.GetComponent<StateComponent>(result.defenderId);
 		const bool defenderWasGrounded = defenderState ? defenderState->isGrounded : true;
@@ -220,12 +274,19 @@ void HitResolveSystem::Update(World& world)
 			result.hitboxIndex);
 
 		ApplyDamage(world, result.defenderId, resolvedDamage);
+		HitStopSystem::RequestFromResolvedHit(world, result, guarded, mutualHit);
+		world.RequestEffectSpawn(
+			guarded ? GuardSparkEffectDataId : HitSparkEffectDataId,
+			result.hitPosition,
+			GetEffectFacingSign(world, result.attackerId));
 		if (guarded)
 		{
 			ApplyGuardstun(world, result.defenderId, result.guardstunFrames, guardType);
 		}
 		else
 		{
+			SoundManager::GetInstance().PlaySE(
+				result.hitSoundId.empty() ? GetDefaultHitSoundId(result.attackKind) : result.hitSoundId);
 			ApplyHitstun(world, result.defenderId, result.hitstunFrames);
 		}
 

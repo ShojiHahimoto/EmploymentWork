@@ -97,6 +97,7 @@ namespace
 		"JumpLoop",
 		"Hitstun",
 		"AirHitstun",
+		"AirToDown",
 		"Down",
 		"Wakeup"
 	};
@@ -126,6 +127,25 @@ namespace
 	};
 
 	/// <summary>
+	/// MotionData ID が攻撃モーション用の保存領域を指しているか確認する。
+	/// </summary>
+	/// <param name="motionDataId">確認する MotionData ID。</param>
+	/// <returns>Attack/ から始まる場合は true。</returns>
+	bool IsAttackMotionDataId(const std::string& motionDataId)
+	{
+		return motionDataId.rfind("Attack/", 0) == 0;
+	}
+
+	/// <summary>
+	/// 技プレビュー上のプレイヤー基準位置を取得する。
+	/// </summary>
+	/// <returns>攻撃移動オフセットを足す前の表示基準座標。</returns>
+	Vector3 GetPreviewPlayerBasePosition()
+	{
+		return Vector3(0.0f, 0.0f, 8.0f);
+	}
+
+	/// <summary>
 	/// 編集対象の AttackData ID から JSON ファイルのパスを作る。
 	/// </summary>
 	/// <param name="attackDataId">assets/AttackData から見た拡張子なしの技 ID。</param>
@@ -133,6 +153,16 @@ namespace
 	std::filesystem::path BuildAttackDataPath(const std::string& attackDataId)
 	{
 		return std::filesystem::path(AttackDataRootPath) / (attackDataId + ".json");
+	}
+
+	/// <summary>
+	/// MotionData ID から JSON ファイルの保存先パスを作る。
+	/// </summary>
+	/// <param name="motionDataId">assets/MotionData から見た拡張子なしのモーション ID。</param>
+	/// <returns>読み書き対象の MotionData JSON ファイルパス。</returns>
+	std::filesystem::path BuildMotionDataPath(const std::string& motionDataId)
+	{
+		return std::filesystem::path("assets/MotionData") / (motionDataId + ".json");
 	}
 
 	/// <summary>
@@ -396,6 +426,275 @@ namespace
 	}
 
 	/// <summary>
+	/// AttackData の movementKeys から指定フレームの移動キーを探す。
+	/// </summary>
+	/// <param name="attackData">検索対象の AttackData。</param>
+	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
+	/// <returns>見つかった移動キー。存在しない場合は nullptr。</returns>
+	AttackMovementKeyData* FindAttackMovementKeyframe(AttackData& attackData, int frame)
+	{
+		for (AttackMovementKeyData& keyframe : attackData.movementKeys)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// AttackData の movementKeys から指定フレームの移動キーを探す。
+	/// </summary>
+	/// <param name="attackData">検索対象の AttackData。</param>
+	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
+	/// <returns>見つかった移動キー。存在しない場合は nullptr。</returns>
+	const AttackMovementKeyData* FindAttackMovementKeyframe(const AttackData& attackData, int frame)
+	{
+		for (const AttackMovementKeyData& keyframe : attackData.movementKeys)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットキーを探す。
+	/// </summary>
+	/// <param name="motionData">検索対象の MotionData。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>見つかったオフセットキー。存在しない場合は nullptr。</returns>
+	MotionRootOffsetKeyData* FindMotionRootOffsetKeyframe(MotionData& motionData, int frame)
+	{
+		for (MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットキーを探す。
+	/// </summary>
+	/// <param name="motionData">検索対象の MotionData。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>見つかったオフセットキー。存在しない場合は nullptr。</returns>
+	const MotionRootOffsetKeyData* FindMotionRootOffsetKeyframe(const MotionData& motionData, int frame)
+	{
+		for (const MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
+		{
+			if (keyframe.frame == frame)
+			{
+				return &keyframe;
+			}
+		}
+
+		return nullptr;
+	}
+
+	/// <summary>
+	/// 攻撃開始位置から見た相対移動量を、movementKeys から線形補間して取得する。
+	/// </summary>
+	/// <param name="attackData">参照する AttackData。</param>
+	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
+	/// <returns>攻撃開始地点からの相対移動量。</returns>
+	Vector2 GetAttackMovementOffsetAtFrame(const AttackData& attackData, int frame)
+	{
+		if (attackData.movementKeys.empty() || frame < 0)
+		{
+			return Vector2::Zero;
+		}
+
+		const AttackMovementKeyData* previousKey = nullptr;
+		const AttackMovementKeyData* nextKey = nullptr;
+		for (const AttackMovementKeyData& keyframe : attackData.movementKeys)
+		{
+			if (keyframe.frame <= frame)
+			{
+				previousKey = &keyframe;
+			}
+			if (keyframe.frame >= frame)
+			{
+				nextKey = &keyframe;
+				break;
+			}
+		}
+
+		if (!previousKey && nextKey)
+		{
+			if (nextKey->frame <= 0)
+			{
+				return nextKey->offset;
+			}
+
+			const float rate = std::clamp(
+				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
+				0.0f,
+				1.0f);
+			return Vector2::Lerp(Vector2::Zero, nextKey->offset, rate);
+		}
+		if (previousKey && !nextKey)
+		{
+			return previousKey->offset;
+		}
+		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+		{
+			const float rate = std::clamp(
+				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
+				0.0f,
+				1.0f);
+			return Vector2::Lerp(previousKey->offset, nextKey->offset, rate);
+		}
+		if (previousKey)
+		{
+			return previousKey->offset;
+		}
+
+		return Vector2::Zero;
+	}
+
+	/// <summary>
+	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットを線形補間して取得する。
+	/// </summary>
+	/// <param name="motionData">参照する MotionData。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <returns>Transform ではなくモデル描画だけに使うオフセット。</returns>
+	Vector3 GetMotionRootOffsetAtFrame(const MotionData& motionData, int frame)
+	{
+		if (motionData.rootOffsetKeys.empty() || frame < 0)
+		{
+			return Vector3::Zero;
+		}
+
+		const MotionRootOffsetKeyData* previousKey = nullptr;
+		const MotionRootOffsetKeyData* nextKey = nullptr;
+		for (const MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
+		{
+			if (keyframe.frame <= frame)
+			{
+				previousKey = &keyframe;
+			}
+			if (keyframe.frame >= frame)
+			{
+				nextKey = &keyframe;
+				break;
+			}
+		}
+
+		if (!previousKey && nextKey)
+		{
+			if (nextKey->frame <= 0)
+			{
+				return nextKey->offset;
+			}
+
+			const float rate = std::clamp(
+				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
+				0.0f,
+				1.0f);
+			return Vector3::Lerp(Vector3::Zero, nextKey->offset, rate);
+		}
+		if (motionData.looping && previousKey && !nextKey)
+		{
+			const MotionRootOffsetKeyData& firstKey = motionData.rootOffsetKeys.front();
+			const int totalFrames = std::max(1, motionData.totalFrames);
+			const int frameSpan = (totalFrames - previousKey->frame) + firstKey.frame;
+			const int frameOffset = frame - previousKey->frame;
+			if (frameSpan <= 0)
+			{
+				return previousKey->offset;
+			}
+
+			const float rate = std::clamp(
+				static_cast<float>(frameOffset) / static_cast<float>(frameSpan),
+				0.0f,
+				1.0f);
+			return Vector3::Lerp(previousKey->offset, firstKey.offset, rate);
+		}
+		if (previousKey && !nextKey)
+		{
+			return previousKey->offset;
+		}
+		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+		{
+			const float rate = std::clamp(
+				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
+				0.0f,
+				1.0f);
+			return Vector3::Lerp(previousKey->offset, nextKey->offset, rate);
+		}
+		if (previousKey)
+		{
+			return previousKey->offset;
+		}
+
+		return Vector3::Zero;
+	}
+
+	/// <summary>
+	/// 指定フレームの攻撃移動キーを追加または上書きする。
+	/// </summary>
+	/// <param name="attackData">編集対象の AttackData。</param>
+	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
+	/// <param name="offset">保存する攻撃開始地点からの相対移動量。</param>
+	void SetAttackMovementKey(AttackData& attackData, int frame, const Vector2& offset)
+	{
+		AttackMovementKeyData* targetKeyframe = FindAttackMovementKeyframe(attackData, frame);
+		if (!targetKeyframe)
+		{
+			AttackMovementKeyData newKeyframe;
+			newKeyframe.frame = frame;
+			attackData.movementKeys.push_back(newKeyframe);
+			targetKeyframe = &attackData.movementKeys.back();
+		}
+
+		targetKeyframe->offset = offset;
+		std::sort(
+			attackData.movementKeys.begin(),
+			attackData.movementKeys.end(),
+			[](const AttackMovementKeyData& left, const AttackMovementKeyData& right)
+			{
+				return left.frame < right.frame;
+			});
+	}
+
+	/// <summary>
+	/// 指定フレームの汎用モーション全身見た目オフセットキーを追加または上書きする。
+	/// </summary>
+	/// <param name="motionData">編集対象の MotionData。</param>
+	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+	/// <param name="offset">保存するモデル描画用オフセット。</param>
+	void SetMotionRootOffsetKey(MotionData& motionData, int frame, const Vector3& offset)
+	{
+		MotionRootOffsetKeyData* targetKeyframe = FindMotionRootOffsetKeyframe(motionData, frame);
+		if (!targetKeyframe)
+		{
+			MotionRootOffsetKeyData newKeyframe;
+			newKeyframe.frame = frame;
+			motionData.rootOffsetKeys.push_back(newKeyframe);
+			targetKeyframe = &motionData.rootOffsetKeys.back();
+		}
+
+		targetKeyframe->offset = offset;
+		std::sort(
+			motionData.rootOffsetKeys.begin(),
+			motionData.rootOffsetKeys.end(),
+			[](const MotionRootOffsetKeyData& left, const MotionRootOffsetKeyData& right)
+			{
+				return left.frame < right.frame;
+			});
+	}
+
+	/// <summary>
 	/// 指定部位に回転キーフレームを追加、または既存フレームを上書きする。
 	/// </summary>
 	/// <param name="motionData">編集対象の MotionData。</param>
@@ -505,14 +804,14 @@ namespace
 		}
 		if (attackData.usableState == AttackUsableState::Air)
 		{
-		attackData.hitReactionType = HitReactionType::Normal;
-	}
-	if (attackData.attackHeight == AttackHeight::Unknown)
-	{
-		attackData.attackHeight = AttackHeight::High;
-	}
+			attackData.hitReactionType = HitReactionType::Normal;
+		}
+		if (attackData.attackHeight == AttackHeight::Unknown)
+		{
+			attackData.attackHeight = AttackHeight::High;
+		}
 
-	for (AttackHitboxData& hitbox : attackData.hitboxes)
+		for (AttackHitboxData& hitbox : attackData.hitboxes)
 		{
 			hitbox.size.x = std::max(0.0f, hitbox.size.x);
 			hitbox.size.y = std::max(0.0f, hitbox.size.y);
@@ -520,6 +819,17 @@ namespace
 
 		const int totalFrames = GetAttackTotalFrames(attackData.frame);
 		const int maxActionFrame = totalFrames - 1;
+		for (AttackMovementKeyData& movementKey : attackData.movementKeys)
+		{
+			movementKey.frame = std::clamp(movementKey.frame, 0, maxActionFrame);
+		}
+		std::sort(
+			attackData.movementKeys.begin(),
+			attackData.movementKeys.end(),
+			[](const AttackMovementKeyData& left, const AttackMovementKeyData& right)
+			{
+				return left.frame < right.frame;
+			});
 		attackData.cancelSetting.startFrame = std::max(0, attackData.cancelSetting.startFrame);
 		attackData.cancelSetting.startFrame = std::min(attackData.cancelSetting.startFrame, maxActionFrame);
 		attackData.cancelSetting.endFrame = std::max(attackData.cancelSetting.startFrame, attackData.cancelSetting.endFrame);
@@ -894,7 +1204,7 @@ void CustomizeScene::DrawCommonMotionSelect()
 /// <param name="renderer">プレビュー RenderTexture と ImGui 表示に使う Renderer。</param>
 void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 {
-	draftAttack.motionDataId = motionDataIdBuffer.data();
+	EnsureDraftAttackMotionDataId();
 	ClampPreviewCurrentFrame();
 	RenderAttackPreview(renderer);
 	DrawAttackPreviewWindow(renderer);
@@ -1033,7 +1343,7 @@ void CustomizeScene::DrawAttackEditorWindow()
 	{
 		ImGui::Text("Slot: %s", editingAttackDataId.c_str());
 		ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
-		ImGui::InputText("MotionData ID", motionDataIdBuffer.data(), motionDataIdBuffer.size());
+		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
 
 		ImGui::Separator();
 		ImGui::InputInt("Damage", &draftAttack.damage);
@@ -1258,6 +1568,8 @@ void CustomizeScene::DrawMotionEditor()
 
 	const int actionFrame = GetPreviewActionFrame();
 	const bool canEditCurrentFrame = HasMotionKeyframeAtPreviewFrame();
+	const bool hasMovementKey = HasAttackMovementKeyframeAtPreviewFrame();
+	const bool hasRootOffsetKey = HasMotionRootOffsetKeyframeAtPreviewFrame();
 	ImGui::Text("Selected Key Frame: %d", std::max(0, actionFrame));
 
 	if (ImGui::Button("Add Whole Body Keyframe", ImVec2(210.0f, 28.0f)))
@@ -1314,6 +1626,67 @@ void CustomizeScene::DrawMotionEditor()
 	}
 	ImGui::EndDisabled();
 
+	if (!editingCommonMotion)
+	{
+		ImGui::Separator();
+		ImGui::Text("Attack Movement Edit");
+		if (actionFrame < 0)
+		{
+			ImGui::TextDisabled("Select preview frame 1 or later before editing attack movement.");
+		}
+
+		ImGui::BeginDisabled(actionFrame < 0);
+		if (ImGui::Button("Add Movement Keyframe", ImVec2(190.0f, 28.0f)))
+		{
+			AddAttackMovementKeyframeAtPreviewFrame();
+		}
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!hasMovementKey);
+		if (ImGui::Button("Delete Movement Keyframe", ImVec2(210.0f, 28.0f)))
+		{
+			DeleteAttackMovementKeyframeAtPreviewFrame();
+		}
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(!hasMovementKey);
+		if (ImGui::DragFloat2("Attack Movement Offset Forward / Up", &attackMovementKeyOffset.x, 0.05f))
+		{
+			SetAttackMovementKeyAtPreviewFrame();
+		}
+		ImGui::EndDisabled();
+		ImGui::EndDisabled();
+	}
+	else
+	{
+		ImGui::Separator();
+		ImGui::Text("Common Motion Visual Offset Edit");
+		if (actionFrame < 0)
+		{
+			ImGui::TextDisabled("Select preview frame 1 or later before editing common motion offset.");
+		}
+
+		ImGui::BeginDisabled(actionFrame < 0);
+		if (ImGui::Button("Add Visual Offset Keyframe", ImVec2(220.0f, 28.0f)))
+		{
+			AddMotionRootOffsetKeyframeAtPreviewFrame();
+		}
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!hasRootOffsetKey);
+		if (ImGui::Button("Delete Visual Offset Keyframe", ImVec2(230.0f, 28.0f)))
+		{
+			DeleteMotionRootOffsetKeyframeAtPreviewFrame();
+		}
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(!hasRootOffsetKey);
+		if (ImGui::DragFloat3("Visual Offset X / Y / Z", &motionRootOffsetKey.x, 0.05f))
+		{
+			SetMotionRootOffsetKeyAtPreviewFrame();
+		}
+		ImGui::EndDisabled();
+		ImGui::EndDisabled();
+	}
+
 	ImGui::Separator();
 	if (ImGui::Button("Save MotionData", ImVec2(160.0f, 28.0f)))
 	{
@@ -1341,6 +1714,8 @@ void CustomizeScene::DrawMotionTimeline()
 	{
 		const int actionFrame = previewFrame - 1;
 		bool hasKey = false;
+		bool hasMovementKey = false;
+		bool hasRootOffsetKey = false;
 		if (actionFrame >= 0)
 		{
 			for (const MotionBoneTrackData& track : draftMotion.boneTracks)
@@ -1351,6 +1726,9 @@ void CustomizeScene::DrawMotionTimeline()
 					break;
 				}
 			}
+
+			hasMovementKey = !editingCommonMotion && FindAttackMovementKeyframe(draftAttack, actionFrame);
+			hasRootOffsetKey = editingCommonMotion && FindMotionRootOffsetKeyframe(draftMotion, actionFrame);
 		}
 
 		ImGui::PushID(previewFrame);
@@ -1361,7 +1739,16 @@ void CustomizeScene::DrawMotionTimeline()
 		}
 		else
 		{
-			label = hasKey ? ("*" + std::to_string(actionFrame)) : std::to_string(actionFrame);
+			const std::string marker = hasKey && hasMovementKey
+				? "*M"
+				: hasKey
+					? "*"
+					: hasMovementKey
+						? "M"
+						: hasRootOffsetKey
+							? "R"
+							: "";
+			label = marker + std::to_string(actionFrame);
 		}
 
 		const bool selected = previewCurrentFrame == previewFrame;
@@ -1369,9 +1756,21 @@ void CustomizeScene::DrawMotionTimeline()
 		{
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.95f, 0.75f, 0.10f, 0.85f));
 		}
+		else if (hasKey && hasMovementKey)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.75f, 0.95f, 0.85f));
+		}
 		else if (hasKey)
 		{
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.95f, 0.85f));
+		}
+		else if (hasMovementKey)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.60f, 0.85f, 0.85f));
+		}
+		else if (hasRootOffsetKey)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.70f, 0.35f, 0.85f));
 		}
 
 		if (ImGui::Button(label.c_str(), ImVec2(46.0f, 28.0f)))
@@ -1382,9 +1781,15 @@ void CustomizeScene::DrawMotionTimeline()
 			motionKeyRotationEulerDegrees = actionFrame >= 0
 				? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
 				: Vector3::Zero;
+			attackMovementKeyOffset = actionFrame >= 0
+				? GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
+				: Vector2::Zero;
+			motionRootOffsetKey = actionFrame >= 0
+				? GetMotionRootOffsetAtFrame(draftMotion, actionFrame)
+				: Vector3::Zero;
 		}
 
-		if (selected || hasKey)
+		if (selected || hasKey || hasMovementKey || hasRootOffsetKey)
 		{
 			ImGui::PopStyleColor();
 		}
@@ -1659,6 +2064,8 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 	CopyMotionEditorBuffers();
 	previewCurrentFrame = 0;
 	previewPlaying = false;
+	attackMovementKeyOffset = Vector2::Zero;
+	motionRootOffsetKey = Vector3::Zero;
 	mode = CustomizeMode::AttackEditor;
 }
 
@@ -1687,6 +2094,8 @@ void CustomizeScene::SelectCommonMotionSlot(int slotIndex)
 	CopyMotionEditorBuffers();
 	previewCurrentFrame = 0;
 	previewPlaying = false;
+	attackMovementKeyOffset = Vector2::Zero;
+	motionRootOffsetKey = Vector3::Zero;
 	mode = CustomizeMode::MotionEditor;
 }
 
@@ -1753,12 +2162,30 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 		return;
 	}
 
-	const std::string oldSlotMotionDataId = BuildAttackDataId(selectedCategory, selectedSlotIndex);
+	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
+	const std::string previousMotionDataId = draftAttack.motionDataId;
 	if (draftAttack.motionDataId.empty()
 		|| draftAttack.motionDataId == "debug_right_arm_wave"
-		|| draftAttack.motionDataId == oldSlotMotionDataId)
+		|| draftAttack.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex)
+		|| !IsAttackMotionDataId(draftAttack.motionDataId)
+		|| draftAttack.motionDataId != expectedMotionDataId)
 	{
-		draftAttack.motionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
+		const std::filesystem::path expectedPath = BuildMotionDataPath(expectedMotionDataId);
+		if (!previousMotionDataId.empty()
+			&& previousMotionDataId != expectedMotionDataId
+			&& IsAttackMotionDataId(previousMotionDataId)
+			&& !std::filesystem::exists(expectedPath))
+		{
+			MotionData copiedMotion;
+			if (MotionDataLoader::LoadMotionData(previousMotionDataId, copiedMotion))
+			{
+				copiedMotion.motionDataId = expectedMotionDataId;
+				MotionDataSaver::SaveMotionData(expectedMotionDataId, copiedMotion);
+				MotionDataManager::UnloadAll();
+			}
+		}
+
+		draftAttack.motionDataId = expectedMotionDataId;
 	}
 
 	motionDataIdBuffer.fill('\0');
@@ -1826,6 +2253,7 @@ void CustomizeScene::SaveDraftMotion()
 	else
 	{
 		draftAttack.motionDataId = motionDataIdBuffer.data();
+		EnsureDraftAttackMotionDataId();
 		draftMotion.motionDataId = draftAttack.motionDataId;
 	}
 	draftMotion.displayName = motionDisplayNameBuffer.data();
@@ -1863,10 +2291,29 @@ void CustomizeScene::SaveDraftMotion()
 			{
 				return track.keyframes.empty();
 			}),
-		draftMotion.boneTracks.end());
+			draftMotion.boneTracks.end());
+
+	const int lastRootOffsetFrame = std::max(0, draftMotion.totalFrames - 1);
+	for (MotionRootOffsetKeyData& keyframe : draftMotion.rootOffsetKeys)
+	{
+		keyframe.frame = std::clamp(keyframe.frame, 0, lastRootOffsetFrame);
+	}
+	std::sort(
+		draftMotion.rootOffsetKeys.begin(),
+		draftMotion.rootOffsetKeys.end(),
+		[](const MotionRootOffsetKeyData& left, const MotionRootOffsetKeyData& right)
+		{
+			return left.frame < right.frame;
+		});
 
 	if (MotionDataSaver::SaveMotionData(draftMotion.motionDataId, draftMotion))
 	{
+		if (!editingCommonMotion)
+		{
+			SyncDraftFromEditor();
+			AttackDataSaver::SaveAttackData(editingAttackDataId, draftAttack);
+		}
+
 		MotionDataManager::UnloadAll();
 		statusMessage = "Saved MotionData: assets/MotionData/" + draftMotion.motionDataId + ".json";
 		return;
@@ -2026,6 +2473,202 @@ bool CustomizeScene::HasMotionKeyframeAtPreviewFrame() const
 }
 
 /// <summary>
+/// 現在のプレビューフレームに攻撃移動キーを追加する。
+/// </summary>
+void CustomizeScene::AddAttackMovementKeyframeAtPreviewFrame()
+{
+	if (editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before adding a movement keyframe.";
+		return;
+	}
+
+	attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, keyFrame);
+	SetAttackMovementKey(draftAttack, keyFrame, attackMovementKeyOffset);
+	statusMessage = "Added attack movement keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームから攻撃移動キーを削除する。
+/// </summary>
+void CustomizeScene::DeleteAttackMovementKeyframeAtPreviewFrame()
+{
+	if (editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before deleting a movement keyframe.";
+		return;
+	}
+
+	draftAttack.movementKeys.erase(
+		std::remove_if(
+			draftAttack.movementKeys.begin(),
+			draftAttack.movementKeys.end(),
+			[keyFrame](const AttackMovementKeyData& keyframe)
+			{
+				return keyframe.frame == keyFrame;
+			}),
+		draftAttack.movementKeys.end());
+	attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, keyFrame);
+	statusMessage = "Deleted attack movement keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームにある攻撃移動キーの offset を更新する。
+/// </summary>
+void CustomizeScene::SetAttackMovementKeyAtPreviewFrame()
+{
+	if (editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before setting a movement keyframe.";
+		return;
+	}
+	if (!HasAttackMovementKeyframeAtPreviewFrame())
+	{
+		statusMessage = "Add a movement keyframe before editing attack movement.";
+		return;
+	}
+
+	SetAttackMovementKey(draftAttack, keyFrame, attackMovementKeyOffset);
+	statusMessage = "Set attack movement keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームに攻撃移動キーが存在するか確認する。
+/// </summary>
+/// <returns>現在フレームに movementKeys のキーがある場合は true。</returns>
+bool CustomizeScene::HasAttackMovementKeyframeAtPreviewFrame() const
+{
+	if (editingCommonMotion)
+	{
+		return false;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		return false;
+	}
+
+	return FindAttackMovementKeyframe(draftAttack, keyFrame) != nullptr;
+}
+
+/// <summary>
+/// 現在のプレビューフレームに汎用モーション用の全身見た目オフセットキーを追加する。
+/// </summary>
+void CustomizeScene::AddMotionRootOffsetKeyframeAtPreviewFrame()
+{
+	if (!editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before adding a visual offset keyframe.";
+		return;
+	}
+
+	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, keyFrame);
+	SetMotionRootOffsetKey(draftMotion, keyFrame, motionRootOffsetKey);
+	statusMessage = "Added common motion visual offset keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームから汎用モーション用の全身見た目オフセットキーを削除する。
+/// </summary>
+void CustomizeScene::DeleteMotionRootOffsetKeyframeAtPreviewFrame()
+{
+	if (!editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before deleting a visual offset keyframe.";
+		return;
+	}
+
+	draftMotion.rootOffsetKeys.erase(
+		std::remove_if(
+			draftMotion.rootOffsetKeys.begin(),
+			draftMotion.rootOffsetKeys.end(),
+			[keyFrame](const MotionRootOffsetKeyData& keyframe)
+			{
+				return keyframe.frame == keyFrame;
+			}),
+		draftMotion.rootOffsetKeys.end());
+	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, keyFrame);
+	statusMessage = "Deleted common motion visual offset keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームにある汎用モーション用の全身見た目オフセットキーを更新する。
+/// </summary>
+void CustomizeScene::SetMotionRootOffsetKeyAtPreviewFrame()
+{
+	if (!editingCommonMotion)
+	{
+		return;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		statusMessage = "Select preview frame 1 or later before setting a visual offset keyframe.";
+		return;
+	}
+	if (!HasMotionRootOffsetKeyframeAtPreviewFrame())
+	{
+		statusMessage = "Add a visual offset keyframe before editing common motion offset.";
+		return;
+	}
+
+	SetMotionRootOffsetKey(draftMotion, keyFrame, motionRootOffsetKey);
+	statusMessage = "Set common motion visual offset keyframe.";
+}
+
+/// <summary>
+/// 現在のプレビューフレームに汎用モーション用の全身見た目オフセットキーが存在するか確認する。
+/// </summary>
+/// <returns>現在フレームに rootOffsetKeys のキーがある場合は true。</returns>
+bool CustomizeScene::HasMotionRootOffsetKeyframeAtPreviewFrame() const
+{
+	if (!editingCommonMotion || !hasDraftMotion)
+	{
+		return false;
+	}
+
+	const int keyFrame = GetPreviewActionFrame();
+	if (keyFrame < 0)
+	{
+		return false;
+	}
+
+	return FindMotionRootOffsetKeyframe(draftMotion, keyFrame) != nullptr;
+}
+
+/// <summary>
 /// 現在フレームに存在する全身キーフレームの回転をコピーする。
 /// </summary>
 void CustomizeScene::CopyWholeBodyMotionPoseAtPreviewFrame()
@@ -2113,7 +2756,7 @@ void CustomizeScene::InitializePreview()
 		MotionSystem::InitializeSkeletonPose(previewSkeletonPose, *previewModel, PreviewModelKey);
 	}
 
-	TransformSystem::SetLocalPosition(previewPlayerTransform, Vector3(0.0f, 0.0f, 8.0f));
+	TransformSystem::SetLocalPosition(previewPlayerTransform, GetPreviewPlayerBasePosition());
 	TransformSystem::SetLocalEulerRotationDegrees(previewPlayerTransform, Vector3(0.0f, -90.0f, 0.0f));
 	TransformSystem::SetLocalScale(previewPlayerTransform, Vector3(0.05f, 0.05f, 0.05f));
 	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
@@ -2171,6 +2814,8 @@ void CustomizeScene::UpdatePreviewPlayback()
 	{
 		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
 		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame);
+		attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, actionFrame);
+		motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, actionFrame);
 	}
 }
 
@@ -2212,6 +2857,19 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 	const float clearColor[4] = { 0.04f, 0.045f, 0.06f, 1.0f };
 	Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
 
+	const int previewActionFrame = GetPreviewActionFrame();
+	const Vector2 previewMovementOffset = !editingCommonMotion && previewActionFrame >= 0
+		? GetAttackMovementOffsetAtFrame(draftAttack, previewActionFrame)
+		: Vector2::Zero;
+	const Vector3 previewVisualOffset = editingCommonMotion && previewActionFrame >= 0
+		? GetMotionRootOffsetAtFrame(draftMotion, previewActionFrame)
+		: Vector3::Zero;
+	TransformSystem::SetLocalPosition(
+		previewPlayerTransform,
+		GetPreviewPlayerBasePosition()
+		+ Vector3(previewMovementOffset.x, previewMovementOffset.y, 0.0f)
+		+ previewVisualOffset);
+
 	UpdatePreviewCameraTransform();
 	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
 	TransformSystem::UpdateWorldTransform(previewCameraTransform);
@@ -2220,6 +2878,8 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 
 	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
 	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
+	SkeletonPoseComponent ghostSkeletonPose;
+	const std::vector<Matrix>* ghostSkinningMatrices = nullptr;
 	if (previewModel && previewSkeletonPose.initialized)
 	{
 		const int actionFrame = GetPreviewActionFrame();
@@ -2230,6 +2890,12 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
 		{
 			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+		}
+		if (idleMotion)
+		{
+			MotionSystem::ApplyMotionData(ghostSkeletonPose, *idleMotion, 0, *previewModel);
+			MotionSystem::UpdateSkinningMatrices(ghostSkeletonPose, *previewModel);
+			ghostSkinningMatrices = &ghostSkeletonPose.skinningMatrices;
 		}
 
 		if (actionFrame < 0)
@@ -2266,6 +2932,19 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer)
 				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
 			}
 		}
+	}
+
+	if (previewModel && ghostSkinningMatrices)
+	{
+		TransformComponent ghostTransform = previewPlayerTransform;
+		TransformSystem::SetLocalPosition(ghostTransform, GetPreviewPlayerBasePosition());
+		TransformSystem::UpdateWorldTransform(ghostTransform);
+		renderer.DrawModel(
+			*previewModel,
+			TransformSystem::GetWorldMatrix(ghostTransform),
+			Color(0.65f, 0.85f, 1.0f, 0.22f),
+			true,
+			ghostSkinningMatrices);
 	}
 
 	const bool drewModel = previewModel
@@ -2337,6 +3016,12 @@ void CustomizeScene::StepPreviewFrame(int frameDelta)
 	const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
 	motionKeyRotationEulerDegrees = actionFrame >= 0
 		? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
+		: Vector3::Zero;
+	attackMovementKeyOffset = actionFrame >= 0
+		? GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
+		: Vector2::Zero;
+	motionRootOffsetKey = actionFrame >= 0
+		? GetMotionRootOffsetAtFrame(draftMotion, actionFrame)
 		: Vector3::Zero;
 }
 
@@ -2612,6 +3297,7 @@ void CustomizeScene::CopyMotionEditorBuffers()
 	motionDisplayNameBuffer.fill('\0');
 	selectedMotionEditorBoneIndex = 3;
 	motionKeyRotationEulerDegrees = Vector3::Zero;
+	motionRootOffsetKey = Vector3::Zero;
 
 	if (!hasDraftMotion)
 	{
@@ -2629,6 +3315,7 @@ void CustomizeScene::CopyMotionEditorBuffers()
 			boneName,
 			std::max(0, GetPreviewActionFrame()));
 	}
+	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, std::max(0, GetPreviewActionFrame()));
 }
 
 /// <summary>

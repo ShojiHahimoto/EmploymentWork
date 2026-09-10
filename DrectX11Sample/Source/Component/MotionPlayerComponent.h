@@ -2,9 +2,11 @@
 
 #include "Component/Component.h"
 
+#include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
 
 #include <string>
+#include <vector>
 
 /// <summary>
 /// GameObject が現在再生している MotionData と再生フレームを保持する。
@@ -31,4 +33,22 @@ struct MotionPlayerComponent : public Component
 
 	// stateDriven 再生の前回攻撃スロット。技が変わったら再生フレームをリセットする。
 	std::string boundAttackSlotId;
+
+	// モーション遷移直前に画面へ出ていた姿勢。ブレンド元として使う。
+	std::vector<BonePose> blendFromBonePoses;
+
+	// モーション遷移直前に画面へ出ていた全身見た目オフセット。姿勢と同じブレンド率で補間する。
+	DirectX::SimpleMath::Vector3 blendFromRootOffset = DirectX::SimpleMath::Vector3::Zero;
+
+	// ブレンド開始から何フレーム進んだか。
+	int blendFrame = 0;
+
+	// 何フレームかけて遷移先モーション姿勢へ寄せるか。0 ならブレンドなし。
+	int blendDurationFrames = 0;
+
+	// 現在モーション遷移ブレンド中なら true。
+	bool blending = false;
+
+	// 汎用モーションの見た目だけに加える全身オフセット。Transform と当たり判定は動かさない。
+	DirectX::SimpleMath::Vector3 visualRootOffset = DirectX::SimpleMath::Vector3::Zero;
 };

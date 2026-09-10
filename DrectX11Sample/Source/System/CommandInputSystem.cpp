@@ -101,8 +101,16 @@ void CommandInputSystem::UpdatePlayerCommandBuffer(World& world, GameObjectId ob
 	}
 
 	const InputHistoryFrame& latestFrame = inputHistory->frames[inputHistory->latestFrameIndex];
-	RemoveExpiredCommands(*commandBuffer, latestFrame.frameNumber);
+	if (!world.IsHitStopActive())
+	{
+		RemoveExpiredCommands(*commandBuffer, latestFrame.frameNumber);
+	}
+
 	RegisterCommandsFromLatestInput(*commandBuffer, *inputHistory, *characterAttackData, *state);
+	if (world.IsHitStopActive())
+	{
+		ExtendBufferedCommandExpiry(*commandBuffer);
+	}
 }
 
 /// <summary>
@@ -117,6 +125,21 @@ void CommandInputSystem::RemoveExpiredCommands(CommandBufferComponent& commandBu
 		if (command.valid && command.bufferExpireFrame < currentFrameNumber)
 		{
 			command = BufferedCommandInput{};
+		}
+	}
+}
+
+/// <summary>
+/// ヒットストップ中に先行入力の有効期限だけを 1 フレーム延長する。
+/// </summary>
+/// <param name="commandBuffer">更新する CommandBufferComponent。</param>
+void CommandInputSystem::ExtendBufferedCommandExpiry(CommandBufferComponent& commandBuffer)
+{
+	for (BufferedCommandInput& command : commandBuffer.commands)
+	{
+		if (command.valid)
+		{
+			++command.bufferExpireFrame;
 		}
 	}
 }

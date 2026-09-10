@@ -86,11 +86,21 @@ public:
 		const SkeletonPoseComponent* basePose);
 
 private:
-	static void SyncMotionPlayerFromState(World& world, GameObjectId objectId, MotionPlayerComponent& player);
+	static void SyncMotionPlayerFromState(
+		World& world,
+		GameObjectId objectId,
+		MotionPlayerComponent& player,
+		const SkeletonPoseComponent& currentPose);
 	static const CharacterAssignedAttackData* FindAssignedAttack(
 		const CharacterAttackDataComponent* attackData,
 		const std::string& attackSlotId);
-	static const char* GetCommonMotionDataId(PlayerActionState actionState);
+	static const char* GetCommonMotionDataId(const StateComponent& state);
+	static int GetMotionBlendFrames(PlayerActionState previousActionState, PlayerActionState nextActionState);
+	static void StartMotionBlend(
+		MotionPlayerComponent& player,
+		const SkeletonPoseComponent& currentPose,
+		PlayerActionState previousActionState,
+		PlayerActionState nextActionState);
 	static bool IsAttackMotionDataId(const std::string& motionDataId);
 	static bool IsAttackActionState(PlayerActionState actionState);
 	static void ResetPoseToBindPose(SkeletonPoseComponent& pose, const ModelResource& model);
@@ -101,6 +111,14 @@ private:
 		int frame,
 		int totalFrames,
 		bool looping);
+	static DirectX::SimpleMath::Vector3 SampleRootOffset(
+		const MotionData& motion,
+		int frame);
+	static void BlendBonePoses(
+		SkeletonPoseComponent& targetPose,
+		const std::vector<BonePose>& blendFromBonePoses,
+		int blendFrame,
+		int blendDurationFrames);
 	static void AdvanceMotionFrame(MotionPlayerComponent& player, const MotionData& motion);
 	static void ApplyDebugPose(SkeletonPoseComponent& pose, const ModelResource& model);
 	static DirectX::SimpleMath::Matrix CreateLocalMatrix(const BonePose& pose);

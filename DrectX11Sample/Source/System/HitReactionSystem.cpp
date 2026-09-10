@@ -271,7 +271,7 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 			ApplyAirBurst(world, request, setting.airVelocity, CameraYFollowMode::Ignore);
 			break;
 		case HitReactionType::Down:
-			ApplyDown(world, request.defenderId, setting.downFrames);
+			ApplyDown(world, request.defenderId, setting.downFrames, DownMotionType::AirToDown);
 			break;
 		case HitReactionType::Normal:
 		case HitReactionType::Unknown:
@@ -292,7 +292,7 @@ void HitReactionSystem::ApplyReactionRequest(World& world, const HitReactionRequ
 	switch (request.hitReactionType)
 	{
 	case HitReactionType::Down:
-		ApplyDown(world, request.defenderId, setting.downFrames);
+		ApplyDown(world, request.defenderId, setting.downFrames, DownMotionType::Default);
 		break;
 	case HitReactionType::Burst:
 	case HitReactionType::HardBurst:
@@ -379,7 +379,12 @@ void HitReactionSystem::ApplyCornerAttackerBack(World& world, const HitReactionR
 /// <param name="world">対象 Component を取得する World。</param>
 /// <param name="defenderId">ダウンさせる Player GameObject ID。</param>
 /// <param name="downFrames">Down 状態を維持するフレーム数。</param>
-void HitReactionSystem::ApplyDown(World& world, GameObjectId defenderId, int downFrames)
+/// <param name="downMotionType">Down 中に再生する見た目用モーション種別。</param>
+void HitReactionSystem::ApplyDown(
+	World& world,
+	GameObjectId defenderId,
+	int downFrames,
+	DownMotionType downMotionType)
 {
 	PlayerReactionRuntime defender;
 	if (!TryBuildPlayerReactionRuntime(world, defenderId, defender))
@@ -389,6 +394,7 @@ void HitReactionSystem::ApplyDown(World& world, GameObjectId defenderId, int dow
 
 	defender.state->currentActionState = PlayerActionState::Down;
 	defender.state->cameraYFollowMode = CameraYFollowMode::None;
+	defender.state->downMotionType = downMotionType;
 	defender.state->actionFrame = 0;
 	defender.state->actionDurationFrames = downFrames;
 	defender.state->isGrounded = true;
@@ -449,6 +455,6 @@ void HitReactionSystem::ResolveLandedAirHitstun(World& world)
 			continue;
 		}
 
-		ApplyDown(world, object.id, DefaultDownFrames);
+		ApplyDown(world, object.id, DefaultDownFrames, DownMotionType::AirToDown);
 	}
 }

@@ -28,6 +28,21 @@ enum class BattleResult
 	Draw,
 };
 
+enum class HitStopLevel
+{
+	None,
+	Guard,
+	NormalAttack,
+	SpecialAttack,
+	Clash,
+};
+
+struct HitStopState
+{
+	int remainingFrames = 0;
+	HitStopLevel level = HitStopLevel::None;
+};
+
 struct SpawnRequest
 {
 	SpawnType type = SpawnType::DebugCube;
@@ -42,16 +57,28 @@ struct DestroyRequest
 	GameObjectId targetId = INVALID_GAME_OBJECT_ID;
 };
 
+struct EffectSpawnRequest
+{
+	std::string effectDataId;
+	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
+	float facingSign = 1.0f;
+	GameObjectId followTargetId = INVALID_GAME_OBJECT_ID;
+	bool followTarget = false;
+};
+
 struct HitCollisionResult
 {
 	GameObjectId attackerId = INVALID_GAME_OBJECT_ID;
 	GameObjectId defenderId = INVALID_GAME_OBJECT_ID;
+	DirectX::SimpleMath::Vector3 hitPosition = DirectX::SimpleMath::Vector3::Zero;
 	std::string attackSlotId;
 	std::string attackDataId;
 	std::string attackDisplayName;
+	std::string hitSoundId;
 	int damage = 10;
 	int hitstunFrames = 30;
 	int guardstunFrames = 30;
+	AttackKind attackKind = AttackKind::Normal;
 	AttackHeight attackHeight = AttackHeight::High;
 	HitReactionType hitReactionType = HitReactionType::Normal;
 	AttackUsableState attackUsableState = AttackUsableState::Ground;
@@ -118,11 +145,19 @@ public:
 		const DirectX::SimpleMath::Vector3& rotationDegrees,
 		const std::string& characterFolderPath = "");
 	void RequestDestroy(GameObjectId objectId);
+	void RequestEffectSpawn(
+		const std::string& effectDataId,
+		const DirectX::SimpleMath::Vector3& position,
+		float facingSign,
+		GameObjectId followTargetId = INVALID_GAME_OBJECT_ID,
+		bool followTarget = false);
 
 	const std::vector<SpawnRequest>& GetSpawnRequests() const;
 	const std::vector<DestroyRequest>& GetDestroyRequests() const;
+	const std::vector<EffectSpawnRequest>& GetEffectSpawnRequests() const;
 	void ClearSpawnRequests();
 	void ClearDestroyRequests();
+	void ClearEffectSpawnRequests();
 
 	void AddHitCollisionResult(const HitCollisionResult& result);
 	const std::vector<HitCollisionResult>& GetHitCollisionResults() const;
@@ -141,16 +176,24 @@ public:
 	bool HasBattleResult() const;
 	void ClearBattleResult();
 
+	void RequestHitStop(HitStopLevel level, int frames);
+	void AdvanceHitStopFrame();
+	bool IsHitStopActive() const;
+	const HitStopState& GetHitStopState() const;
+	void ClearHitStop();
+
 	void DestroyGameObjectImmediate(GameObjectId objectId);
 
 private:
 	std::vector<GameObject> gameObjects;
 	std::vector<SpawnRequest> spawnRequests;
 	std::vector<DestroyRequest> destroyRequests;
+	std::vector<EffectSpawnRequest> effectSpawnRequests;
 	std::vector<HitCollisionResult> hitCollisionResults;
 	std::vector<HitReactionRequest> hitReactionRequests;
 	std::array<GameObjectId, BattlePlayerCount> battlePlayerIds = { INVALID_GAME_OBJECT_ID, INVALID_GAME_OBJECT_ID };
 	BattleResult battleResult = BattleResult::None;
+	HitStopState hitStopState;
 	GameObjectId nextObjectId = 1;
 
 	GameObjectId activeCameraId = INVALID_GAME_OBJECT_ID;

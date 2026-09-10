@@ -32,6 +32,7 @@ private:
 	ID3D11ShaderResourceView* hudNumberTexture = nullptr;
 
 	void InitializeBattleHUD();
+	void InitializeBattleSounds();
 	void RunInitialWorldSetup();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
 	void DrawBattleHUD();

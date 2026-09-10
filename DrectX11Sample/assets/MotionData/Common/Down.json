@@ -3,16 +3,22 @@
   "displayName": "Down",
   "totalFrames": 30,
   "looping": false,
+  "rootOffsetKeys": [
+    {
+      "frame": 5,
+      "offset": { "x": 0.000, "y": 0.065, "z": 0.000 }
+    },
+    {
+      "frame": 16,
+      "offset": { "x": 0.000, "y": -4.335, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 12.000, "y": -5.500, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -21,11 +27,7 @@
       "boneName": "Spine",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -34,11 +36,7 @@
       "boneName": "Waist",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 90.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -47,11 +45,7 @@
       "boneName": "RShoulder",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -60,11 +54,7 @@
       "boneName": "LShoulder",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -73,11 +63,7 @@
       "boneName": "RElbow",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -86,11 +72,7 @@
       "boneName": "LElbow",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -99,11 +81,7 @@
       "boneName": "RHand",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -112,11 +90,7 @@
       "boneName": "LHand",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -125,11 +99,7 @@
       "boneName": "RHipjoint",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 13.000, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -138,11 +108,7 @@
       "boneName": "LHipjoint",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -23.500, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -151,11 +117,7 @@
       "boneName": "RKnees",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 9.500, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -164,11 +126,7 @@
       "boneName": "LKnees",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 22.000, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -177,11 +135,7 @@
       "boneName": "RFeet",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]
@@ -190,11 +144,7 @@
       "boneName": "LFeet",
       "keyframes": [
         {
-          "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
-        },
-        {
-          "frame": 20,
+          "frame": 16,
           "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         }
       ]

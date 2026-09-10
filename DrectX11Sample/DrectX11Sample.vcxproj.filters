@@ -76,6 +76,24 @@
     <Filter Include="リソース ファイル\MotionData">
       <UniqueIdentifier>{ff70432f-5916-4c01-ae84-a82bc6621e32}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\EffectData">
+      <UniqueIdentifier>{481fc841-eebf-498f-bd46-28248f7beb1d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Sound">
+      <UniqueIdentifier>{8b0b6ed3-cc1e-466c-b63b-a361b56a1ea4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Sound\BGM">
+      <UniqueIdentifier>{e79ca9ab-3fbb-4b52-8fb2-353a2de82b2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Sound\SE">
+      <UniqueIdentifier>{af8248c1-59b3-40ff-93a9-c1c247d448c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Sound\SE\Battle">
+      <UniqueIdentifier>{c991c6e7-8ce7-44e7-bdbc-4896809d8c48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\Settings">
+      <UniqueIdentifier>{7dd53b23-0119-4504-946a-5cfe6f7abbbb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -106,6 +124,9 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\CharacterDataSaver.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\EffectDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\JsonValue.cpp">
@@ -153,6 +174,9 @@
     <ClCompile Include="Source\System\Renderer.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\SoundManager.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\Game.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -180,6 +204,12 @@
     <ClCompile Include="Source\System\EmbedResolveSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\EffectRenderSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\EffectSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\HitCollisionSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -187,6 +217,9 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\HitResolveSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\HitStopSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp">
@@ -269,6 +302,9 @@
     <ClInclude Include="Source\System\Renderer.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\SoundManager.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\SpawnDestroySystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -332,6 +368,9 @@
     <ClInclude Include="Source\Component\CommandBufferComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Component\EffectComponent.h">
+      <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\CameraSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -347,6 +386,12 @@
     <ClInclude Include="Source\System\EmbedResolveSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
+    <ClInclude Include="Source\System\EffectRenderSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\EffectSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
     <ClInclude Include="Source\System\HitCollisionSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
@@ -354,6 +399,9 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\HitResolveSystem.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\HitStopSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\BattleScene.h">
@@ -435,6 +483,12 @@
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\CharacterDataSaver.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\EffectData.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\EffectDataLoader.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\JsonValue.h">
@@ -538,6 +592,24 @@
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
+    </None>
+    <None Include="assets\EffectData\GuardSpark.json">
+      <Filter>リソース ファイル\EffectData</Filter>
+    </None>
+    <None Include="assets\EffectData\HitSpark.json">
+      <Filter>リソース ファイル\EffectData</Filter>
+    </None>
+    <None Include="assets\Sound\BGM\BGM_Battle01_maou_.wav">
+      <Filter>リソース ファイル\Sound\BGM</Filter>
+    </None>
+    <None Include="assets\Sound\SE\Battle\SE_Hit_Hard_maou.wav">
+      <Filter>リソース ファイル\Sound\SE\Battle</Filter>
+    </None>
+    <None Include="assets\Sound\SE\Battle\SE_Hit_Normal_maou.wav">
+      <Filter>リソース ファイル\Sound\SE\Battle</Filter>
+    </None>
+    <None Include="assets\Settings\AudioSettings.json">
+      <Filter>リソース ファイル\Settings</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -57,10 +57,12 @@ void World::Clear()
 	gameObjects.clear();
 	spawnRequests.clear();
 	destroyRequests.clear();
+	effectSpawnRequests.clear();
 	hitCollisionResults.clear();
 	hitReactionRequests.clear();
 	battlePlayerIds.fill(INVALID_GAME_OBJECT_ID);
 	battleResult = BattleResult::None;
+	hitStopState = {};
 	nextObjectId = 1;
 	activeCameraId = INVALID_GAME_OBJECT_ID;
 }
@@ -234,6 +236,35 @@ void World::RequestDestroy(GameObjectId objectId)
 }
 
 /// <summary>
+/// フレーム終端で生成するエフェクト GameObject のリクエストを追加する。
+/// </summary>
+/// <param name="effectDataId">読み込む EffectData ID。</param>
+/// <param name="position">エフェクトを発生させるワールド座標。</param>
+/// <param name="facingSign">右向きなら +1、左向きなら -1。横方向の反転に使う。</param>
+/// <param name="followTargetId">追従させる対象 GameObject ID。現段階では予約値。</param>
+/// <param name="followTarget">追従エフェクトとして扱う場合は true。</param>
+void World::RequestEffectSpawn(
+	const std::string& effectDataId,
+	const DirectX::SimpleMath::Vector3& position,
+	float facingSign,
+	GameObjectId followTargetId,
+	bool followTarget)
+{
+	if (effectDataId.empty())
+	{
+		return;
+	}
+
+	EffectSpawnRequest request;
+	request.effectDataId = effectDataId;
+	request.position = position;
+	request.facingSign = facingSign >= 0.0f ? 1.0f : -1.0f;
+	request.followTargetId = followTargetId;
+	request.followTarget = followTarget;
+	effectSpawnRequests.push_back(request);
+}
+
+/// <summary>
 /// 蓄積されている生成リクエストを取得する。
 /// </summary>
 /// <returns>読み取り専用の生成リクエスト配列。</returns>
@@ -252,6 +283,15 @@ const std::vector<DestroyRequest>& World::GetDestroyRequests() const
 }
 
 /// <summary>
+/// 蓄積されているエフェクト生成リクエストを取得する。
+/// </summary>
+/// <returns>読み取り専用のエフェクト生成リクエスト配列。</returns>
+const std::vector<EffectSpawnRequest>& World::GetEffectSpawnRequests() const
+{
+	return effectSpawnRequests;
+}
+
+/// <summary>
 /// 生成リクエストをすべて破棄する。
 /// </summary>
 void World::ClearSpawnRequests()
@@ -265,6 +305,14 @@ void World::ClearSpawnRequests()
 void World::ClearDestroyRequests()
 {
 	destroyRequests.clear();
+}
+
+/// <summary>
+/// エフェクト生成リクエストをすべて破棄する。
+/// </summary>
+void World::ClearEffectSpawnRequests()
+{
+	effectSpawnRequests.clear();
 }
 
 /// <summary>
@@ -407,6 +455,70 @@ bool World::HasBattleResult() const
 void World::ClearBattleResult()
 {
 	battleResult = BattleResult::None;
+}
+
+/// <summary>
+/// ヒット/ガード/相打ち確定後、対戦オブジェクトを止めるヒットストップを予約する。
+/// </summary>
+/// <param name="level">今回発生させるヒットストップの段階。</param>
+/// <param name="frames">停止させるフレーム数。</param>
+void World::RequestHitStop(HitStopLevel level, int frames)
+{
+	if (level == HitStopLevel::None || frames <= 0)
+	{
+		return;
+	}
+
+	// 同一フレームで複数ヒットした場合は、長いヒットストップを優先して残す。
+	if (frames >= hitStopState.remainingFrames)
+	{
+		hitStopState.level = level;
+		hitStopState.remainingFrames = frames;
+	}
+}
+
+/// <summary>
+/// 現在発生中のヒットストップを 1 フレーム進める。
+/// </summary>
+void World::AdvanceHitStopFrame()
+{
+	if (hitStopState.remainingFrames <= 0)
+	{
+		hitStopState = {};
+		return;
+	}
+
+	--hitStopState.remainingFrames;
+	if (hitStopState.remainingFrames <= 0)
+	{
+		hitStopState = {};
+	}
+}
+
+/// <summary>
+/// 対戦オブジェクトを止めるヒットストップ中か確認する。
+/// </summary>
+/// <returns>残りヒットストップフレームがあれば true。</returns>
+bool World::IsHitStopActive() const
+{
+	return hitStopState.remainingFrames > 0;
+}
+
+/// <summary>
+/// 現在のヒットストップ状態を取得する。
+/// </summary>
+/// <returns>ヒットストップの残りフレーム数と段階。</returns>
+const HitStopState& World::GetHitStopState() const
+{
+	return hitStopState;
+}
+
+/// <summary>
+/// Scene 終了やリセット時にヒットストップ状態を破棄する。
+/// </summary>
+void World::ClearHitStop()
+{
+	hitStopState = {};
 }
 
 /// <summary>

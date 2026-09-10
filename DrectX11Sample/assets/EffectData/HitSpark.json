@@ -1,0 +1,46 @@
+﻿{
+  "effectDataId": "HitSpark",
+  "displayName": "HitSpark",
+  "totalFrames": 18,
+  "loop": false,
+  "emitters": [
+    {
+      "startFrame": 0,
+      "emitCount": 14,
+      "particleLifeFrames": 12,
+      "texturePath": "",
+      "blendMode": "Additive",
+      "depthEnabled": false,
+      "baseOffset": { "x": 0.0, "y": 0.1, "z": -0.1 },
+      "spawnRange": { "x": 0.16, "y": 0.16 },
+      "velocityMin": { "x": -0.12, "y": -0.04 },
+      "velocityMax": { "x": 0.22, "y": 0.18 },
+      "acceleration": { "x": 0.0, "y": -0.006 },
+      "startScale": 2.38,
+      "endScale": 0.02,
+      "startColor": { "r": 1.0, "g": 0.88, "b": 0.18, "a": 0.95 },
+      "endColor": { "r": 1.0, "g": 0.08, "b": 0.02, "a": 0.0 },
+      "angularVelocityMin": -18.0,
+      "angularVelocityMax": 18.0
+    },
+    {
+      "startFrame": 2,
+      "emitCount": 5,
+      "particleLifeFrames": 10,
+      "texturePath": "",
+      "blendMode": "Alpha",
+      "depthEnabled": false,
+      "baseOffset": { "x": 0.0, "y": 0.1, "z": -0.12 },
+      "spawnRange": { "x": 0.08, "y": 0.08 },
+      "velocityMin": { "x": -0.04, "y": -0.02 },
+      "velocityMax": { "x": 0.08, "y": 0.08 },
+      "acceleration": { "x": 0.0, "y": 0.0 },
+      "startScale": 0.65,
+      "endScale": 0.9,
+      "startColor": { "r": 1.0, "g": 0.25, "b": 0.08, "a": 0.25 },
+      "endColor": { "r": 1.0, "g": 0.15, "b": 0.02, "a": 0.0 },
+      "angularVelocityMin": -3.0,
+      "angularVelocityMax": 3.0
+    }
+  ]
+}

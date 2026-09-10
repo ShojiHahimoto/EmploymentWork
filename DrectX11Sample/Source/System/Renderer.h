@@ -87,6 +87,7 @@ private:
 		DirectX::SimpleMath::Matrix worldViewProjection;
 		DirectX::SimpleMath::Matrix boneMatrices[MaxModelSkinningBoneCount];
 		DirectX::XMINT4 skinningFlags;
+		DirectX::SimpleMath::Color modelColor;
 	};
 
 	static D3D_FEATURE_LEVEL m_FeatureLevel;
@@ -178,6 +179,12 @@ public:
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,
+		const std::vector<DirectX::SimpleMath::Matrix>* skinningMatrices = nullptr);
+	static bool DrawModel(
+		const ModelResource& model,
+		const DirectX::SimpleMath::Matrix& world,
+		const DirectX::SimpleMath::Color& color,
+		bool disableDepth,
 		const std::vector<DirectX::SimpleMath::Matrix>* skinningMatrices = nullptr);
 	static HRESULT LoadTextureFromFile(const std::string& path, ID3D11ShaderResourceView** textureView);
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);

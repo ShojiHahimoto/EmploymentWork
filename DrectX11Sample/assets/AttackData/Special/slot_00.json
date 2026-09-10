@@ -4,6 +4,8 @@
   "attackKind": "Special",
   "commandId": "Hadouken",
   "usableState": "Ground",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Special/slot_00",
   "damage": 1000,
   "hitstunFrames": 24,
   "guardstunFrames": 16,
@@ -28,6 +30,15 @@
       "size": {
         "x": 4.600,
         "y": 3.950
+      }
+    }
+  ],
+  "movementKeys": [
+    {
+      "frame": 28,
+      "offset": {
+        "x": 9.000,
+        "y": 0.000
       }
     }
   ]

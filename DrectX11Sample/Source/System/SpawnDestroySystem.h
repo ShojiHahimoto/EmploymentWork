@@ -9,5 +9,6 @@ public:
 
 private:
 	static void ApplySpawnRequests(World& world);
+	static void ApplyEffectSpawnRequests(World& world);
 	static void ApplyDestroyRequests(World& world);
 };
