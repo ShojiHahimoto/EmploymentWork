@@ -31,6 +31,12 @@
     <Filter Include="ヘッダー ファイル\Scene">
       <UniqueIdentifier>{a0388b16-b301-4a0f-8792-9ba972a4a20b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Controller">
+      <UniqueIdentifier>{a0ef1dbf-9f98-4ea9-b162-6f4b501dbbc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Controller">
+      <UniqueIdentifier>{d45df39e-5509-4a25-95d3-2c14b782d74c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ソース ファイル\World">
       <UniqueIdentifier>{4d533b1e-3ab9-48f2-89f4-127cf6051f7c}</UniqueIdentifier>
     </Filter>
@@ -146,6 +152,18 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\CustomizeScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
@@ -422,6 +440,18 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizePreviewController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\CustomizeScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
@@ -436,6 +466,9 @@
     </ClInclude>
     <ClInclude Include="Source\Scene\TitleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeTypes.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\World\World.h">
       <Filter>ヘッダー ファイル\World</Filter>

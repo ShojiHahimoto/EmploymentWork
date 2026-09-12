@@ -1,93 +1,21 @@
 ﻿#include "Scene/CustomizeScene.h"
 
 #include "Data/AttackDataSaver.h"
-#include "Data/BattleSetupData.h"
-#include "Data/CharacterDataLoader.h"
-#include "Data/CharacterDataSaver.h"
-#include "Data/MotionData.h"
-#include "Data/MotionDataLoader.h"
-#include "Data/MotionDataSaver.h"
-#include "Data/MotionSkeletonDefinition.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
-#include "Resource/ModelResource.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TitleScene.h"
-#include "System/CameraSystem.h"
-#include "System/Debugger.h"
-#include "System/MotionPose.h"
-#include "System/TransformSystem.h"
 #include "System/imgui-docking/imgui.h"
 
-#include <DirectXMath.h>
-
 #include <algorithm>
-#include <cmath>
-#include <cstdio>
-#include <cstddef>
-#include <cstdint>
-#include <filesystem>
-#include <iomanip>
-#include <iterator>
-#include <memory>
-#include <optional>
 #include <sstream>
-#include <vector>
 
 using namespace DirectX::SimpleMath;
-using namespace DirectX;
 
 namespace
 {
-	constexpr const char* AttackDataRootPath = "assets/AttackData";
-	constexpr const char* CharacterDataRootPath = "assets/CharacterData";
 	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
-	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
-	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
-	constexpr float PreviewBoxDepth = 0.08f;
 	constexpr const char* CategoryLabels[] = { "Ground", "Air", "Special" };
-	constexpr const char* CharacterSlotGroupLabels[] = { "Ground", "Air", "Special" };
-	constexpr AttackButtonId AttackButtonValues[] = {
-		AttackButtonId::AttackA,
-		AttackButtonId::AttackB,
-		AttackButtonId::AttackX,
-		AttackButtonId::AttackY
-	};
-	constexpr const char* AttackButtonLabels[] = { "A", "B", "X", "Y" };
-	constexpr AttackUsableState UsableStateValues[] = {
-		AttackUsableState::Ground,
-		AttackUsableState::Air
-	};
-	constexpr const char* UsableStateLabels[] = { "Ground", "Air" };
-	constexpr AttackHeight AttackHeightValues[] = {
-		AttackHeight::High,
-		AttackHeight::Mid,
-		AttackHeight::Low
-	};
-	constexpr const char* AttackHeightLabels[] = { "High", "Mid", "Low" };
-	constexpr HitReactionType HitReactionValues[] = {
-		HitReactionType::Normal,
-		HitReactionType::Down,
-		HitReactionType::Burst,
-		HitReactionType::HardBurst
-	};
-	constexpr const char* HitReactionLabels[] = { "Normal", "Down", "Burst", "HardBurst" };
-	constexpr AttackCommandId CommandValues[] = {
-		AttackCommandId::None,
-		AttackCommandId::Hadouken,
-		AttackCommandId::Shoryuu,
-		AttackCommandId::Yoga,
-		AttackCommandId::ReverseYoga,
-		AttackCommandId::FullRotate
-	};
-	constexpr const char* CommandLabels[] = {
-		"None",
-		"Hadouken",
-		"Shoryuu",
-		"Yoga",
-		"ReverseYoga",
-		"FullRotate"
-	};
 	constexpr const char* CommonMotionLabels[] = {
 		"Idle",
 		"WalkForward",
@@ -103,13 +31,6 @@ namespace
 		"Down",
 		"Wakeup"
 	};
-	struct AttackPickerItem
-	{
-		std::string attackDataId;
-		std::string displayName;
-		AttackData attackData;
-	};
-
 	struct CustomizePreviewLayout
 	{
 		int splitX = 1;
@@ -142,45 +63,6 @@ namespace
 	}
 
 	/// <summary>
-	/// MotionData ID が攻撃モーション用の保存領域を指しているか確認する。
-	/// </summary>
-	/// <param name="motionDataId">確認する MotionData ID。</param>
-	/// <returns>Attack/ から始まる場合は true。</returns>
-	bool IsAttackMotionDataId(const std::string& motionDataId)
-	{
-		return motionDataId.rfind("Attack/", 0) == 0;
-	}
-
-	/// <summary>
-	/// 技プレビュー上のプレイヤー基準位置を取得する。
-	/// </summary>
-	/// <returns>攻撃移動オフセットを足す前の表示基準座標。</returns>
-	Vector3 GetPreviewPlayerBasePosition()
-	{
-		return Vector3(0.0f, 0.0f, 8.0f);
-	}
-
-	/// <summary>
-	/// 編集対象の AttackData ID から JSON ファイルのパスを作る。
-	/// </summary>
-	/// <param name="attackDataId">assets/AttackData から見た拡張子なしの技 ID。</param>
-	/// <returns>読み書き対象の JSON ファイルパス。</returns>
-	std::filesystem::path BuildAttackDataPath(const std::string& attackDataId)
-	{
-		return std::filesystem::path(AttackDataRootPath) / (attackDataId + ".json");
-	}
-
-	/// <summary>
-	/// MotionData ID から JSON ファイルの保存先パスを作る。
-	/// </summary>
-	/// <param name="motionDataId">assets/MotionData から見た拡張子なしのモーション ID。</param>
-	/// <returns>読み書き対象の MotionData JSON ファイルパス。</returns>
-	std::filesystem::path BuildMotionDataPath(const std::string& motionDataId)
-	{
-		return std::filesystem::path("assets/MotionData") / (motionDataId + ".json");
-	}
-
-	/// <summary>
 	/// CustomizeAttackCategory を配列アクセス用の番号へ変換する。
 	/// </summary>
 	/// <param name="category">変換するカテゴリ。</param>
@@ -188,697 +70,6 @@ namespace
 	int ToCategoryIndex(CustomizeAttackCategory category)
 	{
 		return static_cast<int>(category);
-	}
-
-	/// <summary>
-	/// CustomizeCharacterAttackSlotGroup を配列アクセス用の番号へ変換する。
-	/// </summary>
-	/// <param name="group">変換するキャラクター側の技スロット種別。</param>
-	/// <returns>Ground=0, Air=1, Special=2。</returns>
-	int ToCharacterSlotGroupIndex(CustomizeCharacterAttackSlotGroup group)
-	{
-		return static_cast<int>(group);
-	}
-
-	/// <summary>
-	/// 攻撃ボタンを UI 用の短い表示名へ変換する。
-	/// </summary>
-	/// <param name="button">表示する攻撃ボタン。</param>
-	/// <returns>A / B / X / Y の短縮名。</returns>
-	const char* ToAttackButtonShortLabel(AttackButtonId button)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(AttackButtonValues)); ++index)
-		{
-			if (AttackButtonValues[index] == button)
-			{
-				return AttackButtonLabels[index];
-			}
-		}
-
-		return "-";
-	}
-
-	/// <summary>
-	/// 攻撃候補 JSON のパスから、assets/AttackData 基準の拡張子なし ID を作る。
-	/// </summary>
-	/// <param name="attackPath">実際の AttackData JSON パス。</param>
-	/// <returns>AttackList.json に保存する attackDataId。</returns>
-	std::string BuildAttackDataIdFromPath(const std::filesystem::path& attackPath)
-	{
-		std::error_code errorCode;
-		std::filesystem::path relativePath = std::filesystem::relative(attackPath, AttackDataRootPath, errorCode);
-		if (errorCode)
-		{
-			relativePath = attackPath.filename();
-		}
-
-		relativePath.replace_extension();
-		return relativePath.generic_string();
-	}
-
-	/// <summary>
-	/// 通常技カテゴリから、固定する発動可能状態を取得する。
-	/// </summary>
-	/// <param name="category">現在の技カテゴリ。</param>
-	/// <returns>地上カテゴリなら Ground、空中カテゴリなら Air。</returns>
-	AttackUsableState GetFixedNormalUsableState(CustomizeAttackCategory category)
-	{
-		return category == CustomizeAttackCategory::Air
-			? AttackUsableState::Air
-			: AttackUsableState::Ground;
-	}
-
-	/// <summary>
-	/// AttackUsableState を UI 表示用の文字列へ変換する。
-	/// </summary>
-	/// <param name="state">表示する発動可能状態。</param>
-	/// <returns>Ground / Air の表示名。</returns>
-	const char* ToUsableStateLabel(AttackUsableState state)
-	{
-		return state == AttackUsableState::Air ? "Air" : "Ground";
-	}
-
-	/// <summary>
-	/// AttackUsableState の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackUsableState。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindUsableStateIndex(AttackUsableState value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(UsableStateValues)); ++index)
-		{
-			if (UsableStateValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// AttackHeight の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackHeight。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindAttackHeightIndex(AttackHeight value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(AttackHeightValues)); ++index)
-		{
-			if (AttackHeightValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// HitReactionType の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する HitReactionType。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindHitReactionIndex(HitReactionType value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(HitReactionValues)); ++index)
-		{
-			if (HitReactionValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// AttackCommandId の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackCommandId。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindCommandIndex(AttackCommandId value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(CommandValues)); ++index)
-		{
-			if (CommandValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// MotionData のトラック名から編集用部位プルダウンの index を取得する。
-	/// </summary>
-	/// <param name="boneName">MotionData に保存されている部位名または旧実ボーン名。</param>
-	/// <returns>該当するプルダウン index。見つからない場合は RShoulder。</returns>
-	int FindMotionEditorBoneIndex(const std::string& boneName)
-	{
-		const int bodyPartIndex = MotionSkeleton::FindBodyPartIndex(boneName);
-		if (bodyPartIndex >= 0)
-		{
-			return bodyPartIndex;
-		}
-
-		return static_cast<int>(MotionBodyPart::RShoulder);
-	}
-
-	/// <summary>
-	/// 編集用部位プルダウンの index から MotionData に保存する部位名を取得する。
-	/// </summary>
-	/// <param name="index">部位プルダウンの index。</param>
-	/// <returns>MotionData に保存する Head / RShoulder などの部位名。</returns>
-	const char* GetMotionEditorBoneName(int index)
-	{
-		return MotionSkeleton::GetBodyPartName(index);
-	}
-
-	/// <summary>
-	/// MotionData 内から指定部位のトラックを探す。
-	/// </summary>
-	/// <param name="motionData">検索対象の MotionData。</param>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <returns>見つかったトラック。存在しない場合は nullptr。</returns>
-	MotionBoneTrackData* FindMotionTrack(MotionData& motionData, const std::string& boneName)
-	{
-		for (MotionBoneTrackData& track : motionData.boneTracks)
-		{
-			if (track.boneName == boneName)
-			{
-				return &track;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// MotionData 内から指定部位のトラックを探す。
-	/// </summary>
-	/// <param name="motionData">検索対象の MotionData。</param>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <returns>見つかったトラック。存在しない場合は nullptr。</returns>
-	const MotionBoneTrackData* FindMotionTrack(const MotionData& motionData, const std::string& boneName)
-	{
-		for (const MotionBoneTrackData& track : motionData.boneTracks)
-		{
-			if (track.boneName == boneName)
-			{
-				return &track;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// 指定トラックから指定フレームのキーフレームを探す。
-	/// </summary>
-	/// <param name="track">検索対象の部位トラック。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>見つかったキーフレーム。存在しない場合は nullptr。</returns>
-	MotionBoneKeyframeData* FindMotionKeyframe(MotionBoneTrackData& track, int frame)
-	{
-		for (MotionBoneKeyframeData& keyframe : track.keyframes)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// 指定トラックから指定フレームのキーフレームを探す。
-	/// </summary>
-	/// <param name="track">検索対象の部位トラック。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>見つかったキーフレーム。存在しない場合は nullptr。</returns>
-	const MotionBoneKeyframeData* FindMotionKeyframe(const MotionBoneTrackData& track, int frame)
-	{
-		for (const MotionBoneKeyframeData& keyframe : track.keyframes)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// AttackData の movementKeys から指定フレームの移動キーを探す。
-	/// </summary>
-	/// <param name="attackData">検索対象の AttackData。</param>
-	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
-	/// <returns>見つかった移動キー。存在しない場合は nullptr。</returns>
-	AttackMovementKeyData* FindAttackMovementKeyframe(AttackData& attackData, int frame)
-	{
-		for (AttackMovementKeyData& keyframe : attackData.movementKeys)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// AttackData の movementKeys から指定フレームの移動キーを探す。
-	/// </summary>
-	/// <param name="attackData">検索対象の AttackData。</param>
-	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
-	/// <returns>見つかった移動キー。存在しない場合は nullptr。</returns>
-	const AttackMovementKeyData* FindAttackMovementKeyframe(const AttackData& attackData, int frame)
-	{
-		for (const AttackMovementKeyData& keyframe : attackData.movementKeys)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットキーを探す。
-	/// </summary>
-	/// <param name="motionData">検索対象の MotionData。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>見つかったオフセットキー。存在しない場合は nullptr。</returns>
-	MotionRootOffsetKeyData* FindMotionRootOffsetKeyframe(MotionData& motionData, int frame)
-	{
-		for (MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットキーを探す。
-	/// </summary>
-	/// <param name="motionData">検索対象の MotionData。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>見つかったオフセットキー。存在しない場合は nullptr。</returns>
-	const MotionRootOffsetKeyData* FindMotionRootOffsetKeyframe(const MotionData& motionData, int frame)
-	{
-		for (const MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
-		{
-			if (keyframe.frame == frame)
-			{
-				return &keyframe;
-			}
-		}
-
-		return nullptr;
-	}
-
-	/// <summary>
-	/// 攻撃開始位置から見た相対移動量を、movementKeys から線形補間して取得する。
-	/// </summary>
-	/// <param name="attackData">参照する AttackData。</param>
-	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
-	/// <returns>攻撃開始地点からの相対移動量。</returns>
-	Vector2 GetAttackMovementOffsetAtFrame(const AttackData& attackData, int frame)
-	{
-		if (attackData.movementKeys.empty() || frame < 0)
-		{
-			return Vector2::Zero;
-		}
-
-		const AttackMovementKeyData* previousKey = nullptr;
-		const AttackMovementKeyData* nextKey = nullptr;
-		for (const AttackMovementKeyData& keyframe : attackData.movementKeys)
-		{
-			if (keyframe.frame <= frame)
-			{
-				previousKey = &keyframe;
-			}
-			if (keyframe.frame >= frame)
-			{
-				nextKey = &keyframe;
-				break;
-			}
-		}
-
-		if (!previousKey && nextKey)
-		{
-			if (nextKey->frame <= 0)
-			{
-				return nextKey->offset;
-			}
-
-			const float rate = std::clamp(
-				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
-				0.0f,
-				1.0f);
-			return Vector2::Lerp(Vector2::Zero, nextKey->offset, rate);
-		}
-		if (previousKey && !nextKey)
-		{
-			return previousKey->offset;
-		}
-		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
-		{
-			const float rate = std::clamp(
-				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
-				0.0f,
-				1.0f);
-			return Vector2::Lerp(previousKey->offset, nextKey->offset, rate);
-		}
-		if (previousKey)
-		{
-			return previousKey->offset;
-		}
-
-		return Vector2::Zero;
-	}
-
-	/// <summary>
-	/// MotionData の rootOffsetKeys から指定フレームの全身見た目オフセットを線形補間して取得する。
-	/// </summary>
-	/// <param name="motionData">参照する MotionData。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>Transform ではなくモデル描画だけに使うオフセット。</returns>
-	Vector3 GetMotionRootOffsetAtFrame(const MotionData& motionData, int frame)
-	{
-		if (motionData.rootOffsetKeys.empty() || frame < 0)
-		{
-			return Vector3::Zero;
-		}
-
-		const MotionRootOffsetKeyData* previousKey = nullptr;
-		const MotionRootOffsetKeyData* nextKey = nullptr;
-		for (const MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
-		{
-			if (keyframe.frame <= frame)
-			{
-				previousKey = &keyframe;
-			}
-			if (keyframe.frame >= frame)
-			{
-				nextKey = &keyframe;
-				break;
-			}
-		}
-
-		if (!previousKey && nextKey)
-		{
-			if (nextKey->frame <= 0)
-			{
-				return nextKey->offset;
-			}
-
-			const float rate = std::clamp(
-				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(Vector3::Zero, nextKey->offset, rate);
-		}
-		if (motionData.looping && previousKey && !nextKey)
-		{
-			const MotionRootOffsetKeyData& firstKey = motionData.rootOffsetKeys.front();
-			const int totalFrames = std::max(1, motionData.totalFrames);
-			const int frameSpan = (totalFrames - previousKey->frame) + firstKey.frame;
-			const int frameOffset = frame - previousKey->frame;
-			if (frameSpan <= 0)
-			{
-				return previousKey->offset;
-			}
-
-			const float rate = std::clamp(
-				static_cast<float>(frameOffset) / static_cast<float>(frameSpan),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(previousKey->offset, firstKey.offset, rate);
-		}
-		if (previousKey && !nextKey)
-		{
-			return previousKey->offset;
-		}
-		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
-		{
-			const float rate = std::clamp(
-				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(previousKey->offset, nextKey->offset, rate);
-		}
-		if (previousKey)
-		{
-			return previousKey->offset;
-		}
-
-		return Vector3::Zero;
-	}
-
-	/// <summary>
-	/// 指定フレームの攻撃移動キーを追加または上書きする。
-	/// </summary>
-	/// <param name="attackData">編集対象の AttackData。</param>
-	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
-	/// <param name="offset">保存する攻撃開始地点からの相対移動量。</param>
-	void SetAttackMovementKey(AttackData& attackData, int frame, const Vector2& offset)
-	{
-		AttackMovementKeyData* targetKeyframe = FindAttackMovementKeyframe(attackData, frame);
-		if (!targetKeyframe)
-		{
-			AttackMovementKeyData newKeyframe;
-			newKeyframe.frame = frame;
-			attackData.movementKeys.push_back(newKeyframe);
-			targetKeyframe = &attackData.movementKeys.back();
-		}
-
-		targetKeyframe->offset = offset;
-		std::sort(
-			attackData.movementKeys.begin(),
-			attackData.movementKeys.end(),
-			[](const AttackMovementKeyData& left, const AttackMovementKeyData& right)
-			{
-				return left.frame < right.frame;
-			});
-	}
-
-	/// <summary>
-	/// 指定フレームの汎用モーション全身見た目オフセットキーを追加または上書きする。
-	/// </summary>
-	/// <param name="motionData">編集対象の MotionData。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <param name="offset">保存するモデル描画用オフセット。</param>
-	void SetMotionRootOffsetKey(MotionData& motionData, int frame, const Vector3& offset)
-	{
-		MotionRootOffsetKeyData* targetKeyframe = FindMotionRootOffsetKeyframe(motionData, frame);
-		if (!targetKeyframe)
-		{
-			MotionRootOffsetKeyData newKeyframe;
-			newKeyframe.frame = frame;
-			motionData.rootOffsetKeys.push_back(newKeyframe);
-			targetKeyframe = &motionData.rootOffsetKeys.back();
-		}
-
-		targetKeyframe->offset = offset;
-		std::sort(
-			motionData.rootOffsetKeys.begin(),
-			motionData.rootOffsetKeys.end(),
-			[](const MotionRootOffsetKeyData& left, const MotionRootOffsetKeyData& right)
-			{
-				return left.frame < right.frame;
-			});
-	}
-
-	/// <summary>
-	/// 指定部位に回転キーフレームを追加、または既存フレームを上書きする。
-	/// </summary>
-	/// <param name="motionData">編集対象の MotionData。</param>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <param name="rotationEulerDegrees">保存するローカル回転角度。</param>
-	void SetMotionRotationKey(MotionData& motionData, const std::string& boneName, int frame, const Vector3& rotationEulerDegrees)
-	{
-		MotionBoneTrackData* targetTrack = FindMotionTrack(motionData, boneName);
-		if (!targetTrack)
-		{
-			MotionBoneTrackData newTrack;
-			newTrack.boneName = boneName;
-			motionData.boneTracks.push_back(newTrack);
-			targetTrack = &motionData.boneTracks.back();
-		}
-
-		MotionBoneKeyframeData* targetKeyframe = FindMotionKeyframe(*targetTrack, frame);
-		if (!targetKeyframe)
-		{
-			MotionBoneKeyframeData newKeyframe;
-			newKeyframe.frame = frame;
-			targetTrack->keyframes.push_back(newKeyframe);
-			targetKeyframe = &targetTrack->keyframes.back();
-		}
-
-		targetKeyframe->hasRotation = true;
-		targetKeyframe->localRotationEulerDegrees = rotationEulerDegrees;
-		targetKeyframe->localRotation = Quaternion::CreateFromYawPitchRoll(
-			XMConvertToRadians(rotationEulerDegrees.y),
-			XMConvertToRadians(rotationEulerDegrees.x),
-			XMConvertToRadians(rotationEulerDegrees.z));
-		targetKeyframe->localRotation.Normalize();
-	}
-
-	/// <summary>
-	/// 既存キーから指定フレーム付近の回転値を取得し、新規全身キー作成時の初期値に使う。
-	/// </summary>
-	/// <param name="motionData">参照する MotionData。</param>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>指定フレーム用のローカル回転角度。既存情報がなければ 0。</returns>
-	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame)
-	{
-		const MotionBoneTrackData* track = FindMotionTrack(motionData, boneName);
-		if (!track || track->keyframes.empty())
-		{
-			return Vector3::Zero;
-		}
-
-		const MotionBoneKeyframeData* previousKey = nullptr;
-		const MotionBoneKeyframeData* nextKey = nullptr;
-		for (const MotionBoneKeyframeData& keyframe : track->keyframes)
-		{
-			if (!keyframe.hasRotation)
-			{
-				continue;
-			}
-			if (keyframe.frame <= frame)
-			{
-				previousKey = &keyframe;
-			}
-			if (keyframe.frame >= frame)
-			{
-				nextKey = &keyframe;
-				break;
-			}
-		}
-
-		if (previousKey && previousKey->frame == frame)
-		{
-			return previousKey->localRotationEulerDegrees;
-		}
-		if (!previousKey && nextKey)
-		{
-			return nextKey->localRotationEulerDegrees;
-		}
-		if (previousKey && !nextKey)
-		{
-			return previousKey->localRotationEulerDegrees;
-		}
-		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
-		{
-			const float rate = static_cast<float>(frame - previousKey->frame)
-				/ static_cast<float>(nextKey->frame - previousKey->frame);
-			return Vector3::Lerp(previousKey->localRotationEulerDegrees, nextKey->localRotationEulerDegrees, rate);
-		}
-
-		return Vector3::Zero;
-	}
-
-	/// <summary>
-	/// ImGui の入力後に、フレームやダメージが負数にならないよう補正する。
-	/// </summary>
-	/// <param name="attackData">補正する AttackData。</param>
-	void ClampAttackDataValues(AttackData& attackData)
-	{
-		attackData.damage = std::max(0, attackData.damage);
-		attackData.hitstunFrames = std::max(0, attackData.hitstunFrames);
-		attackData.guardstunFrames = std::max(0, attackData.guardstunFrames);
-		attackData.frame.startup = std::max(2, attackData.frame.startup);
-		attackData.frame.active = std::max(0, attackData.frame.active);
-		attackData.frame.recovery = std::max(0, attackData.frame.recovery);
-		if (attackData.usableState != AttackUsableState::Air)
-		{
-			attackData.usableState = AttackUsableState::Ground;
-		}
-		if (attackData.usableState == AttackUsableState::Air)
-		{
-			attackData.hitReactionType = HitReactionType::Normal;
-		}
-		if (attackData.attackHeight == AttackHeight::Unknown)
-		{
-			attackData.attackHeight = AttackHeight::High;
-		}
-
-		for (AttackHitboxData& hitbox : attackData.hitboxes)
-		{
-			hitbox.size.x = std::max(0.0f, hitbox.size.x);
-			hitbox.size.y = std::max(0.0f, hitbox.size.y);
-		}
-
-		const int totalFrames = GetAttackTotalFrames(attackData.frame);
-		const int maxActionFrame = totalFrames - 1;
-		for (AttackMovementKeyData& movementKey : attackData.movementKeys)
-		{
-			movementKey.frame = std::clamp(movementKey.frame, 0, maxActionFrame);
-		}
-		std::sort(
-			attackData.movementKeys.begin(),
-			attackData.movementKeys.end(),
-			[](const AttackMovementKeyData& left, const AttackMovementKeyData& right)
-			{
-				return left.frame < right.frame;
-			});
-		attackData.cancelSetting.startFrame = std::max(0, attackData.cancelSetting.startFrame);
-		attackData.cancelSetting.startFrame = std::min(attackData.cancelSetting.startFrame, maxActionFrame);
-		attackData.cancelSetting.endFrame = std::max(attackData.cancelSetting.startFrame, attackData.cancelSetting.endFrame);
-		attackData.cancelSetting.endFrame = std::min(attackData.cancelSetting.endFrame, maxActionFrame);
-		attackData.cancelSetting.cancelTypes.erase(
-			std::remove(attackData.cancelSetting.cancelTypes.begin(), attackData.cancelSetting.cancelTypes.end(), AttackCancelType::Unknown),
-			attackData.cancelSetting.cancelTypes.end());
-	}
-
-	/// <summary>
-	/// 指定したキャンセル種別がキャンセル設定に含まれているか確認する。
-	/// </summary>
-	/// <param name="cancelTypes">確認対象のキャンセル種別配列。</param>
-	/// <param name="cancelType">探すキャンセル種別。</param>
-	/// <returns>含まれている場合は true。</returns>
-	bool HasCancelType(const std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType)
-	{
-		return std::find(cancelTypes.begin(), cancelTypes.end(), cancelType) != cancelTypes.end();
-	}
-
-	/// <summary>
-	/// ImGui のチェック状態に合わせて、キャンセル種別を追加または削除する。
-	/// </summary>
-	/// <param name="cancelTypes">編集するキャンセル種別配列。</param>
-	/// <param name="cancelType">切り替えるキャンセル種別。</param>
-	/// <param name="enabled">true なら追加、false なら削除する。</param>
-	void SetCancelTypeEnabled(std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType, bool enabled)
-	{
-		const auto found = std::find(cancelTypes.begin(), cancelTypes.end(), cancelType);
-		if (enabled)
-		{
-			if (found == cancelTypes.end())
-			{
-				cancelTypes.push_back(cancelType);
-			}
-			return;
-		}
-
-		if (found != cancelTypes.end())
-		{
-			cancelTypes.erase(found);
-		}
 	}
 }
 
@@ -953,13 +144,13 @@ void CustomizeScene::Draw(Renderer& renderer)
 		DrawCommonMotionSelect();
 		break;
 	case CustomizeMode::CharacterSlotSelect:
-		DrawCharacterSlotSelect();
+		mode = characterEditor.DrawSlotSelect(statusMessage);
 		break;
 	case CustomizeMode::CharacterEditor:
-		DrawCharacterEditor();
+		mode = characterEditor.DrawEditor(statusMessage);
 		break;
 	case CustomizeMode::AttackPicker:
-		DrawAttackPicker();
+		mode = characterEditor.DrawAttackPicker(statusMessage);
 		break;
 	default:
 		DrawMainMenu();
@@ -1085,7 +276,7 @@ void CustomizeScene::DrawMainMenu()
 
 		if (ImGui::Button("Character Editor", ImVec2(220.0f, 32.0f)))
 		{
-			RefreshCharacterSlotSummaries();
+			characterEditor.RefreshSlotSummaries();
 			mode = CustomizeMode::CharacterSlotSelect;
 		}
 
@@ -1222,8 +413,8 @@ void CustomizeScene::DrawAttackEditor(Renderer& renderer)
 	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
 	if (ImGui::Begin("Attack Playback", nullptr, layout.fixedFlags))
 	{
-		ImGui::Text("Editing: %s", editingAttackDataId.c_str());
-		ImGui::Text("Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
+		ImGui::Text("Editing: %s", attackEditor.GetEditingAttackDataId().c_str());
+		ImGui::Text("Frame: %d / %d", previewController.GetCurrentFrame(), GetPreviewTotalFrames());
 		ImGui::Text("Phase: %s", GetPreviewPhaseText());
 		DrawPreviewPlaybackControls();
 	}
@@ -1251,7 +442,7 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 	{
 		EnsureDraftAttackMotionDataId();
 	}
-	if (!hasDraftMotion)
+	if (!motionEditor.HasDraft())
 	{
 		LoadDraftMotionFromEditorId();
 	}
@@ -1264,7 +455,7 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
 	if (ImGui::Begin("Motion Playback", nullptr, layout.fixedFlags))
 	{
-		ImGui::Text("Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
+		ImGui::Text("Frame: %d / %d", previewController.GetCurrentFrame(), GetPreviewTotalFrames());
 		ImGui::Text("Phase: %s", GetPreviewPhaseText());
 		DrawPreviewPlaybackControls();
 	}
@@ -1280,15 +471,24 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 		}
 		else
 		{
-			ImGui::Text("Attack: %s", editingAttackDataId.c_str());
+			ImGui::Text("Attack: %s", attackEditor.GetEditingAttackDataId().c_str());
 		}
-		ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
+		ImGui::Text("MotionData ID: %s", attackEditor.GetMotionDataIdBuffer().data());
 		ImGui::Separator();
 		ImGui::Text("Preview Camera");
-		ImGui::SliderFloat("Camera Yaw", &previewCameraYawDegrees, -180.0f, 180.0f);
-		ImGui::SliderFloat("Camera Pitch", &previewCameraPitchDegrees, -45.0f, 65.0f);
-		ImGui::SliderFloat("Camera Distance", &previewCameraDistance, 5.0f, 30.0f);
-		DrawMotionEditor();
+		ImGui::SliderFloat("Camera Yaw", &previewController.GetCameraYawDegrees(), -180.0f, 180.0f);
+		ImGui::SliderFloat("Camera Pitch", &previewController.GetCameraPitchDegrees(), -45.0f, 65.0f);
+		ImGui::SliderFloat("Camera Distance", &previewController.GetCameraDistance(), 5.0f, 30.0f);
+		if (motionEditor.DrawEditor(
+			attackEditor.GetDraft(),
+			previewController,
+			editingCommonMotion,
+			GetPreviewTotalFrames(),
+			statusMessage,
+			attackMovementKeyOffset))
+		{
+			SaveDraftMotion();
+		}
 
 		ImGui::Separator();
 		if (ImGui::Button(editingCommonMotion ? "Back To Common Motion Select" : "Back To Attack Editor", ImVec2(240.0f, 30.0f)))
@@ -1302,73 +502,18 @@ void CustomizeScene::DrawMotionEditorScreen(Renderer& renderer)
 }
 
 /// <summary>
-/// 左側の技プレビューウィンドウを描画し、再生ボタンで previewCurrentFrame を操作する。
-/// </summary>
-/// <param name="renderer">RenderTexture 表示のために受け取る Renderer。描画本体は RenderAttackPreview 側で行う。</param>
-void CustomizeScene::DrawAttackPreviewWindow(Renderer& renderer)
-{
-	(void)renderer;
-
-	ImGui::SetNextWindowPos(ImVec2(20.0f, 20.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 40.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Preview"))
-	{
-		ImGui::Text("Editing: %s", editingAttackDataId.c_str());
-		ImGui::Text("Phase: %s", GetPreviewPhaseText());
-		ImGui::Text("Current Frame: %d / %d", previewCurrentFrame, GetPreviewTotalFrames());
-		ImGui::Separator();
-
-		if (previewRenderTexture.shaderResourceView)
-		{
-			const ImVec2 availableSize = ImGui::GetContentRegionAvail();
-			const float reservedControlHeight = 80.0f;
-			const float textureAspect = static_cast<float>(PreviewTextureWidth) / static_cast<float>(PreviewTextureHeight);
-			ImVec2 imageSize(
-				std::max(1.0f, availableSize.x),
-				std::max(120.0f, availableSize.y - reservedControlHeight));
-
-			if (imageSize.x / imageSize.y > textureAspect)
-			{
-				imageSize.x = imageSize.y * textureAspect;
-			}
-			else
-			{
-				imageSize.y = imageSize.x / textureAspect;
-			}
-
-			ImGui::Image(
-				static_cast<ImTextureID>(reinterpret_cast<uintptr_t>(previewRenderTexture.shaderResourceView)),
-				imageSize,
-				ImVec2(0.0f, 0.0f),
-				ImVec2(1.0f, 1.0f));
-		}
-		else
-		{
-			ImGui::TextWrapped("Preview RenderTexture is not available.");
-		}
-
-		DrawPreviewPlaybackControls();
-	}
-	ImGui::End();
-}
-
-/// <summary>
 /// プレビュー再生と1フレーム送り・戻しの共通操作を描画する。
 /// </summary>
 void CustomizeScene::DrawPreviewPlaybackControls()
 {
 	if (ImGui::Button("Play", ImVec2(72.0f, 28.0f)))
 	{
-		if (previewCurrentFrame >= GetPreviewTotalFrames())
-		{
-			previewCurrentFrame = 0;
-		}
-		previewPlaying = true;
+		previewController.Play(GetPreviewTotalFrames());
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Stop", ImVec2(72.0f, 28.0f)))
 	{
-		previewPlaying = false;
+		previewController.Stop();
 	}
 	if (ImGui::GetContentRegionAvail().x >= 320.0f)
 	{
@@ -1404,682 +549,21 @@ void CustomizeScene::DrawAttackEditorWindow()
 /// </summary>
 void CustomizeScene::DrawAttackEditorControls()
 {
-	ImGui::Text("Slot: %s", editingAttackDataId.c_str());
-	ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
-	ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
-
-	ImGui::Separator();
-	ImGui::InputInt("Damage", &draftAttack.damage);
-	ImGui::InputInt("Hitstun Frames", &draftAttack.hitstunFrames);
-	ImGui::InputInt("Guardstun Frames", &draftAttack.guardstunFrames);
-	int attackHeightIndex = FindAttackHeightIndex(draftAttack.attackHeight);
-	if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
+	const CustomizeAttackEditorAction action = attackEditor.DrawEditorControls(GetPreviewTotalFrames(), statusMessage);
+	if (action == CustomizeAttackEditorAction::OpenMotionEditor)
 	{
-		draftAttack.attackHeight = AttackHeightValues[attackHeightIndex];
-	}
-
-	ImGui::Separator();
-	ImGui::InputInt("Startup", &draftAttack.frame.startup);
-	ImGui::InputInt("Active", &draftAttack.frame.active);
-	ImGui::InputInt("Recovery", &draftAttack.frame.recovery);
-
-	ImGui::Separator();
-	if (selectedCategory == CustomizeAttackCategory::Special)
-	{
-		int usableIndex = FindUsableStateIndex(draftAttack.usableState);
-		if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
-		{
-			draftAttack.usableState = UsableStateValues[usableIndex];
-		}
-	}
-	else
-	{
-		draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
-		ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draftAttack.usableState));
-	}
-
-	if (draftAttack.usableState == AttackUsableState::Air)
-	{
-		draftAttack.hitReactionType = HitReactionType::Normal;
-		ImGui::Text("Hit Reaction: Normal (Fixed for Air)");
-	}
-	else
-	{
-		int reactionIndex = FindHitReactionIndex(draftAttack.hitReactionType);
-		if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
-		{
-			draftAttack.hitReactionType = HitReactionValues[reactionIndex];
-		}
-	}
-
-	if (selectedCategory == CustomizeAttackCategory::Special)
-	{
-		int commandIndex = FindCommandIndex(draftAttack.commandId);
-		if (ImGui::Combo("Command", &commandIndex, CommandLabels, static_cast<int>(std::size(CommandLabels))))
-		{
-			draftAttack.commandId = CommandValues[commandIndex];
-		}
-	}
-	else
-	{
-		draftAttack.commandId = AttackCommandId::None;
-	}
-
-	DrawHitboxEditor();
-	DrawCancelSettingEditor();
-	ImGui::Separator();
-	if (ImGui::Button("Open Motion Editor", ImVec2(180.0f, 28.0f)))
-	{
-		EnsureDraftAttackMotionDataId();
 		LoadDraftMotionFromEditorId();
 		mode = CustomizeMode::MotionEditor;
+		ClampPreviewCurrentFrame();
+		return;
 	}
-	ClampAttackDataValues(draftAttack);
-	ClampPreviewCurrentFrame();
-
-	ImGui::Separator();
-	if (ImGui::Button("Save", ImVec2(120.0f, 30.0f)))
-	{
-		SaveDraftAttack();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
+	if (action == CustomizeAttackEditorAction::Back)
 	{
 		NavigateBack();
-	}
-
-	if (!statusMessage.empty())
-	{
-		ImGui::TextWrapped("%s", statusMessage.c_str());
-	}
-}
-
-/// <summary>
-/// 技に含まれる全 AttackBox の位置と大きさを編集する。
-/// </summary>
-void CustomizeScene::DrawHitboxEditor()
-{
-	ImGui::Separator();
-	ImGui::Text("AttackBoxes");
-
-	for (size_t index = 0; index < draftAttack.hitboxes.size();)
-	{
-		ImGui::PushID(static_cast<int>(index));
-		AttackHitboxData& hitbox = draftAttack.hitboxes[index];
-
-		ImGui::Text("AttackBox %zu", index);
-		ImGui::DragFloat2("AttackBox Offset X / Y", &hitbox.offset.x, 0.05f);
-		ImGui::DragFloat2("AttackBox Size Width / Height", &hitbox.size.x, 0.05f, 0.0f, 100.0f);
-
-		bool deleted = false;
-		if (draftAttack.hitboxes.size() > 1
-			&& ImGui::Button("Delete AttackBox", ImVec2(150.0f, 24.0f)))
-		{
-			draftAttack.hitboxes.erase(draftAttack.hitboxes.begin() + static_cast<std::ptrdiff_t>(index));
-			deleted = true;
-		}
-
-		ImGui::PopID();
-		if (!deleted)
-		{
-			++index;
-		}
-	}
-
-	if (ImGui::Button("Add AttackBox", ImVec2(150.0f, 26.0f)))
-	{
-		AttackHitboxData hitbox;
-		hitbox.offset = Vector2(2.5f, 4.0f);
-		hitbox.size = Vector2(2.0f, 2.0f);
-		draftAttack.hitboxes.push_back(hitbox);
-	}
-}
-
-/// <summary>
-/// 技のキャンセル設定として、可能フレームと許可するキャンセル種別を編集する。
-/// </summary>
-void CustomizeScene::DrawCancelSettingEditor()
-{
-	ImGui::Separator();
-	ImGui::Text("Cancel Setting");
-
-	const bool wasAttackCancelEnabled = draftAttack.canAttackCancel;
-	if (ImGui::Checkbox("Can Attack Cancel", &draftAttack.canAttackCancel)
-		&& draftAttack.canAttackCancel
-		&& !wasAttackCancelEnabled
-		&& draftAttack.cancelSetting.startFrame == 0
-		&& draftAttack.cancelSetting.endFrame == 0
-		&& draftAttack.cancelSetting.cancelTypes.empty())
-	{
-		draftAttack.cancelSetting.startFrame = GetAttackActiveEndFrameExclusive(draftAttack.frame);
-		draftAttack.cancelSetting.endFrame = std::max(draftAttack.cancelSetting.startFrame, GetPreviewTotalFrames() - 1);
-		draftAttack.cancelSetting.cancelTypes.push_back(AttackCancelType::Special);
-	}
-
-	if (!draftAttack.canAttackCancel)
-	{
-		ImGui::TextDisabled("Cancel setting data is kept in this draft while hidden.");
 		return;
 	}
 
-	AttackCancelSettingData& cancelSetting = draftAttack.cancelSetting;
-	// UI 表示はプレビューと同じ 1 始まりにし、内部データだけ 0 始まりを維持する。
-	int displayStartFrame = std::max(1, cancelSetting.startFrame + 1);
-	int displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
-	if (ImGui::InputInt("Cancel Start Frame (Preview 1F)", &displayStartFrame))
-	{
-		displayStartFrame = std::max(1, displayStartFrame);
-		cancelSetting.startFrame = displayStartFrame - 1;
-		cancelSetting.endFrame = std::max(cancelSetting.startFrame, cancelSetting.endFrame);
-	}
-	displayStartFrame = cancelSetting.startFrame + 1;
-	displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
-	if (ImGui::InputInt("Cancel End Frame (Preview 1F)", &displayEndFrame))
-	{
-		displayEndFrame = std::max(displayStartFrame, displayEndFrame);
-		cancelSetting.endFrame = displayEndFrame - 1;
-	}
-
-	bool normalEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Normal);
-	bool specialEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Special);
-	bool jumpEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Jump);
-	if (ImGui::Checkbox("Normal Cancel", &normalEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Normal, normalEnabled);
-	}
-	ImGui::SameLine();
-	if (ImGui::Checkbox("Special Cancel", &specialEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Special, specialEnabled);
-	}
-	ImGui::SameLine();
-	if (ImGui::Checkbox("Jump Cancel", &jumpEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Jump, jumpEnabled);
-	}
-}
-
-/// <summary>
-/// AttackData に紐づく MotionData の最低限の編集項目を描画する。
-/// </summary>
-void CustomizeScene::DrawMotionEditor()
-{
-	ImGui::Separator();
-	if (!hasDraftMotion)
-	{
-		ImGui::TextDisabled("No MotionData loaded.");
-		return;
-	}
-
-	ImGui::InputText("Motion Name", motionDisplayNameBuffer.data(), motionDisplayNameBuffer.size());
-	if (editingCommonMotion)
-	{
-		ImGui::InputInt("Motion Total Frames", &draftMotion.totalFrames);
-		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
-		ImGui::Checkbox("Motion Looping", &draftMotion.looping);
-		ClampPreviewCurrentFrame();
-	}
-	else
-	{
-		draftMotion.totalFrames = GetPreviewTotalFrames();
-		ImGui::Text("Motion Total Frames: %d (AttackData)", draftMotion.totalFrames);
-		draftMotion.looping = false;
-		ImGui::Text("Motion Looping: false (Attack Motion)");
-	}
-
-	const int actionFrame = GetPreviewActionFrame();
-	const bool canEditCurrentFrame = HasMotionKeyframeAtPreviewFrame();
-	const bool hasMovementKey = HasAttackMovementKeyframeAtPreviewFrame();
-	const bool hasRootOffsetKey = HasMotionRootOffsetKeyframeAtPreviewFrame();
-	ImGui::Text("Selected Key Frame: %d", std::max(0, actionFrame));
-
-	if (ImGui::Button("Add Whole Body Keyframe", ImVec2(210.0f, 28.0f)))
-	{
-		AddWholeBodyMotionKeyframeAtPreviewFrame();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Delete Current Keyframe", ImVec2(190.0f, 28.0f)))
-	{
-		DeleteWholeBodyMotionKeyframeAtPreviewFrame();
-	}
-	ImGui::SameLine();
-	ImGui::BeginDisabled(!canEditCurrentFrame);
-	if (ImGui::Button("Copy Pose", ImVec2(100.0f, 28.0f)))
-	{
-		CopyWholeBodyMotionPoseAtPreviewFrame();
-	}
-	ImGui::SameLine();
-	ImGui::BeginDisabled(!hasCopiedMotionPose);
-	if (ImGui::Button("Paste Pose", ImVec2(100.0f, 28.0f)))
-	{
-		PasteWholeBodyMotionPoseAtPreviewFrame();
-	}
-	ImGui::EndDisabled();
-	ImGui::SameLine();
-	if (ImGui::Button("T Pose", ImVec2(90.0f, 28.0f)))
-	{
-		ApplyTPosePresetAtPreviewFrame();
-	}
-	ImGui::EndDisabled();
-
-	ImGui::Separator();
-	ImGui::Text("Pose Edit");
-	if (!canEditCurrentFrame)
-	{
-		ImGui::TextDisabled("Add a keyframe to this frame before editing the pose.");
-	}
-
-	ImGui::BeginDisabled(!canEditCurrentFrame);
-	const int previousBoneIndex = selectedMotionEditorBoneIndex;
-	bool partChanged = false;
-	if (ImGui::BeginCombo("Target Part", GetMotionEditorBoneName(selectedMotionEditorBoneIndex)))
-	{
-		for (int bodyPartIndex = 0; bodyPartIndex < MotionEditorBoneCount; ++bodyPartIndex)
-		{
-			const bool isSelected = selectedMotionEditorBoneIndex == bodyPartIndex;
-			if (ImGui::Selectable(GetMotionEditorBoneName(bodyPartIndex), isSelected))
-			{
-				selectedMotionEditorBoneIndex = bodyPartIndex;
-				partChanged = true;
-			}
-			if (isSelected)
-			{
-				ImGui::SetItemDefaultFocus();
-			}
-		}
-		ImGui::EndCombo();
-	}
-	if (partChanged && previousBoneIndex != selectedMotionEditorBoneIndex && canEditCurrentFrame)
-	{
-		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame);
-	}
-	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &motionKeyRotationEulerDegrees.x, 0.5f))
-	{
-		SetMotionRotationKeyAtPreviewFrame();
-	}
-	ImGui::EndDisabled();
-
-	if (!editingCommonMotion)
-	{
-		ImGui::Separator();
-		ImGui::Text("Attack Movement Edit");
-		if (actionFrame < 0)
-		{
-			ImGui::TextDisabled("Select preview frame 1 or later before editing attack movement.");
-		}
-
-		ImGui::BeginDisabled(actionFrame < 0);
-		if (ImGui::Button("Add Movement Keyframe", ImVec2(190.0f, 28.0f)))
-		{
-			AddAttackMovementKeyframeAtPreviewFrame();
-		}
-		ImGui::SameLine();
-		ImGui::BeginDisabled(!hasMovementKey);
-		if (ImGui::Button("Delete Movement Keyframe", ImVec2(210.0f, 28.0f)))
-		{
-			DeleteAttackMovementKeyframeAtPreviewFrame();
-		}
-		ImGui::EndDisabled();
-
-		ImGui::BeginDisabled(!hasMovementKey);
-		if (ImGui::DragFloat2("Attack Movement Offset Forward / Up", &attackMovementKeyOffset.x, 0.05f))
-		{
-			SetAttackMovementKeyAtPreviewFrame();
-		}
-		ImGui::EndDisabled();
-		ImGui::EndDisabled();
-	}
-	else
-	{
-		ImGui::Separator();
-		ImGui::Text("Common Motion Visual Offset Edit");
-		if (actionFrame < 0)
-		{
-			ImGui::TextDisabled("Select preview frame 1 or later before editing common motion offset.");
-		}
-
-		ImGui::BeginDisabled(actionFrame < 0);
-		if (ImGui::Button("Add Visual Offset Keyframe", ImVec2(220.0f, 28.0f)))
-		{
-			AddMotionRootOffsetKeyframeAtPreviewFrame();
-		}
-		ImGui::SameLine();
-		ImGui::BeginDisabled(!hasRootOffsetKey);
-		if (ImGui::Button("Delete Visual Offset Keyframe", ImVec2(230.0f, 28.0f)))
-		{
-			DeleteMotionRootOffsetKeyframeAtPreviewFrame();
-		}
-		ImGui::EndDisabled();
-
-		ImGui::BeginDisabled(!hasRootOffsetKey);
-		if (ImGui::DragFloat3("Visual Offset X / Y / Z", &motionRootOffsetKey.x, 0.05f))
-		{
-			SetMotionRootOffsetKeyAtPreviewFrame();
-		}
-		ImGui::EndDisabled();
-		ImGui::EndDisabled();
-	}
-
-	ImGui::Separator();
-	if (ImGui::Button("Save MotionData", ImVec2(160.0f, 28.0f)))
-	{
-		SaveDraftMotion();
-	}
-
-	DrawMotionTimeline();
-
-	if (!statusMessage.empty())
-	{
-		ImGui::TextWrapped("%s", statusMessage.c_str());
-	}
-}
-
-/// <summary>
-/// モーション編集画面下部に、現在フレームとキーフレーム位置を簡易表示する。
-/// </summary>
-void CustomizeScene::DrawMotionTimeline()
-{
-	ImGui::Separator();
-	ImGui::Text("Timeline");
-
-	const int totalFrames = GetPreviewTotalFrames();
-	for (int previewFrame = 0; previewFrame <= totalFrames; ++previewFrame)
-	{
-		const int actionFrame = previewFrame - 1;
-		bool hasKey = false;
-		bool hasMovementKey = false;
-		bool hasRootOffsetKey = false;
-		if (actionFrame >= 0)
-		{
-			for (const MotionBoneTrackData& track : draftMotion.boneTracks)
-			{
-				if (FindMotionKeyframe(track, actionFrame))
-				{
-					hasKey = true;
-					break;
-				}
-			}
-
-			hasMovementKey = !editingCommonMotion && FindAttackMovementKeyframe(draftAttack, actionFrame);
-			hasRootOffsetKey = editingCommonMotion && FindMotionRootOffsetKeyframe(draftMotion, actionFrame);
-		}
-
-		ImGui::PushID(previewFrame);
-		std::string label;
-		if (previewFrame == 0)
-		{
-			label = "Idle";
-		}
-		else
-		{
-			const std::string marker = hasKey && hasMovementKey
-				? "*M"
-				: hasKey
-					? "*"
-					: hasMovementKey
-						? "M"
-						: hasRootOffsetKey
-							? "R"
-							: "";
-			label = marker + std::to_string(actionFrame);
-		}
-
-		const bool selected = previewCurrentFrame == previewFrame;
-		if (selected)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.95f, 0.75f, 0.10f, 0.85f));
-		}
-		else if (hasKey && hasMovementKey)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.75f, 0.95f, 0.85f));
-		}
-		else if (hasKey)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.45f, 0.95f, 0.85f));
-		}
-		else if (hasMovementKey)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.60f, 0.85f, 0.85f));
-		}
-		else if (hasRootOffsetKey)
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.70f, 0.35f, 0.85f));
-		}
-
-		if (ImGui::Button(label.c_str(), ImVec2(46.0f, 28.0f)))
-		{
-			previewPlaying = false;
-			previewCurrentFrame = previewFrame;
-			const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-			motionKeyRotationEulerDegrees = actionFrame >= 0
-				? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
-				: Vector3::Zero;
-			attackMovementKeyOffset = actionFrame >= 0
-				? GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
-				: Vector2::Zero;
-			motionRootOffsetKey = actionFrame >= 0
-				? GetMotionRootOffsetAtFrame(draftMotion, actionFrame)
-				: Vector3::Zero;
-		}
-
-		if (selected || hasKey || hasMovementKey || hasRootOffsetKey)
-		{
-			ImGui::PopStyleColor();
-		}
-
-		if ((previewFrame + 1) % 10 != 0 && previewFrame < totalFrames)
-		{
-			ImGui::SameLine();
-		}
-		ImGui::PopID();
-	}
-}
-
-/// <summary>
-/// キャラクター作成スロットの一覧を描画する。
-/// </summary>
-void CustomizeScene::DrawCharacterSlotSelect()
-{
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(560.0f, 420.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Character Slots"))
-	{
-		if (ImGui::Button("Refresh Character Slots", ImVec2(180.0f, 28.0f)))
-		{
-			RefreshCharacterSlotSummaries();
-		}
-		ImGui::Separator();
-
-		for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
-		{
-			ImGui::PushID(slotIndex);
-			const std::string label = BuildCharacterSlotButtonLabel(slotIndex);
-			if (ImGui::Button(label.c_str(), ImVec2(170.0f, 58.0f)))
-			{
-				SelectCharacterSlot(slotIndex);
-			}
-			ImGui::PopID();
-
-			if ((slotIndex + 1) % 3 != 0)
-			{
-				ImGui::SameLine();
-			}
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			NavigateBack();
-		}
-	}
-	ImGui::End();
-}
-
-/// <summary>
-/// キャラクター名と各攻撃ボタンの技割り当てを編集する。
-/// </summary>
-void CustomizeScene::DrawCharacterEditor()
-{
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(720.0f, 620.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Character Editor"))
-	{
-		ImGui::Text("Character Id: %s", draftCharacterParameter.characterId.c_str());
-		ImGui::InputText("Character Name", characterNameBuffer.data(), characterNameBuffer.size());
-
-		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Ground, "Ground Attack Slots");
-		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Air, "Air Attack Slots");
-		DrawCharacterAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Special, "Special Attack Slots");
-
-		ImGui::Separator();
-		if (ImGui::Button("Save Character", ImVec2(150.0f, 30.0f)))
-		{
-			SaveDraftCharacter();
-		}
-		ImGui::SameLine();
-		if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
-		{
-			NavigateBack();
-		}
-
-		if (!statusMessage.empty())
-		{
-			ImGui::TextWrapped("%s", statusMessage.c_str());
-		}
-	}
-	ImGui::End();
-}
-
-/// <summary>
-/// 指定したキャラクター側スロットグループの割り当て一覧を描画する。
-/// </summary>
-/// <param name="group">描画するスロットグループ。</param>
-/// <param name="label">ImGui に表示するグループ名。</param>
-void CustomizeScene::DrawCharacterAttackSlotGroup(
-	CustomizeCharacterAttackSlotGroup group,
-	const char* label)
-{
-	ImGui::Separator();
-	ImGui::Text("%s", label);
-
-	std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
-		GetCharacterAttackSlotDrafts(group);
-	const bool isSpecial = group == CustomizeCharacterAttackSlotGroup::Special;
-	for (int slotIndex = 0; slotIndex < CharacterAttackButtonSlotCount; ++slotIndex)
-	{
-		CustomizeCharacterAttackSlotDraft& draft = drafts[slotIndex];
-		const std::string assignedName = draft.attackDataId.empty()
-			? (isSpecial ? "(Empty)" : "(Required)")
-			: (draft.attackDisplayName.empty() ? draft.attackDataId : draft.attackDisplayName);
-
-		ImGui::PushID(static_cast<int>(group) * 10 + slotIndex);
-		ImGui::Text("%s Slot %s: %s",
-			CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(group)],
-			ToAttackButtonShortLabel(draft.button),
-			assignedName.c_str());
-		ImGui::SameLine(360.0f);
-		if (ImGui::Button("Select", ImVec2(90.0f, 24.0f)))
-		{
-			pickingSlotGroup = group;
-			pickingSlotIndex = slotIndex;
-			mode = CustomizeMode::AttackPicker;
-		}
-
-		if (isSpecial)
-		{
-			ImGui::SameLine();
-			if (ImGui::Button("Clear", ImVec2(80.0f, 24.0f)))
-			{
-				draft.attackDataId.clear();
-				draft.attackDisplayName.clear();
-			}
-		}
-		ImGui::PopID();
-	}
-}
-
-/// <summary>
-/// 現在選択中のキャラクター側スロットへ割り当てる AttackData 候補を描画する。
-/// </summary>
-void CustomizeScene::DrawAttackPicker()
-{
-	std::vector<AttackPickerItem> pickerItems;
-	const std::filesystem::path rootPath(AttackDataRootPath);
-	std::error_code errorCode;
-	if (std::filesystem::exists(rootPath, errorCode))
-	{
-		for (const std::filesystem::directory_entry& entry :
-			std::filesystem::recursive_directory_iterator(rootPath, errorCode))
-		{
-			if (errorCode)
-			{
-				break;
-			}
-			if (!entry.is_regular_file(errorCode) || entry.path().extension() != ".json")
-			{
-				continue;
-			}
-
-			const std::string attackDataId = BuildAttackDataIdFromPath(entry.path());
-			AttackData attackData;
-			if (!CharacterDataLoader::LoadAttackData(attackDataId, attackData)
-				|| !IsAttackCompatibleWithCharacterSlotGroup(pickingSlotGroup, attackData))
-			{
-				continue;
-			}
-
-			AttackPickerItem item;
-			item.attackDataId = attackDataId;
-			item.displayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
-			item.attackData = attackData;
-			pickerItems.push_back(item);
-		}
-	}
-
-	std::sort(
-		pickerItems.begin(),
-		pickerItems.end(),
-		[](const AttackPickerItem& lhs, const AttackPickerItem& rhs)
-		{
-			return lhs.attackDataId < rhs.attackDataId;
-		});
-
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(620.0f, 520.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Select Attack Data"))
-	{
-		const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
-			GetCharacterAttackSlotDrafts(pickingSlotGroup);
-		const CustomizeCharacterAttackSlotDraft& targetSlot = drafts[pickingSlotIndex];
-		ImGui::Text("Assign To: %s %s",
-			CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(pickingSlotGroup)],
-			ToAttackButtonShortLabel(targetSlot.button));
-		ImGui::Separator();
-
-		for (const AttackPickerItem& item : pickerItems)
-		{
-			std::ostringstream label;
-			label << item.displayName << "  [" << item.attackDataId << "]";
-			if (ImGui::Selectable(label.str().c_str()))
-			{
-				AssignAttackToCharacterSlot(item.attackDataId, item.attackData);
-				mode = CustomizeMode::CharacterEditor;
-			}
-		}
-
-		if (pickerItems.empty())
-		{
-			ImGui::TextDisabled("No compatible AttackData found.");
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			NavigateBack();
-		}
-	}
-	ImGui::End();
+	ClampPreviewCurrentFrame();
 }
 
 /// <summary>
@@ -2092,54 +576,11 @@ void CustomizeScene::SelectAttackSlot(CustomizeAttackCategory category, int slot
 	editingCommonMotion = false;
 	editingCommonMotionId.clear();
 	selectedCategory = category;
-	selectedSlotIndex = slotIndex;
-	editingAttackDataId = BuildAttackDataId(category, slotIndex);
-
-	const bool hasSavedData = std::filesystem::exists(BuildAttackDataPath(editingAttackDataId));
-	if (!hasSavedData || !CharacterDataLoader::LoadAttackData(editingAttackDataId, draftAttack))
-	{
-		draftAttack = CreateDefaultAttackData(category, slotIndex, editingAttackDataId);
-		statusMessage = "New draft created.";
-	}
-	else
-	{
-		draftAttack.attackDataId = editingAttackDataId;
-		statusMessage = "Loaded existing attack data.";
-	}
-
-	if (draftAttack.hitboxes.empty())
-	{
-		draftAttack.hitboxes.push_back(AttackHitboxData{});
-	}
-	draftAttack.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
-	if (category == CustomizeAttackCategory::Special)
-	{
-		if (draftAttack.usableState != AttackUsableState::Air)
-		{
-			draftAttack.usableState = AttackUsableState::Ground;
-		}
-	}
-	else
-	{
-		draftAttack.commandId = AttackCommandId::None;
-		draftAttack.usableState = GetFixedNormalUsableState(category);
-	}
-	if (draftAttack.usableState == AttackUsableState::Air)
-	{
-		draftAttack.hitReactionType = HitReactionType::Normal;
-	}
-	ClampAttackDataValues(draftAttack);
-
-	EnsureDraftAttackMotionDataId();
-	CopyDisplayNameToBuffer();
-	CopyMotionDataIdToBuffer();
-	hasDraftMotion = false;
-	draftMotion = MotionData();
-	CopyMotionEditorBuffers();
-	previewCurrentFrame = 0;
-	previewPlaying = false;
+	statusMessage = attackEditor.SelectSlot(category, slotIndex);
+	motionEditor.ResetForAttackMotion();
+	previewController.SetCurrentFrame(0);
+	previewController.Stop();
 	attackMovementKeyOffset = Vector2::Zero;
-	motionRootOffsetKey = Vector3::Zero;
 	mode = CustomizeMode::AttackEditor;
 }
 
@@ -2153,23 +594,11 @@ void CustomizeScene::SelectCommonMotionSlot(int slotIndex)
 	selectedCommonMotionIndex = std::clamp(slotIndex, 0, CommonMotionSlotCount - 1);
 	editingCommonMotionId = BuildCommonMotionDataId(selectedCommonMotionIndex);
 
-	draftAttack = AttackData();
-	draftAttack.frame.startup = 2;
-	draftAttack.frame.active = 1;
-	draftAttack.frame.recovery = 27;
-	draftAttack.motionDataId = editingCommonMotionId;
-	editingAttackDataId.clear();
-
-	motionDataIdBuffer.fill('\0');
-	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", editingCommonMotionId.c_str());
-	hasDraftMotion = false;
-	draftMotion = MotionData();
+	attackEditor.PrepareCommonMotionPreview(editingCommonMotionId);
 	LoadDraftMotionFromEditorId();
-	CopyMotionEditorBuffers();
-	previewCurrentFrame = 0;
-	previewPlaying = false;
+	previewController.SetCurrentFrame(0);
+	previewController.Stop();
 	attackMovementKeyOffset = Vector2::Zero;
-	motionRootOffsetKey = Vector3::Zero;
 	mode = CustomizeMode::MotionEditor;
 }
 
@@ -2178,15 +607,7 @@ void CustomizeScene::SelectCommonMotionSlot(int slotIndex)
 /// </summary>
 void CustomizeScene::SaveDraftAttack()
 {
-	SyncDraftFromEditor();
-	if (AttackDataSaver::SaveAttackData(editingAttackDataId, draftAttack))
-	{
-		RefreshAttackSlotSummaries(selectedCategory);
-		statusMessage = "Saved: assets/AttackData/" + editingAttackDataId + ".json";
-		return;
-	}
-
-	statusMessage = "Save failed.";
+	statusMessage = attackEditor.SaveDraft();
 }
 
 /// <summary>
@@ -2199,31 +620,7 @@ void CustomizeScene::SyncDraftFromEditor()
 		return;
 	}
 
-	draftAttack.attackDataId = editingAttackDataId;
-	draftAttack.displayName = displayNameBuffer.data();
-	draftAttack.motionDataId = motionDataIdBuffer.data();
-	EnsureDraftAttackMotionDataId();
-	draftAttack.attackKind = selectedCategory == CustomizeAttackCategory::Special
-		? AttackKind::Special
-		: AttackKind::Normal;
-	if (selectedCategory == CustomizeAttackCategory::Special)
-	{
-		if (draftAttack.usableState != AttackUsableState::Air)
-		{
-			draftAttack.usableState = AttackUsableState::Ground;
-		}
-	}
-	else
-	{
-		draftAttack.commandId = AttackCommandId::None;
-		draftAttack.usableState = GetFixedNormalUsableState(selectedCategory);
-	}
-	if (draftAttack.usableState == AttackUsableState::Air)
-	{
-		draftAttack.hitReactionType = HitReactionType::Normal;
-	}
-
-	ClampAttackDataValues(draftAttack);
+	attackEditor.SyncDraftFromEditor();
 }
 
 /// <summary>
@@ -2236,34 +633,7 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 		return;
 	}
 
-	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
-	const std::string previousMotionDataId = draftAttack.motionDataId;
-	if (draftAttack.motionDataId.empty()
-		|| draftAttack.motionDataId == "debug_right_arm_wave"
-		|| draftAttack.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex)
-		|| !IsAttackMotionDataId(draftAttack.motionDataId)
-		|| draftAttack.motionDataId != expectedMotionDataId)
-	{
-		const std::filesystem::path expectedPath = BuildMotionDataPath(expectedMotionDataId);
-		if (!previousMotionDataId.empty()
-			&& previousMotionDataId != expectedMotionDataId
-			&& IsAttackMotionDataId(previousMotionDataId)
-			&& !std::filesystem::exists(expectedPath))
-		{
-			MotionData copiedMotion;
-			if (MotionDataLoader::LoadMotionData(previousMotionDataId, copiedMotion))
-			{
-				copiedMotion.motionDataId = expectedMotionDataId;
-				MotionDataSaver::SaveMotionData(expectedMotionDataId, copiedMotion);
-				MotionDataManager::UnloadAll();
-			}
-		}
-
-		draftAttack.motionDataId = expectedMotionDataId;
-	}
-
-	motionDataIdBuffer.fill('\0');
-	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", draftAttack.motionDataId.c_str());
+	attackEditor.EnsureDraftMotionDataId();
 }
 
 /// <summary>
@@ -2272,40 +642,12 @@ void CustomizeScene::EnsureDraftAttackMotionDataId()
 void CustomizeScene::LoadDraftMotionFromEditorId()
 {
 	const std::string motionDataId = GetEditingMotionDataId();
-	if (motionDataId.empty())
-	{
-		statusMessage = "MotionData ID is empty.";
-		hasDraftMotion = false;
-		return;
-	}
-
-	if (!MotionDataLoader::LoadMotionData(motionDataId, draftMotion))
-	{
-		draftMotion = MotionData();
-		draftMotion.motionDataId = motionDataId;
-		draftMotion.displayName = editingCommonMotion
-			? CommonMotionLabels[selectedCommonMotionIndex]
-			: motionDataId;
-		draftMotion.totalFrames = editingCommonMotion ? 30 : GetPreviewTotalFrames();
-		draftMotion.looping = editingCommonMotion;
-		statusMessage = "New MotionData draft created.";
-	}
-	else
-	{
-		statusMessage = "Loaded existing MotionData.";
-	}
-
-	if (editingCommonMotion)
-	{
-		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
-	}
-	else
-	{
-		draftMotion.totalFrames = GetPreviewTotalFrames();
-		draftMotion.looping = false;
-	}
-	hasDraftMotion = true;
-	CopyMotionEditorBuffers();
+	const std::string fallbackDisplayName = editingCommonMotion
+		? CommonMotionLabels[selectedCommonMotionIndex]
+		: motionDataId;
+	const int totalFrames = editingCommonMotion ? 30 : GetPreviewTotalFrames();
+	statusMessage = motionEditor.LoadDraft(motionDataId, fallbackDisplayName, totalFrames, editingCommonMotion);
+	motionEditor.CopyEditorBuffers(GetPreviewActionFrame());
 }
 
 /// <summary>
@@ -2313,7 +655,7 @@ void CustomizeScene::LoadDraftMotionFromEditorId()
 /// </summary>
 void CustomizeScene::SaveDraftMotion()
 {
-	if (!hasDraftMotion)
+	if (!motionEditor.HasDraft())
 	{
 		statusMessage = "No MotionData draft.";
 		return;
@@ -2321,498 +663,30 @@ void CustomizeScene::SaveDraftMotion()
 
 	if (editingCommonMotion)
 	{
-		editingCommonMotionId = motionDataIdBuffer.data();
-		draftMotion.motionDataId = editingCommonMotionId;
+		editingCommonMotionId = attackEditor.GetMotionDataIdBuffer().data();
 	}
 	else
 	{
-		draftAttack.motionDataId = motionDataIdBuffer.data();
+		AttackData& draftAttack = attackEditor.GetDraft();
+		draftAttack.motionDataId = attackEditor.GetMotionDataIdBuffer().data();
 		EnsureDraftAttackMotionDataId();
-		draftMotion.motionDataId = draftAttack.motionDataId;
-	}
-	draftMotion.displayName = motionDisplayNameBuffer.data();
-	if (editingCommonMotion)
-	{
-		draftMotion.totalFrames = std::max(1, draftMotion.totalFrames);
-	}
-	else
-	{
-		draftMotion.totalFrames = GetPreviewTotalFrames();
-		draftMotion.looping = false;
 	}
 
-	for (MotionBoneTrackData& track : draftMotion.boneTracks)
-	{
-		const int lastFrame = std::max(0, draftMotion.totalFrames - 1);
-		for (MotionBoneKeyframeData& keyframe : track.keyframes)
-		{
-			keyframe.frame = std::clamp(keyframe.frame, 0, lastFrame);
-		}
-
-		std::sort(
-			track.keyframes.begin(),
-			track.keyframes.end(),
-			[](const MotionBoneKeyframeData& left, const MotionBoneKeyframeData& right)
-			{
-				return left.frame < right.frame;
-			});
-	}
-	draftMotion.boneTracks.erase(
-		std::remove_if(
-			draftMotion.boneTracks.begin(),
-			draftMotion.boneTracks.end(),
-			[](const MotionBoneTrackData& track)
-			{
-				return track.keyframes.empty();
-			}),
-			draftMotion.boneTracks.end());
-
-	const int lastRootOffsetFrame = std::max(0, draftMotion.totalFrames - 1);
-	for (MotionRootOffsetKeyData& keyframe : draftMotion.rootOffsetKeys)
-	{
-		keyframe.frame = std::clamp(keyframe.frame, 0, lastRootOffsetFrame);
-	}
-	std::sort(
-		draftMotion.rootOffsetKeys.begin(),
-		draftMotion.rootOffsetKeys.end(),
-		[](const MotionRootOffsetKeyData& left, const MotionRootOffsetKeyData& right)
-		{
-			return left.frame < right.frame;
-		});
-
-	if (MotionDataSaver::SaveMotionData(draftMotion.motionDataId, draftMotion))
+	const std::string motionDataId = editingCommonMotion
+		? editingCommonMotionId
+		: attackEditor.GetDraft().motionDataId;
+	const int totalFrames = editingCommonMotion
+		? motionEditor.GetDraft().totalFrames
+		: GetPreviewTotalFrames();
+	statusMessage = motionEditor.SaveDraft(motionDataId, totalFrames, editingCommonMotion && motionEditor.GetDraft().looping);
+	if (statusMessage.rfind("Saved MotionData:", 0) == 0)
 	{
 		if (!editingCommonMotion)
 		{
 			SyncDraftFromEditor();
-			AttackDataSaver::SaveAttackData(editingAttackDataId, draftAttack);
-		}
-
-		MotionDataManager::UnloadAll();
-		statusMessage = "Saved MotionData: assets/MotionData/" + draftMotion.motionDataId + ".json";
-		return;
-	}
-
-	statusMessage = "MotionData save failed.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームに、15部位すべてのキーフレームを追加する。
-/// </summary>
-void CustomizeScene::AddWholeBodyMotionKeyframeAtPreviewFrame()
-{
-	if (!hasDraftMotion)
-	{
-		LoadDraftMotionFromEditorId();
-	}
-	if (!hasDraftMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before adding a keyframe.";
-		return;
-	}
-
-	draftMotion.totalFrames = GetPreviewTotalFrames();
-	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
-	{
-		const char* boneName = GetMotionEditorBoneName(boneIndex);
-		const Vector3 rotation = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
-		SetMotionRotationKey(draftMotion, boneName, keyFrame, rotation);
-	}
-
-	const std::string selectedBoneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-	motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, selectedBoneName, keyFrame);
-	statusMessage = "Added whole body MotionData keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームから、全身キーフレームを削除する。
-/// </summary>
-void CustomizeScene::DeleteWholeBodyMotionKeyframeAtPreviewFrame()
-{
-	if (!hasDraftMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before deleting a keyframe.";
-		return;
-	}
-
-	for (MotionBoneTrackData& track : draftMotion.boneTracks)
-	{
-		track.keyframes.erase(
-			std::remove_if(
-				track.keyframes.begin(),
-				track.keyframes.end(),
-				[keyFrame](const MotionBoneKeyframeData& keyframe)
-				{
-					return keyframe.frame == keyFrame;
-				}),
-			track.keyframes.end());
-	}
-	draftMotion.boneTracks.erase(
-		std::remove_if(
-			draftMotion.boneTracks.begin(),
-			draftMotion.boneTracks.end(),
-			[](const MotionBoneTrackData& track)
-			{
-				return track.keyframes.empty();
-			}),
-		draftMotion.boneTracks.end());
-
-	statusMessage = "Deleted current MotionData keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビュー actionFrame に、指定ボーンのローカル回転キーフレームを追加または上書きする。
-/// </summary>
-void CustomizeScene::SetMotionRotationKeyAtPreviewFrame()
-{
-	if (!hasDraftMotion)
-	{
-		LoadDraftMotionFromEditorId();
-	}
-	if (!hasDraftMotion)
-	{
-		return;
-	}
-
-	const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-	if (boneName.empty())
-	{
-		statusMessage = "Target Part is empty.";
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before setting a MotionData key.";
-		return;
-	}
-	if (!HasMotionKeyframeAtPreviewFrame())
-	{
-		statusMessage = "Add a whole body keyframe before editing pose.";
-		return;
-	}
-	draftMotion.totalFrames = GetPreviewTotalFrames();
-	SetMotionRotationKey(draftMotion, boneName, keyFrame, motionKeyRotationEulerDegrees);
-
-	MotionBoneTrackData* targetTrack = FindMotionTrack(draftMotion, boneName);
-	std::sort(
-		targetTrack->keyframes.begin(),
-		targetTrack->keyframes.end(),
-		[](const MotionBoneKeyframeData& left, const MotionBoneKeyframeData& right)
-		{
-			return left.frame < right.frame;
-		});
-
-	statusMessage = "Set MotionData keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームに編集可能なキーフレームが存在するか確認する。
-/// </summary>
-/// <returns>現在フレームに少なくとも 1 部位のキーがある場合は true。</returns>
-bool CustomizeScene::HasMotionKeyframeAtPreviewFrame() const
-{
-	if (!hasDraftMotion)
-	{
-		return false;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		return false;
-	}
-
-	for (const MotionBoneTrackData& track : draftMotion.boneTracks)
-	{
-		if (FindMotionKeyframe(track, keyFrame))
-		{
-			return true;
+			AttackDataSaver::SaveAttackData(attackEditor.GetEditingAttackDataId(), attackEditor.GetDraft());
 		}
 	}
-
-	return false;
-}
-
-/// <summary>
-/// 現在のプレビューフレームに攻撃移動キーを追加する。
-/// </summary>
-void CustomizeScene::AddAttackMovementKeyframeAtPreviewFrame()
-{
-	if (editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before adding a movement keyframe.";
-		return;
-	}
-
-	attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, keyFrame);
-	SetAttackMovementKey(draftAttack, keyFrame, attackMovementKeyOffset);
-	statusMessage = "Added attack movement keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームから攻撃移動キーを削除する。
-/// </summary>
-void CustomizeScene::DeleteAttackMovementKeyframeAtPreviewFrame()
-{
-	if (editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before deleting a movement keyframe.";
-		return;
-	}
-
-	draftAttack.movementKeys.erase(
-		std::remove_if(
-			draftAttack.movementKeys.begin(),
-			draftAttack.movementKeys.end(),
-			[keyFrame](const AttackMovementKeyData& keyframe)
-			{
-				return keyframe.frame == keyFrame;
-			}),
-		draftAttack.movementKeys.end());
-	attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, keyFrame);
-	statusMessage = "Deleted attack movement keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームにある攻撃移動キーの offset を更新する。
-/// </summary>
-void CustomizeScene::SetAttackMovementKeyAtPreviewFrame()
-{
-	if (editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before setting a movement keyframe.";
-		return;
-	}
-	if (!HasAttackMovementKeyframeAtPreviewFrame())
-	{
-		statusMessage = "Add a movement keyframe before editing attack movement.";
-		return;
-	}
-
-	SetAttackMovementKey(draftAttack, keyFrame, attackMovementKeyOffset);
-	statusMessage = "Set attack movement keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームに攻撃移動キーが存在するか確認する。
-/// </summary>
-/// <returns>現在フレームに movementKeys のキーがある場合は true。</returns>
-bool CustomizeScene::HasAttackMovementKeyframeAtPreviewFrame() const
-{
-	if (editingCommonMotion)
-	{
-		return false;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		return false;
-	}
-
-	return FindAttackMovementKeyframe(draftAttack, keyFrame) != nullptr;
-}
-
-/// <summary>
-/// 現在のプレビューフレームに汎用モーション用の全身見た目オフセットキーを追加する。
-/// </summary>
-void CustomizeScene::AddMotionRootOffsetKeyframeAtPreviewFrame()
-{
-	if (!editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before adding a visual offset keyframe.";
-		return;
-	}
-
-	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, keyFrame);
-	SetMotionRootOffsetKey(draftMotion, keyFrame, motionRootOffsetKey);
-	statusMessage = "Added common motion visual offset keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームから汎用モーション用の全身見た目オフセットキーを削除する。
-/// </summary>
-void CustomizeScene::DeleteMotionRootOffsetKeyframeAtPreviewFrame()
-{
-	if (!editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before deleting a visual offset keyframe.";
-		return;
-	}
-
-	draftMotion.rootOffsetKeys.erase(
-		std::remove_if(
-			draftMotion.rootOffsetKeys.begin(),
-			draftMotion.rootOffsetKeys.end(),
-			[keyFrame](const MotionRootOffsetKeyData& keyframe)
-			{
-				return keyframe.frame == keyFrame;
-			}),
-		draftMotion.rootOffsetKeys.end());
-	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, keyFrame);
-	statusMessage = "Deleted common motion visual offset keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームにある汎用モーション用の全身見た目オフセットキーを更新する。
-/// </summary>
-void CustomizeScene::SetMotionRootOffsetKeyAtPreviewFrame()
-{
-	if (!editingCommonMotion)
-	{
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		statusMessage = "Select preview frame 1 or later before setting a visual offset keyframe.";
-		return;
-	}
-	if (!HasMotionRootOffsetKeyframeAtPreviewFrame())
-	{
-		statusMessage = "Add a visual offset keyframe before editing common motion offset.";
-		return;
-	}
-
-	SetMotionRootOffsetKey(draftMotion, keyFrame, motionRootOffsetKey);
-	statusMessage = "Set common motion visual offset keyframe.";
-}
-
-/// <summary>
-/// 現在のプレビューフレームに汎用モーション用の全身見た目オフセットキーが存在するか確認する。
-/// </summary>
-/// <returns>現在フレームに rootOffsetKeys のキーがある場合は true。</returns>
-bool CustomizeScene::HasMotionRootOffsetKeyframeAtPreviewFrame() const
-{
-	if (!editingCommonMotion || !hasDraftMotion)
-	{
-		return false;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	if (keyFrame < 0)
-	{
-		return false;
-	}
-
-	return FindMotionRootOffsetKeyframe(draftMotion, keyFrame) != nullptr;
-}
-
-/// <summary>
-/// 現在フレームに存在する全身キーフレームの回転をコピーする。
-/// </summary>
-void CustomizeScene::CopyWholeBodyMotionPoseAtPreviewFrame()
-{
-	if (!HasMotionKeyframeAtPreviewFrame())
-	{
-		statusMessage = "Copy requires a keyframe on the current frame.";
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
-	{
-		const std::string boneName = GetMotionEditorBoneName(boneIndex);
-		copiedMotionPoseRotations[boneIndex] = GetMotionRotationEulerAtFrame(draftMotion, boneName, keyFrame);
-	}
-
-	hasCopiedMotionPose = true;
-	statusMessage = "Copied whole body pose.";
-}
-
-/// <summary>
-/// コピー済み全身姿勢を、現在フレームに存在する全身キーフレームへ貼り付ける。
-/// </summary>
-void CustomizeScene::PasteWholeBodyMotionPoseAtPreviewFrame()
-{
-	if (!hasCopiedMotionPose)
-	{
-		statusMessage = "No copied pose.";
-		return;
-	}
-	if (!HasMotionKeyframeAtPreviewFrame())
-	{
-		statusMessage = "Paste requires a keyframe on the current frame.";
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
-	{
-		const std::string boneName = GetMotionEditorBoneName(boneIndex);
-		SetMotionRotationKey(draftMotion, boneName, keyFrame, copiedMotionPoseRotations[boneIndex]);
-	}
-
-	const std::string selectedBoneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-	motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, selectedBoneName, keyFrame);
-	statusMessage = "Pasted whole body pose.";
-}
-
-/// <summary>
-/// 現在フレームに存在する全身キーフレームへ、仮の T ポーズ回転を適用する。
-/// </summary>
-void CustomizeScene::ApplyTPosePresetAtPreviewFrame()
-{
-	if (!HasMotionKeyframeAtPreviewFrame())
-	{
-		statusMessage = "T Pose requires a keyframe on the current frame.";
-		return;
-	}
-
-	const int keyFrame = GetPreviewActionFrame();
-	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
-	{
-		const std::string boneName = GetMotionEditorBoneName(boneIndex);
-		SetMotionRotationKey(draftMotion, boneName, keyFrame, Vector3::Zero);
-	}
-
-	motionKeyRotationEulerDegrees = Vector3::Zero;
-	statusMessage = "Applied T Pose preset.";
 }
 
 /// <summary>
@@ -2820,35 +694,7 @@ void CustomizeScene::ApplyTPosePresetAtPreviewFrame()
 /// </summary>
 void CustomizeScene::InitializePreview()
 {
-	ReleasePreview();
-
-	ModelResourceManager::LoadModel(
-		PreviewModelKey,
-		PreviewModelPath,
-		Renderer::GetDevice());
-	if (const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey))
-	{
-		MotionPose::InitializeSkeletonPose(previewSkeletonPose, *previewModel, PreviewModelKey);
-	}
-
-	TransformSystem::SetLocalPosition(previewPlayerTransform, GetPreviewPlayerBasePosition());
-	TransformSystem::SetLocalEulerRotationDegrees(previewPlayerTransform, Vector3(0.0f, -90.0f, 0.0f));
-	TransformSystem::SetLocalScale(previewPlayerTransform, Vector3(0.05f, 0.05f, 0.05f));
-	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
-
-	UpdatePreviewCameraTransform();
-	TransformSystem::SetLocalScale(previewCameraTransform, Vector3::One);
-	TransformSystem::UpdateWorldTransform(previewCameraTransform);
-
-	const float aspectRatio = static_cast<float>(PreviewTextureWidth) / static_cast<float>(PreviewTextureHeight);
-	CameraSystem::SetPerspective(previewCamera, 45.0f, aspectRatio, 0.1f, 1000.0f);
-	CameraSystem::Update(previewCamera, previewCameraTransform);
-
-	const HRESULT hr = Renderer::CreateRenderTexture(previewRenderTexture, PreviewTextureWidth, PreviewTextureHeight);
-	if (FAILED(hr))
-	{
-		DebugLog("[CustomizeScene] Preview RenderTexture creation failed. hr=", static_cast<long>(hr));
-	}
+	previewController.Initialize();
 }
 
 /// <summary>
@@ -2856,7 +702,7 @@ void CustomizeScene::InitializePreview()
 /// </summary>
 void CustomizeScene::ReleasePreview()
 {
-	Renderer::ReleaseRenderTexture(previewRenderTexture);
+	previewController.Release();
 }
 
 /// <summary>
@@ -2865,57 +711,22 @@ void CustomizeScene::ReleasePreview()
 void CustomizeScene::UpdatePreviewPlayback()
 {
 	const bool isPreviewMode = mode == CustomizeMode::AttackEditor || mode == CustomizeMode::MotionEditor;
-	if (!isPreviewMode || !previewPlaying)
+	const bool advanced = previewController.UpdatePlayback(
+		isPreviewMode,
+		editingCommonMotion && motionEditor.GetDraft().looping,
+		GetPreviewTotalFrames());
+	if (!advanced)
 	{
 		return;
-	}
-
-	++previewCurrentFrame;
-	if (previewCurrentFrame >= GetPreviewTotalFrames())
-	{
-		if (editingCommonMotion && draftMotion.looping)
-		{
-			previewCurrentFrame = 1;
-		}
-		else
-		{
-			previewCurrentFrame = GetPreviewTotalFrames();
-			previewPlaying = false;
-		}
 	}
 
 	const int actionFrame = GetPreviewActionFrame();
 	if (actionFrame >= 0)
 	{
-		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame);
-		attackMovementKeyOffset = GetAttackMovementOffsetAtFrame(draftAttack, actionFrame);
-		motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, actionFrame);
+		const AttackData& draftAttack = attackEditor.GetDraft();
+		motionEditor.RefreshFrameEditValues(actionFrame);
+		attackMovementKeyOffset = motionEditor.GetAttackMovementOffsetAtFrame(draftAttack, actionFrame);
 	}
-}
-
-/// <summary>
-/// プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。
-/// </summary>
-void CustomizeScene::UpdatePreviewCameraTransform()
-{
-	previewCameraPitchDegrees = std::clamp(previewCameraPitchDegrees, -45.0f, 65.0f);
-	previewCameraDistance = std::clamp(previewCameraDistance, 5.0f, 30.0f);
-
-	const Vector3 targetPosition = TransformSystem::GetLocalPosition(previewPlayerTransform) + Vector3(0.0f, 4.0f, 0.0f);
-	const float yawRadians = XMConvertToRadians(previewCameraYawDegrees);
-	const float pitchRadians = XMConvertToRadians(previewCameraPitchDegrees);
-	const float cosPitch = std::cos(pitchRadians);
-	const Vector3 forward(
-		std::sin(yawRadians) * cosPitch,
-		std::sin(pitchRadians),
-		std::cos(yawRadians) * cosPitch);
-
-	const Vector3 cameraPosition = targetPosition - forward * previewCameraDistance;
-	TransformSystem::SetLocalPosition(previewCameraTransform, cameraPosition);
-	TransformSystem::SetLocalEulerRotationDegrees(
-		previewCameraTransform,
-		Vector3(previewCameraPitchDegrees, previewCameraYawDegrees, 0.0f));
 }
 
 /// <summary>
@@ -2925,169 +736,15 @@ void CustomizeScene::UpdatePreviewCameraTransform()
 /// <param name="region">本体の描画矩形。nullptr の場合は従来の RenderTexture。</param>
 void CustomizeScene::RenderAttackPreview(Renderer& renderer, const RECT* region)
 {
-	if (!region && !previewRenderTexture.renderTargetView)
-	{
-		return;
-	}
-
-	const Color defaultClearColor = Renderer::GetDefaultClearColor();
-	const float clearColor[4] = {
-		defaultClearColor.x,
-		defaultClearColor.y,
-		defaultClearColor.z,
-		defaultClearColor.w
-	};
-	std::optional<Renderer::ScopedRenderRegion> regionScope;
-	if (region)
-	{
-		regionScope.emplace(*region);
-		CameraSystem::SetAspectRatio(previewCamera,
-			static_cast<float>(region->right - region->left) / static_cast<float>(region->bottom - region->top));
-	}
-	else
-	{
-		Renderer::BeginRenderTexture(previewRenderTexture, clearColor);
-		CameraSystem::SetAspectRatio(previewCamera, static_cast<float>(PreviewTextureWidth) / PreviewTextureHeight);
-	}
-
-	const int previewActionFrame = GetPreviewActionFrame();
-	const Vector2 previewMovementOffset = !editingCommonMotion && previewActionFrame >= 0
-		? GetAttackMovementOffsetAtFrame(draftAttack, previewActionFrame)
-		: Vector2::Zero;
-	const Vector3 previewVisualOffset = editingCommonMotion && previewActionFrame >= 0
-		? GetMotionRootOffsetAtFrame(draftMotion, previewActionFrame)
-		: Vector3::Zero;
-	TransformSystem::SetLocalPosition(
-		previewPlayerTransform,
-		GetPreviewPlayerBasePosition()
-		+ Vector3(previewMovementOffset.x, previewMovementOffset.y, 0.0f)
-		+ previewVisualOffset);
-
-	UpdatePreviewCameraTransform();
-	TransformSystem::UpdateWorldTransform(previewPlayerTransform);
-	TransformSystem::UpdateWorldTransform(previewCameraTransform);
-	CameraSystem::Update(previewCamera, previewCameraTransform);
-	renderer.SetViewProjection(previewCamera.viewMatrix, previewCamera.projectionMatrix);
-
-	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
-	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
-	SkeletonPose ghostSkeletonPose;
-	const std::vector<Matrix>* ghostSkinningMatrices = nullptr;
-	if (previewModel && previewSkeletonPose.initialized)
-	{
-		const int actionFrame = GetPreviewActionFrame();
-		const std::string motionDataId = GetEditingMotionDataId();
-		const MotionData* idleMotion = nullptr;
-		SkeletonPose idleBasePose;
-		const SkeletonPose* basePose = nullptr;
-		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
-		{
-			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
-		}
-		if (idleMotion)
-		{
-			MotionPose::ApplyMotionData(ghostSkeletonPose, *idleMotion, 0, *previewModel);
-			MotionPose::UpdateSkinningMatrices(ghostSkeletonPose, *previewModel);
-			ghostSkinningMatrices = &ghostSkeletonPose.skinningMatrices;
-		}
-
-		if (actionFrame < 0)
-		{
-			if (idleMotion)
-			{
-				MotionPose::ApplyMotionData(previewSkeletonPose, *idleMotion, 0, *previewModel);
-				MotionPose::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
-				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
-			}
-		}
-		else if (!motionDataId.empty())
-		{
-			const MotionData* motion = nullptr;
-			if (hasDraftMotion && draftMotion.motionDataId == motionDataId)
-			{
-				motion = &draftMotion;
-			}
-			else if (MotionDataManager::LoadMotionData(motionDataId))
-			{
-				motion = MotionDataManager::GetMotionData(motionDataId);
-			}
-
-			if (motion)
-			{
-				if (idleMotion && motionDataId.rfind("Attack/", 0) == 0)
-				{
-					MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
-					basePose = &idleBasePose;
-				}
-
-				MotionPose::ApplyMotionData(previewSkeletonPose, *motion, actionFrame, *previewModel, basePose);
-				MotionPose::UpdateSkinningMatrices(previewSkeletonPose, *previewModel);
-				previewSkinningMatrices = &previewSkeletonPose.skinningMatrices;
-			}
-		}
-	}
-
-	if (previewModel && ghostSkinningMatrices)
-	{
-		TransformComponent ghostTransform = previewPlayerTransform;
-		TransformSystem::SetLocalPosition(ghostTransform, GetPreviewPlayerBasePosition());
-		TransformSystem::UpdateWorldTransform(ghostTransform);
-		renderer.DrawModel(
-			*previewModel,
-			TransformSystem::GetWorldMatrix(ghostTransform),
-			Color(0.65f, 0.85f, 1.0f, 0.22f),
-			true,
-			ghostSkinningMatrices);
-	}
-
-	const bool drewModel = previewModel
-		&& renderer.DrawModel(*previewModel, TransformSystem::GetWorldMatrix(previewPlayerTransform), previewSkinningMatrices);
-	if (!drewModel)
-	{
-		const Matrix fallbackWorld =
-			Matrix::CreateScale(1.0f, 4.0f, 1.0f)
-			* Matrix::CreateTranslation(Vector3(0.0f, 3.0f, 8.0f));
-		renderer.DrawDebugCube(fallbackWorld);
-	}
-
-	DrawPreviewAttackBoxes(renderer);
-	if (!region)
-	{
-		Renderer::RestoreBackBuffer();
-	}
-}
-
-/// <summary>
-/// 現在フレームが active 範囲に入っている場合だけ、技の AttackBox を赤い半透明矩形で描画する。
-/// </summary>
-/// <param name="renderer">DebugBox 描画に使う Renderer。</param>
-void CustomizeScene::DrawPreviewAttackBoxes(Renderer& renderer)
-{
-	if (!IsPreviewAttackActive())
-	{
-		return;
-	}
-
-	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.35f);
-	const Vector3 basePosition = TransformSystem::GetWorldPosition(previewPlayerTransform);
-
-	for (const AttackHitboxData& hitbox : draftAttack.hitboxes)
-	{
-		if (hitbox.size.x <= 0.0f || hitbox.size.y <= 0.0f)
-		{
-			continue;
-		}
-
-		const Vector3 center(
-			basePosition.x + hitbox.offset.x,
-			basePosition.y + hitbox.offset.y,
-			basePosition.z);
-		const Matrix boxWorld =
-			Matrix::CreateScale(hitbox.size.x * 0.5f, hitbox.size.y * 0.5f, PreviewBoxDepth * 0.5f)
-			* Matrix::CreateTranslation(center);
-
-		renderer.DrawDebugBox(boxWorld, attackBoxColor);
-	}
+	previewController.Render(
+		renderer,
+		region,
+		attackEditor.GetDraft(),
+		motionEditor.GetDraft(),
+		editingCommonMotion,
+		motionEditor.HasDraft(),
+		GetEditingMotionDataId(),
+		motionEditor.GetSelectedBoneIndex());
 }
 
 /// <summary>
@@ -3095,7 +752,7 @@ void CustomizeScene::DrawPreviewAttackBoxes(Renderer& renderer)
 /// </summary>
 void CustomizeScene::ClampPreviewCurrentFrame()
 {
-	previewCurrentFrame = std::clamp(previewCurrentFrame, 0, GetPreviewTotalFrames());
+	previewController.ClampCurrentFrame(GetPreviewTotalFrames());
 }
 
 /// <summary>
@@ -3104,36 +761,14 @@ void CustomizeScene::ClampPreviewCurrentFrame()
 /// <param name="frameDelta">進めるフレーム数。負数なら戻す。</param>
 void CustomizeScene::StepPreviewFrame(int frameDelta)
 {
-	previewPlaying = false;
-	previewCurrentFrame += frameDelta;
-	ClampPreviewCurrentFrame();
+	previewController.StepFrame(frameDelta, GetPreviewTotalFrames());
 
 	const int actionFrame = GetPreviewActionFrame();
-	const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-	motionKeyRotationEulerDegrees = actionFrame >= 0
-		? GetMotionRotationEulerAtFrame(draftMotion, boneName, actionFrame)
-		: Vector3::Zero;
+	const AttackData& draftAttack = attackEditor.GetDraft();
+	motionEditor.RefreshFrameEditValues(actionFrame);
 	attackMovementKeyOffset = actionFrame >= 0
-		? GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
+		? motionEditor.GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
 		: Vector2::Zero;
-	motionRootOffsetKey = actionFrame >= 0
-		? GetMotionRootOffsetAtFrame(draftMotion, actionFrame)
-		: Vector3::Zero;
-}
-
-/// <summary>
-/// プレビュー表示フレームを内部 actionFrame に変換し、AttackData::frame の active 範囲内か確認する。
-/// </summary>
-/// <returns>AttackBox を表示するフレームなら true。</returns>
-bool CustomizeScene::IsPreviewAttackActive() const
-{
-	if (editingCommonMotion)
-	{
-		return false;
-	}
-
-	const int actionFrame = GetPreviewActionFrame();
-	return IsAttackFrameActive(draftAttack.frame, actionFrame);
 }
 
 /// <summary>
@@ -3144,9 +779,10 @@ int CustomizeScene::GetPreviewTotalFrames() const
 {
 	if (editingCommonMotion)
 	{
-		return std::max(1, draftMotion.totalFrames);
+		return std::max(1, motionEditor.GetDraft().totalFrames);
 	}
 
+	const AttackData& draftAttack = attackEditor.GetDraft();
 	return GetAttackTotalFrames(draftAttack.frame);
 }
 
@@ -3156,7 +792,7 @@ int CustomizeScene::GetPreviewTotalFrames() const
 /// <returns>0F Idle は -1、1F 以降は 0 始まりの内部 actionFrame。</returns>
 int CustomizeScene::GetPreviewActionFrame() const
 {
-	return previewCurrentFrame - 1;
+	return previewController.GetActionFrame();
 }
 
 /// <summary>
@@ -3165,16 +801,17 @@ int CustomizeScene::GetPreviewActionFrame() const
 /// <returns>現在フェーズの表示名。</returns>
 const char* CustomizeScene::GetPreviewPhaseText() const
 {
-	if (previewCurrentFrame <= 0)
+	if (previewController.GetCurrentFrame() <= 0)
 	{
 		return "Idle";
 	}
 	if (editingCommonMotion)
 	{
-		return draftMotion.looping ? "Common Loop Motion" : "Common Motion";
+		return motionEditor.GetDraft().looping ? "Common Loop Motion" : "Common Motion";
 	}
 
 	const int actionFrame = GetPreviewActionFrame();
+	const AttackData& draftAttack = attackEditor.GetDraft();
 	const int activeStartFrame = GetAttackActiveStartFrame(draftAttack.frame);
 	const int activeEndFrame = GetAttackActiveEndFrameExclusive(draftAttack.frame);
 	const int totalFrames = GetPreviewTotalFrames();
@@ -3203,10 +840,10 @@ std::string CustomizeScene::GetEditingMotionDataId() const
 {
 	if (editingCommonMotion)
 	{
-		return editingCommonMotionId.empty() ? std::string(motionDataIdBuffer.data()) : editingCommonMotionId;
+		return editingCommonMotionId.empty() ? std::string(attackEditor.GetMotionDataIdBuffer().data()) : editingCommonMotionId;
 	}
 
-	return draftAttack.motionDataId;
+	return attackEditor.GetDraft().motionDataId;
 }
 
 /// <summary>
@@ -3216,16 +853,7 @@ std::string CustomizeScene::GetEditingMotionDataId() const
 /// <returns>対象カテゴリのスロット数。</returns>
 int CustomizeScene::GetAttackSlotCount(CustomizeAttackCategory category) const
 {
-	switch (category)
-	{
-	case CustomizeAttackCategory::Air:
-		return AirAttackSlotCount;
-	case CustomizeAttackCategory::Special:
-		return SpecialAttackSlotCount;
-	case CustomizeAttackCategory::Ground:
-	default:
-		return GroundAttackSlotCount;
-	}
+	return attackEditor.GetSlotCount(category);
 }
 
 /// <summary>
@@ -3234,37 +862,7 @@ int CustomizeScene::GetAttackSlotCount(CustomizeAttackCategory category) const
 /// <param name="category">更新する技カテゴリ。</param>
 void CustomizeScene::RefreshAttackSlotSummaries(CustomizeAttackCategory category)
 {
-	const int categoryIndex = ToCategoryIndex(category);
-	const int slotCount = GetAttackSlotCount(category);
-	std::array<CustomizeAttackSlotSummary, MaxAttackSlotCount>& summaries = attackSlotSummaries[categoryIndex];
-
-	for (int slotIndex = 0; slotIndex < MaxAttackSlotCount; ++slotIndex)
-	{
-		CustomizeAttackSlotSummary& summary = summaries[slotIndex];
-		summary = CustomizeAttackSlotSummary{};
-
-		if (slotIndex >= slotCount)
-		{
-			continue;
-		}
-
-		const std::string attackDataId = BuildAttackDataId(category, slotIndex);
-		if (!std::filesystem::exists(BuildAttackDataPath(attackDataId)))
-		{
-			continue;
-		}
-
-		AttackData loadedAttack;
-		if (!CharacterDataLoader::LoadAttackData(attackDataId, loadedAttack))
-		{
-			continue;
-		}
-
-		summary.hasSavedData = true;
-		summary.displayName = loadedAttack.displayName.empty()
-			? attackDataId
-			: loadedAttack.displayName;
-	}
+	attackEditor.RefreshSlotSummaries(category);
 }
 
 /// <summary>
@@ -3275,22 +873,7 @@ void CustomizeScene::RefreshAttackSlotSummaries(CustomizeAttackCategory category
 /// <returns>表示名と ImGui ID を含むボタンラベル。</returns>
 std::string CustomizeScene::BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const
 {
-	std::ostringstream label;
-	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex;
-
-	const CustomizeAttackSlotSummary& summary = attackSlotSummaries[ToCategoryIndex(category)][slotIndex];
-	label << "\n";
-	if (summary.hasSavedData)
-	{
-		label << summary.displayName;
-	}
-	else
-	{
-		label << "New Attack";
-	}
-
-	label << "##attack_slot_" << ToCategoryIndex(category) << "_" << slotIndex;
-	return label.str();
+	return attackEditor.BuildSlotButtonLabel(category, slotIndex);
 }
 
 /// <summary>
@@ -3301,10 +884,7 @@ std::string CustomizeScene::BuildAttackSlotButtonLabel(CustomizeAttackCategory c
 /// <returns>拡張子なしの AttackData ID。</returns>
 std::string CustomizeScene::BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const
 {
-	std::ostringstream stream;
-	stream << CategoryLabels[ToCategoryIndex(category)] << "/slot_";
-	stream << std::setw(2) << std::setfill('0') << slotIndex;
-	return stream.str();
+	return attackEditor.BuildAttackDataId(category, slotIndex);
 }
 
 /// <summary>
@@ -3315,10 +895,7 @@ std::string CustomizeScene::BuildAttackDataId(CustomizeAttackCategory category, 
 /// <returns>拡張子なしの MotionData ID。</returns>
 std::string CustomizeScene::BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const
 {
-	std::ostringstream stream;
-	stream << "Attack/" << CategoryLabels[ToCategoryIndex(category)] << "/slot_";
-	stream << std::setw(2) << std::setfill('0') << slotIndex;
-	return stream.str();
+	return attackEditor.BuildMotionDataId(category, slotIndex);
 }
 
 /// <summary>
@@ -3333,490 +910,9 @@ std::string CustomizeScene::BuildCommonMotionDataId(int slotIndex) const
 }
 
 /// <summary>
-/// 未保存スロットを開いた時に使う初期 AttackData を作る。
-/// </summary>
-/// <param name="category">作成する技カテゴリ。</param>
-/// <param name="slotIndex">カテゴリ内スロット番号。</param>
-/// <param name="attackDataId">保存先 AttackData ID。</param>
-/// <returns>編集開始用の初期 AttackData。</returns>
-AttackData CustomizeScene::CreateDefaultAttackData(
-	CustomizeAttackCategory category,
-	int slotIndex,
-	const std::string& attackDataId) const
-{
-	AttackData attackData;
-	attackData.attackDataId = attackDataId;
-	attackData.displayName = std::string(CategoryLabels[ToCategoryIndex(category)]) + " Slot " + std::to_string(slotIndex);
-	attackData.motionDataId = BuildMotionDataId(category, slotIndex);
-	attackData.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
-	attackData.commandId = category == CustomizeAttackCategory::Special ? AttackCommandId::Hadouken : AttackCommandId::None;
-	attackData.usableState = category == CustomizeAttackCategory::Air ? AttackUsableState::Air : AttackUsableState::Ground;
-	attackData.attackHeight = AttackHeight::High;
-	attackData.damage = 100;
-	attackData.hitstunFrames = 30;
-	attackData.guardstunFrames = 30;
-	attackData.hitReactionType = HitReactionType::Normal;
-	attackData.frame.startup = 5;
-	attackData.frame.active = 3;
-	attackData.frame.recovery = 10;
-
-	AttackHitboxData hitbox;
-	hitbox.offset = Vector2(2.5f, 4.0f);
-	hitbox.size = Vector2(2.0f, 2.0f);
-	attackData.hitboxes.push_back(hitbox);
-	return attackData;
-}
-
-/// <summary>
-/// draftAttack の表示名を ImGui 入力用固定バッファへコピーする。
-/// </summary>
-void CustomizeScene::CopyDisplayNameToBuffer()
-{
-	displayNameBuffer.fill('\0');
-	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", draftAttack.displayName.c_str());
-}
-
-/// <summary>
-/// draftAttack の MotionData ID を ImGui 入力用固定バッファへコピーする。
-/// </summary>
-void CustomizeScene::CopyMotionDataIdToBuffer()
-{
-	motionDataIdBuffer.fill('\0');
-	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", draftAttack.motionDataId.c_str());
-}
-
-/// <summary>
 /// draftMotion の表示名と編集対象ボーン名を ImGui 入力用固定バッファへコピーする。
 /// </summary>
 void CustomizeScene::CopyMotionEditorBuffers()
 {
-	motionDisplayNameBuffer.fill('\0');
-	selectedMotionEditorBoneIndex = 3;
-	motionKeyRotationEulerDegrees = Vector3::Zero;
-	motionRootOffsetKey = Vector3::Zero;
-
-	if (!hasDraftMotion)
-	{
-		return;
-	}
-
-	std::snprintf(motionDisplayNameBuffer.data(), motionDisplayNameBuffer.size(), "%s", draftMotion.displayName.c_str());
-	if (!draftMotion.boneTracks.empty())
-	{
-		const MotionBoneTrackData& track = draftMotion.boneTracks.front();
-		selectedMotionEditorBoneIndex = FindMotionEditorBoneIndex(track.boneName);
-		const std::string boneName = GetMotionEditorBoneName(selectedMotionEditorBoneIndex);
-		motionKeyRotationEulerDegrees = GetMotionRotationEulerAtFrame(
-			draftMotion,
-			boneName,
-			std::max(0, GetPreviewActionFrame()));
-	}
-	motionRootOffsetKey = GetMotionRootOffsetAtFrame(draftMotion, std::max(0, GetPreviewActionFrame()));
-}
-
-/// <summary>
-/// キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。
-/// </summary>
-/// <param name="slotIndex">キャラクタースロット番号。</param>
-/// <returns>CharacterSlot00 のような固定桁の ID。</returns>
-std::string CustomizeScene::BuildCharacterId(int slotIndex) const
-{
-	return BattleSetup::BuildCharacterSlotId(slotIndex);
-}
-
-/// <summary>
-/// キャラクタースロット番号から CharacterData 保存フォルダを作る。
-/// </summary>
-/// <param name="slotIndex">キャラクタースロット番号。</param>
-/// <returns>assets/CharacterData 配下の保存フォルダパス。</returns>
-std::string CustomizeScene::BuildCharacterFolderPath(int slotIndex) const
-{
-	return (std::filesystem::path(CharacterDataRootPath) / BuildCharacterId(slotIndex)).generic_string();
-}
-
-/// <summary>
-/// キャラクタースロット一覧に表示するボタンラベルを作る。
-/// </summary>
-/// <param name="slotIndex">キャラクタースロット番号。</param>
-/// <returns>スロット番号、保存済み名、ImGui ID を含むラベル。</returns>
-std::string CustomizeScene::BuildCharacterSlotButtonLabel(int slotIndex) const
-{
-	std::ostringstream label;
-	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex << "\n";
-
-	const CustomizeCharacterSlotSummary& summary = characterSlotSummaries[slotIndex];
-	if (summary.hasSavedData)
-	{
-		label << summary.characterName;
-	}
-	else
-	{
-		label << "New Character";
-	}
-
-	label << "##character_slot_" << slotIndex;
-	return label.str();
-}
-
-/// <summary>
-/// キャラクター側の固定ボタンスロットを初期化する。
-/// </summary>
-/// <param name="group">地上通常技、空中通常技、必殺技のどれか。</param>
-/// <param name="slotIndex">ABXY の何番目か。</param>
-/// <returns>未割り当て状態のスロット draft。</returns>
-CustomizeCharacterAttackSlotDraft CustomizeScene::CreateCharacterAttackSlotDraft(
-	CustomizeCharacterAttackSlotGroup group,
-	int slotIndex) const
-{
-	const int clampedIndex = std::clamp(slotIndex, 0, CharacterAttackButtonSlotCount - 1);
-	const AttackButtonId button = AttackButtonValues[clampedIndex];
-	const std::string buttonText = ToAttackButtonShortLabel(button);
-
-	CustomizeCharacterAttackSlotDraft draft;
-	draft.button = button;
-	switch (group)
-	{
-	case CustomizeCharacterAttackSlotGroup::Air:
-		draft.slotId = std::string("AirAttack") + buttonText;
-		draft.slotType = AttackSlotType::Normal;
-		draft.slotUsableState = AttackUsableState::Air;
-		break;
-	case CustomizeCharacterAttackSlotGroup::Special:
-		draft.slotId = std::string("Special") + buttonText;
-		draft.slotType = AttackSlotType::Special;
-		draft.slotUsableState = AttackUsableState::Unknown;
-		break;
-	case CustomizeCharacterAttackSlotGroup::Ground:
-	default:
-		draft.slotId = std::string("Attack") + buttonText;
-		draft.slotType = AttackSlotType::Normal;
-		draft.slotUsableState = AttackUsableState::Ground;
-		break;
-	}
-
-	return draft;
-}
-
-/// <summary>
-/// 指定グループのキャラクター側スロット draft 配列を取得する。
-/// </summary>
-/// <param name="group">取得するスロットグループ。</param>
-/// <returns>変更可能な draft 配列。</returns>
-std::array<CustomizeCharacterAttackSlotDraft, CustomizeScene::CharacterAttackButtonSlotCount>&
-CustomizeScene::GetCharacterAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group)
-{
-	switch (group)
-	{
-	case CustomizeCharacterAttackSlotGroup::Air:
-		return airAttackSlotDrafts;
-	case CustomizeCharacterAttackSlotGroup::Special:
-		return specialAttackSlotDrafts;
-	case CustomizeCharacterAttackSlotGroup::Ground:
-	default:
-		return groundAttackSlotDrafts;
-	}
-}
-
-/// <summary>
-/// 指定グループのキャラクター側スロット draft 配列を読み取り専用で取得する。
-/// </summary>
-/// <param name="group">取得するスロットグループ。</param>
-/// <returns>読み取り専用の draft 配列。</returns>
-const std::array<CustomizeCharacterAttackSlotDraft, CustomizeScene::CharacterAttackButtonSlotCount>&
-CustomizeScene::GetCharacterAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group) const
-{
-	switch (group)
-	{
-	case CustomizeCharacterAttackSlotGroup::Air:
-		return airAttackSlotDrafts;
-	case CustomizeCharacterAttackSlotGroup::Special:
-		return specialAttackSlotDrafts;
-	case CustomizeCharacterAttackSlotGroup::Ground:
-	default:
-		return groundAttackSlotDrafts;
-	}
-}
-
-/// <summary>
-/// 選択したキャラクタースロットを編集用 draft に読み込む。
-/// </summary>
-/// <param name="slotIndex">編集するキャラクタースロット番号。</param>
-void CustomizeScene::SelectCharacterSlot(int slotIndex)
-{
-	selectedCharacterSlotIndex = std::clamp(slotIndex, 0, CharacterSlotCount - 1);
-	editingCharacterFolderPath = BuildCharacterFolderPath(selectedCharacterSlotIndex);
-
-	draftCharacterParameter = CharacterParameterData{};
-	draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
-	draftCharacterParameter.characterName = "Character Slot " + std::to_string(selectedCharacterSlotIndex);
-
-	for (int index = 0; index < CharacterAttackButtonSlotCount; ++index)
-	{
-		groundAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Ground, index);
-		airAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Air, index);
-		specialAttackSlotDrafts[index] = CreateCharacterAttackSlotDraft(CustomizeCharacterAttackSlotGroup::Special, index);
-	}
-
-	CharacterData loadedCharacter;
-	const bool hasSavedData =
-		std::filesystem::exists(std::filesystem::path(editingCharacterFolderPath) / "Parameter.json")
-		|| std::filesystem::exists(std::filesystem::path(editingCharacterFolderPath) / "AttackList.json");
-	const bool loadedCompletely = hasSavedData
-		&& CharacterDataLoader::LoadCharacterData(editingCharacterFolderPath, loadedCharacter);
-	if (hasSavedData)
-	{
-		draftCharacterParameter = loadedCharacter.parameter;
-		draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
-
-		for (const CharacterAssignedAttackData& assignedAttack : loadedCharacter.attacks)
-		{
-			CustomizeCharacterAttackSlotGroup group = CustomizeCharacterAttackSlotGroup::Ground;
-			if (assignedAttack.slotType == AttackSlotType::Special)
-			{
-				group = CustomizeCharacterAttackSlotGroup::Special;
-			}
-			else if (assignedAttack.slotUsableState == AttackUsableState::Air)
-			{
-				group = CustomizeCharacterAttackSlotGroup::Air;
-			}
-
-			std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
-				GetCharacterAttackSlotDrafts(group);
-			for (CustomizeCharacterAttackSlotDraft& draft : drafts)
-			{
-				if (draft.button != assignedAttack.button)
-				{
-					continue;
-				}
-
-				draft.attackDataId = assignedAttack.attack.attackDataId;
-				draft.attackDisplayName = assignedAttack.attack.displayName.empty()
-					? assignedAttack.attack.attackDataId
-					: assignedAttack.attack.displayName;
-				break;
-			}
-		}
-
-		statusMessage = loadedCompletely
-			? "Loaded existing character data."
-			: "Loaded character draft with missing or invalid attack data.";
-	}
-	else
-	{
-		statusMessage = "New character draft created.";
-	}
-
-	CopyCharacterNameToBuffer();
-	RefreshCharacterAttackSlotNames();
-	mode = CustomizeMode::CharacterEditor;
-}
-
-/// <summary>
-/// キャラクター編集バッファの内容を CharacterData JSON として保存する。
-/// </summary>
-void CustomizeScene::SaveDraftCharacter()
-{
-	draftCharacterParameter.characterId = BuildCharacterId(selectedCharacterSlotIndex);
-	draftCharacterParameter.characterName = characterNameBuffer.data();
-	if (draftCharacterParameter.characterName.empty())
-	{
-		statusMessage = "Character name is required.";
-		return;
-	}
-
-	std::string missingSlotName;
-	if (!AreRequiredCharacterAttackSlotsFilled(missingSlotName))
-	{
-		statusMessage = "Required slot is empty: " + missingSlotName;
-		return;
-	}
-
-	std::vector<CharacterAttackSlotData> attackSlots = BuildCharacterAttackSlotsForSave();
-	if (CharacterDataSaver::SaveCharacterData(editingCharacterFolderPath, draftCharacterParameter, attackSlots))
-	{
-		RefreshCharacterSlotSummaries();
-		statusMessage = "Saved: " + editingCharacterFolderPath;
-		return;
-	}
-
-	statusMessage = "Character save failed.";
-}
-
-/// <summary>
-/// draftCharacterParameter のキャラクター名を ImGui 入力用固定バッファへコピーする。
-/// </summary>
-void CustomizeScene::CopyCharacterNameToBuffer()
-{
-	characterNameBuffer.fill('\0');
-	std::snprintf(
-		characterNameBuffer.data(),
-		characterNameBuffer.size(),
-		"%s",
-		draftCharacterParameter.characterName.c_str());
-}
-
-/// <summary>
-/// CharacterData フォルダを確認し、キャラクタースロット一覧表示用の名前を更新する。
-/// </summary>
-void CustomizeScene::RefreshCharacterSlotSummaries()
-{
-	for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
-	{
-		CustomizeCharacterSlotSummary& summary = characterSlotSummaries[slotIndex];
-		summary = CustomizeCharacterSlotSummary{};
-
-		const std::filesystem::path characterFolder(BuildCharacterFolderPath(slotIndex));
-		const bool hasSavedData =
-			std::filesystem::exists(characterFolder / "Parameter.json")
-			|| std::filesystem::exists(characterFolder / "AttackList.json");
-		if (!hasSavedData)
-		{
-			continue;
-		}
-
-		CharacterData loadedCharacter;
-		CharacterDataLoader::LoadCharacterData(characterFolder.generic_string(), loadedCharacter);
-		summary.hasSavedData = true;
-		summary.characterName = loadedCharacter.parameter.characterName.empty()
-			? BuildCharacterId(slotIndex)
-			: loadedCharacter.parameter.characterName;
-	}
-}
-
-/// <summary>
-/// キャラクター draft 内の attackDataId から表示名を読み直す。
-/// </summary>
-void CustomizeScene::RefreshCharacterAttackSlotNames()
-{
-	for (CustomizeCharacterAttackSlotGroup group : {
-		CustomizeCharacterAttackSlotGroup::Ground,
-		CustomizeCharacterAttackSlotGroup::Air,
-		CustomizeCharacterAttackSlotGroup::Special })
-	{
-		std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
-			GetCharacterAttackSlotDrafts(group);
-		for (CustomizeCharacterAttackSlotDraft& draft : drafts)
-		{
-			if (draft.attackDataId.empty())
-			{
-				draft.attackDisplayName.clear();
-				continue;
-			}
-
-			AttackData attackData;
-			if (CharacterDataLoader::LoadAttackData(draft.attackDataId, attackData))
-			{
-				draft.attackDisplayName = attackData.displayName.empty()
-					? draft.attackDataId
-					: attackData.displayName;
-			}
-			else
-			{
-				draft.attackDisplayName = draft.attackDataId;
-			}
-		}
-	}
-}
-
-/// <summary>
-/// AttackPicker で選んだ技を、現在選択中のキャラクター側スロットへ割り当てる。
-/// </summary>
-/// <param name="attackDataId">割り当てる AttackData ID。</param>
-/// <param name="attackData">表示名確認用に読み込み済みの AttackData。</param>
-void CustomizeScene::AssignAttackToCharacterSlot(const std::string& attackDataId, const AttackData& attackData)
-{
-	std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts =
-		GetCharacterAttackSlotDrafts(pickingSlotGroup);
-	CustomizeCharacterAttackSlotDraft& draft = drafts[pickingSlotIndex];
-	draft.attackDataId = attackDataId;
-	draft.attackDisplayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
-}
-
-/// <summary>
-/// キャラクター draft から保存用 CharacterAttackSlotData 配列を作る。
-/// </summary>
-/// <returns>AttackList.json に保存する技スロット情報。</returns>
-std::vector<CharacterAttackSlotData> CustomizeScene::BuildCharacterAttackSlotsForSave() const
-{
-	std::vector<CharacterAttackSlotData> result;
-	const auto appendSlots =
-		[&result](const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts)
-		{
-			for (const CustomizeCharacterAttackSlotDraft& draft : drafts)
-			{
-				if (draft.attackDataId.empty())
-				{
-					continue;
-				}
-
-				CharacterAttackSlotData slot;
-				slot.slotId = draft.slotId;
-				slot.attackDataId = draft.attackDataId;
-				slot.slotType = draft.slotType;
-				slot.button = draft.button;
-				slot.slotUsableState = draft.slotUsableState;
-				result.push_back(slot);
-			}
-		};
-
-	appendSlots(groundAttackSlotDrafts);
-	appendSlots(airAttackSlotDrafts);
-	appendSlots(specialAttackSlotDrafts);
-	return result;
-}
-
-/// <summary>
-/// 地上通常技と空中通常技の必須スロットが埋まっているか確認する。
-/// </summary>
-/// <param name="outMissingSlotName">未設定スロットがある場合の表示名。</param>
-/// <returns>必須スロットが全て埋まっている場合は true。</returns>
-bool CustomizeScene::AreRequiredCharacterAttackSlotsFilled(std::string& outMissingSlotName) const
-{
-	const auto checkSlots =
-		[&outMissingSlotName](
-			const std::array<CustomizeCharacterAttackSlotDraft, CharacterAttackButtonSlotCount>& drafts,
-			const char* groupName)
-		{
-			for (const CustomizeCharacterAttackSlotDraft& draft : drafts)
-			{
-				if (!draft.attackDataId.empty())
-				{
-					continue;
-				}
-
-				outMissingSlotName = std::string(groupName) + " " + ToAttackButtonShortLabel(draft.button);
-				return false;
-			}
-
-			return true;
-		};
-
-	return checkSlots(groundAttackSlotDrafts, "Ground")
-		&& checkSlots(airAttackSlotDrafts, "Air");
-}
-
-/// <summary>
-/// AttackData が選択中のキャラクター側スロットへ割り当て可能か確認する。
-/// </summary>
-/// <param name="group">割り当て先のキャラクター側スロットグループ。</param>
-/// <param name="attackData">確認する AttackData。</param>
-/// <returns>通常/必殺、地上/空中の条件を満たす場合は true。</returns>
-bool CustomizeScene::IsAttackCompatibleWithCharacterSlotGroup(
-	CustomizeCharacterAttackSlotGroup group,
-	const AttackData& attackData) const
-{
-	switch (group)
-	{
-	case CustomizeCharacterAttackSlotGroup::Air:
-		return attackData.attackKind == AttackKind::Normal
-			&& attackData.usableState == AttackUsableState::Air;
-	case CustomizeCharacterAttackSlotGroup::Special:
-		return attackData.attackKind == AttackKind::Special
-			&& (attackData.usableState == AttackUsableState::Ground
-				|| attackData.usableState == AttackUsableState::Air);
-	case CustomizeCharacterAttackSlotGroup::Ground:
-	default:
-		return attackData.attackKind == AttackKind::Normal
-			&& attackData.usableState == AttackUsableState::Ground;
-	}
+	motionEditor.CopyEditorBuffers(GetPreviewActionFrame());
 }

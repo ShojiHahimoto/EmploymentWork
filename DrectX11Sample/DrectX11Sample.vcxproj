@@ -36,6 +36,10 @@
     <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizePreviewController.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
     <ClCompile Include="Source\Scene\ResultScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
@@ -115,11 +119,16 @@
     <ClInclude Include="Source\Input\InputTypes.h" />
     <ClInclude Include="Source\Scene\BattleScene.h" />
     <ClInclude Include="Source\Scene\BattleSetupScene.h" />
+    <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizePreviewController.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\TitleScene.h" />
+    <ClInclude Include="Source\Controller\CustomizeTypes.h" />
     <ClInclude Include="Source\System\Application.h" />
     <ClInclude Include="Source\System\BattleCameraSystem.h" />
     <ClInclude Include="Source\System\BattleHUDSystem.h" />

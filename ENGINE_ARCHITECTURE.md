@@ -538,7 +538,8 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 
 現在の実装状態は次のとおり。
 
-- 編集用プレビューは CustomizeScene が持つ RenderTexture を ImGui に表示している
+- 編集用プレビューの低レベル状態と描画は `CustomizePreviewController` が持つ。AttackData の draft、保存/読込、スロット概要は `CustomizeAttackEditorController` が持つ。MotionData の draft、保存/読込、姿勢キー、汎用モーション用オフセットキーは `CustomizeMotionEditorController` が持つ。CharacterData の draft、キャラクター名、技スロット割り当て、保存/読込は `CustomizeCharacterEditorController` が持つ。CustomizeScene は画面モード、各編集 UI の呼び出し、controller 間の接着を担当する
+- アタック編集とモーション編集のプレビューは本体ウィンドウ左側のバックバッファへ直接描画する。旧 RenderTexture 経路は補助として残すが、通常の編集画面では ImGui Image プレビューを使わない
 - 部位選択はプルダウンを基本とし、選択状態は `selectedMotionEditorBoneIndex` で管理している
 - `MotionData` は編集用部位名を使った `boneTracks` を持ち、姿勢キーは全身キーとして編集画面から操作する
 - `MotionBoneKeyframeData` は `hasPosition / localPosition`、`hasRotation / localRotation`、`hasScale / localScale` を持つ
@@ -581,7 +582,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - 合図の文言が完全一致しなくても、次段階へ進む意図が明確なら同じ運用とする
 - 追加で必要な基盤作業や不具合修正がある場合は、段階の順序を壊さない範囲で先に行う
 - 追加作業によって次段階の内容が変わる場合は、実装前に変更理由を説明し、このメモへ反映する
-- 現在は第1・第2段階完了、第3段階実装済み（実画面確認待ち）。第3段階の動作確認後、次の合図では第4段階「関節マーカーとクリック選択」へ進む。未確認の不具合があれば先に第3段階を修正する
+- 現在は第1・第2段階完了、第3段階実装済み、第4段階実装済み（実画面確認待ち）。第4段階の動作確認後、次の合図では第5段階「数値による FK 編集」へ進む。未確認の不具合があれば先に第4段階を修正する
 
 1. 部位定義の共通化
    - 15 部位の正式名称、モデル側のボーン名候補、親部位、左右関係を 1 か所へ集約する
@@ -617,6 +618,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
    - クリック選択と既存プルダウン選択を同じ選択状態へ同期する
    - 選択中の関節、関節マーカー、親子関係をデバッグ表示する
    - 初期実装ではメッシュ全体の正確なピッキングを行わず、関節マーカー選択を基本とする
+   - 2026-09-12 実装。`CustomizePreviewController` が現在姿勢の部位座標をプレビュー矩形へ投影し、関節マーカー、親子ライン、選択中部位名を ImGui DrawList で重ねる。プレビュー領域内クリックで最も近い部位を拾い、`CustomizeMotionEditorController` の既存プルダウン選択と同じ `selectedBoneIndex` へ同期する。クリック選択は編集補助であり、MotionData 保存形式やバトル中の MotionSystem には影響させない
 
 5. 数値による FK 編集
    - キーフレームがあるフレームだけ、選択部位のローカル回転 X/Y/Z を編集できるようにする
@@ -699,6 +701,9 @@ SceneManager が Scene を管理する。
 - InputSystem と ActionMap は Scene をまたいで使い回す
 - Scene が World を持つ構造は維持し、必要になった段階で UI 用 GameObject やプレビュー用 GameObject を追加する
 - 非バトル Scene でも GameObject / Component にゲームロジックを持たせる方針にはしない
+- 非バトル Scene が肥大化した場合、Scene へ直接書き続けず `Controller` / `Panel` / `Draft` に段階的に切り出す。これらはバトル用 Component ではなく編集・UI 専用の補助クラスとして扱う
+- バトル周り以外の Scene では、Scene ファイルへ処理を直書きしない方針を基本とする。Scene は画面モード、遷移、World の保持、Controller の呼び出しに限定し、編集・UI・プレビューなどの具体処理は `Source/Controller` の Controller 系へ委託する
+- BattleScene と TrainingScene 相当のバトル部分は、同一フレーム整合性を守るため System 駆動を維持する。UI/編集系だけを扱いやすさ優先で分割してよい
 
 CustomizeScene は技調整・キャラクター調整用の作業 Scene とする。
 
@@ -709,6 +714,15 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - AttackData の保存先は `assets/AttackData/<Category>/slot_XX.json` を基準とする
 - AttackDataSaver は CharacterDataLoader が読み込める JSON 形式を維持する
 - スロット一覧は保存済み AttackData の表示名を見せ、手動保存した JSON も選びやすくする
+- 2026-09-10 時点で `CustomizePreviewController` を追加し、プレビュー用モデル、カメラ、RenderTexture、再生フレーム、SkeletonPose、描画処理を CustomizeScene から切り出した
+- 2026-09-12 時点で `CustomizeAttackEditorController` と `CustomizeTypes` を追加し、AttackData の draft、保存/読込、MotionData ID 正規化、技スロット概要を CustomizeScene から切り出した
+- 2026-09-12 時点で `CustomizeMotionEditorController` を追加し、MotionData の draft、保存/読込、姿勢キー編集、コピー/ペースト、Tポーズ、汎用モーション用オフセットキー編集を CustomizeScene から切り出した
+- 2026-09-12 時点で controller 系ファイルは `Source/Controller` に配置する方針へ変更した
+- 2026-09-12 時点で `CustomizeCharacterEditorController` を追加し、CharacterData の draft、キャラクター名、技スロット割り当て、保存/読込、スロット概要を CustomizeScene から切り出した
+- 2026-09-12 時点で CharacterEditor / AttackPicker の ImGui 描画も `CustomizeCharacterEditorController` へ移し、CustomizeScene は該当画面で controller の Draw を呼んで戻り値の `CustomizeMode` を受け取るだけにした
+- 2026-09-12 時点で AttackEditor のパラメータ編集、AttackBox 編集、CancelSetting 編集、保存ボタン処理を `CustomizeAttackEditorController` へ移した。CustomizeScene は右ウィンドウの配置、プレビュー描画、MotionEditor への遷移要求、戻る要求だけを扱う
+- 2026-09-12 時点で MotionEditor の UI 操作、姿勢キー編集、攻撃移動キー編集、汎用モーション用オフセットキー編集、タイムライン描画を `CustomizeMotionEditorController` へ移した。CustomizeScene はプレビュー領域、再生操作欄、保存時に AttackData と MotionData を接続する処理だけを扱う
+- 今後 CustomizeScene をさらに分割する場合も、Scene に編集処理を戻さない。画面固有の実処理は `Source/Controller` の Controller へ置き、Scene は画面モード、遷移、Controller 間の接着に限定する
 - AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
 - `frame.startup` は前隙フレーム数ではなく、攻撃ボタンを押したフレームを 1F とした時に何フレーム目から攻撃判定が出るかを表す
 - `frame.startup` の最小値は 2F とする。1F は内部 `actionFrame=0` から攻撃判定が出るため、このプロジェクトでは使用しない
