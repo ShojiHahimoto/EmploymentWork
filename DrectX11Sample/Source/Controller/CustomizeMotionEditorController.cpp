@@ -14,6 +14,16 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	/// <summary>
+	/// 編集用部位番号を有効範囲へ収める。
+	/// </summary>
+	/// <param name="bodyPartIndex">補正する部位番号。</param>
+	/// <returns>0 から MotionEditorBoneCount - 1 の部位番号。</returns>
+	int ClampBodyPartIndex(int bodyPartIndex)
+	{
+		return std::clamp(bodyPartIndex, 0, CustomizeMotionEditorController::MotionEditorBoneCount - 1);
+	}
+
+	/// <summary>
 	/// MotionData 内から指定部位のトラックを検索し、なければ作成する。
 	/// </summary>
 	/// <param name="motionData">編集対象の MotionData。</param>
@@ -405,7 +415,7 @@ bool CustomizeMotionEditorController::DrawEditor(
 	}
 
 	const int actionFrame = previewController.GetActionFrame();
-	const bool canEditCurrentFrame = HasMotionKeyframe(actionFrame);
+	bool canEditCurrentFrame = HasMotionKeyframe(actionFrame);
 	const bool hasMovementKey = !editingCommonMotion
 		&& actionFrame >= 0
 		&& FindAttackMovementKeyframe(attackData, actionFrame) != nullptr;
@@ -413,7 +423,7 @@ bool CustomizeMotionEditorController::DrawEditor(
 	const int pickedBodyPartIndex = previewController.ConsumePickedBodyPartIndex();
 	if (pickedBodyPartIndex >= 0 && pickedBodyPartIndex < MotionEditorBoneCount)
 	{
-		selectedBoneIndex = pickedBodyPartIndex;
+		selectedBoneIndex = ClampBodyPartIndex(pickedBodyPartIndex);
 		if (canEditCurrentFrame)
 		{
 			RefreshFrameEditValues(actionFrame);
@@ -425,11 +435,13 @@ bool CustomizeMotionEditorController::DrawEditor(
 	if (ImGui::Button("Add Whole Body Keyframe", ImVec2(210.0f, 28.0f)))
 	{
 		statusMessage = AddWholeBodyKeyframe(actionFrame, totalFrames);
+		canEditCurrentFrame = HasMotionKeyframe(actionFrame);
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Delete Current Keyframe", ImVec2(190.0f, 28.0f)))
 	{
 		statusMessage = DeleteWholeBodyKeyframe(actionFrame);
+		canEditCurrentFrame = HasMotionKeyframe(actionFrame);
 	}
 	ImGui::SameLine();
 	ImGui::BeginDisabled(!canEditCurrentFrame);
@@ -461,6 +473,7 @@ bool CustomizeMotionEditorController::DrawEditor(
 	ImGui::BeginDisabled(!canEditCurrentFrame);
 	const int previousBoneIndex = selectedBoneIndex;
 	bool partChanged = false;
+	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
 	if (ImGui::BeginCombo("Target Part", MotionSkeleton::GetBodyPartName(selectedBoneIndex)))
 	{
 		for (int bodyPartIndex = 0; bodyPartIndex < MotionEditorBoneCount; ++bodyPartIndex)
@@ -728,7 +741,7 @@ void CustomizeMotionEditorController::CopyEditorBuffers(int actionFrame)
 	if (!draft.boneTracks.empty())
 	{
 		const MotionBoneTrackData& track = draft.boneTracks.front();
-		selectedBoneIndex = std::max(0, MotionSkeleton::FindBodyPartIndex(track.boneName));
+		selectedBoneIndex = ClampBodyPartIndex(MotionSkeleton::FindBodyPartIndex(track.boneName));
 	}
 
 	RefreshFrameEditValues(actionFrame);
@@ -744,6 +757,7 @@ void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 	}
 
 	const int sampleFrame = std::max(0, actionFrame);
+	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	rotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, sampleFrame);
 	rootOffsetKey = GetMotionRootOffsetAtFrame(draft, sampleFrame);
