@@ -32,9 +32,15 @@
     <ClCompile Include="Source\Data\EffectDataLoader.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Data\MotionDataLoader.cpp" />
+    <ClCompile Include="Source\Data\PosePreset.cpp" />
+    <ClCompile Include="Source\Data\MotionSkeletonDefinition.cpp" />
     <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizePreviewController.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
     <ClCompile Include="Source\Scene\ResultScene.cpp" />
     <ClCompile Include="Source\Scene\SceneManager.cpp" />
@@ -54,6 +60,7 @@
     <ClCompile Include="Source\System\HitStopSystem.cpp" />
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\MotionSystem.cpp" />
+    <ClCompile Include="Source\System\MotionPose.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
@@ -105,6 +112,8 @@
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Data\MotionData.h" />
     <ClInclude Include="Source\Data\MotionDataLoader.h" />
+    <ClInclude Include="Source\Data\PosePreset.h" />
+    <ClInclude Include="Source\Data\MotionSkeletonDefinition.h" />
     <ClInclude Include="Source\Data\MotionDataSaver.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
     <ClInclude Include="Source\Input\InputConfigLoader.h" />
@@ -112,11 +121,16 @@
     <ClInclude Include="Source\Input\InputTypes.h" />
     <ClInclude Include="Source\Scene\BattleScene.h" />
     <ClInclude Include="Source\Scene\BattleSetupScene.h" />
+    <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizePreviewController.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Scene\SceneManager.h" />
     <ClInclude Include="Source\Scene\TitleScene.h" />
+    <ClInclude Include="Source\Controller\CustomizeTypes.h" />
     <ClInclude Include="Source\System\Application.h" />
     <ClInclude Include="Source\System\BattleCameraSystem.h" />
     <ClInclude Include="Source\System\BattleHUDSystem.h" />
@@ -146,6 +160,8 @@
     <ClInclude Include="Source\System\main.h" />
     <ClInclude Include="Source\System\MovementSystem.h" />
     <ClInclude Include="Source\System\MotionSystem.h" />
+    <ClInclude Include="Source\System\MotionPose.h" />
+    <ClInclude Include="Source\Data\SkeletonPose.h" />
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h" />
     <ClInclude Include="Source\System\PlayerFacingSystem.h" />
     <ClInclude Include="Source\System\PlayerControlSystem.h" />
@@ -165,6 +181,7 @@
     <None Include="assets\Sound\SE\Battle\SE_Hit_Hard_maou.wav" />
     <None Include="assets\Sound\SE\Battle\SE_Hit_Normal_maou.wav" />
     <None Include="assets\Settings\AudioSettings.json" />
+    <None Include="assets\PosePreset\TPose.json" />
     <None Include="assets\MotionData\Attack\Air\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_01.json" />

@@ -70,6 +70,34 @@ public:
 		int height = 0;
 	};
 
+	/// <summary>本体ウィンドウの矩形へ描画し、終了時に描画領域・カメラ・出力状態を戻す。</summary>
+	class ScopedRenderRegion
+	{
+	public:
+		/// <summary>指定矩形をプレビュー描画先にする。バックバッファ内の有効矩形を渡す。</summary>
+		/// <param name="region">クライアント座標での描画領域。</param>
+		ScopedRenderRegion(const RECT& region);
+		/// <summary>変更した出力状態を復元し、取得した COM 参照を解放する。</summary>
+		~ScopedRenderRegion();
+		ScopedRenderRegion(const ScopedRenderRegion&) = delete;
+		ScopedRenderRegion& operator=(const ScopedRenderRegion&) = delete;
+	private:
+		D3D11_VIEWPORT viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+		RECT scissors[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+		UINT viewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+		UINT scissorCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+		ID3D11RasterizerState* rasterizer = nullptr;
+		ID3D11DepthStencilState* depth = nullptr;
+		ID3D11BlendState* blend = nullptr;
+		ID3D11RenderTargetView* target = nullptr;
+		ID3D11DepthStencilView* depthTarget = nullptr;
+		UINT stencilRef = 0;
+		UINT sampleMask = 0;
+		float blendFactor[4] = {};
+		DirectX::SimpleMath::Matrix view;
+		DirectX::SimpleMath::Matrix projection;
+	};
+
 private:
 	struct DebugCubeConstantBuffer
 	{
@@ -111,6 +139,7 @@ private:
 	static ID3D11BlendState* m_pBlendStateATC;
 
 	static ID3D11RasterizerState* m_pRasterizerSolid;
+	static ID3D11RasterizerState* m_pRasterizerPreview;
 	static ID3D11RasterizerState* m_pRasterizerWireframe;
 
 	// カメラは Renderer が所有しない。外部から渡された行列だけを保持する。
@@ -160,6 +189,7 @@ public:
 	static void Uninit();
 	static void DrawStart();
 	static void DrawEnd();
+	static DirectX::SimpleMath::Color GetDefaultClearColor();
 
 	static ID3D11Device* GetDevice();
 	static ID3D11DeviceContext* GetDeviceContext();

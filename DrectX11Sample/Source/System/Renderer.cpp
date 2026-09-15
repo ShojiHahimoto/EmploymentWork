@@ -171,6 +171,7 @@ ID3D11BlendState* Renderer::m_BlendState[MAX_BLENDSTATE] = {};
 ID3D11BlendState* Renderer::m_pBlendStateATC = nullptr;
 
 ID3D11RasterizerState* Renderer::m_pRasterizerSolid = nullptr;
+ID3D11RasterizerState* Renderer::m_pRasterizerPreview = nullptr;
 ID3D11RasterizerState* Renderer::m_pRasterizerWireframe = nullptr;
 
 Matrix Renderer::m_ViewMatrix = Matrix::Identity;
@@ -263,6 +264,10 @@ HRESULT Renderer::Init()
 	rsDesc.CullMode = D3D11_CULL_NONE;
 	hr = m_pDevice->CreateRasterizerState(&rsDesc, &m_pRasterizerSolid);
 	if (FAILED(hr)) return hr;
+	rsDesc.ScissorEnable = TRUE;
+	hr = m_pDevice->CreateRasterizerState(&rsDesc, &m_pRasterizerPreview);
+	rsDesc.ScissorEnable = FALSE;
+	if (FAILED(hr)) return hr;
 
 	rsDesc.FillMode = D3D11_FILL_WIREFRAME;
 	hr = m_pDevice->CreateRasterizerState(&rsDesc, &m_pRasterizerWireframe);
@@ -294,7 +299,8 @@ HRESULT Renderer::Init()
 /// </summary>
 void Renderer::DrawStart()
 {
-	float clearColor[4] = { 0.0f, 0.0f, 0.35f, 1.0f };
+	const Color defaultClearColor = GetDefaultClearColor();
+	float clearColor[4] = { defaultClearColor.x, defaultClearColor.y, defaultClearColor.z, defaultClearColor.w };
 
 	m_pDeviceContext->ClearRenderTargetView(m_pRenderTargetView, clearColor);
 	m_pDeviceContext->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -310,6 +316,15 @@ void Renderer::DrawStart()
 void Renderer::DrawEnd()
 {
 	m_pSwapChain->Present(1, 0);
+}
+
+/// <summary>
+/// ゲーム本体とプレビューで共通して使う既定背景色を取得する。
+/// </summary>
+/// <returns>既定のクリア色。</returns>
+Color Renderer::GetDefaultClearColor()
+{
+	return Color(0.0f, 0.0f, 0.35f, 1.0f);
 }
 
 /// <summary>
@@ -472,6 +487,49 @@ void Renderer::RestoreBackBuffer()
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
 	m_pDeviceContext->RSSetState(m_pRasterizerSolid);
 	SetViewport(Application::GetWidth(), Application::GetHeight());
+}
+
+/// <summary>既存の描画領域と出力状態を退避して、専用 viewport / scissor を設定する。</summary>
+/// <param name="region">バックバッファ上のプレビュー矩形。</param>
+Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region)
+	: view(m_ViewMatrix), projection(m_ProjectionMatrix)
+{
+	auto* context = m_pDeviceContext;
+	context->RSGetViewports(&viewportCount, viewports);
+	context->RSGetScissorRects(&scissorCount, scissors);
+	context->RSGetState(&rasterizer);
+	context->OMGetDepthStencilState(&depth, &stencilRef);
+	context->OMGetBlendState(&blend, blendFactor, &sampleMask);
+	context->OMGetRenderTargets(1, &target, &depthTarget);
+	RestoreBackBuffer();
+	DrawScreenRect(region, GetDefaultClearColor());
+	// 色は矩形だけ塗る。深度クリアは全体に作用するため、シーン最初の3Dパスとして使用する。
+	context->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	const D3D11_VIEWPORT viewport = { static_cast<float>(region.left), static_cast<float>(region.top),
+		static_cast<float>(region.right - region.left), static_cast<float>(region.bottom - region.top), 0.0f, 1.0f };
+	context->RSSetViewports(1, &viewport);
+	context->RSSetScissorRects(1, &region);
+	context->RSSetState(m_pRasterizerPreview);
+	context->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+	context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+}
+
+/// <summary>後続のゲーム描画や ImGui にプレビューの設定を持ち越さない。</summary>
+Renderer::ScopedRenderRegion::~ScopedRenderRegion()
+{
+	auto* context = m_pDeviceContext;
+	context->OMSetRenderTargets(1, &target, depthTarget);
+	context->RSSetViewports(viewportCount, viewports);
+	context->RSSetScissorRects(scissorCount, scissors);
+	context->RSSetState(rasterizer);
+	context->OMSetDepthStencilState(depth, stencilRef);
+	context->OMSetBlendState(blend, blendFactor, sampleMask);
+	SetViewProjection(view, projection);
+	SAFE_RELEASE(target);
+	SAFE_RELEASE(depthTarget);
+	SAFE_RELEASE(rasterizer);
+	SAFE_RELEASE(depth);
+	SAFE_RELEASE(blend);
 }
 
 /// <summary>
@@ -1406,6 +1464,7 @@ void Renderer::Uninit()
 	}
 
 	SAFE_RELEASE(m_pRasterizerSolid);
+	SAFE_RELEASE(m_pRasterizerPreview);
 	SAFE_RELEASE(m_pRasterizerWireframe);
 
 	SAFE_RELEASE(m_pSwapChain);

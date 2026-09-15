@@ -31,6 +31,12 @@
     <Filter Include="ヘッダー ファイル\Scene">
       <UniqueIdentifier>{a0388b16-b301-4a0f-8792-9ba972a4a20b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Controller">
+      <UniqueIdentifier>{a0ef1dbf-9f98-4ea9-b162-6f4b501dbbc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\Controller">
+      <UniqueIdentifier>{d45df39e-5509-4a25-95d3-2c14b782d74c}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ソース ファイル\World">
       <UniqueIdentifier>{4d533b1e-3ab9-48f2-89f4-127cf6051f7c}</UniqueIdentifier>
     </Filter>
@@ -75,6 +81,9 @@
     </Filter>
     <Filter Include="リソース ファイル\MotionData">
       <UniqueIdentifier>{ff70432f-5916-4c01-ae84-a82bc6621e32}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\PosePreset">
+      <UniqueIdentifier>{00ad4531-0591-4bb3-a9f3-acba3f741284}</UniqueIdentifier>
     </Filter>
     <Filter Include="リソース ファイル\EffectData">
       <UniqueIdentifier>{481fc841-eebf-498f-bd46-28248f7beb1d}</UniqueIdentifier>
@@ -135,6 +144,12 @@
     <ClCompile Include="Source\Data\MotionDataLoader.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Data\PosePreset.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\MotionSkeletonDefinition.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Data\MotionDataSaver.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
@@ -143,6 +158,18 @@
     </ClCompile>
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\CustomizeScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
@@ -184,6 +211,9 @@
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\MotionSystem.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\System\MotionPose.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
@@ -289,6 +319,12 @@
     </ClInclude>
     <ClInclude Include="Source\System\MotionSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\MotionPose.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\SkeletonPose.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -410,6 +446,18 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizePreviewController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\CustomizeScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
@@ -424,6 +472,9 @@
     </ClInclude>
     <ClInclude Include="Source\Scene\TitleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeTypes.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\World\World.h">
       <Filter>ヘッダー ファイル\World</Filter>
@@ -500,6 +551,12 @@
     <ClInclude Include="Source\Data\MotionDataLoader.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Data\PosePreset.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Data\MotionSkeletonDefinition.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Data\MotionDataSaver.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
@@ -511,6 +568,9 @@
     </None>
     <None Include="assets\MotionData\debug_right_arm_wave.json">
       <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\PosePreset\TPose.json">
+      <Filter>リソース ファイル\PosePreset</Filter>
     </None>
     <None Include="assets\MotionData\Attack\Ground\slot_00.json">
       <Filter>リソース ファイル\MotionData</Filter>

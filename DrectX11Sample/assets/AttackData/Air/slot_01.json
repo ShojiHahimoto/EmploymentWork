@@ -4,6 +4,9 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Air",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Air/slot_01",
+  "hitSoundId": "",
   "damage": 800,
   "hitstunFrames": 20,
   "guardstunFrames": 15,
@@ -30,5 +33,6 @@
         "y": 2.000
       }
     }
-  ]
+  ],
+  "movementKeys": []
 }
