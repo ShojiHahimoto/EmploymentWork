@@ -3,6 +3,7 @@
   "displayName": "WalkForward",
   "totalFrames": 30,
   "looping": true,
+  "rootOffsetKeys": [],
   "boneTracks": [
     {
       "boneName": "Head",
@@ -30,19 +31,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -18.500, "y": -23.000, "z": 6.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -18.500, "y": -23.000, "z": 6.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -18.500, "y": -23.000, "z": 6.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -18.500, "y": -20.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -18.500, "y": -23.000, "z": 6.000 }
         }
       ]
     },
@@ -51,19 +52,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 27.000, "z": 0.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 27.000, "z": 0.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 27.000, "z": 0.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 27.000, "z": 0.000 }
         }
       ]
     },
@@ -72,19 +73,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+          "rotationEulerDegrees": { "x": -64.000, "y": 0.000, "z": -69.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+          "rotationEulerDegrees": { "x": -64.000, "y": 0.000, "z": -69.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+          "rotationEulerDegrees": { "x": -64.000, "y": 0.000, "z": -69.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+          "rotationEulerDegrees": { "x": -64.000, "y": 0.000, "z": -69.000 }
         }
       ]
     },
@@ -93,19 +94,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+          "rotationEulerDegrees": { "x": -63.500, "y": 8.000, "z": 70.500 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+          "rotationEulerDegrees": { "x": -63.500, "y": 8.000, "z": 70.500 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+          "rotationEulerDegrees": { "x": -63.500, "y": 8.000, "z": 70.500 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+          "rotationEulerDegrees": { "x": -63.500, "y": 8.000, "z": 70.500 }
         }
       ]
     },
@@ -114,19 +115,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+          "rotationEulerDegrees": { "x": -22.000, "y": -33.500, "z": -35.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+          "rotationEulerDegrees": { "x": -22.000, "y": -33.500, "z": -35.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+          "rotationEulerDegrees": { "x": -22.000, "y": -33.500, "z": -35.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+          "rotationEulerDegrees": { "x": -22.000, "y": -33.500, "z": -35.000 }
         }
       ]
     },
@@ -135,19 +136,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationEulerDegrees": { "x": -47.500, "y": 35.000, "z": 35.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationEulerDegrees": { "x": -47.500, "y": 35.000, "z": 35.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationEulerDegrees": { "x": -47.500, "y": 35.000, "z": 35.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationEulerDegrees": { "x": -47.500, "y": 35.000, "z": 35.000 }
         }
       ]
     },
@@ -156,19 +157,19 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -31.000, "y": 1.000, "z": -24.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -31.000, "y": 1.000, "z": -24.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -31.000, "y": 1.000, "z": -24.000 }
         },
         {
           "frame": 22,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": -31.000, "y": 1.000, "z": -24.000 }
         }
       ]
     },
