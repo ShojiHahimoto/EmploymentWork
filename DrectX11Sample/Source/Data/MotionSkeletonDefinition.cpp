@@ -7,6 +7,40 @@
 
 namespace
 {
+	/// <summary>
+	/// 制限なしの関節可動域を作る。
+	/// </summary>
+	/// <returns>可動域制限無効の設定。</returns>
+	MotionJointRotationLimit NoRotationLimit()
+	{
+		return MotionJointRotationLimit{};
+	}
+
+	/// <summary>
+	/// 編集用の甘めの回転可動域を作る。
+	/// </summary>
+	/// <param name="minX">X軸の最小角度。</param>
+	/// <param name="maxX">X軸の最大角度。</param>
+	/// <param name="minY">Y軸の最小角度。</param>
+	/// <param name="maxY">Y軸の最大角度。</param>
+	/// <param name="minZ">Z軸の最小角度。</param>
+	/// <param name="maxZ">Z軸の最大角度。</param>
+	/// <returns>可動域制限有効の設定。</returns>
+	MotionJointRotationLimit RotationLimit(
+		float minX,
+		float maxX,
+		float minY,
+		float maxY,
+		float minZ,
+		float maxZ)
+	{
+		MotionJointRotationLimit limit;
+		limit.enabled = true;
+		limit.minDegrees = DirectX::SimpleMath::Vector3(minX, minY, minZ);
+		limit.maxDegrees = DirectX::SimpleMath::Vector3(maxX, maxY, maxZ);
+		return limit;
+	}
+
 	const std::array<MotionBodyPartDefinition, MotionBodyPartCount> BodyPartDefinitions =
 	{
 		MotionBodyPartDefinition
@@ -14,105 +48,120 @@ namespace
 			MotionBodyPart::Head,
 			"Head",
 			MotionBodyPart::Spine,
-			{ "mixamorig:Head", "Head", "", "" }
+			{ "mixamorig:Head", "Head", "", "" },
+			RotationLimit(-60.0f, 60.0f, -80.0f, 80.0f, -45.0f, 45.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::Spine,
 			"Spine",
 			MotionBodyPart::Waist,
-			{ "mixamorig:Spine", "mixamorig:Spine1", "Spine", "" }
+			{ "mixamorig:Spine", "mixamorig:Spine1", "Spine", "" },
+			RotationLimit(-45.0f, 45.0f, -55.0f, 55.0f, -45.0f, 45.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::Waist,
 			"Waist",
 			MotionBodyPart::None,
-			{ "mixamorig:Hips", "Hips", "", "" }
+			{ "mixamorig:Hips", "Hips", "", "" },
+			NoRotationLimit()
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RShoulder,
 			"RShoulder",
 			MotionBodyPart::Spine,
-			{ "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder", "" }
+			{ "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder", "" },
+			RotationLimit(-120.0f, 100.0f, -180.0f, 60.0f, -150.0f, 120.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LShoulder,
 			"LShoulder",
 			MotionBodyPart::Spine,
-			{ "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder", "" }
+			{ "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder", "" },
+			RotationLimit(-120.0f, 100.0f, -60.0f, 180.0f, -120.0f, 150.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RElbow,
 			"RElbow",
 			MotionBodyPart::RShoulder,
-			{ "mixamorig:RightForeArm", "RightForeArm", "", "" }
+			{ "mixamorig:RightForeArm", "RightForeArm", "", "" },
+			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LElbow,
 			"LElbow",
 			MotionBodyPart::LShoulder,
-			{ "mixamorig:LeftForeArm", "LeftForeArm", "", "" }
+			{ "mixamorig:LeftForeArm", "LeftForeArm", "", "" },
+			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RHand,
 			"RHand",
 			MotionBodyPart::RElbow,
-			{ "mixamorig:RightHand", "RightHand", "", "" }
+			{ "mixamorig:RightHand", "RightHand", "", "" },
+			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LHand,
 			"LHand",
 			MotionBodyPart::LElbow,
-			{ "mixamorig:LeftHand", "LeftHand", "", "" }
+			{ "mixamorig:LeftHand", "LeftHand", "", "" },
+			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RHipjoint,
 			"RHipjoint",
 			MotionBodyPart::Waist,
-			{ "mixamorig:RightUpLeg", "RightUpLeg", "", "" }
+			{ "mixamorig:RightUpLeg", "RightUpLeg", "", "" },
+			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LHipjoint,
 			"LHipjoint",
 			MotionBodyPart::Waist,
-			{ "mixamorig:LeftUpLeg", "LeftUpLeg", "", "" }
+			{ "mixamorig:LeftUpLeg", "LeftUpLeg", "", "" },
+			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RKnees,
 			"RKnees",
 			MotionBodyPart::RHipjoint,
-			{ "mixamorig:RightLeg", "RightLeg", "", "" }
+			{ "mixamorig:RightLeg", "RightLeg", "", "" },
+			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LKnees,
 			"LKnees",
 			MotionBodyPart::LHipjoint,
-			{ "mixamorig:LeftLeg", "LeftLeg", "", "" }
+			{ "mixamorig:LeftLeg", "LeftLeg", "", "" },
+			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::RFeet,
 			"RFeet",
 			MotionBodyPart::RKnees,
-			{ "mixamorig:RightFoot", "RightFoot", "", "" }
+			{ "mixamorig:RightFoot", "RightFoot", "", "" },
+			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f)
 		},
 		MotionBodyPartDefinition
 		{
 			MotionBodyPart::LFeet,
 			"LFeet",
 			MotionBodyPart::LKnees,
-			{ "mixamorig:LeftFoot", "LeftFoot", "", "" }
+			{ "mixamorig:LeftFoot", "LeftFoot", "", "" },
+			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f)
 		}
 	};
 }
@@ -147,6 +196,16 @@ namespace MotionSkeleton
 	const char* GetBodyPartName(int index)
 	{
 		return GetBodyPartDefinition(index).editorName;
+	}
+
+	/// <summary>
+	/// 部位番号に対応する編集用回転可動域を取得する。
+	/// </summary>
+	/// <param name="index">0から始まる部位番号。</param>
+	/// <returns>有効/無効フラグ付きの回転可動域。</returns>
+	const MotionJointRotationLimit& GetRotationLimit(int index)
+	{
+		return GetBodyPartDefinition(index).rotationLimit;
 	}
 
 	/// <summary>

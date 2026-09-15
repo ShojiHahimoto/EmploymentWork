@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include <SimpleMath.h>
+
 #include <array>
 #include <string_view>
 
@@ -32,6 +34,16 @@ enum class MotionBodyPart : int
 inline constexpr int MotionBodyPartCount = static_cast<int>(MotionBodyPart::Count);
 
 /// <summary>
+/// モーション編集時に使う、部位ごとの甘めの回転可動域。
+/// </summary>
+struct MotionJointRotationLimit
+{
+	bool enabled = false;
+	DirectX::SimpleMath::Vector3 minDegrees = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector3 maxDegrees = DirectX::SimpleMath::Vector3::Zero;
+};
+
+/// <summary>
 /// 標準部位とモデル側ボーンの対応、親部位を保持する。
 /// </summary>
 struct MotionBodyPartDefinition
@@ -40,6 +52,7 @@ struct MotionBodyPartDefinition
 	const char* editorName = "";
 	MotionBodyPart parent = MotionBodyPart::None;
 	std::array<const char*, 4> modelBoneNames = {};
+	MotionJointRotationLimit rotationLimit;
 };
 
 namespace MotionSkeleton
@@ -63,6 +76,13 @@ namespace MotionSkeleton
 	/// <param name="index">0から始まる部位番号。</param>
 	/// <returns>HeadやRHandなどの正式名称。</returns>
 	const char* GetBodyPartName(int index);
+
+	/// <summary>
+	/// 部位番号に対応する編集用回転可動域を取得する。
+	/// </summary>
+	/// <param name="index">0から始まる部位番号。</param>
+	/// <returns>有効/無効フラグ付きの回転可動域。</returns>
+	const MotionJointRotationLimit& GetRotationLimit(int index);
 
 	/// <summary>
 	/// 編集用正式名または旧モデルボーン名から部位番号を取得する。

@@ -24,6 +24,43 @@ namespace
 	}
 
 	/// <summary>
+	/// 部位ごとの可動域に合わせてローカル回転を補正する。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集用部位番号。</param>
+	/// <param name="rotationEulerDegrees">補正する Euler 回転。</param>
+	/// <returns>制限内へ補正した Euler 回転。制限なし部位は入力値そのまま。</returns>
+	Vector3 ClampRotationByBodyPart(int bodyPartIndex, const Vector3& rotationEulerDegrees)
+	{
+		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
+		if (!limit.enabled)
+		{
+			return rotationEulerDegrees;
+		}
+
+		return Vector3(
+			std::clamp(rotationEulerDegrees.x, limit.minDegrees.x, limit.maxDegrees.x),
+			std::clamp(rotationEulerDegrees.y, limit.minDegrees.y, limit.maxDegrees.y),
+			std::clamp(rotationEulerDegrees.z, limit.minDegrees.z, limit.maxDegrees.z));
+	}
+
+	/// <summary>
+	/// 部位名に対応する可動域でローカル回転を補正する。
+	/// </summary>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <param name="rotationEulerDegrees">補正する Euler 回転。</param>
+	/// <returns>制限内へ補正した Euler 回転。</returns>
+	Vector3 ClampRotationByBoneName(const std::string& boneName, const Vector3& rotationEulerDegrees)
+	{
+		const int bodyPartIndex = MotionSkeleton::FindBodyPartIndex(boneName);
+		if (bodyPartIndex < 0)
+		{
+			return rotationEulerDegrees;
+		}
+
+		return ClampRotationByBodyPart(bodyPartIndex, rotationEulerDegrees);
+	}
+
+	/// <summary>
 	/// MotionData 内から指定部位のトラックを検索し、なければ作成する。
 	/// </summary>
 	/// <param name="motionData">編集対象の MotionData。</param>
@@ -246,12 +283,13 @@ namespace
 			targetKeyframe->frame = frame;
 		}
 
+		const Vector3 clampedRotationEulerDegrees = ClampRotationByBoneName(boneName, rotationEulerDegrees);
 		targetKeyframe->hasRotation = true;
-		targetKeyframe->localRotationEulerDegrees = rotationEulerDegrees;
+		targetKeyframe->localRotationEulerDegrees = clampedRotationEulerDegrees;
 		targetKeyframe->localRotation = Quaternion::CreateFromYawPitchRoll(
-			DirectX::XMConvertToRadians(rotationEulerDegrees.y),
-			DirectX::XMConvertToRadians(rotationEulerDegrees.x),
-			DirectX::XMConvertToRadians(rotationEulerDegrees.z));
+			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.y),
+			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.x),
+			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.z));
 	}
 
 	/// <summary>
@@ -495,8 +533,25 @@ bool CustomizeMotionEditorController::DrawEditor(
 	{
 		RefreshFrameEditValues(actionFrame);
 	}
+	const MotionJointRotationLimit& selectedLimit = MotionSkeleton::GetRotationLimit(selectedBoneIndex);
+	if (selectedLimit.enabled)
+	{
+		ImGui::Text(
+			"Rotation Limit X %.0f..%.0f / Y %.0f..%.0f / Z %.0f..%.0f",
+			selectedLimit.minDegrees.x,
+			selectedLimit.maxDegrees.x,
+			selectedLimit.minDegrees.y,
+			selectedLimit.maxDegrees.y,
+			selectedLimit.minDegrees.z,
+			selectedLimit.maxDegrees.z);
+	}
+	else
+	{
+		ImGui::Text("Rotation Limit: None");
+	}
 	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &rotationEulerDegrees.x, 0.5f))
 	{
+		rotationEulerDegrees = ClampRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
 		statusMessage = SetSelectedRotationKey(actionFrame, totalFrames);
 	}
 	ImGui::EndDisabled();
@@ -844,6 +899,7 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(int keyFrame
 
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	draft.totalFrames = std::max(1, totalFrames);
+	rotationEulerDegrees = ClampRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
 	SetMotionRotationKey(draft, boneName, keyFrame, rotationEulerDegrees);
 
 	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);

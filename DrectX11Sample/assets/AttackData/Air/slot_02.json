@@ -4,13 +4,16 @@
   "attackKind": "Normal",
   "commandId": "None",
   "usableState": "Air",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Air/slot_02",
+  "hitSoundId": "",
   "damage": 500,
   "hitstunFrames": 15,
   "guardstunFrames": 10,
   "hitReactionType": "Normal",
   "frame": {
-    "startup": 7,
-    "active": 4,
+    "startup": 9,
+    "active": 7,
     "recovery": 7
   },
   "canAttackCancel": false,
@@ -22,13 +25,14 @@
   "hitboxes": [
     {
       "offset": {
-        "x": 0.750,
-        "y": 2.450
+        "x": 0.950,
+        "y": 3.000
       },
       "size": {
         "x": 3.900,
         "y": 3.250
       }
     }
-  ]
+  ],
+  "movementKeys": []
 }
