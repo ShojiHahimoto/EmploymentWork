@@ -17,6 +17,7 @@ class CustomizeMotionEditorController
 {
 public:
 	static constexpr int MotionNameBufferSize = 128;
+	static constexpr int PresetNameBufferSize = 128;
 	static constexpr int MotionEditorBoneCount = MotionBodyPartCount;
 
 	/// <summary>
@@ -158,11 +159,16 @@ public:
 	std::string PasteWholeBodyPose(int keyFrame);
 
 	/// <summary>
-	/// 現在フレームへ T ポーズ回転を適用する。
+	/// 現在フレームへ指定プリセットの選択部位だけを適用する。
 	/// </summary>
+	/// <param name="presetId">読み込む姿勢プリセット ID。</param>
 	/// <param name="keyFrame">適用先の内部 actionFrame。</param>
+	/// <param name="applyMask">適用する部位だけ true の配列。</param>
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
-	std::string ApplyTPosePreset(int keyFrame);
+	std::string ApplyPosePreset(
+		const std::string& presetId,
+		int keyFrame,
+		const std::array<bool, MotionEditorBoneCount>& applyMask);
 
 	/// <summary>
 	/// MotionData 下書きを取得する。
@@ -214,6 +220,21 @@ public:
 
 private:
 	/// <summary>
+	/// 姿勢プリセットの保存/読み込み UI を描画し、選択部位への適用を行う。
+	/// </summary>
+	/// <param name="keyFrame">現在の内部 actionFrame。</param>
+	/// <param name="totalFrames">MotionData の総フレーム数。</param>
+	/// <param name="statusMessage">処理結果メッセージの書き込み先。</param>
+	void DrawPosePresetControls(int keyFrame, int totalFrames, std::string& statusMessage);
+
+	/// <summary>
+	/// 現在フレームの全身姿勢をプリセットとして保存する。
+	/// </summary>
+	/// <param name="keyFrame">保存元の内部 actionFrame。</param>
+	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
+	std::string SaveCurrentPoseAsPreset(int keyFrame);
+
+	/// <summary>
 	/// 保存前に MotionData のフレーム範囲とキー順を整える。
 	/// </summary>
 	void NormalizeDraftForSave();
@@ -226,4 +247,9 @@ private:
 	DirectX::SimpleMath::Vector3 rootOffsetKey = DirectX::SimpleMath::Vector3::Zero;
 	std::array<DirectX::SimpleMath::Vector3, MotionEditorBoneCount> copiedPoseRotations = {};
 	bool hasCopiedPose = false;
+	std::array<char, PresetNameBufferSize> presetNameBuffer = {};
+	std::array<bool, MotionEditorBoneCount> presetApplyMask = {};
+	bool showSavePresetPanel = false;
+	bool showLoadPresetPanel = false;
+	int selectedPresetIndex = 0;
 };

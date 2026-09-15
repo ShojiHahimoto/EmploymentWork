@@ -32,6 +32,7 @@
     <ClCompile Include="Source\Data\EffectDataLoader.cpp" />
     <ClCompile Include="Source\Data\JsonValue.cpp" />
     <ClCompile Include="Source\Data\MotionDataLoader.cpp" />
+    <ClCompile Include="Source\Data\PosePreset.cpp" />
     <ClCompile Include="Source\Data\MotionSkeletonDefinition.cpp" />
     <ClCompile Include="Source\Data\MotionDataSaver.cpp" />
     <ClCompile Include="Source\Scene\BattleScene.cpp" />
@@ -111,6 +112,7 @@
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Data\MotionData.h" />
     <ClInclude Include="Source\Data\MotionDataLoader.h" />
+    <ClInclude Include="Source\Data\PosePreset.h" />
     <ClInclude Include="Source\Data\MotionSkeletonDefinition.h" />
     <ClInclude Include="Source\Data\MotionDataSaver.h" />
     <ClInclude Include="Source\Input\InputBindings.h" />
@@ -179,6 +181,7 @@
     <None Include="assets\Sound\SE\Battle\SE_Hit_Hard_maou.wav" />
     <None Include="assets\Sound\SE\Battle\SE_Hit_Normal_maou.wav" />
     <None Include="assets\Settings\AudioSettings.json" />
+    <None Include="assets\PosePreset\TPose.json" />
     <None Include="assets\MotionData\Attack\Air\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_00.json" />
     <None Include="assets\MotionData\Attack\Ground\slot_01.json" />

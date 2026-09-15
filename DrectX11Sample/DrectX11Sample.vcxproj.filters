@@ -82,6 +82,9 @@
     <Filter Include="リソース ファイル\MotionData">
       <UniqueIdentifier>{ff70432f-5916-4c01-ae84-a82bc6621e32}</UniqueIdentifier>
     </Filter>
+    <Filter Include="リソース ファイル\PosePreset">
+      <UniqueIdentifier>{00ad4531-0591-4bb3-a9f3-acba3f741284}</UniqueIdentifier>
+    </Filter>
     <Filter Include="リソース ファイル\EffectData">
       <UniqueIdentifier>{481fc841-eebf-498f-bd46-28248f7beb1d}</UniqueIdentifier>
     </Filter>
@@ -139,6 +142,9 @@
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\MotionDataLoader.cpp">
+      <Filter>ソース ファイル\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Data\PosePreset.cpp">
       <Filter>ソース ファイル\Data</Filter>
     </ClCompile>
     <ClCompile Include="Source\Data\MotionSkeletonDefinition.cpp">
@@ -545,6 +551,9 @@
     <ClInclude Include="Source\Data\MotionDataLoader.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Data\PosePreset.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Data\MotionSkeletonDefinition.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
@@ -559,6 +568,9 @@
     </None>
     <None Include="assets\MotionData\debug_right_arm_wave.json">
       <Filter>リソース ファイル\MotionData</Filter>
+    </None>
+    <None Include="assets\PosePreset\TPose.json">
+      <Filter>リソース ファイル\PosePreset</Filter>
     </None>
     <None Include="assets\MotionData\Attack\Ground\slot_00.json">
       <Filter>リソース ファイル\MotionData</Filter>

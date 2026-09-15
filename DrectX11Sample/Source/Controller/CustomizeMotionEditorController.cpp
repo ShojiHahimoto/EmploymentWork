@@ -2,17 +2,126 @@
 
 #include "Data/MotionDataLoader.h"
 #include "Data/MotionDataSaver.h"
+#include "Data/PosePreset.h"
 #include "System/imgui-docking/imgui.h"
 
 #include <DirectXMath.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
+#include <vector>
 
 using namespace DirectX::SimpleMath;
 
 namespace
 {
+	/// <summary>
+	/// 読み込み UI に表示する姿勢プリセット候補。
+	/// </summary>
+	struct PosePresetListItem
+	{
+		std::string presetId;
+		std::string displayName;
+		bool idleMotion = false;
+	};
+
+	constexpr const char* IdlePosePresetId = "__IdlePose__";
+
+	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
+
+	/// <summary>
+	/// 文字列が空白だけか確認する。
+	/// </summary>
+	/// <param name="text">確認する文字列。</param>
+	/// <returns>空または空白だけなら true。</returns>
+	bool IsBlank(const std::string& text)
+	{
+		return std::all_of(
+			text.begin(),
+			text.end(),
+			[](unsigned char character)
+			{
+				return std::isspace(character) != 0;
+			});
+	}
+
+	/// <summary>
+	/// 保存済みプリセットと Idle 参照プリセットを一覧化する。
+	/// </summary>
+	/// <returns>読み込み UI に表示するプリセット候補。</returns>
+	std::vector<PosePresetListItem> BuildPosePresetList()
+	{
+		std::vector<PosePresetListItem> items;
+		items.push_back({ IdlePosePresetId, "Idle Pose (Common/Idle)", true });
+
+		for (const std::string& presetId : PosePresetStore::ListPresetIds())
+		{
+			PosePresetData preset;
+			std::string displayName = presetId;
+			if (PosePresetStore::LoadPreset(presetId, preset) && !preset.displayName.empty())
+			{
+				displayName = preset.displayName;
+			}
+
+			items.push_back({ presetId, displayName, false });
+		}
+
+		return items;
+	}
+
+	/// <summary>
+	/// Common/Idle の 0F 姿勢を、プリセットと同じ形に変換する。
+	/// </summary>
+	/// <param name="outPreset">作成した Idle 姿勢プリセットの書き込み先。</param>
+	/// <returns>Idle MotionData の読み込みに成功した場合は true。</returns>
+	bool BuildIdlePosePreset(PosePresetData& outPreset)
+	{
+		MotionData idleMotion;
+		if (!MotionDataLoader::LoadMotionData("Common/Idle", idleMotion))
+		{
+			return false;
+		}
+
+		outPreset = PosePresetData();
+		outPreset.presetId = IdlePosePresetId;
+		outPreset.displayName = "Idle Pose";
+		for (int boneIndex = 0; boneIndex < CustomizeMotionEditorController::MotionEditorBoneCount; ++boneIndex)
+		{
+			const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
+			PosePresetBoneData bone;
+			bone.boneName = boneName;
+			bone.localRotationEulerDegrees = GetMotionRotationEulerAtFrame(idleMotion, boneName, 0);
+			outPreset.bones.push_back(bone);
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// 指定プリセット内から部位回転を検索する。
+	/// </summary>
+	/// <param name="preset">検索対象のプリセット。</param>
+	/// <param name="boneName">検索する編集用部位名。</param>
+	/// <param name="outRotation">見つかった回転の書き込み先。</param>
+	/// <returns>部位回転が見つかった場合は true。</returns>
+	bool FindPresetBoneRotation(
+		const PosePresetData& preset,
+		const std::string& boneName,
+		Vector3& outRotation)
+	{
+		for (const PosePresetBoneData& bone : preset.bones)
+		{
+			if (bone.boneName == boneName)
+			{
+				outRotation = bone.localRotationEulerDegrees;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/// <summary>
 	/// 編集用部位番号を有効範囲へ収める。
 	/// </summary>
@@ -589,12 +698,9 @@ bool CustomizeMotionEditorController::DrawEditor(
 		statusMessage = PasteWholeBodyPose(actionFrame);
 	}
 	ImGui::EndDisabled();
-	ImGui::SameLine();
-	if (ImGui::Button("T Pose", ImVec2(90.0f, 28.0f)))
-	{
-		statusMessage = ApplyTPosePreset(actionFrame);
-	}
 	ImGui::EndDisabled();
+
+	DrawPosePresetControls(actionFrame, totalFrames, statusMessage);
 
 	ImGui::Separator();
 	ImGui::Text("Pose Edit");
@@ -1140,21 +1246,216 @@ std::string CustomizeMotionEditorController::PasteWholeBodyPose(int keyFrame)
 	return "Pasted whole body pose.";
 }
 
-std::string CustomizeMotionEditorController::ApplyTPosePreset(int keyFrame)
+void CustomizeMotionEditorController::DrawPosePresetControls(int keyFrame, int totalFrames, std::string& statusMessage)
+{
+	(void)totalFrames;
+
+	ImGui::Separator();
+	ImGui::Text("Pose Preset");
+	ImGui::BeginDisabled(!HasMotionKeyframe(keyFrame));
+	if (ImGui::Button("Save Pose Preset", ImVec2(150.0f, 28.0f)))
+	{
+		showSavePresetPanel = !showSavePresetPanel;
+		showLoadPresetPanel = false;
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Load Pose Preset", ImVec2(150.0f, 28.0f)))
+	{
+		showLoadPresetPanel = !showLoadPresetPanel;
+		showSavePresetPanel = false;
+		if (std::none_of(presetApplyMask.begin(), presetApplyMask.end(), [](bool selected) { return selected; }))
+		{
+			presetApplyMask.fill(true);
+		}
+	}
+	ImGui::EndDisabled();
+
+	if (!HasMotionKeyframe(keyFrame))
+	{
+		ImGui::TextDisabled("Preset save/load requires a keyframe on the current frame.");
+		return;
+	}
+
+	if (showSavePresetPanel)
+	{
+		ImGui::SeparatorText("Save Current Pose Preset");
+		ImGui::InputText("Preset Name", presetNameBuffer.data(), presetNameBuffer.size());
+		if (ImGui::Button("Save Current Pose", ImVec2(160.0f, 28.0f)))
+		{
+			statusMessage = SaveCurrentPoseAsPreset(keyFrame);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel Save", ImVec2(120.0f, 28.0f)))
+		{
+			showSavePresetPanel = false;
+		}
+	}
+
+	if (showLoadPresetPanel)
+	{
+		ImGui::SeparatorText("Load Pose Preset");
+		const std::vector<PosePresetListItem> presets = BuildPosePresetList();
+		if (presets.empty())
+		{
+			ImGui::TextDisabled("No pose preset found.");
+			return;
+		}
+
+		selectedPresetIndex = std::clamp(selectedPresetIndex, 0, static_cast<int>(presets.size()) - 1);
+		if (ImGui::BeginCombo("Pose Preset", presets[static_cast<size_t>(selectedPresetIndex)].displayName.c_str()))
+		{
+			for (int presetIndex = 0; presetIndex < static_cast<int>(presets.size()); ++presetIndex)
+			{
+				const bool selected = selectedPresetIndex == presetIndex;
+				if (ImGui::Selectable(presets[static_cast<size_t>(presetIndex)].displayName.c_str(), selected))
+				{
+					selectedPresetIndex = presetIndex;
+				}
+				if (selected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::Button("Select All Parts", ImVec2(150.0f, 26.0f)))
+		{
+			presetApplyMask.fill(true);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Clear All Parts", ImVec2(150.0f, 26.0f)))
+		{
+			presetApplyMask.fill(false);
+		}
+
+		constexpr int Columns = 3;
+		for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
+		{
+			ImGui::PushID(boneIndex);
+			const bool selected = presetApplyMask[static_cast<size_t>(boneIndex)];
+			if (ImGui::Selectable(MotionSkeleton::GetBodyPartName(boneIndex), selected, 0, ImVec2(125.0f, 24.0f)))
+			{
+				presetApplyMask[static_cast<size_t>(boneIndex)] = !selected;
+			}
+			ImGui::PopID();
+			if ((boneIndex + 1) % Columns != 0)
+			{
+				ImGui::SameLine();
+			}
+		}
+
+		const bool hasAnySelectedPart = std::any_of(
+			presetApplyMask.begin(),
+			presetApplyMask.end(),
+			[](bool selected)
+			{
+				return selected;
+			});
+		ImGui::BeginDisabled(!hasAnySelectedPart);
+		if (ImGui::Button("Apply Preset To Selected Parts", ImVec2(240.0f, 28.0f)))
+		{
+			statusMessage = ApplyPosePreset(
+				presets[static_cast<size_t>(selectedPresetIndex)].presetId,
+				keyFrame,
+				presetApplyMask);
+		}
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel Load", ImVec2(120.0f, 28.0f)))
+		{
+			showLoadPresetPanel = false;
+		}
+	}
+}
+
+std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFrame)
 {
 	if (!HasMotionKeyframe(keyFrame))
 	{
-		return "T Pose requires a keyframe on the current frame.";
+		return "Pose preset save requires a keyframe on the current frame.";
 	}
 
+	const std::string presetId = presetNameBuffer.data();
+	if (IsBlank(presetId))
+	{
+		return "Preset name is empty.";
+	}
+	if (!PosePresetStore::IsValidPresetId(presetId))
+	{
+		return "Preset name contains invalid file name characters.";
+	}
+	if (PosePresetStore::Exists(presetId) || presetId == IdlePosePresetId)
+	{
+		return "Preset name already exists.";
+	}
+
+	PosePresetData preset;
+	preset.presetId = presetId;
+	preset.displayName = presetId;
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		SetMotionRotationKey(draft, boneName, keyFrame, Vector3::Zero);
+		PosePresetBoneData bone;
+		bone.boneName = boneName;
+		bone.localRotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, keyFrame);
+		preset.bones.push_back(bone);
+	}
+
+	if (!PosePresetStore::SavePreset(presetId, preset))
+	{
+		return "Failed to save pose preset.";
+	}
+
+	presetNameBuffer.fill('\0');
+	showSavePresetPanel = false;
+	return "Saved pose preset: assets/PosePreset/" + presetId + ".json";
+}
+
+std::string CustomizeMotionEditorController::ApplyPosePreset(
+	const std::string& presetId,
+	int keyFrame,
+	const std::array<bool, MotionEditorBoneCount>& applyMask)
+{
+	if (!HasMotionKeyframe(keyFrame))
+	{
+		return "Pose preset load requires a keyframe on the current frame.";
+	}
+
+	PosePresetData preset;
+	if (presetId == IdlePosePresetId)
+	{
+		if (!BuildIdlePosePreset(preset))
+		{
+			return "Failed to load Idle pose from Common/Idle.";
+		}
+	}
+	else if (!PosePresetStore::LoadPreset(presetId, preset))
+	{
+		return "Failed to load pose preset: " + presetId;
+	}
+
+	int appliedCount = 0;
+	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
+	{
+		if (!applyMask[static_cast<size_t>(boneIndex)])
+		{
+			continue;
+		}
+
+		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
+		Vector3 rotation = Vector3::Zero;
+		if (FindPresetBoneRotation(preset, boneName, rotation))
+		{
+			SetMotionRotationKey(draft, boneName, keyFrame, rotation);
+			++appliedCount;
+		}
 	}
 
 	RefreshFrameEditValues(keyFrame);
-	return "Applied T Pose preset.";
+	return appliedCount > 0
+		? "Applied pose preset: " + preset.displayName
+		: "Pose preset has no matching selected parts.";
 }
 
 MotionData& CustomizeMotionEditorController::GetDraft()
