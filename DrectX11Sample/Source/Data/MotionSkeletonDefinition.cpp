@@ -41,6 +41,24 @@ namespace
 		return limit;
 	}
 
+	/// <summary>
+	/// 内部値と編集UI表示値の符号をそのままにする。
+	/// </summary>
+	/// <returns>全軸 +1 の符号。</returns>
+	DirectX::SimpleMath::Vector3 SameEditorRotationSign()
+	{
+		return DirectX::SimpleMath::Vector3::One;
+	}
+
+	/// <summary>
+	/// 左側部位を右側と同じ数値で対称編集しやすくする符号を返す。
+	/// </summary>
+	/// <returns>Xは同値、Y/Zは反転する符号。</returns>
+	DirectX::SimpleMath::Vector3 LeftSideEditorRotationSign()
+	{
+		return DirectX::SimpleMath::Vector3(1.0f, -1.0f, -1.0f);
+	}
+
 	const std::array<MotionBodyPartDefinition, MotionBodyPartCount> BodyPartDefinitions =
 	{
 		MotionBodyPartDefinition
@@ -49,7 +67,8 @@ namespace
 			"Head",
 			MotionBodyPart::Spine,
 			{ "mixamorig:Head", "Head", "", "" },
-			RotationLimit(-60.0f, 60.0f, -80.0f, 80.0f, -45.0f, 45.0f)
+			RotationLimit(-60.0f, 60.0f, -80.0f, 80.0f, -45.0f, 45.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -57,7 +76,8 @@ namespace
 			"Spine",
 			MotionBodyPart::Waist,
 			{ "mixamorig:Spine", "mixamorig:Spine1", "Spine", "" },
-			RotationLimit(-45.0f, 45.0f, -55.0f, 55.0f, -45.0f, 45.0f)
+			RotationLimit(-45.0f, 45.0f, -55.0f, 55.0f, -45.0f, 45.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -65,7 +85,8 @@ namespace
 			"Waist",
 			MotionBodyPart::None,
 			{ "mixamorig:Hips", "Hips", "", "" },
-			NoRotationLimit()
+			NoRotationLimit(),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -73,7 +94,8 @@ namespace
 			"RShoulder",
 			MotionBodyPart::Spine,
 			{ "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder", "" },
-			RotationLimit(-120.0f, 100.0f, -180.0f, 60.0f, -150.0f, 120.0f)
+			RotationLimit(-120.0f, 100.0f, -180.0f, 60.0f, -150.0f, 120.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -81,7 +103,8 @@ namespace
 			"LShoulder",
 			MotionBodyPart::Spine,
 			{ "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder", "" },
-			RotationLimit(-120.0f, 100.0f, -60.0f, 180.0f, -120.0f, 150.0f)
+			RotationLimit(-120.0f, 100.0f, -60.0f, 180.0f, -120.0f, 150.0f),
+			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -89,7 +112,8 @@ namespace
 			"RElbow",
 			MotionBodyPart::RShoulder,
 			{ "mixamorig:RightForeArm", "RightForeArm", "", "" },
-			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f)
+			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -97,7 +121,8 @@ namespace
 			"LElbow",
 			MotionBodyPart::LShoulder,
 			{ "mixamorig:LeftForeArm", "LeftForeArm", "", "" },
-			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f)
+			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f),
+			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -105,7 +130,8 @@ namespace
 			"RHand",
 			MotionBodyPart::RElbow,
 			{ "mixamorig:RightHand", "RightHand", "", "" },
-			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f)
+			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -113,7 +139,8 @@ namespace
 			"LHand",
 			MotionBodyPart::LElbow,
 			{ "mixamorig:LeftHand", "LeftHand", "", "" },
-			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f)
+			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f),
+			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -121,7 +148,8 @@ namespace
 			"RHipjoint",
 			MotionBodyPart::Waist,
 			{ "mixamorig:RightUpLeg", "RightUpLeg", "", "" },
-			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f)
+			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -129,7 +157,8 @@ namespace
 			"LHipjoint",
 			MotionBodyPart::Waist,
 			{ "mixamorig:LeftUpLeg", "LeftUpLeg", "", "" },
-			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f)
+			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f),
+			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -137,7 +166,8 @@ namespace
 			"RKnees",
 			MotionBodyPart::RHipjoint,
 			{ "mixamorig:RightLeg", "RightLeg", "", "" },
-			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f)
+			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -145,7 +175,8 @@ namespace
 			"LKnees",
 			MotionBodyPart::LHipjoint,
 			{ "mixamorig:LeftLeg", "LeftLeg", "", "" },
-			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f)
+			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f),
+			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -153,7 +184,8 @@ namespace
 			"RFeet",
 			MotionBodyPart::RKnees,
 			{ "mixamorig:RightFoot", "RightFoot", "", "" },
-			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f)
+			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f),
+			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
 		{
@@ -161,7 +193,8 @@ namespace
 			"LFeet",
 			MotionBodyPart::LKnees,
 			{ "mixamorig:LeftFoot", "LeftFoot", "", "" },
-			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f)
+			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f),
+			LeftSideEditorRotationSign()
 		}
 	};
 }
@@ -206,6 +239,16 @@ namespace MotionSkeleton
 	const MotionJointRotationLimit& GetRotationLimit(int index)
 	{
 		return GetBodyPartDefinition(index).rotationLimit;
+	}
+
+	/// <summary>
+	/// 内部保存値と編集UI表示値を変換するための軸符号を取得する。
+	/// </summary>
+	/// <param name="index">0から始まる部位番号。</param>
+	/// <returns>各軸に掛ける符号。左側部位は対称編集用に一部軸が -1 になる。</returns>
+	DirectX::SimpleMath::Vector3 GetEditorRotationSign(int index)
+	{
+		return GetBodyPartDefinition(index).editorRotationSign;
 	}
 
 	/// <summary>

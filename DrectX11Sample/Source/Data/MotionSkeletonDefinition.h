@@ -53,6 +53,7 @@ struct MotionBodyPartDefinition
 	MotionBodyPart parent = MotionBodyPart::None;
 	std::array<const char*, 4> modelBoneNames = {};
 	MotionJointRotationLimit rotationLimit;
+	DirectX::SimpleMath::Vector3 editorRotationSign = DirectX::SimpleMath::Vector3::One;
 };
 
 namespace MotionSkeleton
@@ -83,6 +84,13 @@ namespace MotionSkeleton
 	/// <param name="index">0から始まる部位番号。</param>
 	/// <returns>有効/無効フラグ付きの回転可動域。</returns>
 	const MotionJointRotationLimit& GetRotationLimit(int index);
+
+	/// <summary>
+	/// 内部保存値と編集UI表示値を変換するための軸符号を取得する。
+	/// </summary>
+	/// <param name="index">0から始まる部位番号。</param>
+	/// <returns>各軸に掛ける符号。左側部位は対称編集用に一部軸が -1 になる。</returns>
+	DirectX::SimpleMath::Vector3 GetEditorRotationSign(int index);
 
 	/// <summary>
 	/// 編集用正式名または旧モデルボーン名から部位番号を取得する。

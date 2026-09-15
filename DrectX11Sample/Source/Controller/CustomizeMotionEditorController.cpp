@@ -24,6 +24,78 @@ namespace
 	}
 
 	/// <summary>
+	/// Vector3 の各軸へ符号を掛ける。
+	/// </summary>
+	/// <param name="value">変換元の値。</param>
+	/// <param name="sign">各軸へ掛ける符号。</param>
+	/// <returns>符号変換後の値。</returns>
+	Vector3 ApplyAxisSign(const Vector3& value, const Vector3& sign)
+	{
+		return Vector3(value.x * sign.x, value.y * sign.y, value.z * sign.z);
+	}
+
+	/// <summary>
+	/// MotionData 内部保存値を、左右対称入力しやすい編集UI表示値へ変換する。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集用部位番号。</param>
+	/// <param name="internalRotationEulerDegrees">MotionData に保存されている内部 Euler 回転。</param>
+	/// <returns>編集UIに表示する Euler 回転。</returns>
+	Vector3 ConvertInternalRotationToEditorRotation(int bodyPartIndex, const Vector3& internalRotationEulerDegrees)
+	{
+		const Vector3 sign = MotionSkeleton::GetEditorRotationSign(ClampBodyPartIndex(bodyPartIndex));
+		return ApplyAxisSign(internalRotationEulerDegrees, sign);
+	}
+
+	/// <summary>
+	/// 編集UI表示値を、既存MotionData形式の内部保存値へ戻す。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集用部位番号。</param>
+	/// <param name="editorRotationEulerDegrees">編集UI上の Euler 回転。</param>
+	/// <returns>MotionData に保存する内部 Euler 回転。</returns>
+	Vector3 ConvertEditorRotationToInternalRotation(int bodyPartIndex, const Vector3& editorRotationEulerDegrees)
+	{
+		const Vector3 sign = MotionSkeleton::GetEditorRotationSign(ClampBodyPartIndex(bodyPartIndex));
+		return ApplyAxisSign(editorRotationEulerDegrees, sign);
+	}
+
+	/// <summary>
+	/// 内部可動域を編集UI表示用の可動域へ変換する。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集用部位番号。</param>
+	/// <param name="minDegrees">UI表示用の最小値。</param>
+	/// <param name="maxDegrees">UI表示用の最大値。</param>
+	void GetEditorRotationLimitRange(int bodyPartIndex, Vector3& minDegrees, Vector3& maxDegrees)
+	{
+		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
+		minDegrees = limit.minDegrees;
+		maxDegrees = limit.maxDegrees;
+		if (!limit.enabled)
+		{
+			return;
+		}
+
+		const Vector3 sign = MotionSkeleton::GetEditorRotationSign(ClampBodyPartIndex(bodyPartIndex));
+		if (sign.x < 0.0f)
+		{
+			std::swap(minDegrees.x, maxDegrees.x);
+			minDegrees.x = -minDegrees.x;
+			maxDegrees.x = -maxDegrees.x;
+		}
+		if (sign.y < 0.0f)
+		{
+			std::swap(minDegrees.y, maxDegrees.y);
+			minDegrees.y = -minDegrees.y;
+			maxDegrees.y = -maxDegrees.y;
+		}
+		if (sign.z < 0.0f)
+		{
+			std::swap(minDegrees.z, maxDegrees.z);
+			minDegrees.z = -minDegrees.z;
+			maxDegrees.z = -maxDegrees.z;
+		}
+	}
+
+	/// <summary>
 	/// 部位ごとの可動域に合わせてローカル回転を補正する。
 	/// </summary>
 	/// <param name="bodyPartIndex">編集用部位番号。</param>
@@ -41,6 +113,29 @@ namespace
 			std::clamp(rotationEulerDegrees.x, limit.minDegrees.x, limit.maxDegrees.x),
 			std::clamp(rotationEulerDegrees.y, limit.minDegrees.y, limit.maxDegrees.y),
 			std::clamp(rotationEulerDegrees.z, limit.minDegrees.z, limit.maxDegrees.z));
+	}
+
+	/// <summary>
+	/// 編集UI表示値を、表示上の可動域に合わせて補正する。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集用部位番号。</param>
+	/// <param name="editorRotationEulerDegrees">編集UI上の Euler 回転。</param>
+	/// <returns>編集UI表示用可動域に収めた Euler 回転。</returns>
+	Vector3 ClampEditorRotationByBodyPart(int bodyPartIndex, const Vector3& editorRotationEulerDegrees)
+	{
+		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
+		if (!limit.enabled)
+		{
+			return editorRotationEulerDegrees;
+		}
+
+		Vector3 editorMin;
+		Vector3 editorMax;
+		GetEditorRotationLimitRange(bodyPartIndex, editorMin, editorMax);
+		return Vector3(
+			std::clamp(editorRotationEulerDegrees.x, editorMin.x, editorMax.x),
+			std::clamp(editorRotationEulerDegrees.y, editorMin.y, editorMax.y),
+			std::clamp(editorRotationEulerDegrees.z, editorMin.z, editorMax.z));
 	}
 
 	/// <summary>
@@ -536,14 +631,17 @@ bool CustomizeMotionEditorController::DrawEditor(
 	const MotionJointRotationLimit& selectedLimit = MotionSkeleton::GetRotationLimit(selectedBoneIndex);
 	if (selectedLimit.enabled)
 	{
+		Vector3 editorLimitMin;
+		Vector3 editorLimitMax;
+		GetEditorRotationLimitRange(selectedBoneIndex, editorLimitMin, editorLimitMax);
 		ImGui::Text(
 			"Rotation Limit X %.0f..%.0f / Y %.0f..%.0f / Z %.0f..%.0f",
-			selectedLimit.minDegrees.x,
-			selectedLimit.maxDegrees.x,
-			selectedLimit.minDegrees.y,
-			selectedLimit.maxDegrees.y,
-			selectedLimit.minDegrees.z,
-			selectedLimit.maxDegrees.z);
+			editorLimitMin.x,
+			editorLimitMax.x,
+			editorLimitMin.y,
+			editorLimitMax.y,
+			editorLimitMin.z,
+			editorLimitMax.z);
 	}
 	else
 	{
@@ -551,7 +649,7 @@ bool CustomizeMotionEditorController::DrawEditor(
 	}
 	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &rotationEulerDegrees.x, 0.5f))
 	{
-		rotationEulerDegrees = ClampRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
+		rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
 		statusMessage = SetSelectedRotationKey(actionFrame, totalFrames);
 	}
 	ImGui::EndDisabled();
@@ -814,7 +912,8 @@ void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 	const int sampleFrame = std::max(0, actionFrame);
 	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
-	rotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, sampleFrame);
+	const Vector3 internalRotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, sampleFrame);
+	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(selectedBoneIndex, internalRotationEulerDegrees);
 	rootOffsetKey = GetMotionRootOffsetAtFrame(draft, sampleFrame);
 }
 
@@ -899,8 +998,10 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(int keyFrame
 
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	draft.totalFrames = std::max(1, totalFrames);
-	rotationEulerDegrees = ClampRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
-	SetMotionRotationKey(draft, boneName, keyFrame, rotationEulerDegrees);
+	rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
+	const Vector3 internalRotationEulerDegrees =
+		ConvertEditorRotationToInternalRotation(selectedBoneIndex, rotationEulerDegrees);
+	SetMotionRotationKey(draft, boneName, keyFrame, internalRotationEulerDegrees);
 
 	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);
 	std::sort(
