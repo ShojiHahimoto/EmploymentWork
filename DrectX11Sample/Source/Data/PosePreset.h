@@ -53,6 +53,19 @@ public:
 	static bool SavePreset(const std::string& presetId, const PosePresetData& preset);
 
 	/// <summary>
+	/// 新規保存に使う ASCII の安全なプリセット ID を作成する。
+	/// </summary>
+	/// <returns>既存ファイルと衝突しない pose_XXXX 形式の ID。</returns>
+	static std::string CreateUniquePresetId();
+
+	/// <summary>
+	/// 表示名が既存プリセットと重複しているか確認する。
+	/// </summary>
+	/// <param name="displayName">確認する表示名。</param>
+	/// <returns>同じ表示名のプリセットが既に存在する場合は true。</returns>
+	static bool DisplayNameExists(const std::string& displayName);
+
+	/// <summary>
 	/// 指定 ID のプリセットファイルが既に存在するか確認する。
 	/// </summary>
 	/// <param name="presetId">確認する拡張子なし ID。</param>

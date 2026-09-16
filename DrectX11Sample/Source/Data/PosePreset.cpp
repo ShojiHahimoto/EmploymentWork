@@ -78,6 +78,33 @@ namespace
 	}
 
 	/// <summary>
+	/// 読み込み候補ディレクトリのうち最初に存在するパスを取得する。
+	/// </summary>
+	/// <param name="outPath">見つかったディレクトリの書き込み先。</param>
+	/// <returns>見つかった場合は true。</returns>
+	bool FindPresetDirectory(std::filesystem::path& outPath)
+	{
+		const std::vector<std::filesystem::path> rootCandidates =
+		{
+			std::filesystem::path(PosePresetRootPath),
+			std::filesystem::path("DrectX11Sample") / PosePresetRootPath,
+			std::filesystem::path("../../DrectX11Sample") / PosePresetRootPath,
+		};
+
+		for (const std::filesystem::path& rootPath : rootCandidates)
+		{
+			std::error_code errorCode;
+			if (std::filesystem::is_directory(rootPath, errorCode))
+			{
+				outPath = rootPath;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
 	/// テキストファイルを読み込み、文字列として返す。
 	/// </summary>
 	/// <param name="path">読み込むファイルパス。</param>
@@ -231,35 +258,27 @@ namespace
 std::vector<std::string> PosePresetStore::ListPresetIds()
 {
 	std::vector<std::string> presetIds;
-	const std::vector<std::filesystem::path> rootCandidates =
-	{
-		std::filesystem::path(PosePresetRootPath),
-		std::filesystem::path("DrectX11Sample") / PosePresetRootPath,
-		std::filesystem::path("../../DrectX11Sample") / PosePresetRootPath,
-	};
 
-	for (const std::filesystem::path& rootPath : rootCandidates)
+	std::filesystem::path rootPath;
+	if (!FindPresetDirectory(rootPath))
 	{
-		std::error_code errorCode;
-		if (!std::filesystem::is_directory(rootPath, errorCode))
+		return presetIds;
+	}
+
+	std::error_code errorCode;
+	for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(rootPath, errorCode))
+	{
+		if (errorCode)
+		{
+			break;
+		}
+		if (!entry.is_regular_file(errorCode) || entry.path().extension() != ".json")
 		{
 			continue;
 		}
 
-		for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(rootPath, errorCode))
-		{
-			if (errorCode)
-			{
-				break;
-			}
-			if (!entry.is_regular_file(errorCode) || entry.path().extension() != ".json")
-			{
-				continue;
-			}
-
-			presetIds.push_back(entry.path().stem().string());
-		}
-		break;
+		// 旧実装で日本語ファイル名が文字化けしている場合も、既存データ読み込み互換のため stem を ID として保持する。
+		presetIds.push_back(entry.path().stem().string());
 	}
 
 	std::sort(presetIds.begin(), presetIds.end());
@@ -359,6 +378,40 @@ bool PosePresetStore::SavePreset(const std::string& presetId, const PosePresetDa
 	const std::string text = json.str();
 	file.write(text.data(), static_cast<std::streamsize>(text.size()));
 	return true;
+}
+
+std::string PosePresetStore::CreateUniquePresetId()
+{
+	for (int index = 1; index <= 9999; ++index)
+	{
+		std::ostringstream id;
+		id << "pose_" << std::setw(4) << std::setfill('0') << index;
+		if (!Exists(id.str()))
+		{
+			return id.str();
+		}
+	}
+
+	return "pose_overflow";
+}
+
+bool PosePresetStore::DisplayNameExists(const std::string& displayName)
+{
+	if (displayName.empty())
+	{
+		return false;
+	}
+
+	for (const std::string& presetId : ListPresetIds())
+	{
+		PosePresetData preset;
+		if (LoadPreset(presetId, preset) && preset.displayName == displayName)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool PosePresetStore::Exists(const std::string& presetId)

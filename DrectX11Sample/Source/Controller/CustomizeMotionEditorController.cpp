@@ -1279,7 +1279,7 @@ void CustomizeMotionEditorController::DrawPosePresetControls(int keyFrame, int t
 	if (showSavePresetPanel)
 	{
 		ImGui::SeparatorText("Save Current Pose Preset");
-		ImGui::InputText("Preset Name", presetNameBuffer.data(), presetNameBuffer.size());
+		ImGui::InputText("Preset Display Name", presetNameBuffer.data(), presetNameBuffer.size());
 		if (ImGui::Button("Save Current Pose", ImVec2(160.0f, 28.0f)))
 		{
 			statusMessage = SaveCurrentPoseAsPreset(keyFrame);
@@ -1376,23 +1376,20 @@ std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFram
 		return "Pose preset save requires a keyframe on the current frame.";
 	}
 
-	const std::string presetId = presetNameBuffer.data();
-	if (IsBlank(presetId))
+	const std::string displayName = presetNameBuffer.data();
+	if (IsBlank(displayName))
 	{
 		return "Preset name is empty.";
 	}
-	if (!PosePresetStore::IsValidPresetId(presetId))
+	if (displayName == "Idle Pose" || PosePresetStore::DisplayNameExists(displayName))
 	{
-		return "Preset name contains invalid file name characters.";
-	}
-	if (PosePresetStore::Exists(presetId) || presetId == IdlePosePresetId)
-	{
-		return "Preset name already exists.";
+		return "Preset display name already exists.";
 	}
 
+	const std::string presetId = PosePresetStore::CreateUniquePresetId();
 	PosePresetData preset;
 	preset.presetId = presetId;
-	preset.displayName = presetId;
+	preset.displayName = displayName;
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
@@ -1409,7 +1406,7 @@ std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFram
 
 	presetNameBuffer.fill('\0');
 	showSavePresetPanel = false;
-	return "Saved pose preset: assets/PosePreset/" + presetId + ".json";
+	return "Saved pose preset: " + displayName;
 }
 
 std::string CustomizeMotionEditorController::ApplyPosePreset(
