@@ -206,6 +206,7 @@ public:
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
+	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX);
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,
