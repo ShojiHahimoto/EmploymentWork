@@ -1,9 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Scene/Scene.h"
 #include "World/World.h"
-
-#include <d3d11.h>
 
 class ResultScene : public Scene
 {
@@ -22,7 +20,6 @@ public:
 
 private:
 	World world;
-	ID3D11ShaderResourceView* backgroundTexture = nullptr;
 	BattleResult battleResult = BattleResult::None;
 	int width = 0;
 	int height = 0;
