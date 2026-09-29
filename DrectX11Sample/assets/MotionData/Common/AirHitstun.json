@@ -1,8 +1,8 @@
 ﻿{
   "motionDataId": "Common/AirHitstun",
   "displayName": "AirHitstun",
-  "totalFrames": 20,
-  "looping": false,
+  "totalFrames": 30,
+  "looping": true,
   "rootOffsetKeys": [
     {
       "frame": 19,
@@ -15,7 +15,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -24,7 +24,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": -103.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.783, "y": 0.000, "z": 0.000, "w": 0.623 }
         }
       ]
     },
@@ -33,7 +33,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 130.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.906, "y": 0.000, "z": 0.000, "w": 0.423 }
         }
       ]
     },
@@ -42,7 +42,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": -72.000, "y": -116.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.311, "y": -0.686, "z": -0.498, "w": 0.429 }
         }
       ]
     },
@@ -51,7 +51,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": -76.000, "y": 108.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.362, "y": 0.638, "z": 0.498, "w": 0.463 }
         }
       ]
     },
@@ -60,7 +60,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -69,7 +69,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -78,7 +78,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -87,7 +87,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -96,7 +96,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -105,7 +105,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -114,7 +114,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -123,7 +123,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -132,7 +132,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -141,7 +141,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     }

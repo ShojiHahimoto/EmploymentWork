@@ -261,7 +261,7 @@ private:
 	int selectedBoneIndex = 0;
 	DirectX::SimpleMath::Vector3 rotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 rootOffsetKey = DirectX::SimpleMath::Vector3::Zero;
-	std::array<DirectX::SimpleMath::Vector3, MotionEditorBoneCount> copiedPoseRotations = {};
+	std::array<DirectX::SimpleMath::Quaternion, MotionEditorBoneCount> copiedPoseRotations = {};
 	bool hasCopiedPose = false;
 	std::array<char, PresetNameBufferSize> presetNameBuffer = {};
 	std::array<bool, MotionEditorBoneCount> presetApplyMask = {};

@@ -740,9 +740,10 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - 2026-09-12 時点で AttackEditor のパラメータ編集、AttackBox 編集、CancelSetting 編集、保存ボタン処理を `CustomizeAttackEditorController` へ移した。CustomizeScene は右ウィンドウの配置、プレビュー描画、MotionEditor への遷移要求、戻る要求だけを扱う
 - 2026-09-12 時点で MotionEditor の UI 操作、姿勢キー編集、攻撃移動キー編集、汎用モーション用オフセットキー編集、タイムライン描画を `CustomizeMotionEditorController` へ移した。CustomizeScene はプレビュー領域、再生操作欄、保存時に AttackData と MotionData を接続する処理だけを扱う
 - 今後 CustomizeScene をさらに分割する場合も、Scene に編集処理を戻さない。画面固有の実処理は `Source/Controller` の Controller へ置き、Scene は画面モード、遷移、Controller 間の接着に限定する
-- ImGuizmo の回転編集は X/Y/Z リングのみを表示し、スクリーン回転用の白リングは使わない。ドラッグ中は掴み始めたローカル軸を固定し、ImGuizmo から得た回転差分を Quaternion として開始時ローカル回転へ積む。MotionData の保存形式は既存互換のため Euler を維持する
-- ギズモドラッグ中は MotionData を毎フレーム書き換えない。プレビュー用 SkeletonPose の対象ボーンだけを Quaternion で直接更新し、ドラッグ終了時のみ Euler へ変換して MotionData へ保存する
+- ImGuizmo の回転編集は X/Y/Z リングのみを表示し、スクリーン回転用の白リングは使わない。ドラッグ中は掴み始めたローカル軸を固定し、ImGuizmo から得た回転差分を Quaternion として開始時ローカル回転へ積む
+- ギズモドラッグ中は MotionData を毎フレーム書き換えない。プレビュー用 SkeletonPose の対象ボーンだけを Quaternion で直接更新し、ドラッグ終了時のみ Quaternion として MotionData へ保存する
 - 2026-09-29 変更。MotionData の回転保存は Quaternion を正とする。JSON 保存時は `rotationQuaternion` のみを書き出し、旧 `rotationEulerDegrees` は読み込み互換用としてのみ扱う。右側 UI の角度入力/表示は Euler のまま維持するが、数値入力時に Quaternion へ変換して保存する
+- 2026-09-29 変更。PosePreset と姿勢コピー/ペーストも Quaternion を正とする。PosePreset JSON 保存時は `rotationQuaternion` のみを書き出し、旧 `rotationEulerDegrees` は読み込み互換用としてのみ扱う。既存の Euler 形式プリセットは読み込み時に Quaternion へ変換されるため、UI から読み込んで保存し直すことで新形式へ移行できる
 - AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
 - `frame.startup` は前隙フレーム数ではなく、攻撃ボタンを押したフレームを 1F とした時に何フレーム目から攻撃判定が出るかを表す
 - `frame.startup` の最小値は 2F とする。1F は内部 `actionFrame=0` から攻撃判定が出るため、このプロジェクトでは使用しない

@@ -28,7 +28,9 @@ namespace
 
 	constexpr const char* IdlePosePresetId = "__IdlePose__";
 
+	Vector3 QuaternionToEulerDegrees(const Quaternion& rotation);
 	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
+	Quaternion GetMotionRotationQuaternionAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
 
 	/// <summary>
 	/// 文字列が空白だけか確認する。
@@ -91,7 +93,8 @@ namespace
 			const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
 			PosePresetBoneData bone;
 			bone.boneName = boneName;
-			bone.localRotationEulerDegrees = GetMotionRotationEulerAtFrame(idleMotion, boneName, 0);
+			bone.localRotation = GetMotionRotationQuaternionAtFrame(idleMotion, boneName, 0);
+			bone.localRotationEulerDegrees = QuaternionToEulerDegrees(bone.localRotation);
 			outPreset.bones.push_back(bone);
 		}
 
@@ -108,13 +111,13 @@ namespace
 	bool FindPresetBoneRotation(
 		const PosePresetData& preset,
 		const std::string& boneName,
-		Vector3& outRotation)
+		Quaternion& outRotation)
 	{
 		for (const PosePresetBoneData& bone : preset.bones)
 		{
 			if (bone.boneName == boneName)
 			{
-				outRotation = bone.localRotationEulerDegrees;
+				outRotation = bone.localRotation;
 				return true;
 			}
 		}
@@ -441,10 +444,22 @@ namespace
 	/// <returns>補間済みのオイラー角。</returns>
 	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame)
 	{
+		return QuaternionToEulerDegrees(GetMotionRotationQuaternionAtFrame(motionData, boneName, frame));
+	}
+
+	/// <summary>
+	/// MotionData から指定部位のローカル Quaternion 回転を取得する。
+	/// </summary>
+	/// <param name="motionData">参照する MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <param name="frame">参照する内部 actionFrame。</param>
+	/// <returns>補間済みの Quaternion 回転。</returns>
+	Quaternion GetMotionRotationQuaternionAtFrame(const MotionData& motionData, const std::string& boneName, int frame)
+	{
 		const MotionBoneTrackData* track = FindMotionTrack(motionData, boneName);
 		if (!track || track->keyframes.empty())
 		{
-			return Vector3::Zero;
+			return Quaternion::Identity;
 		}
 
 		const MotionBoneKeyframeData* previousKey = nullptr;
@@ -464,22 +479,22 @@ namespace
 
 		if (!previousKey && nextKey)
 		{
-			return QuaternionToEulerDegrees(nextKey->localRotation);
+			return nextKey->localRotation;
 		}
 		if (previousKey && !nextKey)
 		{
-			return QuaternionToEulerDegrees(previousKey->localRotation);
+			return previousKey->localRotation;
 		}
 		if (!previousKey || !nextKey || previousKey == nextKey)
 		{
-			return previousKey ? QuaternionToEulerDegrees(previousKey->localRotation) : Vector3::Zero;
+			return previousKey ? previousKey->localRotation : Quaternion::Identity;
 		}
 
 		const float range = static_cast<float>(std::max(1, nextKey->frame - previousKey->frame));
 		const float t = static_cast<float>(frame - previousKey->frame) / range;
 		Quaternion sampledRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
 		sampledRotation.Normalize();
-		return QuaternionToEulerDegrees(sampledRotation);
+		return sampledRotation;
 	}
 
 	/// <summary>
@@ -1309,7 +1324,7 @@ std::string CustomizeMotionEditorController::CopyWholeBodyPose(int keyFrame)
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		copiedPoseRotations[boneIndex] = GetMotionRotationEulerAtFrame(draft, boneName, keyFrame);
+		copiedPoseRotations[boneIndex] = GetMotionRotationQuaternionAtFrame(draft, boneName, keyFrame);
 	}
 
 	hasCopiedPose = true;
@@ -1330,7 +1345,7 @@ std::string CustomizeMotionEditorController::PasteWholeBodyPose(int keyFrame)
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		SetMotionRotationKey(draft, boneName, keyFrame, copiedPoseRotations[boneIndex]);
+		SetMotionRotationQuaternionKey(draft, boneName, keyFrame, copiedPoseRotations[boneIndex]);
 	}
 
 	RefreshFrameEditValues(keyFrame);
@@ -1486,7 +1501,8 @@ std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFram
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
 		PosePresetBoneData bone;
 		bone.boneName = boneName;
-		bone.localRotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, keyFrame);
+		bone.localRotation = GetMotionRotationQuaternionAtFrame(draft, boneName, keyFrame);
+		bone.localRotationEulerDegrees = QuaternionToEulerDegrees(bone.localRotation);
 		preset.bones.push_back(bone);
 	}
 
@@ -1532,10 +1548,10 @@ std::string CustomizeMotionEditorController::ApplyPosePreset(
 		}
 
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		Vector3 rotation = Vector3::Zero;
+		Quaternion rotation = Quaternion::Identity;
 		if (FindPresetBoneRotation(preset, boneName, rotation))
 		{
-			SetMotionRotationKey(draft, boneName, keyFrame, rotation);
+			SetMotionRotationQuaternionKey(draft, boneName, keyFrame, rotation);
 			++appliedCount;
 		}
 	}

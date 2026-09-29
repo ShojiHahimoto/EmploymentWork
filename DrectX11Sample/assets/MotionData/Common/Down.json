@@ -2,7 +2,7 @@
   "motionDataId": "Common/Down",
   "displayName": "Down",
   "totalFrames": 30,
-  "looping": false,
+  "looping": true,
   "rootOffsetKeys": [
     {
       "frame": 5,
@@ -19,7 +19,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -28,7 +28,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -37,7 +37,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 90.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.707, "y": 0.000, "z": 0.000, "w": 0.707 }
         }
       ]
     },
@@ -46,7 +46,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -55,7 +55,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -64,7 +64,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -73,7 +73,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -82,7 +82,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -91,7 +91,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -100,7 +100,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -109,7 +109,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -118,7 +118,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -127,7 +127,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -136,7 +136,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -145,7 +145,7 @@
       "keyframes": [
         {
           "frame": 16,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     }

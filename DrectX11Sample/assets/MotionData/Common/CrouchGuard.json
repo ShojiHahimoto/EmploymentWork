@@ -1,7 +1,7 @@
 ﻿{
   "motionDataId": "Common/CrouchGuard",
   "displayName": "CrouchGuard",
-  "totalFrames": 20,
+  "totalFrames": 30,
   "looping": true,
   "rootOffsetKeys": [
     {
@@ -15,7 +15,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 12.000, "y": -5.500, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
         }
       ]
     },
@@ -24,7 +24,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 5.500, "y": 2.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.048, "y": 0.017, "z": -0.001, "w": 0.999 }
         }
       ]
     },
@@ -33,7 +33,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
         }
       ]
     },
@@ -42,7 +42,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 20.000, "y": -2.000, "z": -69.000 }
+          "rotationQuaternion": { "x": 0.153, "y": 0.084, "z": -0.555, "w": 0.813 }
         }
       ]
     },
@@ -51,7 +51,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -15.000, "y": 5.500, "z": 84.000 }
+          "rotationQuaternion": { "x": -0.065, "y": 0.123, "z": 0.667, "w": 0.732 }
         }
       ]
     },
@@ -60,7 +60,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -93.500, "y": 6.500, "z": -139.500 }
+          "rotationQuaternion": { "x": -0.288, "y": -0.669, "z": -0.628, "w": 0.276 }
         }
       ]
     },
@@ -69,7 +69,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationQuaternion": { "x": -0.114, "y": 0.505, "z": 0.468, "w": 0.716 }
         }
       ]
     },
@@ -78,7 +78,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.100, "y": 0.000, "z": 0.000, "w": 0.995 }
         }
       ]
     },
@@ -87,7 +87,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.126, "y": 0.000, "z": 0.000, "w": 0.992 }
         }
       ]
     },
@@ -96,7 +96,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 3.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.031, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -105,7 +105,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -96.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.746, "y": 0.000, "z": 0.000, "w": 0.666 }
         }
       ]
     },
@@ -114,7 +114,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 97.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.749, "y": 0.000, "z": 0.000, "w": 0.663 }
         }
       ]
     },
@@ -123,7 +123,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 87.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.688, "y": 0.000, "z": 0.000, "w": 0.725 }
         }
       ]
     },
@@ -132,7 +132,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
         }
       ]
     },
@@ -141,7 +141,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 11.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.096, "y": 0.000, "z": 0.000, "w": 0.995 }
         }
       ]
     }

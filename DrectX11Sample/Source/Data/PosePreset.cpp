@@ -3,12 +3,15 @@
 #include "Data/JsonValue.h"
 #include "System/Debugger.h"
 
+#include <DirectXMath.h>
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 
+using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 namespace
@@ -209,6 +212,53 @@ namespace
 	}
 
 	/// <summary>
+	/// x/y/z/w を持つ JSON Object から Quaternion を取得する。
+	/// </summary>
+	/// <param name="object">参照する JSON Object。</param>
+	/// <param name="defaultValue">キーがない場合の既定値。</param>
+	/// <returns>正規化済み Quaternion。</returns>
+	Quaternion GetQuaternion(const JsonValue& object, const Quaternion& defaultValue)
+	{
+		Quaternion rotation(
+			GetFloat(object, "x", defaultValue.x),
+			GetFloat(object, "y", defaultValue.y),
+			GetFloat(object, "z", defaultValue.z),
+			GetFloat(object, "w", defaultValue.w));
+		rotation.Normalize();
+		return rotation;
+	}
+
+	/// <summary>
+	/// Quaternion を UI 表示用の Euler degree に変換する。
+	/// </summary>
+	/// <param name="rotation">変換する Quaternion。</param>
+	/// <returns>degree 単位の Euler 回転。</returns>
+	Vector3 QuaternionToEulerDegrees(const Quaternion& rotation)
+	{
+		const Vector3 eulerRadians = rotation.ToEuler();
+		return Vector3(
+			XMConvertToDegrees(eulerRadians.x),
+			XMConvertToDegrees(eulerRadians.y),
+			XMConvertToDegrees(eulerRadians.z));
+	}
+
+	/// <summary>
+	/// Euler degree の JSON Object を Quaternion へ変換する。
+	/// </summary>
+	/// <param name="object">x/y/z degree を持つ JSON Object。</param>
+	/// <returns>変換した Quaternion。</returns>
+	Quaternion GetEulerDegreesAsQuaternion(const JsonValue& object)
+	{
+		const Vector3 eulerDegrees = GetVector3(object, Vector3::Zero);
+		Quaternion rotation = Quaternion::CreateFromYawPitchRoll(
+			XMConvertToRadians(eulerDegrees.y),
+			XMConvertToRadians(eulerDegrees.x),
+			XMConvertToRadians(eulerDegrees.z));
+		rotation.Normalize();
+		return rotation;
+	}
+
+	/// <summary>
 	/// JSON 文字列として安全に保存できるよう、最低限必要な文字をエスケープする。
 	/// </summary>
 	/// <param name="text">保存する元文字列。</param>
@@ -245,13 +295,13 @@ namespace
 	}
 
 	/// <summary>
-	/// Vector3 を JSON の { x, y, z } 形式で書き込む。
+	/// Quaternion を JSON の { x, y, z, w } 形式で書き込む。
 	/// </summary>
 	/// <param name="stream">書き込み先ストリーム。</param>
-	/// <param name="value">保存する Vector3。</param>
-	void WriteVector3(std::ostringstream& stream, const Vector3& value)
+	/// <param name="value">保存する Quaternion。</param>
+	void WriteQuaternion(std::ostringstream& stream, const Quaternion& value)
 	{
-		stream << "{ \"x\": " << value.x << ", \"y\": " << value.y << ", \"z\": " << value.z << " }";
+		stream << "{ \"x\": " << value.x << ", \"y\": " << value.y << ", \"z\": " << value.z << ", \"w\": " << value.w << " }";
 	}
 }
 
@@ -317,11 +367,22 @@ bool PosePresetStore::LoadPreset(const std::string& presetId, PosePresetData& ou
 
 			PosePresetBoneData bone;
 			bone.boneName = GetString(boneValue, "boneName", "");
-			const JsonValue* rotation = boneValue.Find("rotationEulerDegrees");
-			if (!bone.boneName.empty() && rotation && rotation->IsObject())
+			const JsonValue* rotationQuaternion = boneValue.Find("rotationQuaternion");
+			if (!bone.boneName.empty() && rotationQuaternion && rotationQuaternion->IsObject())
 			{
-				bone.localRotationEulerDegrees = GetVector3(*rotation, Vector3::Zero);
+				bone.localRotation = GetQuaternion(*rotationQuaternion, bone.localRotation);
+				bone.localRotationEulerDegrees = QuaternionToEulerDegrees(bone.localRotation);
 				outPreset.bones.push_back(bone);
+			}
+			else
+			{
+				const JsonValue* rotation = boneValue.Find("rotationEulerDegrees");
+				if (!bone.boneName.empty() && rotation && rotation->IsObject())
+				{
+					bone.localRotationEulerDegrees = GetVector3(*rotation, Vector3::Zero);
+					bone.localRotation = GetEulerDegreesAsQuaternion(*rotation);
+					outPreset.bones.push_back(bone);
+				}
 			}
 		}
 	}
@@ -358,8 +419,8 @@ bool PosePresetStore::SavePreset(const std::string& presetId, const PosePresetDa
 		json << (boneIndex == 0 ? "\n" : ",\n");
 		json << "    {\n";
 		json << "      \"boneName\": \"" << EscapeJsonString(bone.boneName) << "\",\n";
-		json << "      \"rotationEulerDegrees\": ";
-		WriteVector3(json, bone.localRotationEulerDegrees);
+		json << "      \"rotationQuaternion\": ";
+		WriteQuaternion(json, bone.localRotation);
 		json << "\n";
 		json << "    }";
 	}

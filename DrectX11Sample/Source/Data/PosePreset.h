@@ -13,7 +13,10 @@ struct PosePresetBoneData
 	// MotionSkeletonDefinition 側の編集用部位名。
 	std::string boneName;
 
-	// MotionData と同じ内部保存値の Euler 回転。
+	// 保存・適用時に正とするローカル Quaternion 回転。
+	DirectX::SimpleMath::Quaternion localRotation = DirectX::SimpleMath::Quaternion::Identity;
+
+	// 旧 rotationEulerDegrees 読み込み互換と UI 表示確認用の Euler 回転。
 	DirectX::SimpleMath::Vector3 localRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 };
 
