@@ -183,9 +183,21 @@ private:
 	/// </summary>
 	void CopyMotionDataIdToBuffer();
 
+	/// <summary>
+	/// draft のスタンフレームから、編集 UI 用の硬直差入力値を更新する。
+	/// </summary>
+	void RefreshFrameAdvantageInputs();
+
+	/// <summary>
+	/// 編集 UI の硬直差入力値を、実行時に使うスタンフレームへ反映する。
+	/// </summary>
+	void ApplyFrameAdvantageInputsToDraft();
+
 	AttackData draft;
 	std::array<char, AttackNameBufferSize> displayNameBuffer = {};
 	std::array<char, MotionDataIdBufferSize> motionDataIdBuffer = {};
+	int hitFrameAdvantage = 0;
+	int guardFrameAdvantage = 0;
 	std::string editingAttackDataId;
 	CustomizeAttackCategory selectedCategory = CustomizeAttackCategory::Ground;
 	int selectedSlotIndex = 0;

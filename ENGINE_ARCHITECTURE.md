@@ -266,10 +266,10 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - ヒットストップ中も InputHistory / CommandInput / BattleResult / BattleHUD / Debug 表示は止めない
 - ヒットストップ中も入力履歴とコマンド候補の登録は進めるが、成立済みコマンド候補の有効期限はヒットストップ 1F ごとに 1F 延長し、停止中に先行入力だけが期限切れしないようにする
 - ラウンドタイマー、SE/BGM、エフェクトなどの演出系はヒットストップで止めない方針とする
-- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持する実行時フレーム数として扱う
 - `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
 - ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる
-- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持するフレーム数として扱う
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持する実行時フレーム数として扱う
 - ガード時は本来ダメージの 1/10 を HP へ適用する
 - 通常ガードは地上の `Idle / Crouch / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立する。右向き `4` / 左向き `6` は立ちガード、右向き `1` / 左向き `3` はしゃがみガードとして扱う
 - `StandGuard / CrouchGuard` は将来の事前ガード姿勢用ステートとして先に定義しておく。現段階では通常入力だけで常時このステートへ遷移させる処理は入れない
@@ -440,7 +440,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `AttackList.json` の `attackDataId` は `assets/AttackData` からの相対 ID を基本とする。例: `debug_punch`、`Ground/slot_00`
 - Loader は手動編集しやすいよう、`Ground/slot_00.json` や `assets/AttackData/Ground/slot_00.json` のような書き方も読み込み時に吸収する
 - ファイル名だけで指定して複数候補が見つかる場合は曖昧な指定として扱うため、カテゴリ付き ID を推奨する
-- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
+- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、実行時スタンフレームの `hitstunFrames`、`guardstunFrames` を持つ
 - AttackData は `hitReactionType` を持ち、技ごとの被弾反応を `Normal / Down / Burst / HardBurst` から選ぶ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
@@ -748,6 +748,8 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - `frame.startup` は前隙フレーム数ではなく、攻撃ボタンを押したフレームを 1F とした時に何フレーム目から攻撃判定が出るかを表す
 - `frame.startup` の最小値は 2F とする。1F は内部 `actionFrame=0` から攻撃判定が出るため、このプロジェクトでは使用しない
 - `frame.active` は攻撃判定が出ているフレーム数、`frame.recovery` は攻撃判定が消えた後の硬直フレーム数を表す
+- CustomizeScene の AttackData Editor では、`hitstunFrames / guardstunFrames` を直接入力せず、ヒット時硬直差 / ガード時硬直差として入力する。硬直差は発生 1F 目で当たった前提で、攻撃側の硬直が解けた時点で防御側に残る硬直フレーム数を表す。`0` は同時に動ける、正の値は攻撃側有利、負の値は防御側有利とする
+- 保存時は `hitstunFrames = 攻撃側残り硬直 + ヒット硬直差`、`guardstunFrames = 攻撃側残り硬直 + ガード硬直差` として 0 以上に丸め、JSON は従来通り実行時スタンフレーム数を保存する。持続後半で当たった場合は実戦上の硬直差がその分だけ有利になる
 - キャンセル設定は `canAttackCancel` で有効/無効を切り替える。有効フラグを OFF にしても編集中 draft の `cancelSetting` は消さず、再度 ON にした時に直前編集内容を復元する
 - キャンセル開始/終了フレームは内部データと JSON では 0 始まりを維持し、CustomizeScene の表示と入力だけプレビューに合わせて 1 始まりに変換する
 - `AttackUsableState` は `Ground / Air` のみとし、通常技はカテゴリで固定、必殺技だけ CustomizeScene で選択可能にする
