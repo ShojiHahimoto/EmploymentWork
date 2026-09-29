@@ -110,6 +110,22 @@ public:
 	std::string SetSelectedRotationKey(int keyFrame, int totalFrames);
 
 	/// <summary>
+	/// ギズモ操作で得た内部ローカル回転を、既存の数値入力と同じルールで現在フレームへ保存する。
+	/// </summary>
+	/// <param name="bodyPartIndex">編集された部位番号。</param>
+	/// <param name="axisIndex">操作された軸番号。X=0, Y=1, Z=2。範囲外なら保存しない。</param>
+	/// <param name="keyFrame">更新対象の内部 actionFrame。</param>
+	/// <param name="totalFrames">MotionData の総フレーム数。</param>
+	/// <param name="localRotation">保存するローカル Quaternion。</param>
+	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
+	std::string ApplyGizmoRotationEdit(
+		int bodyPartIndex,
+		int axisIndex,
+		int keyFrame,
+		int totalFrames,
+		const DirectX::SimpleMath::Quaternion& localRotation);
+
+	/// <summary>
 	/// 現在フレームに姿勢キーフレームがあるか確認する。
 	/// </summary>
 	/// <param name="keyFrame">確認対象の内部 actionFrame。</param>

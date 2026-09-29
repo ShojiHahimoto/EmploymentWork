@@ -19,6 +19,7 @@
 #include "System/imgui-docking/imgui.h"
 #include "System/imgui-docking/backends/imgui_impl_dx11.h"
 #include "System/imgui-docking/backends/imgui_impl_win32.h"
+#include "ThirdParty/ImGuizmo/ImGuizmo.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 	HWND windowHandle,
@@ -250,6 +251,7 @@ void DebugImGuiSystem::BeginFrame()
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
 
 	// 中央領域を透過して、ゲーム画面を ImGui の背景で覆わないようにする。
 	// デバッグウィンドウだけをドッキング・分離できる状態に保つ。

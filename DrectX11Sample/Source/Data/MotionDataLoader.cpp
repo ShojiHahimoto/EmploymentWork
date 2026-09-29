@@ -200,6 +200,37 @@ namespace
 	}
 
 	/// <summary>
+	/// x/y/z/w を持つ JSON Object から Quaternion を取得する。
+	/// </summary>
+	/// <param name="object">参照する JSON Object。</param>
+	/// <param name="defaultValue">キーがない場合の既定値。</param>
+	/// <returns>正規化済み Quaternion。</returns>
+	Quaternion GetQuaternion(const JsonValue& object, const Quaternion& defaultValue)
+	{
+		Quaternion rotation(
+			GetFloat(object, "x", defaultValue.x),
+			GetFloat(object, "y", defaultValue.y),
+			GetFloat(object, "z", defaultValue.z),
+			GetFloat(object, "w", defaultValue.w));
+		rotation.Normalize();
+		return rotation;
+	}
+
+	/// <summary>
+	/// Quaternion を UI 表示用の Euler degree に変換する。
+	/// </summary>
+	/// <param name="rotation">変換する Quaternion。</param>
+	/// <returns>degree 単位の Euler 回転。</returns>
+	Vector3 QuaternionToEulerDegrees(const Quaternion& rotation)
+	{
+		const Vector3 eulerRadians = rotation.ToEuler();
+		return Vector3(
+			XMConvertToDegrees(eulerRadians.x),
+			XMConvertToDegrees(eulerRadians.y),
+			XMConvertToDegrees(eulerRadians.z));
+	}
+
+	/// <summary>
 	/// Euler degree の JSON Object を Quaternion へ変換する。
 	/// </summary>
 	/// <param name="object">x/y/z degree を持つ JSON Object。</param>
@@ -237,12 +268,22 @@ namespace
 			outKeyframe.localPosition = GetVector3(*position, outKeyframe.localPosition);
 		}
 
-		const JsonValue* rotation = keyframeValue.Find("rotationEulerDegrees");
-		if (rotation && rotation->IsObject())
+		const JsonValue* rotationQuaternion = keyframeValue.Find("rotationQuaternion");
+		if (rotationQuaternion && rotationQuaternion->IsObject())
 		{
 			outKeyframe.hasRotation = true;
-			outKeyframe.localRotationEulerDegrees = GetVector3(*rotation, outKeyframe.localRotationEulerDegrees);
-			outKeyframe.localRotation = GetEulerDegreesAsQuaternion(*rotation);
+			outKeyframe.localRotation = GetQuaternion(*rotationQuaternion, outKeyframe.localRotation);
+			outKeyframe.localRotationEulerDegrees = QuaternionToEulerDegrees(outKeyframe.localRotation);
+		}
+		else
+		{
+			const JsonValue* rotation = keyframeValue.Find("rotationEulerDegrees");
+			if (rotation && rotation->IsObject())
+			{
+				outKeyframe.hasRotation = true;
+				outKeyframe.localRotationEulerDegrees = GetVector3(*rotation, outKeyframe.localRotationEulerDegrees);
+				outKeyframe.localRotation = GetEulerDegreesAsQuaternion(*rotation);
+			}
 		}
 
 		const JsonValue* scale = keyframeValue.Find("scale");

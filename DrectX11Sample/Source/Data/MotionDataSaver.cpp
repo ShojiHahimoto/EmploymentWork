@@ -59,6 +59,17 @@ namespace
 	{
 		stream << "{ \"x\": " << value.x << ", \"y\": " << value.y << ", \"z\": " << value.z << " }";
 	}
+
+	/// <summary>
+	/// Quaternion を JSON の { x, y, z, w } 形式で書き込む。
+	/// </summary>
+	/// <param name="stream">書き込み先ストリーム。</param>
+	/// <param name="indent">行頭インデント。</param>
+	/// <param name="value">保存する Quaternion。</param>
+	void WriteQuaternion(std::ostringstream& stream, const char* indent, const Quaternion& value)
+	{
+		stream << "{ \"x\": " << value.x << ", \"y\": " << value.y << ", \"z\": " << value.z << ", \"w\": " << value.w << " }";
+	}
 }
 
 bool MotionDataSaver::SaveMotionData(const std::string& motionDataId, const MotionData& motionData)
@@ -119,8 +130,8 @@ bool MotionDataSaver::SaveMotionData(const std::string& motionDataId, const Moti
 			}
 			if (keyframe.hasRotation)
 			{
-				json << ",\n          \"rotationEulerDegrees\": ";
-				WriteVector3(json, "          ", keyframe.localRotationEulerDegrees);
+				json << ",\n          \"rotationQuaternion\": ";
+				WriteQuaternion(json, "          ", keyframe.localRotation);
 			}
 			if (keyframe.hasScale)
 			{

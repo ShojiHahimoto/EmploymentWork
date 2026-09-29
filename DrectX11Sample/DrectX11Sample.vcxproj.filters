@@ -61,6 +61,18 @@
     <Filter Include="ヘッダー ファイル\Data">
       <UniqueIdentifier>{74a53e3b-e332-46be-889d-acac457d5feb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\ThirdParty">
+      <UniqueIdentifier>{aa7a95ed-3da8-4411-bfe8-262b41fb4fb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\ThirdParty\ImGuizmo">
+      <UniqueIdentifier>{32f02849-97e7-4a0d-9b3d-669f8b063e09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\ThirdParty">
+      <UniqueIdentifier>{8fc4bd2d-ef99-4781-8d37-b8bd1fa612ff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\ThirdParty\ImGuizmo">
+      <UniqueIdentifier>{73f9e460-74bf-481f-8816-bb88125bb240}</UniqueIdentifier>
+    </Filter>
     <Filter Include="リソース ファイル\AttackData">
       <UniqueIdentifier>{879b6924-d03a-43db-8a8a-5bc6069c3b39}</UniqueIdentifier>
     </Filter>
@@ -284,6 +296,9 @@
     </ClCompile>
     <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ThirdParty\ImGuizmo\ImGuizmo.cpp">
+      <Filter>ソース ファイル\ThirdParty\ImGuizmo</Filter>
     </ClCompile>
     <ClCompile Include="Source\Resource\ModelResource.cpp">
       <Filter>ソース ファイル\Resource</Filter>
@@ -559,6 +574,9 @@
     </ClInclude>
     <ClInclude Include="Source\Data\MotionDataSaver.h">
       <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ThirdParty\ImGuizmo\ImGuizmo.h">
+      <Filter>ヘッダー ファイル\ThirdParty\ImGuizmo</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

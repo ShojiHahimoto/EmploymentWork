@@ -7,6 +7,7 @@
 #include "System/MotionPose.h"
 #include "System/TransformSystem.h"
 #include "System/imgui-docking/imgui.h"
+#include "ThirdParty/ImGuizmo/ImGuizmo.h"
 
 #include <DirectXMath.h>
 
@@ -28,6 +29,7 @@ namespace
 	constexpr float PreviewBoxDepth = 0.08f;
 	constexpr float JointMarkerRadius = 7.0f;
 	constexpr float JointPickRadius = 14.0f;
+	constexpr float RotationGizmoSizeClipSpace = 0.2f;
 
 	/// <summary>
 	/// プレビューキャラの基準位置を取得する。
@@ -211,6 +213,81 @@ namespace
 		outScreenPosition.y = viewportOrigin.y + static_cast<float>(region.top) + (1.0f - clipPosition.y) * 0.5f * regionHeight;
 		return true;
 	}
+
+	/// <summary>
+	/// ImGuizmo の回転ハンドル種別を、MotionData の Euler 軸番号へ変換する。
+	/// </summary>
+	/// <param name="handleType">現在操作中の ImGuizmo ハンドル。</param>
+	/// <returns>X=0, Y=1, Z=2。対象外なら -1。</returns>
+	int GetRotationAxisIndex(ImGuizmo::MOVETYPE handleType)
+	{
+		switch (handleType)
+		{
+		case ImGuizmo::MT_ROTATE_X:
+			return 0;
+		case ImGuizmo::MT_ROTATE_Y:
+			return 1;
+		case ImGuizmo::MT_ROTATE_Z:
+			return 2;
+		default:
+			return -1;
+		}
+	}
+
+	/// <summary>
+	/// 回転軸番号からローカル空間の単位軸を取得する。
+	/// </summary>
+	/// <param name="axisIndex">X=0, Y=1, Z=2。</param>
+	/// <returns>ローカル空間の単位軸。</returns>
+	Vector3 GetLocalAxisByIndex(int axisIndex)
+	{
+		switch (axisIndex)
+		{
+		case 0:
+			return Vector3::UnitX;
+		case 1:
+			return Vector3::UnitY;
+		case 2:
+			return Vector3::UnitZ;
+		default:
+			return Vector3::Zero;
+		}
+	}
+
+	/// <summary>
+	/// Vector3 から指定軸の値を取得する。
+	/// </summary>
+	/// <param name="value">参照する値。</param>
+	/// <param name="axisIndex">X=0, Y=1, Z=2。</param>
+	/// <returns>指定軸の値。対象外なら 0。</returns>
+	float GetAxisValue(const Vector3& value, int axisIndex)
+	{
+		switch (axisIndex)
+		{
+		case 0:
+			return value.x;
+		case 1:
+			return value.y;
+		case 2:
+			return value.z;
+		default:
+			return 0.0f;
+		}
+	}
+
+	/// <summary>
+	/// Quaternion を既存 MotionData と同じ Euler degree 表示へ変換する。
+	/// </summary>
+	/// <param name="rotation">変換する Quaternion。</param>
+	/// <returns>degree 単位の Euler 回転。</returns>
+	Vector3 ToEulerDegrees(const Quaternion& rotation)
+	{
+		const Vector3 eulerRadians = rotation.ToEuler();
+		return Vector3(
+			XMConvertToDegrees(eulerRadians.x),
+			XMConvertToDegrees(eulerRadians.y),
+			XMConvertToDegrees(eulerRadians.z));
+	}
 }
 
 void CustomizePreviewController::Initialize()
@@ -309,8 +386,10 @@ void CustomizePreviewController::Render(
 	bool editingCommonMotion,
 	bool hasDraftMotion,
 	const std::string& editingMotionDataId,
-	int selectedBodyPartIndex)
+	int selectedBodyPartIndex,
+	bool rotationGizmoEnabled)
 {
+	hasGizmoRotationEdit = false;
 	if (!region && !renderTexture.renderTargetView)
 	{
 		return;
@@ -411,6 +490,11 @@ void CustomizePreviewController::Render(
 		}
 	}
 
+	if (region && previewModel && previewSkinningMatrices)
+	{
+		DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex, rotationGizmoEnabled);
+	}
+
 	if (previewModel && ghostSkinningMatrices)
 	{
 		TransformComponent ghostTransform = playerTransform;
@@ -444,6 +528,26 @@ void CustomizePreviewController::Render(
 	{
 		DrawJointMarkers(*region, *previewModel, selectedBodyPartIndex);
 	}
+}
+
+bool CustomizePreviewController::ConsumeGizmoRotationEdit(
+	int& outBodyPartIndex,
+	int& outAxisIndex,
+	Quaternion& outLocalRotation)
+{
+	if (!hasGizmoRotationEdit)
+	{
+		return false;
+	}
+
+	outBodyPartIndex = gizmoEditedBodyPartIndex;
+	outAxisIndex = gizmoEditedAxisIndex;
+	outLocalRotation = gizmoLocalRotation;
+	hasGizmoRotationEdit = false;
+	gizmoEditedBodyPartIndex = -1;
+	gizmoEditedAxisIndex = -1;
+	gizmoLocalRotation = Quaternion::Identity;
+	return true;
 }
 
 int CustomizePreviewController::ConsumePickedBodyPartIndex()
@@ -636,7 +740,10 @@ void CustomizePreviewController::DrawJointMarkers(
 
 	if (mouseInPreview && nearestBodyPartIndex >= 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		pickedBodyPartIndex = nearestBodyPartIndex;
+		if (!ImGuizmo::IsOver() && !ImGuizmo::IsUsing())
+		{
+			pickedBodyPartIndex = nearestBodyPartIndex;
+		}
 	}
 
 	for (int bodyPartIndex = 0; bodyPartIndex < MotionBodyPartCount; ++bodyPartIndex)
@@ -663,5 +770,162 @@ void CustomizePreviewController::DrawJointMarkers(
 				IM_COL32(255, 255, 255, 245),
 				MotionSkeleton::GetBodyPartName(bodyPartIndex));
 		}
+	}
+}
+
+void CustomizePreviewController::DrawRotationGizmo(
+	const RECT& region,
+	const ModelResource& model,
+	int selectedBodyPartIndex,
+	bool enabled)
+{
+	if (!enabled || !skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
+	{
+		rotationGizmoDragActive = false;
+		return;
+	}
+	if (selectedBodyPartIndex < 0 || selectedBodyPartIndex >= MotionBodyPartCount)
+	{
+		rotationGizmoDragActive = false;
+		return;
+	}
+
+	const int modelBoneIndex = MotionSkeleton::FindModelBoneIndex(
+		model,
+		MotionSkeleton::GetBodyPartName(selectedBodyPartIndex));
+	if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneWorldMatrices.size()))
+	{
+		rotationGizmoDragActive = false;
+		return;
+	}
+
+	Matrix boneWorld;
+	const Matrix playerWorld = TransformSystem::GetWorldMatrix(playerTransform);
+	if (!MotionPose::GetBoneWorldMatrix(skeletonPose, modelBoneIndex, playerWorld, boneWorld))
+	{
+		rotationGizmoDragActive = false;
+		return;
+	}
+
+	const ImVec2 viewportOrigin = ImGui::GetMainViewport()->Pos;
+	const float regionX = viewportOrigin.x + static_cast<float>(region.left);
+	const float regionY = viewportOrigin.y + static_cast<float>(region.top);
+	const float regionWidth = static_cast<float>(region.right - region.left);
+	const float regionHeight = static_cast<float>(region.bottom - region.top);
+	if (regionWidth <= 0.0f || regionHeight <= 0.0f)
+	{
+		return;
+	}
+
+	ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
+	ImGuizmo::SetOrthographic(false);
+	ImGuizmo::SetRect(regionX, regionY, regionWidth, regionHeight);
+	ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
+
+	if (rotationGizmoDragActive && rotationGizmoDragBodyPartIndex != selectedBodyPartIndex)
+	{
+		rotationGizmoDragActive = false;
+	}
+
+	const bool wasDragActive = rotationGizmoDragActive;
+	Matrix editableWorld = rotationGizmoDragActive ? rotationGizmoDragWorldMatrix : boneWorld;
+	ImGuizmo::SetRotationAngleLimit(false, 0.0f, 0.0f);
+	if (rotationGizmoDragActive)
+	{
+		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(selectedBodyPartIndex);
+		if (limit.enabled)
+		{
+			const Vector3 startEulerDegrees = ToEulerDegrees(rotationGizmoDragStartLocalRotation);
+			const float startAxisDegrees = GetAxisValue(startEulerDegrees, rotationGizmoDragAxisIndex);
+			const float minDeltaDegrees = GetAxisValue(limit.minDegrees, rotationGizmoDragAxisIndex) - startAxisDegrees;
+			const float maxDeltaDegrees = GetAxisValue(limit.maxDegrees, rotationGizmoDragAxisIndex) - startAxisDegrees;
+			ImGuizmo::SetRotationAngleLimit(
+				true,
+				XMConvertToRadians(std::min(minDeltaDegrees, maxDeltaDegrees)),
+				XMConvertToRadians(std::max(minDeltaDegrees, maxDeltaDegrees)));
+		}
+	}
+
+	const ImGuizmo::OPERATION rotationOperation =
+		ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z;
+	const bool manipulated = ImGuizmo::Manipulate(
+		&camera.viewMatrix._11,
+		&camera.projectionMatrix._11,
+		rotationOperation,
+		ImGuizmo::LOCAL,
+		&editableWorld._11);
+
+	const bool usingGizmo = ImGuizmo::IsUsing();
+	int axisIndex = GetRotationAxisIndex(ImGuizmo::GetActiveHandleType());
+	if (axisIndex < 0 && rotationGizmoDragActive && manipulated)
+	{
+		axisIndex = rotationGizmoDragAxisIndex;
+	}
+	if (axisIndex < 0 && rotationGizmoDragActive)
+	{
+		axisIndex = rotationGizmoDragAxisIndex;
+	}
+	if (!usingGizmo && !wasDragActive)
+	{
+		rotationGizmoDragActive = false;
+		return;
+	}
+	if (axisIndex < 0)
+	{
+		if (!usingGizmo)
+		{
+			rotationGizmoDragActive = false;
+		}
+		return;
+	}
+
+	if (!rotationGizmoDragActive)
+	{
+		rotationGizmoDragActive = true;
+		rotationGizmoDragBodyPartIndex = selectedBodyPartIndex;
+		rotationGizmoDragAxisIndex = axisIndex;
+		rotationGizmoDragWorldMatrix = boneWorld;
+		rotationGizmoDragStartLocalRotation = skeletonPose.bonePoses[modelBoneIndex].localRotation;
+		rotationGizmoDragStartLocalRotation.Normalize();
+		rotationGizmoDragAccumulatedRadians = 0.0f;
+	}
+	if (rotationGizmoDragAxisIndex != axisIndex)
+	{
+		rotationGizmoDragAxisIndex = axisIndex;
+		rotationGizmoDragWorldMatrix = boneWorld;
+		rotationGizmoDragStartLocalRotation = skeletonPose.bonePoses[modelBoneIndex].localRotation;
+		rotationGizmoDragStartLocalRotation.Normalize();
+		rotationGizmoDragAccumulatedRadians = 0.0f;
+	}
+
+	const float rotationDeltaRadians = ImGuizmo::GetRotationLastDeltaRadians();
+	rotationGizmoDragAccumulatedRadians += rotationDeltaRadians;
+	if (!wasDragActive && !manipulated && std::abs(rotationDeltaRadians) <= std::numeric_limits<float>::epsilon())
+	{
+		return;
+	}
+
+	const Vector3 localAxis = GetLocalAxisByIndex(rotationGizmoDragAxisIndex);
+	if (localAxis.LengthSquared() <= std::numeric_limits<float>::epsilon())
+	{
+		return;
+	}
+
+	Quaternion deltaRotation = Quaternion::CreateFromAxisAngle(localAxis, rotationGizmoDragAccumulatedRadians);
+	deltaRotation.Normalize();
+	Quaternion editedLocalRotation = deltaRotation * rotationGizmoDragStartLocalRotation;
+	editedLocalRotation.Normalize();
+
+	// ドラッグ中は MotionData を書き換えず、プレビュー用 SkeletonPose だけを Quaternion で直接更新する。
+	// Euler 変換はドラッグ終了時の保存だけに限定し、操作中の特異点ジャンプを避ける。
+	skeletonPose.bonePoses[modelBoneIndex].localRotation = editedLocalRotation;
+	MotionPose::UpdateSkinningMatrices(skeletonPose, model);
+	if (!usingGizmo)
+	{
+		hasGizmoRotationEdit = true;
+		gizmoEditedBodyPartIndex = selectedBodyPartIndex;
+		gizmoEditedAxisIndex = rotationGizmoDragAxisIndex;
+		gizmoLocalRotation = editedLocalRotation;
+		rotationGizmoDragActive = false;
 	}
 }

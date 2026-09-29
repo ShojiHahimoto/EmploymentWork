@@ -736,6 +736,13 @@ void CustomizeScene::UpdatePreviewPlayback()
 /// <param name="region">本体の描画矩形。nullptr の場合は従来の RenderTexture。</param>
 void CustomizeScene::RenderAttackPreview(Renderer& renderer, const RECT* region)
 {
+	const int actionFrame = GetPreviewActionFrame();
+	const bool rotationGizmoEnabled =
+		mode == CustomizeMode::MotionEditor
+		&& region != nullptr
+		&& !previewController.IsPlaying()
+		&& motionEditor.HasMotionKeyframe(actionFrame);
+
 	previewController.Render(
 		renderer,
 		region,
@@ -744,7 +751,24 @@ void CustomizeScene::RenderAttackPreview(Renderer& renderer, const RECT* region)
 		editingCommonMotion,
 		motionEditor.HasDraft(),
 		GetEditingMotionDataId(),
-		motionEditor.GetSelectedBoneIndex());
+		motionEditor.GetSelectedBoneIndex(),
+		rotationGizmoEnabled);
+
+	int gizmoBodyPartIndex = -1;
+	int gizmoAxisIndex = -1;
+	Quaternion gizmoLocalRotation = Quaternion::Identity;
+	if (previewController.ConsumeGizmoRotationEdit(
+		gizmoBodyPartIndex,
+		gizmoAxisIndex,
+		gizmoLocalRotation))
+	{
+		statusMessage = motionEditor.ApplyGizmoRotationEdit(
+			gizmoBodyPartIndex,
+			gizmoAxisIndex,
+			actionFrame,
+			GetPreviewTotalFrames(),
+			gizmoLocalRotation);
+	}
 }
 
 /// <summary>

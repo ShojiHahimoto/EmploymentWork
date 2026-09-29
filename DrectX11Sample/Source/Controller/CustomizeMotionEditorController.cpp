@@ -168,6 +168,20 @@ namespace
 	}
 
 	/// <summary>
+	/// Quaternion を UI 表示用の Euler degree に変換する。
+	/// </summary>
+	/// <param name="rotation">変換する Quaternion。</param>
+	/// <returns>degree 単位の Euler 回転。</returns>
+	Vector3 QuaternionToEulerDegrees(const Quaternion& rotation)
+	{
+		const Vector3 eulerRadians = rotation.ToEuler();
+		return Vector3(
+			DirectX::XMConvertToDegrees(eulerRadians.x),
+			DirectX::XMConvertToDegrees(eulerRadians.y),
+			DirectX::XMConvertToDegrees(eulerRadians.z));
+	}
+
+	/// <summary>
 	/// 内部可動域を編集UI表示用の可動域へ変換する。
 	/// </summary>
 	/// <param name="bodyPartIndex">編集用部位番号。</param>
@@ -450,20 +464,22 @@ namespace
 
 		if (!previousKey && nextKey)
 		{
-			return nextKey->localRotationEulerDegrees;
+			return QuaternionToEulerDegrees(nextKey->localRotation);
 		}
 		if (previousKey && !nextKey)
 		{
-			return previousKey->localRotationEulerDegrees;
+			return QuaternionToEulerDegrees(previousKey->localRotation);
 		}
 		if (!previousKey || !nextKey || previousKey == nextKey)
 		{
-			return previousKey ? previousKey->localRotationEulerDegrees : Vector3::Zero;
+			return previousKey ? QuaternionToEulerDegrees(previousKey->localRotation) : Vector3::Zero;
 		}
 
 		const float range = static_cast<float>(std::max(1, nextKey->frame - previousKey->frame));
 		const float t = static_cast<float>(frame - previousKey->frame) / range;
-		return Vector3::Lerp(previousKey->localRotationEulerDegrees, nextKey->localRotationEulerDegrees, t);
+		Quaternion sampledRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
+		sampledRotation.Normalize();
+		return QuaternionToEulerDegrees(sampledRotation);
 	}
 
 	/// <summary>
@@ -494,6 +510,35 @@ namespace
 			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.y),
 			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.x),
 			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.z));
+		targetKeyframe->localRotation.Normalize();
+	}
+
+	/// <summary>
+	/// MotionData の指定部位とフレームに Quaternion ローカル回転キーを追加または上書きする。
+	/// </summary>
+	/// <param name="motionData">編集対象の MotionData。</param>
+	/// <param name="boneName">編集用部位名。</param>
+	/// <param name="frame">設定先の内部 actionFrame。</param>
+	/// <param name="localRotation">保存する Quaternion 回転。</param>
+	void SetMotionRotationQuaternionKey(
+		MotionData& motionData,
+		const std::string& boneName,
+		int frame,
+		const Quaternion& localRotation)
+	{
+		MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(motionData, boneName);
+		MotionBoneKeyframeData* targetKeyframe = FindMotionKeyframe(*targetTrack, frame);
+		if (!targetKeyframe)
+		{
+			targetKeyframe = &targetTrack->keyframes.emplace_back();
+			targetKeyframe->frame = frame;
+		}
+
+		Quaternion normalizedRotation = localRotation;
+		normalizedRotation.Normalize();
+		targetKeyframe->hasRotation = true;
+		targetKeyframe->localRotation = normalizedRotation;
+		targetKeyframe->localRotationEulerDegrees = QuaternionToEulerDegrees(normalizedRotation);
 	}
 
 	/// <summary>
@@ -1118,6 +1163,52 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(int keyFrame
 			return left.frame < right.frame;
 		});
 
+	return "Set MotionData keyframe.";
+}
+
+std::string CustomizeMotionEditorController::ApplyGizmoRotationEdit(
+	int bodyPartIndex,
+	int axisIndex,
+	int keyFrame,
+	int totalFrames,
+	const Quaternion& localRotation)
+{
+	if (!hasDraft)
+	{
+		return "No MotionData draft.";
+	}
+	if (keyFrame < 0)
+	{
+		return "Select preview frame 1 or later before editing pose.";
+	}
+	if (!HasMotionKeyframe(keyFrame))
+	{
+		return "Add a whole body keyframe before editing pose.";
+	}
+
+	selectedBoneIndex = ClampBodyPartIndex(bodyPartIndex);
+	if (axisIndex < 0 || axisIndex > 2)
+	{
+		return "Invalid gizmo rotation axis.";
+	}
+
+	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
+	draft.totalFrames = std::max(1, totalFrames);
+	SetMotionRotationQuaternionKey(draft, boneName, keyFrame, localRotation);
+
+	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);
+	std::sort(
+		targetTrack->keyframes.begin(),
+		targetTrack->keyframes.end(),
+		[](const MotionBoneKeyframeData& left, const MotionBoneKeyframeData& right)
+		{
+			return left.frame < right.frame;
+		});
+
+	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(
+		selectedBoneIndex,
+		QuaternionToEulerDegrees(localRotation));
+	rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
 	return "Set MotionData keyframe.";
 }
 

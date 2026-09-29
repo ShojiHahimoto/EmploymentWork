@@ -83,7 +83,20 @@ public:
 		bool editingCommonMotion,
 		bool hasDraftMotion,
 		const std::string& editingMotionDataId,
-		int selectedBodyPartIndex);
+		int selectedBodyPartIndex,
+		bool rotationGizmoEnabled);
+
+	/// <summary>
+	/// 回転ギズモで編集された部位、操作軸、内部ローカル回転を取り出す。
+	/// </summary>
+	/// <param name="outBodyPartIndex">編集された部位番号の書き込み先。</param>
+	/// <param name="outAxisIndex">操作された軸番号。X=0, Y=1, Z=2。</param>
+	/// <param name="outLocalRotation">保存するローカル Quaternion の書き込み先。</param>
+	/// <returns>今フレームにギズモ操作があった場合は true。</returns>
+	bool ConsumeGizmoRotationEdit(
+		int& outBodyPartIndex,
+		int& outAxisIndex,
+		DirectX::SimpleMath::Quaternion& outLocalRotation);
 
 	/// <summary>
 	/// プレビュー上の関節クリックで選択された部位を取り出す。
@@ -164,6 +177,19 @@ private:
 		const ModelResource& model,
 		int selectedBodyPartIndex);
 
+	/// <summary>
+	/// 選択中部位のワールド回転ギズモを表示し、操作結果を内部ローカル回転として記録する。
+	/// </summary>
+	/// <param name="region">プレビュー描画矩形。</param>
+	/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+	/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
+	/// <param name="enabled">現在フレームで姿勢編集できる場合は true。</param>
+	void DrawRotationGizmo(
+		const RECT& region,
+		const ModelResource& model,
+		int selectedBodyPartIndex,
+		bool enabled);
+
 	Renderer::RenderTexture renderTexture;
 	CameraComponent camera;
 	TransformComponent cameraTransform;
@@ -172,6 +198,16 @@ private:
 	int currentFrame = 0;
 	bool playing = false;
 	int pickedBodyPartIndex = -1;
+	bool hasGizmoRotationEdit = false;
+	int gizmoEditedBodyPartIndex = -1;
+	int gizmoEditedAxisIndex = -1;
+	DirectX::SimpleMath::Quaternion gizmoLocalRotation = DirectX::SimpleMath::Quaternion::Identity;
+	bool rotationGizmoDragActive = false;
+	int rotationGizmoDragBodyPartIndex = -1;
+	int rotationGizmoDragAxisIndex = -1;
+	DirectX::SimpleMath::Matrix rotationGizmoDragWorldMatrix = DirectX::SimpleMath::Matrix::Identity;
+	DirectX::SimpleMath::Quaternion rotationGizmoDragStartLocalRotation = DirectX::SimpleMath::Quaternion::Identity;
+	float rotationGizmoDragAccumulatedRadians = 0.0f;
 	float cameraYawDegrees = 0.0f;
 	float cameraPitchDegrees = -2.5f;
 	float cameraDistance = 14.0f;
