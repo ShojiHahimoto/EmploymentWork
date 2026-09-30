@@ -8,6 +8,9 @@
 struct MotionIkChain
 {
     std::array<MotionBodyPart, 3> parts;
+    // 真なら、祖先固定・骨長固定の条件下では有限の直線移動が不可能。
+    // 非操作軸を動かす球面投影や、未許可の祖先回転で回避しない。
+    bool translationLocked = false;
 };
 
 struct MotionIkResult
@@ -17,10 +20,20 @@ struct MotionIkResult
     DirectX::SimpleMath::Vector3 reachedPosition;
     float positionError = 0.0f;
     bool atReachLimit = false;
+    bool atJointLimit = false;
+    bool translationLocked = false;
+    bool usedAlternativePose = false; // 制限回避で曲げ面/長軸回転の配分を変更した結果。
 };
 
 namespace MotionIk
 {
+    /// <summary>IK可動域からの逸脱量を計測する。保存姿勢は矯正しない。</summary>
+    /// <param name="part">部位。</param><param name="rotation">検査するローカル回転。</param>
+    /// <param name="bind">FBX基準回転。</param><param name="reference">角度連続性の基準回転。</param>
+    /// <returns>swing X、twist Y、swing Z/円錐の最大逸脱度数。全て0なら範囲内。</returns>
+    DirectX::SimpleMath::Vector3 MeasureLimitViolation(MotionBodyPart part,
+        const DirectX::SimpleMath::Quaternion& rotation, const DirectX::SimpleMath::Quaternion& bind,
+        const DirectX::SimpleMath::Quaternion& reference);
     /// <summary>選択部位から、回転を保存できる親2点と対象点を決める。</summary>
     /// <param name="target">動かす部位。</param>
     /// <returns>対応チェーン。非対応部位はnullptr。</returns>

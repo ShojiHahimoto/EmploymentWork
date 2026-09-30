@@ -8,40 +8,6 @@
 namespace
 {
 	/// <summary>
-	/// 制限なしの関節可動域を作る。
-	/// </summary>
-	/// <returns>可動域制限無効の設定。</returns>
-	MotionJointRotationLimit NoRotationLimit()
-	{
-		return MotionJointRotationLimit{};
-	}
-
-	/// <summary>
-	/// 編集用の甘めの回転可動域を作る。
-	/// </summary>
-	/// <param name="minX">X軸の最小角度。</param>
-	/// <param name="maxX">X軸の最大角度。</param>
-	/// <param name="minY">Y軸の最小角度。</param>
-	/// <param name="maxY">Y軸の最大角度。</param>
-	/// <param name="minZ">Z軸の最小角度。</param>
-	/// <param name="maxZ">Z軸の最大角度。</param>
-	/// <returns>可動域制限有効の設定。</returns>
-	MotionJointRotationLimit RotationLimit(
-		float minX,
-		float maxX,
-		float minY,
-		float maxY,
-		float minZ,
-		float maxZ)
-	{
-		MotionJointRotationLimit limit;
-		limit.enabled = true;
-		limit.minDegrees = DirectX::SimpleMath::Vector3(minX, minY, minZ);
-		limit.maxDegrees = DirectX::SimpleMath::Vector3(maxX, maxY, maxZ);
-		return limit;
-	}
-
-	/// <summary>
 	/// 内部値と編集UI表示値の符号をそのままにする。
 	/// </summary>
 	/// <returns>全軸 +1 の符号。</returns>
@@ -67,7 +33,6 @@ namespace
 			"Head",
 			MotionBodyPart::Spine,
 			{ "mixamorig:Head", "Head", "", "" },
-			RotationLimit(-60.0f, 60.0f, -80.0f, 80.0f, -45.0f, 45.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -76,7 +41,6 @@ namespace
 			"Spine",
 			MotionBodyPart::Waist,
 			{ "mixamorig:Spine", "mixamorig:Spine1", "Spine", "" },
-			RotationLimit(-45.0f, 45.0f, -55.0f, 55.0f, -45.0f, 45.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -85,7 +49,6 @@ namespace
 			"Waist",
 			MotionBodyPart::None,
 			{ "mixamorig:Hips", "Hips", "", "" },
-			NoRotationLimit(),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -94,7 +57,6 @@ namespace
 			"RShoulder",
 			MotionBodyPart::Spine,
 			{ "mixamorig:RightArm", "RightArm", "mixamorig:RightShoulder", "" },
-			RotationLimit(-120.0f, 100.0f, -180.0f, 60.0f, -150.0f, 120.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -103,7 +65,6 @@ namespace
 			"LShoulder",
 			MotionBodyPart::Spine,
 			{ "mixamorig:LeftArm", "LeftArm", "mixamorig:LeftShoulder", "" },
-			RotationLimit(-120.0f, 100.0f, -60.0f, 180.0f, -120.0f, 150.0f),
 			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -112,7 +73,6 @@ namespace
 			"RElbow",
 			MotionBodyPart::RShoulder,
 			{ "mixamorig:RightForeArm", "RightForeArm", "", "" },
-			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -121,7 +81,6 @@ namespace
 			"LElbow",
 			MotionBodyPart::LShoulder,
 			{ "mixamorig:LeftForeArm", "LeftForeArm", "", "" },
-			RotationLimit(-160.0f, 10.0f, -35.0f, 35.0f, -35.0f, 35.0f),
 			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -130,7 +89,6 @@ namespace
 			"RHand",
 			MotionBodyPart::RElbow,
 			{ "mixamorig:RightHand", "RightHand", "", "" },
-			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -139,7 +97,6 @@ namespace
 			"LHand",
 			MotionBodyPart::LElbow,
 			{ "mixamorig:LeftHand", "LeftHand", "", "" },
-			RotationLimit(-90.0f, 90.0f, -90.0f, 90.0f, -90.0f, 90.0f),
 			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -148,7 +105,6 @@ namespace
 			"RHipjoint",
 			MotionBodyPart::Waist,
 			{ "mixamorig:RightUpLeg", "RightUpLeg", "", "" },
-			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -157,7 +113,6 @@ namespace
 			"LHipjoint",
 			MotionBodyPart::Waist,
 			{ "mixamorig:LeftUpLeg", "LeftUpLeg", "", "" },
-			RotationLimit(-140.0f, 100.0f, -90.0f, 90.0f, -90.0f, 90.0f),
 			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -166,7 +121,6 @@ namespace
 			"RKnees",
 			MotionBodyPart::RHipjoint,
 			{ "mixamorig:RightLeg", "RightLeg", "", "" },
-			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -175,7 +129,6 @@ namespace
 			"LKnees",
 			MotionBodyPart::LHipjoint,
 			{ "mixamorig:LeftLeg", "LeftLeg", "", "" },
-			RotationLimit(-10.0f, 160.0f, -20.0f, 20.0f, -20.0f, 20.0f),
 			LeftSideEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -184,7 +137,6 @@ namespace
 			"RFeet",
 			MotionBodyPart::RKnees,
 			{ "mixamorig:RightFoot", "RightFoot", "", "" },
-			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f),
 			SameEditorRotationSign()
 		},
 		MotionBodyPartDefinition
@@ -193,7 +145,6 @@ namespace
 			"LFeet",
 			MotionBodyPart::LKnees,
 			{ "mixamorig:LeftFoot", "LeftFoot", "", "" },
-			RotationLimit(-80.0f, 80.0f, -60.0f, 60.0f, -60.0f, 60.0f),
 			LeftSideEditorRotationSign()
 		}
 	};
@@ -201,6 +152,34 @@ namespace
 
 namespace MotionSkeleton
 {
+	MotionPoseRotationLimit GetPoseRotationLimit(MotionBodyPart part)
+	{
+		using Part = MotionBodyPart;
+		// Mixamoの基準骨軸Yを長軸とする。X/Zはswing回転ベクトルの成分。
+		// Tポーズ基準なので、人体の腕を下げた中立姿勢の角度を直接代入しない。
+		// 肩は広めの円錐、前腕は屈曲と回内外を分離。値は編集用で医療的な限界ではない。
+		switch (part)
+		{
+		case Part::RShoulder: case Part::LShoulder:
+			return {true, {-170,-130,-170}, {170,130,170}, 175};
+		case Part::RHipjoint: case Part::LHipjoint:
+			return {true, {-155,-100,-110}, {115,100,110}, 165};
+		case Part::RElbow: case Part::LElbow:
+			return {true, {-170,-110,-15}, {0,110,15}, 175};
+		case Part::RKnees: case Part::LKnees:
+			return {true, {0,-25,-10}, {165,25,10}, 170};
+		case Part::RHand: case Part::LHand:
+			return {true, {-100,-100,-60}, {100,100,60}, 120};
+		case Part::RFeet: case Part::LFeet:
+			return {true, {-85,-65,-50}, {85,65,50}, 100};
+		case Part::Head:
+			return {true, {-70,-90,-55}, {70,90,55}, 100};
+		case Part::Spine:
+			return {true, {-55,-70,-55}, {55,70,55}, 85};
+		default: return {};
+		}
+	}
+
 	/// <summary>
 	/// 15部位の共通定義一覧を取得する。
 	/// </summary>
@@ -229,16 +208,6 @@ namespace MotionSkeleton
 	const char* GetBodyPartName(int index)
 	{
 		return GetBodyPartDefinition(index).editorName;
-	}
-
-	/// <summary>
-	/// 部位番号に対応する編集用回転可動域を取得する。
-	/// </summary>
-	/// <param name="index">0から始まる部位番号。</param>
-	/// <returns>有効/無効フラグ付きの回転可動域。</returns>
-	const MotionJointRotationLimit& GetRotationLimit(int index)
-	{
-		return GetBodyPartDefinition(index).rotationLimit;
 	}
 
 	/// <summary>

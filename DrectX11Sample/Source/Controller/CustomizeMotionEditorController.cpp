@@ -1,6 +1,7 @@
 ﻿#include "Controller/CustomizeMotionEditorController.h"
 
 #include "Data/MotionDataLoader.h"
+#include "System/MotionRotationLimits.h"
 #include "Data/MotionDataSaver.h"
 #include "Data/PosePreset.h"
 #include "System/imgui-docking/imgui.h"
@@ -181,103 +182,6 @@ namespace
 			DirectX::XMConvertToDegrees(eulerRadians.x),
 			DirectX::XMConvertToDegrees(eulerRadians.y),
 			DirectX::XMConvertToDegrees(eulerRadians.z));
-	}
-
-	/// <summary>
-	/// 内部可動域を編集UI表示用の可動域へ変換する。
-	/// </summary>
-	/// <param name="bodyPartIndex">編集用部位番号。</param>
-	/// <param name="minDegrees">UI表示用の最小値。</param>
-	/// <param name="maxDegrees">UI表示用の最大値。</param>
-	void GetEditorRotationLimitRange(int bodyPartIndex, Vector3& minDegrees, Vector3& maxDegrees)
-	{
-		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
-		minDegrees = limit.minDegrees;
-		maxDegrees = limit.maxDegrees;
-		if (!limit.enabled)
-		{
-			return;
-		}
-
-		const Vector3 sign = MotionSkeleton::GetEditorRotationSign(ClampBodyPartIndex(bodyPartIndex));
-		if (sign.x < 0.0f)
-		{
-			std::swap(minDegrees.x, maxDegrees.x);
-			minDegrees.x = -minDegrees.x;
-			maxDegrees.x = -maxDegrees.x;
-		}
-		if (sign.y < 0.0f)
-		{
-			std::swap(minDegrees.y, maxDegrees.y);
-			minDegrees.y = -minDegrees.y;
-			maxDegrees.y = -maxDegrees.y;
-		}
-		if (sign.z < 0.0f)
-		{
-			std::swap(minDegrees.z, maxDegrees.z);
-			minDegrees.z = -minDegrees.z;
-			maxDegrees.z = -maxDegrees.z;
-		}
-	}
-
-	/// <summary>
-	/// 部位ごとの可動域に合わせてローカル回転を補正する。
-	/// </summary>
-	/// <param name="bodyPartIndex">編集用部位番号。</param>
-	/// <param name="rotationEulerDegrees">補正する Euler 回転。</param>
-	/// <returns>制限内へ補正した Euler 回転。制限なし部位は入力値そのまま。</returns>
-	Vector3 ClampRotationByBodyPart(int bodyPartIndex, const Vector3& rotationEulerDegrees)
-	{
-		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
-		if (!limit.enabled)
-		{
-			return rotationEulerDegrees;
-		}
-
-		return Vector3(
-			std::clamp(rotationEulerDegrees.x, limit.minDegrees.x, limit.maxDegrees.x),
-			std::clamp(rotationEulerDegrees.y, limit.minDegrees.y, limit.maxDegrees.y),
-			std::clamp(rotationEulerDegrees.z, limit.minDegrees.z, limit.maxDegrees.z));
-	}
-
-	/// <summary>
-	/// 編集UI表示値を、表示上の可動域に合わせて補正する。
-	/// </summary>
-	/// <param name="bodyPartIndex">編集用部位番号。</param>
-	/// <param name="editorRotationEulerDegrees">編集UI上の Euler 回転。</param>
-	/// <returns>編集UI表示用可動域に収めた Euler 回転。</returns>
-	Vector3 ClampEditorRotationByBodyPart(int bodyPartIndex, const Vector3& editorRotationEulerDegrees)
-	{
-		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(ClampBodyPartIndex(bodyPartIndex));
-		if (!limit.enabled)
-		{
-			return editorRotationEulerDegrees;
-		}
-
-		Vector3 editorMin;
-		Vector3 editorMax;
-		GetEditorRotationLimitRange(bodyPartIndex, editorMin, editorMax);
-		return Vector3(
-			std::clamp(editorRotationEulerDegrees.x, editorMin.x, editorMax.x),
-			std::clamp(editorRotationEulerDegrees.y, editorMin.y, editorMax.y),
-			std::clamp(editorRotationEulerDegrees.z, editorMin.z, editorMax.z));
-	}
-
-	/// <summary>
-	/// 部位名に対応する可動域でローカル回転を補正する。
-	/// </summary>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <param name="rotationEulerDegrees">補正する Euler 回転。</param>
-	/// <returns>制限内へ補正した Euler 回転。</returns>
-	Vector3 ClampRotationByBoneName(const std::string& boneName, const Vector3& rotationEulerDegrees)
-	{
-		const int bodyPartIndex = MotionSkeleton::FindBodyPartIndex(boneName);
-		if (bodyPartIndex < 0)
-		{
-			return rotationEulerDegrees;
-		}
-
-		return ClampRotationByBodyPart(bodyPartIndex, rotationEulerDegrees);
 	}
 
 	/// <summary>
@@ -494,37 +398,6 @@ namespace
 		Quaternion sampledRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
 		sampledRotation.Normalize();
 		return sampledRotation;
-	}
-
-	/// <summary>
-	/// MotionData の指定部位とフレームにローカル回転キーを追加または上書きする。
-	/// </summary>
-	/// <param name="motionData">編集対象の MotionData。</param>
-	/// <param name="boneName">編集用部位名。</param>
-	/// <param name="frame">設定先の内部 actionFrame。</param>
-	/// <param name="rotationEulerDegrees">保存するオイラー角。</param>
-	void SetMotionRotationKey(
-		MotionData& motionData,
-		const std::string& boneName,
-		int frame,
-		const Vector3& rotationEulerDegrees)
-	{
-		MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(motionData, boneName);
-		MotionBoneKeyframeData* targetKeyframe = FindMotionKeyframe(*targetTrack, frame);
-		if (!targetKeyframe)
-		{
-			targetKeyframe = &targetTrack->keyframes.emplace_back();
-			targetKeyframe->frame = frame;
-		}
-
-		const Vector3 clampedRotationEulerDegrees = ClampRotationByBoneName(boneName, rotationEulerDegrees);
-		targetKeyframe->hasRotation = true;
-		targetKeyframe->localRotationEulerDegrees = clampedRotationEulerDegrees;
-		targetKeyframe->localRotation = Quaternion::CreateFromYawPitchRoll(
-			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.y),
-			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.x),
-			DirectX::XMConvertToRadians(clampedRotationEulerDegrees.z));
-		targetKeyframe->localRotation.Normalize();
 	}
 
 	/// <summary>
@@ -793,29 +666,9 @@ bool CustomizeMotionEditorController::DrawEditor(
 	{
 		RefreshFrameEditValues(actionFrame);
 	}
-	const MotionJointRotationLimit& selectedLimit = MotionSkeleton::GetRotationLimit(selectedBoneIndex);
-	if (selectedLimit.enabled)
-	{
-		Vector3 editorLimitMin;
-		Vector3 editorLimitMax;
-		GetEditorRotationLimitRange(selectedBoneIndex, editorLimitMin, editorLimitMax);
-		ImGui::Text(
-			"Rotation Limit X %.0f..%.0f / Y %.0f..%.0f / Z %.0f..%.0f",
-			editorLimitMin.x,
-			editorLimitMax.x,
-			editorLimitMin.y,
-			editorLimitMax.y,
-			editorLimitMin.z,
-			editorLimitMax.z);
-	}
-	else
-	{
-		ImGui::Text("Rotation Limit: None");
-	}
 	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &rotationEulerDegrees.x, 0.5f))
 	{
-		rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
-		statusMessage = SetSelectedRotationKey(actionFrame, totalFrames);
+		statusMessage = SetSelectedRotationKey(previewController, actionFrame, totalFrames);
 	}
 	ImGui::EndDisabled();
 
@@ -1104,8 +957,8 @@ std::string CustomizeMotionEditorController::AddWholeBodyKeyframe(int keyFrame, 
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const char* boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		const Vector3 rotation = GetMotionRotationEulerAtFrame(draft, boneName, keyFrame);
-		SetMotionRotationKey(draft, boneName, keyFrame, rotation);
+		const Quaternion rotation = GetMotionRotationQuaternionAtFrame(draft, boneName, keyFrame);
+		SetMotionRotationQuaternionKey(draft, boneName, keyFrame, rotation);
 	}
 
 	RefreshFrameEditValues(keyFrame);
@@ -1148,7 +1001,7 @@ std::string CustomizeMotionEditorController::DeleteWholeBodyKeyframe(int keyFram
 	return "Deleted current MotionData keyframe.";
 }
 
-std::string CustomizeMotionEditorController::SetSelectedRotationKey(int keyFrame, int totalFrames)
+std::string CustomizeMotionEditorController::SetSelectedRotationKey(CustomizePreviewController& previewController, int keyFrame, int totalFrames)
 {
 	if (!hasDraft)
 	{
@@ -1165,10 +1018,15 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(int keyFrame
 
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	draft.totalFrames = std::max(1, totalFrames);
-	rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
-	const Vector3 internalRotationEulerDegrees =
-		ConvertEditorRotationToInternalRotation(selectedBoneIndex, rotationEulerDegrees);
-	SetMotionRotationKey(draft, boneName, keyFrame, internalRotationEulerDegrees);
+	const Vector3 input = ConvertEditorRotationToInternalRotation(selectedBoneIndex, rotationEulerDegrees);
+	const Quaternion requested = Quaternion::CreateFromYawPitchRoll(
+		DirectX::XMConvertToRadians(input.y), DirectX::XMConvertToRadians(input.x), DirectX::XMConvertToRadians(input.z));
+	Quaternion bind;
+	if (!previewController.GetBodyPartBindRotation(selectedBoneIndex, bind)) return "Waiting for preview model.";
+	const Quaternion previous = GetMotionRotationQuaternionAtFrame(draft, boneName, keyFrame);
+	const Quaternion constrained = MotionRotationLimits::Constrain(static_cast<MotionBodyPart>(selectedBoneIndex), previous, requested, bind);
+	SetMotionRotationQuaternionKey(draft, boneName, keyFrame, constrained);
+	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(selectedBoneIndex, QuaternionToEulerDegrees(constrained));
 
 	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);
 	std::sort(
@@ -1224,7 +1082,6 @@ std::string CustomizeMotionEditorController::ApplyGizmoRotationEdit(
 	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(
 		selectedBoneIndex,
 		QuaternionToEulerDegrees(localRotation));
-	rotationEulerDegrees = ClampEditorRotationByBodyPart(selectedBoneIndex, rotationEulerDegrees);
 	return "Set MotionData keyframe.";
 }
 
@@ -1488,7 +1345,19 @@ void CustomizeMotionEditorController::DrawIkControls(
         ikTargetEditing = false;
         hasIkTargetWorldPosition = false;
         ikTargetKeyFrame = ikTargetBodyPartIndex = -1;
-        ImGui::TextDisabled("Select a hand, elbow, foot or knee on a pose keyframe.");
+        ImGui::TextDisabled("Select an IK joint on a pose keyframe.");
+        return;
+    }
+
+    if (chain->translationLocked)
+    {
+        // 固定条件下で直線移動の自由度がない対象には、動かない入力欄を出さない。
+        // 既存の回転編集はそのまま使える。背中/腰を勝手に動かす旧チェーンは禁止。
+        previewController.EndIkSolveSession();
+        ikTargetEditing = false;
+        hasIkTargetWorldPosition = false;
+        ikTargetKeyFrame = ikTargetBodyPartIndex = -1;
+        ImGui::TextDisabled("Translation locked (fixed hierarchy).");
         return;
     }
 
@@ -1545,13 +1414,15 @@ std::string CustomizeMotionEditorController::ApplySelectedIkTarget(
     MotionIkResult result;
     if (!chain || !previewController.SolveIkTarget(selectedBoneIndex, ikTargetWorldPosition, result))
         return "IK could not verify the pose. The existing keyframe was kept.";
+    if (result.translationLocked) return "IK translation is locked by the fixed hierarchy.";
 
-    // 位置キーは追加しない。親2点と、ワールド方向を維持した対象点の回転をまとめて記録する。
+    // 位置キーは追加しない。親2点の回転を変更し、手足自身のローカル回転は維持する。
     // 実FKで位置解との一致が確認された場合にだけ下書きを変更する。
     for (int i = 0; i < 3; ++i)
         SetMotionRotationQuaternionKey(draft,
             MotionSkeleton::GetBodyPartName(static_cast<int>(chain->parts[i])), keyFrame, result.localRotations[i]);
     RefreshFrameEditValues(keyFrame);
+    if (result.atJointLimit) return "IK: joint rotation limit reached on the selected axis.";
     return result.atReachLimit ? "IK: reached the limit on the selected axis." : "IK pose updated.";
 }
 

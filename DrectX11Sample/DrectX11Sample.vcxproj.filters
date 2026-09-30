@@ -231,6 +231,9 @@
     <ClCompile Include="Source\System\MotionIk.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
+    <ClCompile Include="Source\System\MotionRotationLimits.cpp">
+      <Filter>ソース ファイル\System</Filter>
+    </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
@@ -342,6 +345,9 @@
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\MotionIk.h">
+      <Filter>ヘッダー ファイル\System</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\System\MotionRotationLimits.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\SkeletonPose.h">

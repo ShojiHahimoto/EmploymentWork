@@ -106,6 +106,10 @@ public:
 	/// <returns>現在のプレビュー姿勢を固定できた場合は true。</returns>
 	bool BeginIkSolveSession(int actionFrame);
 
+	/// <summary>数値回転とIKが同じ基準で制限できるよう、実モデルの基準回転を取得する。</summary>
+	/// <param name="part">編集部位。</param><param name="rotation">取得先。</param><returns>取得成功時true。</returns>
+	bool GetBodyPartBindRotation(int part, DirectX::SimpleMath::Quaternion& rotation) const;
+
 	/// <summary>
 	/// IK 数値ドラッグ用に固定していた基準姿勢を破棄する。
 	/// </summary>
@@ -250,6 +254,8 @@ private:
 	DirectX::SimpleMath::Matrix rotationGizmoDragWorldMatrix = DirectX::SimpleMath::Matrix::Identity;
 	DirectX::SimpleMath::Quaternion rotationGizmoDragStartLocalRotation = DirectX::SimpleMath::Quaternion::Identity;
 	float rotationGizmoDragAccumulatedRadians = 0.0f;
+	// ドラッグ開始時の共通可動域から求めた1軸角度範囲。毎描画フレームで再探索しない。
+	DirectX::SimpleMath::Vector2 rotationGizmoDragLimits = DirectX::SimpleMath::Vector2::Zero;
 	float cameraYawDegrees = 0.0f;
 	float cameraPitchDegrees = -2.5f;
 	float cameraDistance = 14.0f;

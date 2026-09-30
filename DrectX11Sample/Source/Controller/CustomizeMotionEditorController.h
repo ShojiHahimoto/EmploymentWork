@@ -104,10 +104,11 @@ public:
 	/// <summary>
 	/// 選択部位の回転キーを現在の編集値で更新する。
 	/// </summary>
+	/// <param name="previewController">実FBXの基準回転を取得するプレビュー。</param>
 	/// <param name="keyFrame">更新対象の内部 actionFrame。</param>
 	/// <param name="totalFrames">MotionData の総フレーム数。</param>
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
-	std::string SetSelectedRotationKey(int keyFrame, int totalFrames);
+	std::string SetSelectedRotationKey(CustomizePreviewController& previewController, int keyFrame, int totalFrames);
 
 	/// <summary>
 	/// ギズモ操作で得た内部ローカル回転を、既存の数値入力と同じルールで現在フレームへ保存する。

@@ -13,6 +13,7 @@
 #include "System/TransformSystem.h"
 
 #include <cstdint>
+#include <chrono>
 #include <filesystem>
 
 #if defined(_DEBUG)
@@ -38,6 +39,56 @@ namespace
 {
 	constexpr const char* JapaneseFontPath = "assets/font/static/NotoSansJP-Regular.ttf";
 	constexpr float DebugImGuiFontSize = 18.0f;
+
+	// 描画フレーム間の実時間だけを計測する。固定60fpsのゲーム更新には使用しない。
+	using FpsClock = std::chrono::steady_clock;
+	FpsClock::time_point fpsSampleStart;
+	unsigned int renderedFrameIntervals = 0;
+	double measuredFps = 0.0;
+	bool fpsSampleStarted = false;
+	bool fpsSampleReady = false;
+	constexpr double FpsSampleSeconds = 0.5;
+
+	/// <summary>
+	/// 描画間隔を実時間で集計し、全シーン共通のFPSウィンドウを表示する。
+	/// </summary>
+	void DrawFpsWindow()
+	{
+		const auto now = FpsClock::now();
+		if (!fpsSampleStarted)
+		{
+			fpsSampleStart = now;
+			fpsSampleStarted = true;
+		}
+		else
+		{
+			// BeginFrame は Game::Draw ごとに一度だけ呼ばれるため、
+			// 更新の追いつき処理を数えず、描画・待機・更新に費やした実時間を含められる。
+			++renderedFrameIntervals;
+			const double elapsedSeconds = std::chrono::duration<double>(now - fpsSampleStart).count();
+			if (elapsedSeconds >= FpsSampleSeconds)
+			{
+				measuredFps = renderedFrameIntervals / elapsedSeconds;
+				fpsSampleReady = true;
+				renderedFrameIntervals = 0;
+				fpsSampleStart = now;
+			}
+		}
+
+		// 閉じるボタンを設けず、シーン遷移後も常に確認できるようにする。
+		if (ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
+		{
+			if (fpsSampleReady)
+			{
+				ImGui::Text("FPS: %.1f", measuredFps);
+			}
+			else
+			{
+				ImGui::TextUnformatted("FPS: --");
+			}
+		}
+		ImGui::End();
+	}
 
 	/// <summary>
 	/// ImGui に日本語グリフを含むフォントを登録し、UTF-8 の日本語文字列を表示できるようにする。
@@ -121,6 +172,10 @@ bool DebugImGuiSystem::Init(HWND windowHandle, ID3D11Device* device, ID3D11Devic
 		return false;
 	}
 
+	fpsSampleStarted = false;
+	fpsSampleReady = false;
+	renderedFrameIntervals = 0;
+	measuredFps = 0.0;
 	initialized = true;
 	return true;
 #else
@@ -259,6 +314,7 @@ void DebugImGuiSystem::BeginFrame()
 		0,
 		nullptr,
 		ImGuiDockNodeFlags_PassthruCentralNode);
+	DrawFpsWindow();
 #endif
 }
 

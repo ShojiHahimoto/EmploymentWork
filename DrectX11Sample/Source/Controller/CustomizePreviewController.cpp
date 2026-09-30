@@ -11,6 +11,7 @@
 
 #include <DirectXMath.h>
 
+#include "System/MotionRotationLimits.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -215,7 +216,7 @@ namespace
 	}
 
 	/// <summary>
-	/// ImGuizmo の回転ハンドル種別を、MotionData の Euler 軸番号へ変換する。
+	/// ImGuizmo の回転ハンドル種別を、ローカル回転軸番号へ変換する。
 	/// </summary>
 	/// <param name="handleType">現在操作中の ImGuizmo ハンドル。</param>
 	/// <returns>X=0, Y=1, Z=2。対象外なら -1。</returns>
@@ -252,41 +253,6 @@ namespace
 		default:
 			return Vector3::Zero;
 		}
-	}
-
-	/// <summary>
-	/// Vector3 から指定軸の値を取得する。
-	/// </summary>
-	/// <param name="value">参照する値。</param>
-	/// <param name="axisIndex">X=0, Y=1, Z=2。</param>
-	/// <returns>指定軸の値。対象外なら 0。</returns>
-	float GetAxisValue(const Vector3& value, int axisIndex)
-	{
-		switch (axisIndex)
-		{
-		case 0:
-			return value.x;
-		case 1:
-			return value.y;
-		case 2:
-			return value.z;
-		default:
-			return 0.0f;
-		}
-	}
-
-	/// <summary>
-	/// Quaternion を既存 MotionData と同じ Euler degree 表示へ変換する。
-	/// </summary>
-	/// <param name="rotation">変換する Quaternion。</param>
-	/// <returns>degree 単位の Euler 回転。</returns>
-	Vector3 ToEulerDegrees(const Quaternion& rotation)
-	{
-		const Vector3 eulerRadians = rotation.ToEuler();
-		return Vector3(
-			XMConvertToDegrees(eulerRadians.x),
-			XMConvertToDegrees(eulerRadians.y),
-			XMConvertToDegrees(eulerRadians.z));
 	}
 
 	/// <summary>
@@ -600,6 +566,16 @@ bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 	ikSolveBasePose = skeletonPose;
 	ikSolveObjectWorld = TransformSystem::GetWorldMatrix(playerTransform);
 	hasIkSolveBasePose = true;
+	return true;
+}
+
+bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion& rotation) const
+{
+	const auto* model = ModelResourceManager::GetModel(PreviewModelKey);
+	if (!model || part < 0 || part >= MotionBodyPartCount) return false;
+	const int bone = MotionSkeleton::FindModelBoneIndex(*model, MotionSkeleton::GetBodyPartName(part));
+	if (bone < 0) return false;
+	rotation = model->GetBones()[bone].bindLocalRotation;
 	return true;
 }
 
@@ -927,17 +903,10 @@ void CustomizePreviewController::DrawRotationGizmo(
 	ImGuizmo::SetRotationAngleLimit(false, 0.0f, 0.0f);
 	if (rotationGizmoDragActive)
 	{
-		const MotionJointRotationLimit& limit = MotionSkeleton::GetRotationLimit(selectedBodyPartIndex);
-		if (limit.enabled)
+		const auto part = static_cast<MotionBodyPart>(selectedBodyPartIndex);
+		if (MotionSkeleton::GetPoseRotationLimit(part).enabled)
 		{
-			const Vector3 startEulerDegrees = ToEulerDegrees(rotationGizmoDragStartLocalRotation);
-			const float startAxisDegrees = GetAxisValue(startEulerDegrees, rotationGizmoDragAxisIndex);
-			const float minDeltaDegrees = GetAxisValue(limit.minDegrees, rotationGizmoDragAxisIndex) - startAxisDegrees;
-			const float maxDeltaDegrees = GetAxisValue(limit.maxDegrees, rotationGizmoDragAxisIndex) - startAxisDegrees;
-			ImGuizmo::SetRotationAngleLimit(
-				true,
-				XMConvertToRadians(std::min(minDeltaDegrees, maxDeltaDegrees)),
-				XMConvertToRadians(std::max(minDeltaDegrees, maxDeltaDegrees)));
+			ImGuizmo::SetRotationAngleLimit(true, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
 		}
 	}
 
@@ -974,6 +943,7 @@ void CustomizePreviewController::DrawRotationGizmo(
 		return;
 	}
 
+	const bool initializeRange = !rotationGizmoDragActive || rotationGizmoDragAxisIndex != axisIndex;
 	if (!rotationGizmoDragActive)
 	{
 		rotationGizmoDragActive = true;
@@ -1006,13 +976,21 @@ void CustomizePreviewController::DrawRotationGizmo(
 		return;
 	}
 
+	const auto part = static_cast<MotionBodyPart>(selectedBodyPartIndex);
+	if (MotionSkeleton::GetPoseRotationLimit(part).enabled)
+	{
+		if (initializeRange)
+			rotationGizmoDragLimits = MotionRotationLimits::AxisRange(part, rotationGizmoDragStartLocalRotation,
+				localAxis, model.GetBones()[modelBoneIndex].bindLocalRotation);
+		rotationGizmoDragAccumulatedRadians = std::clamp(rotationGizmoDragAccumulatedRadians, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
+	}
 	Quaternion deltaRotation = Quaternion::CreateFromAxisAngle(localAxis, rotationGizmoDragAccumulatedRadians);
 	deltaRotation.Normalize();
 	Quaternion editedLocalRotation = deltaRotation * rotationGizmoDragStartLocalRotation;
 	editedLocalRotation.Normalize();
 
 	// ドラッグ中は MotionData を書き換えず、プレビュー用 SkeletonPose だけを Quaternion で直接更新する。
-	// Euler 変換はドラッグ終了時の保存だけに限定し、操作中の特異点ジャンプを避ける。
+	// 制限範囲・途中姿勢・確定保存までQuaternionを使い、Eulerへ往復しない。
 	skeletonPose.bonePoses[modelBoneIndex].localRotation = editedLocalRotation;
 	MotionPose::UpdateSkinningMatrices(skeletonPose, model);
 	if (!usingGizmo)
