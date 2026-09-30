@@ -244,6 +244,33 @@ private:
 	void DrawPosePresetControls(int keyFrame, int totalFrames, std::string& statusMessage);
 
 	/// <summary>
+	/// 編集専用 2 ボーン IK のワールド座標ターゲット UI を描画し、変更された瞬間に回転キーへ焼き込む。
+	/// </summary>
+	/// <param name="previewController">現在表示中のプレビュー姿勢と IK 計算に使う Controller。</param>
+	/// <param name="keyFrame">現在の内部 actionFrame。姿勢キーフレームがある場合だけ IK 編集できる。</param>
+	/// <param name="statusMessage">処理結果メッセージの書き込み先。</param>
+	void DrawIkControls(
+		CustomizePreviewController& previewController,
+		int keyFrame,
+		std::string& statusMessage);
+
+	/// <summary>
+	/// 選択中 IK 対象関節のワールド位置を、現在のプレビュー姿勢から一時ターゲット入力へ読み込む。
+	/// </summary>
+	/// <param name="previewController">現在表示中のプレビュー姿勢を持つ Controller。</param>
+	/// <param name="keyFrame">読み込んだターゲットが属する内部 actionFrame。</param>
+	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
+	std::string CaptureCurrentIkTarget(CustomizePreviewController& previewController, int keyFrame);
+
+	/// <summary>
+	/// 選択中 IK 対象を解き、必要な親側関節の回転だけを現在フレームの MotionData キーへ保存する。
+	/// </summary>
+	/// <param name="previewController">現在表示中のプレビュー姿勢と IK 計算に使う Controller。</param>
+	/// <param name="keyFrame">保存先の内部 actionFrame。</param>
+	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
+	std::string ApplySelectedIkTarget(CustomizePreviewController& previewController, int keyFrame);
+
+	/// <summary>
 	/// 現在フレームの全身姿勢をプリセットとして保存する。
 	/// </summary>
 	/// <param name="keyFrame">保存元の内部 actionFrame。</param>
@@ -268,4 +295,9 @@ private:
 	bool showSavePresetPanel = false;
 	bool showLoadPresetPanel = false;
 	int selectedPresetIndex = 0;
+	DirectX::SimpleMath::Vector3 ikTargetWorldPosition = DirectX::SimpleMath::Vector3::Zero;
+	bool hasIkTargetWorldPosition = false;
+	bool ikTargetEditing = false; // アクティブな位置入力だけが開始姿勢を保持する。
+	int ikTargetKeyFrame = -1;
+	int ikTargetBodyPartIndex = -1;
 };

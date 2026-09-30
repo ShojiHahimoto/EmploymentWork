@@ -68,7 +68,12 @@ namespace
 	/// <param name="value">保存する Quaternion。</param>
 	void WriteQuaternion(std::ostringstream& stream, const char* indent, const Quaternion& value)
 	{
+		// 3桁へ丸めると親回転の誤差が末端位置へ伝播し、IKの保存再読込で位置がずれる。
+		// Quaternionだけfloatの精度を保持し、他のパラメータの書式は変更しない。
+		const auto previousPrecision = stream.precision();
+		stream << std::setprecision(9);
 		stream << "{ \"x\": " << value.x << ", \"y\": " << value.y << ", \"z\": " << value.z << ", \"w\": " << value.w << " }";
+		stream.precision(previousPrecision);
 	}
 }
 

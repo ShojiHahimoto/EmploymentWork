@@ -61,6 +61,7 @@
     <ClCompile Include="Source\System\InputHistorySystem.cpp" />
     <ClCompile Include="Source\System\MotionSystem.cpp" />
     <ClCompile Include="Source\System\MotionPose.cpp" />
+    <ClCompile Include="Source\System\MotionIk.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp" />
     <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp" />
     <ClCompile Include="Source\System\imgui-docking\imgui.cpp" />
@@ -162,6 +163,7 @@
     <ClInclude Include="Source\System\MovementSystem.h" />
     <ClInclude Include="Source\System\MotionSystem.h" />
     <ClInclude Include="Source\System\MotionPose.h" />
+    <ClInclude Include="Source\System\MotionIk.h" />
     <ClInclude Include="Source\Data\SkeletonPose.h" />
     <ClInclude Include="Source\System\PlayerInvincibilitySystem.h" />
     <ClInclude Include="Source\System\PlayerFacingSystem.h" />

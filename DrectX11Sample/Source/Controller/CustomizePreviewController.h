@@ -7,6 +7,7 @@
 #include "Data/MotionSkeletonDefinition.h"
 #include "Data/SkeletonPose.h"
 #include "System/Renderer.h"
+#include "System/MotionIk.h"
 
 #include <SimpleMath.h>
 
@@ -99,6 +100,36 @@ public:
 		DirectX::SimpleMath::Quaternion& outLocalRotation);
 
 	/// <summary>
+	/// IK 数値ドラッグ開始時の姿勢を固定し、ドラッグ中の IK 計算基準にする。
+	/// </summary>
+	/// <param name="actionFrame">固定する姿勢の内部 actionFrame。</param>
+	/// <returns>現在のプレビュー姿勢を固定できた場合は true。</returns>
+	bool BeginIkSolveSession(int actionFrame);
+
+	/// <summary>
+	/// IK 数値ドラッグ用に固定していた基準姿勢を破棄する。
+	/// </summary>
+	void EndIkSolveSession();
+
+	/// <summary>
+	/// プレビュー上に表示されている現在姿勢から、指定部位のワールド位置を取得する。
+	/// </summary>
+	/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
+	/// <param name="outWorldPosition">取得したワールド位置の書き込み先。</param>
+	/// <returns>現在のプレビュー姿勢とモデルから位置を取得できた場合は true。</returns>
+	bool GetBodyPartWorldPosition(
+		int bodyPartIndex,
+		DirectX::SimpleMath::Vector3& outWorldPosition) const;
+
+    /// <summary>選択関節を開始姿勢からワールド直線上で移動し、検証済み回転を返す。</summary>
+    /// <param name="targetBodyPartIndex">手・肘・足・膝の編集部位。</param>
+    /// <param name="targetWorldPosition">入力したワールド位置。</param>
+    /// <param name="result">保存する回転と到達情報。</param>
+    /// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
+    bool SolveIkTarget(int targetBodyPartIndex,
+        const DirectX::SimpleMath::Vector3& targetWorldPosition, MotionIkResult& result) const;
+
+	/// <summary>
 	/// プレビュー上の関節クリックで選択された部位を取り出す。
 	/// </summary>
 	/// <returns>クリック選択された部位番号。未選択なら -1。</returns>
@@ -121,6 +152,13 @@ public:
 	/// </summary>
 	/// <returns>0F Idle は -1、1F 以降は 0 始まりの内部 actionFrame。</returns>
 	int GetActionFrame() const;
+
+	/// <summary>
+	/// 指定 actionFrame の姿勢が直近の Render でプレビュー姿勢へ反映済みか確認する。
+	/// </summary>
+	/// <param name="actionFrame">確認対象の内部 actionFrame。</param>
+	/// <returns>現在の skeletonPose が指定フレームから作られている場合は true。</returns>
+	bool HasRenderedActionFrame(int actionFrame) const;
 
 	/// <summary>
 	/// プレビューが再生中か取得する。
@@ -195,7 +233,11 @@ private:
 	TransformComponent cameraTransform;
 	TransformComponent playerTransform;
 	SkeletonPose skeletonPose;
+	SkeletonPose ikSolveBasePose;
+	DirectX::SimpleMath::Matrix ikSolveObjectWorld = DirectX::SimpleMath::Matrix::Identity;
 	int currentFrame = 0;
+	int lastRenderedActionFrame = -100000;
+	bool hasIkSolveBasePose = false;
 	bool playing = false;
 	int pickedBodyPartIndex = -1;
 	bool hasGizmoRotationEdit = false;

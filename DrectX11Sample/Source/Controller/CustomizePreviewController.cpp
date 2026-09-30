@@ -288,6 +288,41 @@ namespace
 			XMConvertToDegrees(eulerRadians.y),
 			XMConvertToDegrees(eulerRadians.z));
 	}
+
+	/// <summary>
+	/// モデルと現在姿勢から、編集用部位の実ボーンワールド行列を取得する。
+	/// </summary>
+	/// <param name="pose">参照する姿勢。</param>
+	/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+	/// <param name="playerWorld">プレビューキャラ本体のワールド行列。</param>
+	/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
+	/// <param name="outModelBoneIndex">解決した実ボーン番号。</param>
+	/// <param name="outWorld">取得した実ワールド行列。</param>
+	/// <returns>有効な実ボーン行列を取得できた場合は true。</returns>
+	bool GetBodyPartWorldMatrix(
+		const SkeletonPose& pose,
+		const ModelResource& model,
+		const Matrix& playerWorld,
+		int bodyPartIndex,
+		int& outModelBoneIndex,
+		Matrix& outWorld)
+	{
+		if (bodyPartIndex < 0 || bodyPartIndex >= MotionBodyPartCount)
+		{
+			return false;
+		}
+
+		outModelBoneIndex = MotionSkeleton::FindModelBoneIndex(
+			model,
+			MotionSkeleton::GetBodyPartName(bodyPartIndex));
+		if (outModelBoneIndex < 0 || outModelBoneIndex >= static_cast<int>(pose.boneWorldMatrices.size()))
+		{
+			return false;
+		}
+
+		return MotionPose::GetBoneWorldMatrix(pose, outModelBoneIndex, playerWorld, outWorld);
+	}
+
 }
 
 void CustomizePreviewController::Initialize()
@@ -489,6 +524,7 @@ void CustomizePreviewController::Render(
 			}
 		}
 	}
+	lastRenderedActionFrame = previewSkinningMatrices ? actionFrame : -100000;
 
 	if (region && previewModel && previewSkinningMatrices)
 	{
@@ -550,6 +586,60 @@ bool CustomizePreviewController::ConsumeGizmoRotationEdit(
 	return true;
 }
 
+bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
+{
+	if (!skeletonPose.initialized || !HasRenderedActionFrame(actionFrame))
+	{
+		hasIkSolveBasePose = false;
+		return false;
+	}
+
+	// IK 数値編集中に毎フレーム MotionData へ回転を書き込むと、
+	// 次フレームのプレビュー姿勢もその回転を含むため、そこからさらに IK を解くと回転が累積して暴れる。
+	// そのためドラッグ開始時の姿勢を丸ごと固定し、ドラッグ中は常にこの姿勢を基準に Solver を走らせる。
+	ikSolveBasePose = skeletonPose;
+	ikSolveObjectWorld = TransformSystem::GetWorldMatrix(playerTransform);
+	hasIkSolveBasePose = true;
+	return true;
+}
+
+void CustomizePreviewController::EndIkSolveSession()
+{
+	hasIkSolveBasePose = false;
+	ikSolveBasePose = SkeletonPose{};
+}
+
+bool CustomizePreviewController::GetBodyPartWorldPosition(
+	int bodyPartIndex,
+	Vector3& outWorldPosition) const
+{
+	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
+	if (!previewModel || !skeletonPose.initialized)
+	{
+		return false;
+	}
+
+	int modelBoneIndex = -1;
+	Matrix bodyPartWorld;
+	const Matrix playerWorld = TransformSystem::GetWorldMatrix(playerTransform);
+	if (!GetBodyPartWorldMatrix(skeletonPose, *previewModel, playerWorld, bodyPartIndex, modelBoneIndex, bodyPartWorld))
+	{
+		return false;
+	}
+
+	outWorldPosition = Vector3::Transform(Vector3::Zero, bodyPartWorld);
+	return true;
+}
+
+bool CustomizePreviewController::SolveIkTarget(
+    int targetBodyPartIndex, const Vector3& targetWorldPosition, MotionIkResult& result) const
+{
+    const ModelResource* model = ModelResourceManager::GetModel(PreviewModelKey);
+    const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(targetBodyPartIndex));
+    if (!model || !chain || !hasIkSolveBasePose) return false;
+    return MotionIk::Solve(*model, ikSolveBasePose, ikSolveObjectWorld, *chain, targetWorldPosition, result);
+}
+
 int CustomizePreviewController::ConsumePickedBodyPartIndex()
 {
 	const int result = pickedBodyPartIndex;
@@ -570,6 +660,11 @@ void CustomizePreviewController::SetCurrentFrame(int frame)
 int CustomizePreviewController::GetActionFrame() const
 {
 	return currentFrame - 1;
+}
+
+bool CustomizePreviewController::HasRenderedActionFrame(int actionFrame) const
+{
+	return lastRenderedActionFrame == actionFrame;
 }
 
 bool CustomizePreviewController::IsPlaying() const

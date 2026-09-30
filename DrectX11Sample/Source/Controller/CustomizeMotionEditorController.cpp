@@ -26,11 +26,10 @@ namespace
 		bool idleMotion = false;
 	};
 
-	constexpr const char* IdlePosePresetId = "__IdlePose__";
-
-	Vector3 QuaternionToEulerDegrees(const Quaternion& rotation);
-	Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
-	Quaternion GetMotionRotationQuaternionAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
+    constexpr const char* IdlePosePresetId = "__IdlePose__";
+    Vector3 QuaternionToEulerDegrees(const Quaternion& rotation);
+    Vector3 GetMotionRotationEulerAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
+    Quaternion GetMotionRotationQuaternionAtFrame(const MotionData& motionData, const std::string& boneName, int frame);
 
 	/// <summary>
 	/// 文字列が空白だけか確認する。
@@ -820,6 +819,8 @@ bool CustomizeMotionEditorController::DrawEditor(
 	}
 	ImGui::EndDisabled();
 
+	DrawIkControls(previewController, actionFrame, statusMessage);
+
 	if (!editingCommonMotion)
 	{
 		ImGui::Separator();
@@ -1473,6 +1474,85 @@ void CustomizeMotionEditorController::DrawPosePresetControls(int keyFrame, int t
 			showLoadPresetPanel = false;
 		}
 	}
+}
+
+void CustomizeMotionEditorController::DrawIkControls(
+    CustomizePreviewController& previewController, int keyFrame, std::string& statusMessage)
+{
+    ImGui::Separator();
+    ImGui::Text("IK Edit (World)");
+    const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBoneIndex));
+    if (!HasMotionKeyframe(keyFrame) || !chain)
+    {
+        previewController.EndIkSolveSession();
+        ikTargetEditing = false;
+        hasIkTargetWorldPosition = false;
+        ikTargetKeyFrame = ikTargetBodyPartIndex = -1;
+        ImGui::TextDisabled("Select a hand, elbow, foot or knee on a pose keyframe.");
+        return;
+    }
+
+    // 部位・フレームが変わったら別の編集。以前のドラッグの基準を流用しない。
+    if (ikTargetKeyFrame != keyFrame || ikTargetBodyPartIndex != selectedBoneIndex)
+    {
+        previewController.EndIkSolveSession();
+        ikTargetEditing = false;
+    }
+    // 操作していない間は、回転編集・プリセット適用後も実際の関節位置に同期する。
+    // 操作中だけは要求値を保持し、限界で止まった解で入力を上書きしない。
+    if (!ikTargetEditing) CaptureCurrentIkTarget(previewController, keyFrame);
+    ImGui::BeginDisabled(!hasIkTargetWorldPosition);
+    constexpr const char* labels[] = { "World X", "World Y", "World Z" };
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        float value = (&ikTargetWorldPosition.x)[axis];
+        const bool changed = ImGui::DragFloat(labels[axis], &value, 0.01f, 0.0f, 0.0f, "%.3f");
+        if (ImGui::IsItemActivated())
+        {
+            previewController.Stop();
+            ikTargetEditing = previewController.BeginIkSolveSession(keyFrame);
+        }
+        if (changed && ikTargetEditing)
+        {
+            (&ikTargetWorldPosition.x)[axis] = value;
+            statusMessage = ApplySelectedIkTarget(previewController, keyFrame);
+        }
+        if (ImGui::IsItemDeactivated())
+        {
+            previewController.EndIkSolveSession();
+            ikTargetEditing = false;
+        }
+    }
+    ImGui::EndDisabled();
+}
+
+std::string CustomizeMotionEditorController::CaptureCurrentIkTarget(
+    CustomizePreviewController& previewController, int keyFrame)
+{
+    hasIkTargetWorldPosition = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBoneIndex))
+        && previewController.HasRenderedActionFrame(keyFrame)
+        && previewController.GetBodyPartWorldPosition(selectedBoneIndex, ikTargetWorldPosition);
+    ikTargetKeyFrame = hasIkTargetWorldPosition ? keyFrame : -1;
+    ikTargetBodyPartIndex = hasIkTargetWorldPosition ? selectedBoneIndex : -1;
+    return hasIkTargetWorldPosition ? "IK position synchronized." : "Waiting for preview pose.";
+}
+
+std::string CustomizeMotionEditorController::ApplySelectedIkTarget(
+    CustomizePreviewController& previewController, int keyFrame)
+{
+    if (!HasMotionKeyframe(keyFrame) || !hasIkTargetWorldPosition) return "IK requires a pose keyframe.";
+    const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBoneIndex));
+    MotionIkResult result;
+    if (!chain || !previewController.SolveIkTarget(selectedBoneIndex, ikTargetWorldPosition, result))
+        return "IK could not verify the pose. The existing keyframe was kept.";
+
+    // 位置キーは追加しない。親2点と、ワールド方向を維持した対象点の回転をまとめて記録する。
+    // 実FKで位置解との一致が確認された場合にだけ下書きを変更する。
+    for (int i = 0; i < 3; ++i)
+        SetMotionRotationQuaternionKey(draft,
+            MotionSkeleton::GetBodyPartName(static_cast<int>(chain->parts[i])), keyFrame, result.localRotations[i]);
+    RefreshFrameEditValues(keyFrame);
+    return result.atReachLimit ? "IK: reached the limit on the selected axis." : "IK pose updated.";
 }
 
 std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFrame)
