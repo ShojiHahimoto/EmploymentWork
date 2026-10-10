@@ -27,11 +27,11 @@
       "keyframes": [
         {
           "frame": 3,
-          "rotationEulerDegrees": { "x": 179.500, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         },
         {
           "frame": 5,
-          "rotationEulerDegrees": { "x": 227.111, "y": 0.000, "z": 0.000 }
+          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
         },
         {
           "frame": 12,
