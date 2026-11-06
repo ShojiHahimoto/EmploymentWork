@@ -70,6 +70,13 @@ public:
 		int height = 0;
 	};
 
+	struct ScreenRectDraw
+	{
+		// クライアント領域の描画先と、その矩形へ適用する色。
+		RECT destination = {};
+		DirectX::SimpleMath::Color color = DirectX::SimpleMath::Color(1.0f, 1.0f, 1.0f, 1.0f);
+	};
+
 	/// <summary>本体ウィンドウの矩形へ描画し、終了時に描画領域・カメラ・出力状態を戻す。</summary>
 	class ScopedRenderRegion
 	{
@@ -221,6 +228,9 @@ public:
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);
 	static void DrawScreenRect(const RECT& destination, const DirectX::SimpleMath::Color& color);
+	/// <summary>単色矩形の配列を 1 回の SpriteBatch で描画する。</summary>
+	/// <param name="draws">画面座標と色の描画要求。</param>
+	static void DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws);
 	static void DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const DirectX::SimpleMath::Color& color);
 	static void DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height);
 	static void SetDepthEnable(bool Enable);

@@ -39,6 +39,10 @@
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
     <ClCompile Include="Source\Controller\BattleSetupControllers.cpp" />
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp" />
+    <ClCompile Include="Source\UI\CustomizeAttackEditorImGuiView.cpp" />
+    <ClCompile Include="Source\UI\UIRoot.cpp" />
+    <ClCompile Include="Source\UI\UIInputSystem.cpp" />
+    <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
@@ -132,6 +136,11 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h" />
     <ClInclude Include="Source\Controller\BattleSetupControllers.h" />
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h" />
+    <ClInclude Include="Source\UI\CustomizeAttackEditorImGuiView.h" />
+    <ClInclude Include="Source\UI\UIRoot.h" />
+    <ClInclude Include="Source\UI\UIInputSystem.h" />
+    <ClInclude Include="Source\UI\UIRenderer.h" />
+    <ClInclude Include="Source\UI\UITheme.h" />
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
     <ClInclude Include="Source\Controller\CustomizeFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />

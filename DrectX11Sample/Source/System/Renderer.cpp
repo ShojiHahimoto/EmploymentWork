@@ -1495,6 +1495,31 @@ void Renderer::DrawScreenRect(const RECT& destination, const Color& color)
 }
 
 /// <summary>
+/// UI などの単色矩形を 1 回の SpriteBatch でまとめて描画する。
+/// </summary>
+/// <param name="draws">画面座標と色の描画要求。</param>
+void Renderer::DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws)
+{
+	if (!m_pWhiteTextureView || !m_pSpriteBatch || draws.empty())
+	{
+		return;
+	}
+
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pSpriteBatch->Begin();
+	for (const ScreenRectDraw& draw : draws)
+	{
+		if (draw.destination.right > draw.destination.left
+			&& draw.destination.bottom > draw.destination.top)
+		{
+			m_pSpriteBatch->Draw(m_pWhiteTextureView, draw.destination, draw.color);
+		}
+	}
+	m_pSpriteBatch->End();
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
 /// テクスチャの指定領域を画面座標の 2D 矩形へ描画する。
 /// </summary>
 /// <param name="textureView">描画する ShaderResourceView。</param>

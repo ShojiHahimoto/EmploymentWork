@@ -553,7 +553,7 @@ void CustomizeFlowController::DrawAttackEditorWindow()
 /// </summary>
 void CustomizeFlowController::DrawAttackEditorControls()
 {
-	const CustomizeAttackEditorAction action = attackEditor.DrawEditorControls(GetPreviewTotalFrames(), statusMessage);
+	const CustomizeAttackEditorAction action = attackEditorView.Draw(attackEditor, GetPreviewTotalFrames(), statusMessage);
 	if (action == CustomizeAttackEditorAction::OpenMotionEditor)
 	{
 		LoadDraftMotionFromEditorId();

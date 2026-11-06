@@ -14,6 +14,16 @@ enum class CustomizeAttackEditorAction
 };
 
 /// <summary>
+/// 編集画面が一時的に扱う技データと、硬直差入力値のスナップショット。
+/// </summary>
+struct CustomizeAttackEditorEditState
+{
+	AttackData attackData; // 表示側が編集する技パラメータのコピー。
+	int hitFrameAdvantage = 0; // 実行時スタン値ではなく編集UIの硬直差入力値。
+	int guardFrameAdvantage = 0; // 実行時スタン値ではなく編集UIの硬直差入力値。
+};
+
+/// <summary>
 /// カスタマイズ画面の AttackData 下書き、保存、スロット概要を管理する。
 /// </summary>
 class CustomizeAttackEditorController
@@ -40,17 +50,20 @@ public:
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 	std::string SaveDraft();
 
-	/// <summary>
-	/// AttackData の編集 UI と、保存/遷移ボタンの入力処理を実行する。
-	/// </summary>
-	/// <param name="previewTotalFrames">プレビュー表示上の総フレーム数。</param>
-	/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
-	/// <returns>Scene 側で扱う必要がある遷移要求。</returns>
-	CustomizeAttackEditorAction DrawEditorControls(int previewTotalFrames, std::string& statusMessage);
+	/// <summary>UI 表示用に、編集中データのコピーを取得する。</summary>
+	/// <returns>表示・編集に使う一時スナップショット。</returns>
+	CustomizeAttackEditorEditState GetEditState() const;
+	/// <summary>編集結果を検証・正規化して下書きへ反映する。</summary>
+	/// <param name="editState">表示側が編集した一時データ。</param>
+	void ApplyEditState(const CustomizeAttackEditorEditState& editState);
+	/// <summary>モーション編集画面を開く要求を作り、モーション ID を整える。</summary>
+	/// <returns>モーション編集への遷移要求。</returns>
+	CustomizeAttackEditorAction RequestOpenMotionEditor();
+	/// <summary>技編集画面から戻る要求を作る。</summary>
+	/// <returns>戻る遷移要求。</returns>
+	CustomizeAttackEditorAction RequestBack() const;
 
-	/// <summary>
-	/// ImGui 入力欄の内容を draft に反映する。
-	/// </summary>
+	/// <summary>編集入力バッファの内容を下書きへ確定する。</summary>
 	void SyncDraftFromEditor();
 
 	/// <summary>
@@ -163,17 +176,6 @@ private:
 		const std::string& attackDataId) const;
 
 	/// <summary>
-	/// AttackBox の位置と大きさを編集する UI を描画する。
-	/// </summary>
-	void DrawHitboxEditor();
-
-	/// <summary>
-	/// キャンセル可能フレームとキャンセル種別の UI を描画する。
-	/// </summary>
-	/// <param name="previewTotalFrames">プレビュー表示上の総フレーム数。</param>
-	void DrawCancelSettingEditor(int previewTotalFrames);
-
-	/// <summary>
 	/// draft の表示名を ImGui 入力用固定バッファへコピーする。
 	/// </summary>
 	void CopyDisplayNameToBuffer();
@@ -192,6 +194,7 @@ private:
 	/// 編集 UI の硬直差入力値を、実行時に使うスタンフレームへ反映する。
 	/// </summary>
 	void ApplyFrameAdvantageInputsToDraft();
+	void NormalizeDraftForSelectedCategory();
 
 	AttackData draft;
 	std::array<char, AttackNameBufferSize> displayNameBuffer = {};

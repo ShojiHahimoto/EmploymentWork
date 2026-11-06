@@ -4,8 +4,6 @@
 #include "Data/CharacterDataLoader.h"
 #include "Data/MotionDataLoader.h"
 #include "Data/MotionDataSaver.h"
-#include "System/imgui-docking/imgui.h"
-
 #include <SimpleMath.h>
 
 #include <algorithm>
@@ -22,41 +20,6 @@ namespace
 {
 	constexpr const char* AttackDataRootPath = "assets/AttackData";
 	constexpr const char* CategoryLabels[] = { "Ground", "Air", "Special" };
-	constexpr AttackUsableState UsableStateValues[] = {
-		AttackUsableState::Ground,
-		AttackUsableState::Air
-	};
-	constexpr const char* UsableStateLabels[] = { "Ground", "Air" };
-	constexpr AttackHeight AttackHeightValues[] = {
-		AttackHeight::High,
-		AttackHeight::Mid,
-		AttackHeight::Low
-	};
-	constexpr const char* AttackHeightLabels[] = { "High", "Mid", "Low" };
-	constexpr HitReactionType HitReactionValues[] = {
-		HitReactionType::Normal,
-		HitReactionType::Down,
-		HitReactionType::Burst,
-		HitReactionType::HardBurst
-	};
-	constexpr const char* HitReactionLabels[] = { "Normal", "Down", "Burst", "HardBurst" };
-	constexpr AttackCommandId CommandValues[] = {
-		AttackCommandId::None,
-		AttackCommandId::Hadouken,
-		AttackCommandId::Shoryuu,
-		AttackCommandId::Yoga,
-		AttackCommandId::ReverseYoga,
-		AttackCommandId::FullRotate
-	};
-	constexpr const char* CommandLabels[] = {
-		"None",
-		"Hadouken",
-		"Shoryuu",
-		"Yoga",
-		"ReverseYoga",
-		"FullRotate"
-	};
-
 	/// <summary>
 	/// CustomizeAttackCategory を配列アクセス用の番号へ変換する。
 	/// </summary>
@@ -110,124 +73,7 @@ namespace
 	}
 
 	/// <summary>
-	/// AttackUsableState を UI 表示用の文字列へ変換する。
-	/// </summary>
-	/// <param name="state">表示する発動可能状態。</param>
-	/// <returns>Ground / Air の表示名。</returns>
-	const char* ToUsableStateLabel(AttackUsableState state)
-	{
-		return state == AttackUsableState::Air ? "Air" : "Ground";
-	}
-
-	/// <summary>
-	/// AttackUsableState の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackUsableState。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindUsableStateIndex(AttackUsableState value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(UsableStateValues)); ++index)
-		{
-			if (UsableStateValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// AttackHeight の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackHeight。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindAttackHeightIndex(AttackHeight value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(AttackHeightValues)); ++index)
-		{
-			if (AttackHeightValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// HitReactionType の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する HitReactionType。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindHitReactionIndex(HitReactionType value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(HitReactionValues)); ++index)
-		{
-			if (HitReactionValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// AttackCommandId の現在値が Combo 配列の何番目かを取得する。
-	/// </summary>
-	/// <param name="value">検索する AttackCommandId。</param>
-	/// <returns>Combo 用 index。</returns>
-	int FindCommandIndex(AttackCommandId value)
-	{
-		for (int index = 0; index < static_cast<int>(std::size(CommandValues)); ++index)
-		{
-			if (CommandValues[index] == value)
-			{
-				return index;
-			}
-		}
-
-		return 0;
-	}
-
-	/// <summary>
-	/// 指定したキャンセル種別がキャンセル設定に含まれているか確認する。
-	/// </summary>
-	/// <param name="cancelTypes">確認対象のキャンセル種別配列。</param>
-	/// <param name="cancelType">探すキャンセル種別。</param>
-	/// <returns>含まれている場合は true。</returns>
-	bool HasCancelType(const std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType)
-	{
-		return std::find(cancelTypes.begin(), cancelTypes.end(), cancelType) != cancelTypes.end();
-	}
-
-	/// <summary>
-	/// ImGui のチェック状態に合わせて、キャンセル種別を追加または削除する。
-	/// </summary>
-	/// <param name="cancelTypes">編集するキャンセル種別配列。</param>
-	/// <param name="cancelType">切り替えるキャンセル種別。</param>
-	/// <param name="enabled">true なら追加、false なら削除する。</param>
-	void SetCancelTypeEnabled(std::vector<AttackCancelType>& cancelTypes, AttackCancelType cancelType, bool enabled)
-	{
-		const auto found = std::find(cancelTypes.begin(), cancelTypes.end(), cancelType);
-		if (enabled)
-		{
-			if (found == cancelTypes.end())
-			{
-				cancelTypes.push_back(cancelType);
-			}
-			return;
-		}
-
-		if (found != cancelTypes.end())
-		{
-			cancelTypes.erase(found);
-		}
-	}
-
-	/// <summary>
-	/// ImGui の入力後に、フレームやダメージが負数にならないよう補正する。
+	/// 編集値が負数や総フレーム外にならないよう補正する。
 	/// </summary>
 	/// <param name="attackData">補正する AttackData。</param>
 	void ClampAttackDataValues(AttackData& attackData)
@@ -341,110 +187,51 @@ std::string CustomizeAttackEditorController::SaveDraft()
 	return "Save failed.";
 }
 
-CustomizeAttackEditorAction CustomizeAttackEditorController::DrawEditorControls(
-	int previewTotalFrames,
-	std::string& statusMessage)
+CustomizeAttackEditorEditState CustomizeAttackEditorController::GetEditState() const
 {
-	ImGui::Text("Slot: %s", editingAttackDataId.c_str());
-	ImGui::InputText("Attack Name", displayNameBuffer.data(), displayNameBuffer.size());
-	ImGui::Text("MotionData ID: %s", motionDataIdBuffer.data());
-
-	ImGui::Separator();
-	ImGui::InputInt("Damage", &draft.damage);
-	ImGui::InputInt("Hit Frame Advantage", &hitFrameAdvantage);
-	ImGui::InputInt("Guard Frame Advantage", &guardFrameAdvantage);
-	int attackHeightIndex = FindAttackHeightIndex(draft.attackHeight);
-	if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
-	{
-		draft.attackHeight = AttackHeightValues[attackHeightIndex];
-	}
-
-	ImGui::Separator();
-	ImGui::InputInt("Startup", &draft.frame.startup);
-	ImGui::InputInt("Active", &draft.frame.active);
-	ImGui::InputInt("Recovery", &draft.frame.recovery);
-	ApplyFrameAdvantageInputsToDraft();
-	ImGui::TextDisabled("Saved stun frames: Hit %d / Guard %d", draft.hitstunFrames, draft.guardstunFrames);
-
-	ImGui::Separator();
-	if (selectedCategory == CustomizeAttackCategory::Special)
-	{
-		int usableIndex = FindUsableStateIndex(draft.usableState);
-		if (ImGui::Combo("Usable State", &usableIndex, UsableStateLabels, static_cast<int>(std::size(UsableStateLabels))))
-		{
-			draft.usableState = UsableStateValues[usableIndex];
-		}
-	}
-	else
-	{
-		draft.usableState = GetFixedNormalUsableState(selectedCategory);
-		ImGui::Text("Usable State: %s (Fixed)", ToUsableStateLabel(draft.usableState));
-	}
-
-	if (draft.usableState == AttackUsableState::Air)
-	{
-		draft.hitReactionType = HitReactionType::Normal;
-		ImGui::Text("Hit Reaction: Normal (Fixed for Air)");
-	}
-	else
-	{
-		int reactionIndex = FindHitReactionIndex(draft.hitReactionType);
-		if (ImGui::Combo("Hit Reaction", &reactionIndex, HitReactionLabels, static_cast<int>(std::size(HitReactionLabels))))
-		{
-			draft.hitReactionType = HitReactionValues[reactionIndex];
-		}
-	}
-
-	if (selectedCategory == CustomizeAttackCategory::Special)
-	{
-		int commandIndex = FindCommandIndex(draft.commandId);
-		if (ImGui::Combo("Command", &commandIndex, CommandLabels, static_cast<int>(std::size(CommandLabels))))
-		{
-			draft.commandId = CommandValues[commandIndex];
-		}
-	}
-	else
-	{
-		draft.commandId = AttackCommandId::None;
-	}
-
-	DrawHitboxEditor();
-	DrawCancelSettingEditor(previewTotalFrames);
-	ClampAttackDataValues(draft);
-
-	ImGui::Separator();
-	if (ImGui::Button("Open Motion Editor", ImVec2(180.0f, 28.0f)))
-	{
-		EnsureDraftMotionDataId();
-		return CustomizeAttackEditorAction::OpenMotionEditor;
-	}
-
-	ImGui::Separator();
-	if (ImGui::Button("Save", ImVec2(120.0f, 30.0f)))
-	{
-		statusMessage = SaveDraft();
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
-	{
-		return CustomizeAttackEditorAction::Back;
-	}
-
-	if (!statusMessage.empty())
-	{
-		ImGui::TextWrapped("%s", statusMessage.c_str());
-	}
-
-	return CustomizeAttackEditorAction::None;
+	return CustomizeAttackEditorEditState{
+		draft,
+		hitFrameAdvantage,
+		guardFrameAdvantage
+	};
 }
 
+void CustomizeAttackEditorController::ApplyEditState(const CustomizeAttackEditorEditState& editState)
+{
+	draft = editState.attackData;
+	hitFrameAdvantage = editState.hitFrameAdvantage;
+	guardFrameAdvantage = editState.guardFrameAdvantage;
+	draft.attackDataId = editingAttackDataId;
+	ApplyFrameAdvantageInputsToDraft();
+	NormalizeDraftForSelectedCategory();
+	CopyDisplayNameToBuffer();
+	CopyMotionDataIdToBuffer();
+}
+
+CustomizeAttackEditorAction CustomizeAttackEditorController::RequestOpenMotionEditor()
+{
+	EnsureDraftMotionDataId();
+	return CustomizeAttackEditorAction::OpenMotionEditor;
+}
+
+CustomizeAttackEditorAction CustomizeAttackEditorController::RequestBack() const
+{
+	return CustomizeAttackEditorAction::Back;
+}
+
+/// <summary>編集バッファを下書きへ確定し、カテゴリ条件を整える。</summary>
 void CustomizeAttackEditorController::SyncDraftFromEditor()
 {
 	draft.attackDataId = editingAttackDataId;
 	draft.displayName = displayNameBuffer.data();
 	draft.motionDataId = motionDataIdBuffer.data();
-	ApplyFrameAdvantageInputsToDraft();
 	EnsureDraftMotionDataId();
+	NormalizeDraftForSelectedCategory();
+}
+
+void CustomizeAttackEditorController::NormalizeDraftForSelectedCategory()
+{
+	ApplyFrameAdvantageInputsToDraft();
 	draft.attackKind = selectedCategory == CustomizeAttackCategory::Special
 		? AttackKind::Special
 		: AttackKind::Normal;
@@ -675,105 +462,6 @@ AttackData CustomizeAttackEditorController::CreateDefaultAttackData(
 	hitbox.size = Vector2(2.0f, 2.0f);
 	attackData.hitboxes.push_back(hitbox);
 	return attackData;
-}
-
-void CustomizeAttackEditorController::DrawHitboxEditor()
-{
-	ImGui::Separator();
-	ImGui::Text("AttackBoxes");
-
-	for (size_t index = 0; index < draft.hitboxes.size();)
-	{
-		ImGui::PushID(static_cast<int>(index));
-		AttackHitboxData& hitbox = draft.hitboxes[index];
-
-		ImGui::Text("AttackBox %zu", index);
-		ImGui::DragFloat2("AttackBox Offset X / Y", &hitbox.offset.x, 0.05f);
-		ImGui::DragFloat2("AttackBox Size Width / Height", &hitbox.size.x, 0.05f, 0.0f, 100.0f);
-
-		bool deleted = false;
-		if (draft.hitboxes.size() > 1
-			&& ImGui::Button("Delete AttackBox", ImVec2(150.0f, 24.0f)))
-		{
-			draft.hitboxes.erase(draft.hitboxes.begin() + static_cast<std::ptrdiff_t>(index));
-			deleted = true;
-		}
-
-		ImGui::PopID();
-		if (!deleted)
-		{
-			++index;
-		}
-	}
-
-	if (ImGui::Button("Add AttackBox", ImVec2(150.0f, 26.0f)))
-	{
-		AttackHitboxData hitbox;
-		hitbox.offset = Vector2(2.5f, 4.0f);
-		hitbox.size = Vector2(2.0f, 2.0f);
-		draft.hitboxes.push_back(hitbox);
-	}
-}
-
-void CustomizeAttackEditorController::DrawCancelSettingEditor(int previewTotalFrames)
-{
-	ImGui::Separator();
-	ImGui::Text("Cancel Setting");
-
-	const bool wasAttackCancelEnabled = draft.canAttackCancel;
-	if (ImGui::Checkbox("Can Attack Cancel", &draft.canAttackCancel)
-		&& draft.canAttackCancel
-		&& !wasAttackCancelEnabled
-		&& draft.cancelSetting.startFrame == 0
-		&& draft.cancelSetting.endFrame == 0
-		&& draft.cancelSetting.cancelTypes.empty())
-	{
-		draft.cancelSetting.startFrame = GetAttackActiveEndFrameExclusive(draft.frame);
-		draft.cancelSetting.endFrame = std::max(draft.cancelSetting.startFrame, previewTotalFrames - 1);
-		draft.cancelSetting.cancelTypes.push_back(AttackCancelType::Special);
-	}
-
-	if (!draft.canAttackCancel)
-	{
-		ImGui::TextDisabled("Cancel setting data is kept in this draft while hidden.");
-		return;
-	}
-
-	AttackCancelSettingData& cancelSetting = draft.cancelSetting;
-	// UI 表示はプレビューと同じ 1 始まりにし、内部データだけ 0 始まりを維持する。
-	int displayStartFrame = std::max(1, cancelSetting.startFrame + 1);
-	int displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
-	if (ImGui::InputInt("Cancel Start Frame (Preview 1F)", &displayStartFrame))
-	{
-		displayStartFrame = std::max(1, displayStartFrame);
-		cancelSetting.startFrame = displayStartFrame - 1;
-		cancelSetting.endFrame = std::max(cancelSetting.startFrame, cancelSetting.endFrame);
-	}
-	displayStartFrame = cancelSetting.startFrame + 1;
-	displayEndFrame = std::max(displayStartFrame, cancelSetting.endFrame + 1);
-	if (ImGui::InputInt("Cancel End Frame (Preview 1F)", &displayEndFrame))
-	{
-		displayEndFrame = std::max(displayStartFrame, displayEndFrame);
-		cancelSetting.endFrame = displayEndFrame - 1;
-	}
-
-	bool normalEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Normal);
-	bool specialEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Special);
-	bool jumpEnabled = HasCancelType(cancelSetting.cancelTypes, AttackCancelType::Jump);
-	if (ImGui::Checkbox("Normal Cancel", &normalEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Normal, normalEnabled);
-	}
-	ImGui::SameLine();
-	if (ImGui::Checkbox("Special Cancel", &specialEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Special, specialEnabled);
-	}
-	ImGui::SameLine();
-	if (ImGui::Checkbox("Jump Cancel", &jumpEnabled))
-	{
-		SetCancelTypeEnabled(cancelSetting.cancelTypes, AttackCancelType::Jump, jumpEnabled);
-	}
 }
 
 void CustomizeAttackEditorController::CopyDisplayNameToBuffer()

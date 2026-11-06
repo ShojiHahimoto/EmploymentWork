@@ -34,8 +34,14 @@
     <Filter Include="ソース ファイル\Controller">
       <UniqueIdentifier>{a0ef1dbf-9f98-4ea9-b162-6f4b501dbbc5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\UI">
+      <UniqueIdentifier>{e81487c0-0710-4dd2-b566-80f1f41a53d1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ヘッダー ファイル\Controller">
       <UniqueIdentifier>{d45df39e-5509-4a25-95d3-2c14b782d74c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\UI">
+      <UniqueIdentifier>{81e8072b-b9a6-4e1d-bae0-7a43c190832d}</UniqueIdentifier>
     </Filter>
     <Filter Include="ソース ファイル\World">
       <UniqueIdentifier>{4d533b1e-3ab9-48f2-89f4-127cf6051f7c}</UniqueIdentifier>
@@ -177,6 +183,14 @@
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
+    <ClCompile Include="Source\UI\CustomizeAttackEditorImGuiView.cpp">
+      <Filter>ソース ファイル\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\UIRoot.cpp">
+      <Filter>ソース ファイル\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\UIInputSystem.cpp" />
+    <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
@@ -496,6 +510,17 @@
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\CustomizeAttackEditorImGuiView.h">
+      <Filter>ヘッダー ファイル\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\UIRoot.h">
+      <Filter>ヘッダー ファイル\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\UIInputSystem.h" />
+    <ClInclude Include="Source\UI\UIRenderer.h" />
+    <ClInclude Include="Source\UI\UITheme.h">
+      <Filter>ヘッダー ファイル\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>

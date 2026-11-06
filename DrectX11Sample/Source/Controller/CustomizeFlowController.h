@@ -7,6 +7,7 @@
 #include "Controller/CustomizePreviewController.h"
 #include "Controller/CustomizeTypes.h"
 #include "System/Renderer.h"
+#include "UI/CustomizeAttackEditorImGuiView.h"
 #include "World/World.h"
 
 #include <string>
@@ -35,6 +36,7 @@ private:
 	int height = 0;
 
 	CustomizeAttackEditorController attackEditor;
+	CustomizeAttackEditorImGuiView attackEditorView;
 	CustomizeMotionEditorController motionEditor;
 	CustomizeCharacterEditorController characterEditor;
 	DirectX::SimpleMath::Vector2 attackMovementKeyOffset = DirectX::SimpleMath::Vector2::Zero;
