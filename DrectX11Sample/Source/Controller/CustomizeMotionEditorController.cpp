@@ -595,6 +595,13 @@ bool CustomizeMotionEditorController::DrawEditor(
 		&& FindAttackMovementKeyframe(attackData, actionFrame) != nullptr;
 	const bool hasRootOffsetKey = editingCommonMotion && HasRootOffsetKeyframe(actionFrame);
 	const int pickedBodyPartIndex = previewController.ConsumePickedBodyPartIndex();
+	if (pickedBodyPartIndex == -2)
+	{
+		selectedBoneIndex = -1;
+		previewController.EndIkSolveSession();
+		ikTargetEditing = false;
+		hasIkTargetWorldPosition = false;
+	}
 	if (pickedBodyPartIndex >= 0 && pickedBodyPartIndex < MotionEditorBoneCount)
 	{
 		selectedBoneIndex = ClampBodyPartIndex(pickedBodyPartIndex);
@@ -644,8 +651,7 @@ bool CustomizeMotionEditorController::DrawEditor(
 	ImGui::BeginDisabled(!canEditCurrentFrame);
 	const int previousBoneIndex = selectedBoneIndex;
 	bool partChanged = false;
-	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
-	if (ImGui::BeginCombo("Target Part", MotionSkeleton::GetBodyPartName(selectedBoneIndex)))
+	if (ImGui::BeginCombo("Target Part", selectedBoneIndex >= 0 ? MotionSkeleton::GetBodyPartName(selectedBoneIndex) : "None"))
 	{
 		for (int bodyPartIndex = 0; bodyPartIndex < MotionEditorBoneCount; ++bodyPartIndex)
 		{
@@ -666,10 +672,12 @@ bool CustomizeMotionEditorController::DrawEditor(
 	{
 		RefreshFrameEditValues(actionFrame);
 	}
+	ImGui::BeginDisabled(selectedBoneIndex < 0);
 	if (ImGui::DragFloat3("Rotation Euler Degrees X / Y / Z", &rotationEulerDegrees.x, 0.5f))
 	{
 		statusMessage = SetSelectedRotationKey(previewController, actionFrame, totalFrames);
 	}
+	ImGui::EndDisabled();
 	ImGui::EndDisabled();
 
 	DrawIkControls(previewController, actionFrame, statusMessage);
@@ -930,6 +938,12 @@ void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 	}
 
 	const int sampleFrame = std::max(0, actionFrame);
+	if (selectedBoneIndex < 0)
+	{
+		rotationEulerDegrees = Vector3::Zero;
+		rootOffsetKey = GetMotionRootOffsetAtFrame(draft, sampleFrame);
+		return;
+	}
 	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	const Vector3 internalRotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, sampleFrame);

@@ -20,6 +20,10 @@
 class CustomizePreviewController
 {
 public:
+	/// <summary>カメラの角度・距離・注視点オフセットとマウス操作状態を初期化する。</summary>
+	void ResetCamera();
+	/// <summary>両編集画面で共用するカメラ初期化ボタンを描画する。</summary>
+	void DrawCameraResetButton();
 	bool translationGizmoEnabled = false;
 	bool translationGizmoActive = false;
 	bool hasTranslationGizmoEdit = false;
@@ -143,7 +147,7 @@ public:
 	/// <summary>
 	/// プレビュー上の関節クリックで選択された部位を取り出す。
 	/// </summary>
-	/// <returns>クリック選択された部位番号。未選択なら -1。</returns>
+	/// <returns>選択された部位番号。イベントなしは -1、空白クリックによる解除は -2。</returns>
 	int ConsumePickedBodyPartIndex();
 
 	/// <summary>
@@ -202,6 +206,9 @@ public:
 	float& GetCameraDistance();
 
 private:
+	/// <summary>両編集画面共通の旋回・平行移動・ズームを処理する。</summary>
+	/// <param name="region">本体ウィンドウ内のプレビュー領域。</param>
+	void UpdateCameraInput(const RECT& region);
 	/// <summary>
 	/// プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。
 	/// </summary>
@@ -268,4 +275,8 @@ private:
 	float cameraYawDegrees = 0.0f;
 	float cameraPitchDegrees = -2.5f;
 	float cameraDistance = 14.0f;
+	// カメラ操作だけの状態。モーションや本体Transformには保存しない。
+	DirectX::SimpleMath::Vector3 cameraTargetOffset = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector3 cameraDragTarget = DirectX::SimpleMath::Vector3::Zero;
+	int cameraDragButton = -1;
 };

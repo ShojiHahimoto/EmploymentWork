@@ -326,7 +326,25 @@ void CustomizePreviewController::Initialize()
 
 void CustomizePreviewController::Release()
 {
+	ResetCamera();
 	Renderer::ReleaseRenderTexture(renderTexture);
+}
+
+/// <summary>カメラだけを既定の表示へ戻す。編集姿勢と再生フレームは変更しない。</summary>
+void CustomizePreviewController::ResetCamera()
+{
+	cameraYawDegrees = 0.0f;
+	cameraPitchDegrees = -2.5f;
+	cameraDistance = 14.0f;
+	cameraTargetOffset = Vector3::Zero;
+	cameraDragTarget = Vector3::Zero;
+	cameraDragButton = -1;
+}
+
+/// <summary>再生操作欄に配置するカメラ初期化ボタンを描画する。</summary>
+void CustomizePreviewController::DrawCameraResetButton()
+{
+	if (ImGui::Button("Reset Camera")) ResetCamera();
 }
 
 bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int totalFrames)
@@ -429,6 +447,7 @@ void CustomizePreviewController::Render(
 		+ Vector3(movementOffset.x, movementOffset.y, 0.0f)
 		+ visualOffset);
 
+	if (region) UpdateCameraInput(*region);
 	UpdateCameraTransform();
 	TransformSystem::UpdateWorldTransform(playerTransform);
 	TransformSystem::UpdateWorldTransform(cameraTransform);
@@ -494,7 +513,13 @@ void CustomizePreviewController::Render(
 
 	if (region && previewModel && previewSkinningMatrices)
 	{
+		const ImVec2 origin = ImGui::GetMainViewport()->Pos;
+		ImDrawList* overlay = ImGui::GetForegroundDrawList();
+		// 3Dのビューポート制限はImGuiには伝わらないため、オーバーレイも明示的に切り取る。
+		overlay->PushClipRect(ImVec2(origin.x + region->left, origin.y + region->top),
+			ImVec2(origin.x + region->right, origin.y + region->bottom), true);
 		DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex, rotationGizmoEnabled);
+		overlay->PopClipRect();
 	}
 
 	if (previewModel && ghostSkinningMatrices)
@@ -528,7 +553,12 @@ void CustomizePreviewController::Render(
 
 	if (region && previewModel && previewSkinningMatrices)
 	{
+		const ImVec2 origin = ImGui::GetMainViewport()->Pos;
+		ImDrawList* overlay = ImGui::GetForegroundDrawList();
+		overlay->PushClipRect(ImVec2(origin.x + region->left, origin.y + region->top),
+			ImVec2(origin.x + region->right, origin.y + region->bottom), true);
 		DrawJointMarkers(*region, *previewModel, selectedBodyPartIndex);
+		overlay->PopClipRect();
 	}
 }
 
@@ -676,12 +706,57 @@ float& CustomizePreviewController::GetCameraDistance()
 	return cameraDistance;
 }
 
+/// <summary>プレビュー内から始まったマウス操作だけを取り込み、カメラ状態を更新する。</summary>
+/// <param name="region">ウィンドウ内のプレビュー領域。</param>
+void CustomizePreviewController::UpdateCameraInput(const RECT& region)
+{
+	const ImGuiIO& io = ImGui::GetIO();
+	const ImVec2 origin = ImGui::GetMainViewport()->Pos;
+	const bool inside = io.MousePos.x >= origin.x + region.left && io.MousePos.x < origin.x + region.right
+		&& io.MousePos.y >= origin.y + region.top && io.MousePos.y < origin.y + region.bottom;
+	const Vector3 baseTarget = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0, 4, 0);
+	// 開始判定だけを領域内に限定。ドラッグ中は領域外でもボタン解除まで追跡する。
+	if (cameraDragButton >= 0 && (!ImGui::IsMouseDown(cameraDragButton) || io.AppFocusLost)) cameraDragButton = -1;
+	const bool editing = ImGuizmo::IsUsing() || rotationGizmoDragActive || translationGizmoActive || hasIkSolveBasePose;
+	if (editing) { cameraDragButton = -1; return; }
+	if (cameraDragButton < 0 && inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive())
+	{
+		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) cameraDragButton = ImGuiMouseButton_Right;
+		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) cameraDragButton = ImGuiMouseButton_Middle;
+		if (cameraDragButton >= 0) cameraDragTarget = baseTarget + cameraTargetOffset;
+	}
+	if (cameraDragButton >= 0)
+	{
+		if (cameraDragButton == ImGuiMouseButton_Right)
+		{
+			cameraYawDegrees = std::remainder(cameraYawDegrees + io.MouseDelta.x * 0.3f, 360.0f);
+			cameraPitchDegrees = std::clamp(cameraPitchDegrees - io.MouseDelta.y * 0.3f, -45.0f, 65.0f);
+		}
+		else
+		{
+			const float yaw = XMConvertToRadians(cameraYawDegrees), pitch = XMConvertToRadians(cameraPitchDegrees);
+			const Vector3 right(std::cos(yaw), 0, -std::sin(yaw));
+			const Vector3 forward(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch));
+			const Vector3 up = forward.Cross(right);
+			// 距離と画角から1ピクセルのワールド移動量を求め、画面上の掴み心地を揃える。
+			const float units = 2 * cameraDistance * std::tan(XMConvertToRadians(camera.fovYDegrees) * 0.5f)
+				/ static_cast<float>(std::max(1L, region.bottom - region.top));
+			cameraDragTarget += (-right * io.MouseDelta.x + up * io.MouseDelta.y) * units;
+		}
+		// 再生中にモデルが移動しても、操作中の注視点を勝手に追従させない。
+		cameraTargetOffset = cameraDragTarget - baseTarget;
+	}
+	if (inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive() && io.MouseWheel != 0)
+		cameraDistance = std::clamp(cameraDistance * std::pow(0.9f, io.MouseWheel), 5.0f, 30.0f);
+}
+
+/// <summary>注視点オフセットと旋回角度からカメラTransformを更新する。</summary>
 void CustomizePreviewController::UpdateCameraTransform()
 {
 	cameraPitchDegrees = std::clamp(cameraPitchDegrees, -45.0f, 65.0f);
 	cameraDistance = std::clamp(cameraDistance, 5.0f, 30.0f);
 
-	const Vector3 targetPosition = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0.0f, 4.0f, 0.0f);
+	const Vector3 targetPosition = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0.0f, 4.0f, 0.0f) + cameraTargetOffset;
 	const float yawRadians = XMConvertToRadians(cameraYawDegrees);
 	const float pitchRadians = XMConvertToRadians(cameraPitchDegrees);
 	const float cosPitch = std::cos(pitchRadians);
@@ -692,9 +767,14 @@ void CustomizePreviewController::UpdateCameraTransform()
 
 	const Vector3 cameraPosition = targetPosition - forward * cameraDistance;
 	TransformSystem::SetLocalPosition(cameraTransform, cameraPosition);
-	TransformSystem::SetLocalEulerRotationDegrees(
-		cameraTransform,
-		Vector3(cameraPitchDegrees, cameraYawDegrees, 0.0f));
+	// 位置の球面計算とEuler回転のPitch符号を別々に扱わない。
+	// 実際の位置から注視点へのLookAtを作り、その逆行列からカメラの向きを復元する。
+	Matrix view;
+	XMStoreFloat4x4(&view, XMMatrixLookAtLH(XMLoadFloat3(&cameraPosition),
+		XMLoadFloat3(&targetPosition), XMVectorSet(0, 1, 0, 0)));
+	Quaternion rotation = Quaternion::CreateFromRotationMatrix(view.Invert());
+	rotation.Normalize();
+	TransformSystem::SetLocalRotationQuaternion(cameraTransform, rotation);
 }
 
 void CustomizePreviewController::DrawAttackBoxes(Renderer& renderer, const AttackData& attackData, bool editingCommonMotion)
@@ -817,11 +897,13 @@ void CustomizePreviewController::DrawJointMarkers(
 		}
 	}
 
-	if (mouseInPreview && nearestBodyPartIndex >= 0 && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	if (mouseInPreview && !ImGui::GetIO().WantCaptureMouse && cameraDragButton < 0
+		&& ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
 		if (!ImGuizmo::IsOver() && !ImGuizmo::IsUsing())
 		{
-			pickedBodyPartIndex = nearestBodyPartIndex;
+			// -1はイベントなし、-2は空白クリックによる明示的な選択解除。
+			pickedBodyPartIndex = nearestBodyPartIndex >= 0 ? nearestBodyPartIndex : -2;
 		}
 	}
 
@@ -868,6 +950,8 @@ void CustomizePreviewController::DrawRotationGizmo(
 	if (selectedBodyPartIndex < 0 || selectedBodyPartIndex >= MotionBodyPartCount)
 	{
 		rotationGizmoDragActive = false;
+		if (translationGizmoActive) EndIkSolveSession();
+		translationGizmoActive = false;
 		return;
 	}
 

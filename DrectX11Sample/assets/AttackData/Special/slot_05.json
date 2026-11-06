@@ -34,5 +34,20 @@
       }
     }
   ],
-  "movementKeys": []
+  "movementKeys": [
+    {
+      "frame": 10,
+      "offset": {
+        "x": 1.000,
+        "y": 0.000
+      }
+    },
+    {
+      "frame": 14,
+      "offset": {
+        "x": 2.300,
+        "y": 0.000
+      }
+    }
+  ]
 }

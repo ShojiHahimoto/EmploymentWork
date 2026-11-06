@@ -39,6 +39,7 @@
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp" />
     <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
@@ -126,6 +127,7 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h" />
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h" />
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />
     <ClInclude Include="Source\Controller\CustomizePreviewController.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />

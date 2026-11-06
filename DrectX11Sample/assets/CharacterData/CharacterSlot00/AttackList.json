@@ -63,7 +63,7 @@
     {
       "slotId": "SpecialY",
       "button": "AttackY",
-      "attackDataId": "Special/slot_02"
+      "attackDataId": "Special/slot_05"
     }
   ]
 }
