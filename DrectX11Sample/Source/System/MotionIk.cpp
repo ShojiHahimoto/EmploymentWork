@@ -119,14 +119,26 @@ namespace
     /// <param name="pose">更新する作業姿勢。</param><param name="model">実骨階層。</param>
     /// <param name="object">本体変換。</param><param name="bone">回すノード。</param>
     /// <param name="desired">目標ワールド行列。</param><returns>回転復元成功時true。</returns>
+    /// <param name="path">補助ボーンを含む根元から末端への更新順。</param>
     bool SetWorldRotation(SkeletonPose& pose, const ModelResource& model, const Matrix& object,
-        int bone, const Matrix& desired)
+        int bone, const Matrix& desired, const std::vector<int>& path)
     {
         BonePose local;
         if (!MotionPose::WorldToLocalPose(pose, model, bone, object, desired, local)) return false;
         // ローカル位置と長さは一切変更しない。補助ノードも元のまま残す。
         pose.bonePoses[bone].localRotation = local.localRotation;
-        MotionPose::UpdateSkinningMatrices(pose, model);
+        // 候補探索には対象の根元から末端までのFKだけが必要。
+        // 補助ボーンを省略せず、描画用スキニングと無関係な枝は再計算しない。
+        for (const int index : path)
+        {
+            const auto& localPose = pose.bonePoses[index];
+            const Matrix localMatrix = Matrix::CreateScale(localPose.localScale)
+                * Matrix::CreateFromQuaternion(localPose.localRotation)
+                * Matrix::CreateTranslation(localPose.localPosition);
+            const int parent = model.GetBones()[index].parentIndex;
+            pose.boneWorldMatrices[index] = parent >= 0
+                ? localMatrix * pose.boneWorldMatrices[parent] : localMatrix;
+        }
         return true;
     }
 }
@@ -141,11 +153,15 @@ const MotionIkChain* MotionIk::FindChain(MotionBodyPart target)
 /// <param name="model">モデル。</param><param name="basePose">開始姿勢。</param>
 /// <param name="objectWorld">本体変換。</param><param name="chain">対象階層。</param>
 /// <param name="target">目標。</param><param name="result">検証済みFK解。</param>
+/// <param name="solved">候補間で再利用する作業姿勢。根元と中間の回転は毎回戻す。</param>
+/// <param name="indices">解決済みの根元・中間・末端の番号。</param>
+/// <param name="path">候補探索で更新する実階層。</param>
 /// <param name="swivel">手足への直線を軸にした肘膝の回り込み角。</param>
 /// <param name="alignHinge">曲げ面に合わせる上腕/大腿の長軸補正率0～1。</param>
 /// <returns>有効な幾何解ならtrue。</returns>
 static bool SolveUnconstrained(const ModelResource& model, const SkeletonPose& basePose,
     const Matrix& objectWorld, const MotionIkChain& chain, const Vector3& target, MotionIkResult& result,
+    SkeletonPose& solved, const std::array<int, 3>& indices, const std::vector<int>& path,
     float swivel = 0.0f, float alignHinge = 0.0f)
 {
     if (!basePose.initialized || !Finite(target) || basePose.bonePoses.size() != model.GetBones().size()) return false;
@@ -154,8 +170,7 @@ static bool SolveUnconstrained(const ModelResource& model, const SkeletonPose& b
     std::array<Vector3, 3> points;
     for (int i = 0; i < 3; ++i)
     {
-        candidate.boneIndices[i] = MotionSkeleton::FindModelBoneIndex(model,
-            MotionSkeleton::GetBodyPartName(static_cast<int>(chain.parts[i])));
+        candidate.boneIndices[i] = indices[i];
         if (!MotionPose::GetBoneWorldMatrix(basePose, candidate.boneIndices[i], objectWorld, worlds[i])
             || !IsRigidScaled(worlds[i])) return false;
         points[i] = worlds[i].Translation();
@@ -217,13 +232,16 @@ static bool SolveUnconstrained(const ModelResource& model, const SkeletonPose& b
     const double height = std::sqrt(std::max(0.0,a*a-along*along));
     const Vector3 middle = points[0] + direction*static_cast<float>(along) + pole*static_cast<float>(height);
 
-    SkeletonPose solved = basePose;
+    // 作業バッファはSolve内で一度だけ確保。前候補が変更した回転のみ戻す。
+    // 根元更新時にpath全体のFKが再計算されるので古い行列は残らない。
+    for (int i = 0; i < 2; ++i)
+        solved.bonePoses[indices[i]].localRotation = basePose.bonePoses[indices[i]].localRotation;
     // 行ベクトルのDirectX規約では既存ワールド行列の右側にワールド差分を掛ける。
     // 以前のdelta * currentQuaternionは順序が逆で、回転済みモデルの方向を壊していた。
     Matrix root = worlds[0]; root.Translation(Vector3::Zero);
     root *= DirectionRotation(upper,middle-points[0],pole);
     root.Translation(points[0]);
-    if (!SetWorldRotation(solved,model,objectWorld,candidate.boneIndices[0],root)) return false;
+    if (!SetWorldRotation(solved,model,objectWorld,candidate.boneIndices[0],root,path)) return false;
     Matrix midWorld, endWorld;
     MotionPose::GetBoneWorldMatrix(solved,candidate.boneIndices[1],objectWorld,midWorld);
     MotionPose::GetBoneWorldMatrix(solved,candidate.boneIndices[2],objectWorld,endWorld);
@@ -244,7 +262,7 @@ static bool SolveUnconstrained(const ModelResource& model, const SkeletonPose& b
             root.Translation(Vector3::Zero);
             root *= Matrix::CreateFromAxisAngle(upperDirection, roll);
             root.Translation(points[0]);
-            if (!SetWorldRotation(solved, model, objectWorld, candidate.boneIndices[0], root)) return false;
+            if (!SetWorldRotation(solved, model, objectWorld, candidate.boneIndices[0], root,path)) return false;
             MotionPose::GetBoneWorldMatrix(solved,candidate.boneIndices[1],objectWorld,midWorld);
             MotionPose::GetBoneWorldMatrix(solved,candidate.boneIndices[2],objectWorld,endWorld);
         }
@@ -253,7 +271,7 @@ static bool SolveUnconstrained(const ModelResource& model, const SkeletonPose& b
     Matrix rotatedMiddle = midWorld; rotatedMiddle.Translation(Vector3::Zero);
     rotatedMiddle *= DirectionRotation(endWorld.Translation()-actualMiddle,end-actualMiddle,pole);
     rotatedMiddle.Translation(actualMiddle);
-    if (!SetWorldRotation(solved,model,objectWorld,candidate.boneIndices[1],rotatedMiddle)) return false;
+    if (!SetWorldRotation(solved,model,objectWorld,candidate.boneIndices[1],rotatedMiddle,path)) return false;
 
     // 手足自身のローカル回転は開始時のまま。親に追従するワールド姿勢を許可し、
     // 向き固定のための手首/足首補正でIK全体を止めない。
@@ -279,15 +297,42 @@ Vector3 MotionIk::MeasureLimitViolation(Part part, const Quaternion& rotation,
 bool MotionIk::Solve(const ModelResource& model, const SkeletonPose& basePose,
     const Matrix& objectWorld, const MotionIkChain& chain, const Vector3& target, MotionIkResult& result)
 {
+    // モデル検索と作業領域の準備は入力変更一回につき一度だけ行う。
+    std::array<int, 3> indices;
+    for (int i = 0; i < 3; ++i)
+    {
+        indices[i] = MotionSkeleton::FindModelBoneIndex(model,
+            MotionSkeleton::GetBodyPartName(static_cast<int>(chain.parts[i])));
+        if (indices[i] < 0 || static_cast<size_t>(indices[i]) >= basePose.bonePoses.size()) return false;
+    }
+    std::vector<int> path;
+    int node = indices[2];
+    while (node >= 0 && static_cast<size_t>(node) < model.GetBones().size())
+    {
+        path.push_back(node);
+        if (node == indices[0]) break;
+        const int parent = model.GetBones()[node].parentIndex;
+        if (parent >= node) return false;
+        node = parent;
+    }
+    if (path.empty() || path.back() != indices[0]) return false;
+    std::reverse(path.begin(), path.end());
+    SkeletonPose scratch = basePose;
+    const auto solveGeometry = [&](const Vector3& end, MotionIkResult& output,
+        float swivel = 0.0f, float alignment = 0.0f)
+    {
+        return SolveUnconstrained(model, basePose, objectWorld, chain, end, output,
+            scratch, indices, path, swivel, alignment);
+    };
     MotionIkResult requested;
-    if (!SolveUnconstrained(model, basePose, objectWorld, chain, target, requested)) return false;
+    if (!solveGeometry(target, requested)) return false;
     if (chain.translationLocked) { result = requested; return true; }
     Matrix startWorld;
     MotionPose::GetBoneWorldMatrix(basePose, requested.boneIndices[2], objectWorld, startWorld);
     const Vector3 start = startWorld.Translation();
     const Vector3 delta = requested.reachedPosition - start;
     MotionIkResult accepted;
-    if (!SolveUnconstrained(model, basePose, objectWorld, chain, start, accepted)) return false;
+    if (!solveGeometry(start, accepted)) return false;
     if (delta.LengthSquared() < 1e-14f) { result = requested; return true; }
 
     std::array<MotionRotationLimits::Violation, 2> allowance;
@@ -302,6 +347,11 @@ bool MotionIk::Solve(const ModelResource& model, const SkeletonPose& basePose,
     {
         for (int i = 0; i < 2; ++i)
         {
+            // 通常解にも代替解にも同じ連続性条件を課す。
+            // 従来は代替解だけに適用していた飛び移り防止を通常解にも適用する。
+            constexpr float continuityDot = 0.98f;
+            if (std::abs(pose.localRotations[i].Dot(accepted.localRotations[i])) < continuityDot)
+                return false;
             const int bone = pose.boneIndices[i];
             if (!MotionRotationLimits::Permits(MotionRotationLimits::Measure(chain.parts[i], pose.localRotations[i],
                 model.GetBones()[bone].bindLocalRotation, basePose.bonePoses[bone].localRotation), allowance[i])) return false;
@@ -314,7 +364,7 @@ bool MotionIk::Solve(const ModelResource& model, const SkeletonPose& basePose,
     const auto solveAt = [&](float fraction, MotionIkResult& pose, float& chosenSwivel, float& chosenAlignment)
     {
         const Vector3 end = start + delta * fraction;
-        if (SolveUnconstrained(model, basePose, objectWorld, chain, end, pose, swivel, alignment) && permits(pose))
+        if (solveGeometry(end, pose, swivel, alignment) && permits(pose))
         { chosenSwivel = swivel; chosenAlignment = alignment; return true; }
         bool found = false;
         float best = 1e9f;
@@ -324,7 +374,7 @@ bool MotionIk::Solve(const ModelResource& model, const SkeletonPose& basePose,
             for (float weight : {0.f, 0.25f, 0.5f, 0.75f, 1.f})
             {
                 const float angle = swivel + DirectX::XMConvertToRadians(degrees);
-                if (!SolveUnconstrained(model, basePose, objectWorld, chain, end, candidate, angle, weight) || !permits(candidate)) continue;
+                if (!solveGeometry(end, candidate, angle, weight) || !permits(candidate)) continue;
                 float change = 0;
                 for (int i = 0; i < 2; ++i)
                     change += 1 - std::abs(candidate.localRotations[i].Dot(accepted.localRotations[i]));
@@ -345,7 +395,7 @@ bool MotionIk::Solve(const ModelResource& model, const SkeletonPose& basePose,
             const float t = (low + high) * 0.5f;
             const float angle = swivel + (endSwivel - swivel) * t;
             const float weight = alignment + (endAlignment - alignment) * t;
-            if (SolveUnconstrained(model, basePose, objectWorld, chain, end, candidate, angle, weight) && permits(candidate))
+            if (solveGeometry(end, candidate, angle, weight) && permits(candidate))
             { high = t; pose = candidate; chosenSwivel = angle; chosenAlignment = weight; }
             else low = t;
         }

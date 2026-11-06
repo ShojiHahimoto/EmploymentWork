@@ -131,7 +131,7 @@ public:
     /// <param name="result">保存する回転と到達情報。</param>
     /// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
     bool SolveIkTarget(int targetBodyPartIndex,
-        const DirectX::SimpleMath::Vector3& targetWorldPosition, MotionIkResult& result) const;
+        const DirectX::SimpleMath::Vector3& targetWorldPosition, MotionIkResult& result);
 
 	/// <summary>
 	/// プレビュー上の関節クリックで選択された部位を取り出す。
@@ -238,6 +238,8 @@ private:
 	TransformComponent playerTransform;
 	SkeletonPose skeletonPose;
 	SkeletonPose ikSolveBasePose;
+	// 直前に採用した姿勢。開始姿勢とは別に保持して解の連続性を維持する。
+	SkeletonPose ikSolveAcceptedPose;
 	DirectX::SimpleMath::Matrix ikSolveObjectWorld = DirectX::SimpleMath::Matrix::Identity;
 	int currentFrame = 0;
 	int lastRenderedActionFrame = -100000;

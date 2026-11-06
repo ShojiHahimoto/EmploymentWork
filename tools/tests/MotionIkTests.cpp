@@ -15,6 +15,9 @@
 #define assert(condition) do { if (!(condition)) { std::cerr << "CHECK FAILED line " << __LINE__ << ": " << #condition << '\n'; std::exit(1); } } while (false)
 
 static int checks = 0;
+static double solveTotalMs = 0;
+static double solveMaxMs = 0;
+static int timedSolves = 0;
 static int alternativeSolutions = 0;
 
 using namespace DirectX::SimpleMath;
@@ -55,7 +58,13 @@ static void CheckSolve(const ModelResource& model, const SkeletonPose& base, con
     Vector3 start = startWorld.Translation(), target = start;
     (&target.x)[axis] += amount;
     MotionIkResult result;
-    if (!MotionIk::Solve(model,base,object,chain,target,result))
+    const auto solveStart = std::chrono::steady_clock::now();
+    const bool solved = MotionIk::Solve(model,base,object,chain,target,result);
+    const double elapsedMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - solveStart).count();
+    solveTotalMs += elapsedMs;
+    solveMaxMs = std::max(solveMaxMs, elapsedMs);
+    ++timedSolves;
+    if (!solved)
     {
         std::cerr << "Solve failure: " << MotionSkeleton::GetBodyPartName(static_cast<int>(chain.parts[2]))
             << " axis=" << axis << " amount=" << amount << '\n';
@@ -157,6 +166,10 @@ static void CheckDrag(const ModelResource& model, SkeletonPose base, const Matri
                     assert(std::abs(last.localRotations[i].Dot(current.localRotations[i])) > 0.95f);
             }
             last = current;
+            // エディター同様、入力座標の基準は固定し、採用姿勢だけを引き継ぐ。
+            for (int i = 0; i < 3; ++i)
+                base.bonePoses[current.boneIndices[i]].localRotation = current.localRotations[i];
+            MotionPose::UpdateSkinningMatrices(base, model);
             ++checks;
         }
         for (int i = 0; i < 3; ++i) base.bonePoses[last.boneIndices[i]].localRotation = last.localRotations[i];
@@ -347,5 +360,7 @@ int main(int argc, char** argv)
     }
     if (argc == 1) assert(alternativeSolutions > 0);
     std::cout << "Alternative pose solutions: " << alternativeSolutions << '\n';
+    if (timedSolves) std::cout << "IK solve ms mean=" << solveTotalMs / timedSolves
+        << " max=" << solveMaxMs << " samples=" << timedSolves << '\n';
     std::cout << "IK FK/sampling/axis/reach tests passed: " << checks << '\n';
 }

@@ -562,8 +562,9 @@ bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 
 	// IK 数値編集中に毎フレーム MotionData へ回転を書き込むと、
 	// 次フレームのプレビュー姿勢もその回転を含むため、そこからさらに IK を解くと回転が累積して暴れる。
-	// そのためドラッグ開始時の姿勢を丸ごと固定し、ドラッグ中は常にこの姿勢を基準に Solver を走らせる。
+	// 開始姿勢とは別に採用済み姿勢を保持し、下書きを読み戻さず連続した解を探索する。
 	ikSolveBasePose = skeletonPose;
+	ikSolveAcceptedPose = skeletonPose;
 	ikSolveObjectWorld = TransformSystem::GetWorldMatrix(playerTransform);
 	hasIkSolveBasePose = true;
 	return true;
@@ -583,6 +584,7 @@ void CustomizePreviewController::EndIkSolveSession()
 {
 	hasIkSolveBasePose = false;
 	ikSolveBasePose = SkeletonPose{};
+	ikSolveAcceptedPose = SkeletonPose{};
 }
 
 bool CustomizePreviewController::GetBodyPartWorldPosition(
@@ -608,12 +610,18 @@ bool CustomizePreviewController::GetBodyPartWorldPosition(
 }
 
 bool CustomizePreviewController::SolveIkTarget(
-    int targetBodyPartIndex, const Vector3& targetWorldPosition, MotionIkResult& result) const
+    int targetBodyPartIndex, const Vector3& targetWorldPosition, MotionIkResult& result)
 {
     const ModelResource* model = ModelResourceManager::GetModel(PreviewModelKey);
     const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(targetBodyPartIndex));
     if (!model || !chain || !hasIkSolveBasePose) return false;
-    return MotionIk::Solve(*model, ikSolveBasePose, ikSolveObjectWorld, *chain, targetWorldPosition, result);
+    // 入力値は開始時のワールド座標のまま。解の探索だけを前回の採用姿勢から続ける。
+    // 下書きやプレビューから読み戻さないため、他の編集更新の混入を防ぐ。
+    if (!MotionIk::Solve(*model, ikSolveAcceptedPose, ikSolveObjectWorld, *chain, targetWorldPosition, result)) return false;
+    for (int i = 0; i < 3; ++i)
+        ikSolveAcceptedPose.bonePoses[result.boneIndices[i]].localRotation = result.localRotations[i];
+    MotionPose::UpdateSkinningMatrices(ikSolveAcceptedPose, *model);
+    return true;
 }
 
 int CustomizePreviewController::ConsumePickedBodyPartIndex()
@@ -965,11 +973,6 @@ void CustomizePreviewController::DrawRotationGizmo(
 
 	const float rotationDeltaRadians = ImGuizmo::GetRotationLastDeltaRadians();
 	rotationGizmoDragAccumulatedRadians += rotationDeltaRadians;
-	if (!wasDragActive && !manipulated && std::abs(rotationDeltaRadians) <= std::numeric_limits<float>::epsilon())
-	{
-		return;
-	}
-
 	const Vector3 localAxis = GetLocalAxisByIndex(rotationGizmoDragAxisIndex);
 	if (localAxis.LengthSquared() <= std::numeric_limits<float>::epsilon())
 	{
@@ -983,6 +986,13 @@ void CustomizePreviewController::DrawRotationGizmo(
 			rotationGizmoDragLimits = MotionRotationLimits::AxisRange(part, rotationGizmoDragStartLocalRotation,
 				localAxis, model.GetBones()[modelBoneIndex].bindLocalRotation);
 		rotationGizmoDragAccumulatedRadians = std::clamp(rotationGizmoDragAccumulatedRadians, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
+	}
+	// 掴んだ瞬間は差分0でも、次フレームで使う可動域は先に確定する。
+	// ここより前で戻ると開始フラグだけが立ち、未初期化の範囲(0,0)や
+	// 前のドラッグの範囲が、その後の操作に使われ続けてしまう。
+	if (!wasDragActive && !manipulated && std::abs(rotationDeltaRadians) <= std::numeric_limits<float>::epsilon())
+	{
+		return;
 	}
 	Quaternion deltaRotation = Quaternion::CreateFromAxisAngle(localAxis, rotationGizmoDragAccumulatedRadians);
 	deltaRotation.Normalize();
