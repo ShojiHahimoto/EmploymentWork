@@ -171,6 +171,9 @@
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Controller\BattleSetupControllers.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
@@ -184,6 +187,18 @@
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\ResultNavigationController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\ResultPresentationController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\TitleMenuController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Controller\TitleNavigationController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\CustomizeScene.cpp">
@@ -476,6 +491,9 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\BattleSetupControllers.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
@@ -489,6 +507,18 @@
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizePreviewController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\ResultNavigationController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\ResultPresentationController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\TitleMenuController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\TitleNavigationController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\CustomizeScene.h">

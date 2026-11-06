@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Controller/ResultNavigationController.h"
+#include "Controller/ResultPresentationController.h"
 #include "Scene/Scene.h"
 #include "World/World.h"
 
@@ -20,9 +22,6 @@ public:
 
 private:
 	World world;
-	BattleResult battleResult = BattleResult::None;
-	int width = 0;
-	int height = 0;
-
-	bool WasSubmitTriggered() const;
+	ResultPresentationController presentationController;
+	ResultNavigationController navigationController;
 };

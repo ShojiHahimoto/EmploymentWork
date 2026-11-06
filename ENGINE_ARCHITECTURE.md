@@ -824,3 +824,6 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - プレビューの右ドラッグ旋回・中ドラッグ平行移動・ホイールズームはCustomizePreviewControllerが担当し、技編集とモーション編集で共用する。
 - カメラ操作はプレビュー内から開始し、UI・IK・ギズモと競合させない。カメラ移動は保存モーションへ影響させない。
 - 関節の空白クリック解除は正式な未選択状態とし、未選択時に別部位へ自動補正しない。
+- 2026-11-06 実装。Title / Result は表示Controllerと遷移Controllerに分け、SceneはWorld保持とController呼び出しに限定する。
+- 2026-11-06 実装。BattleSetup は共有セッションデータを各担当Controllerで扱い、`BattleSetupDeviceAssignmentController`、`BattleSetupCharacterSelectionController`、`BattleSetupInputConfigController`、`BattleSetupFlowController` に分離する。Flowは各担当Controllerの呼び出し順、全体検証、シーン遷移だけを調整し、単一の巨大なSceneControllerへScene処理を移しただけの形にはしない。
+- 非バトルSceneのControllerはScene単位ではなく責務単位で分割する。Flow Controllerは担当Controller間の順序・状態・遷移を調整し、各機能の実処理を抱え込まない。
