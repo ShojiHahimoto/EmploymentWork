@@ -1,8 +1,8 @@
 ﻿{
   "motionDataId": "Common/Crouch",
   "displayName": "Crouch",
-  "totalFrames": 20,
-  "looping": false,
+  "totalFrames": 30,
+  "looping": true,
   "rootOffsetKeys": [
     {
       "frame": 0,
@@ -15,7 +15,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 12.000, "y": -5.500, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
         }
       ]
     },
@@ -24,7 +24,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -12.500, "y": -20.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.107, "y": -0.173, "z": -0.019, "w": 0.979 }
         }
       ]
     },
@@ -33,7 +33,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
         }
       ]
     },
@@ -42,7 +42,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -47.000, "y": 25.500, "z": -69.000 }
+          "rotationQuaternion": { "x": -0.435, "y": -0.053, "z": -0.434, "w": 0.787 }
         }
       ]
     },
@@ -51,7 +51,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -46.500, "y": 8.000, "z": 70.500 }
+          "rotationQuaternion": { "x": -0.285, "y": 0.280, "z": 0.551, "w": 0.733 }
         }
       ]
     },
@@ -60,7 +60,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -5.000, "y": -30.000, "z": -107.000 }
+          "rotationQuaternion": { "x": 0.183, "y": -0.188, "z": -0.782, "w": 0.565 }
         }
       ]
     },
@@ -69,7 +69,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -39.500, "y": 53.000, "z": 46.000 }
+          "rotationQuaternion": { "x": -0.114, "y": 0.505, "z": 0.468, "w": 0.716 }
         }
       ]
     },
@@ -78,7 +78,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.100, "y": 0.000, "z": 0.000, "w": 0.995 }
         }
       ]
     },
@@ -87,7 +87,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.126, "y": 0.000, "z": 0.000, "w": 0.992 }
         }
       ]
     },
@@ -96,7 +96,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 3.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.031, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -105,7 +105,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -96.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.746, "y": 0.000, "z": 0.000, "w": 0.666 }
         }
       ]
     },
@@ -114,7 +114,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 97.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.749, "y": 0.000, "z": 0.000, "w": 0.663 }
         }
       ]
     },
@@ -123,7 +123,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 87.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.688, "y": 0.000, "z": 0.000, "w": 0.725 }
         }
       ]
     },
@@ -132,7 +132,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
         }
       ]
     },
@@ -141,7 +141,7 @@
       "keyframes": [
         {
           "frame": 0,
-          "rotationEulerDegrees": { "x": 11.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.096, "y": 0.000, "z": 0.000, "w": 0.995 }
         }
       ]
     }

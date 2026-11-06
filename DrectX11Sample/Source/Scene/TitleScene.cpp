@@ -7,12 +7,37 @@
 #include "Scene/CustomizeScene.h"
 #include "Scene/SceneManager.h"
 #include "System/Application.h"
-#include "System/Debugger.h"
 #include "System/Renderer.h"
+#include "System/imgui-docking/imgui.h"
 
 #include <Windows.h>
 
 #include <memory>
+
+namespace
+{
+/// <summary>
+/// タイトルの通常ルートとして BattleSetupScene への切り替えを予約する。
+/// </summary>
+void RequestBattleSetupScene()
+{
+	SceneManager::GetInstance().RequestChangeScene(
+		std::make_unique<BattleSetupScene>(
+			static_cast<int>(Application::GetWidth()),
+			static_cast<int>(Application::GetHeight())));
+}
+
+/// <summary>
+/// カスタマイズ画面への切り替えを予約する。
+/// </summary>
+void RequestCustomizeScene()
+{
+	SceneManager::GetInstance().RequestChangeScene(
+		std::make_unique<CustomizeScene>(
+			static_cast<int>(Application::GetWidth()),
+			static_cast<int>(Application::GetHeight())));
+}
+}
 
 /// <summary>
 /// タイトル画面を現在の描画サイズで初期化する。
@@ -26,25 +51,18 @@ TitleScene::TitleScene(int initialWidth, int initialHeight)
 }
 
 /// <summary>
-/// タイトル用の入力マップへ切り替え、仮背景画像を読み込む。
+/// タイトル用の入力マップへ切り替える。
 /// </summary>
 void TitleScene::Enter()
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
-
-	const HRESULT hr = Renderer::LoadTextureFromFile("assets/texture/title_kari.png", &backgroundTexture);
-	if (FAILED(hr))
-	{
-		DebugLog("[TitleScene] Background texture load failed. hr=", static_cast<long>(hr));
-	}
 }
 
 /// <summary>
-/// タイトル用に読み込んだ描画リソースと World を破棄する。
+/// タイトル用の World を破棄する。
 /// </summary>
 void TitleScene::Exit()
 {
-	Renderer::ReleaseTexture(backgroundTexture);
 	world.Clear();
 }
 
@@ -55,10 +73,7 @@ void TitleScene::RunSystems()
 {
 	if (WasCustomizeTriggered())
 	{
-		SceneManager::GetInstance().RequestChangeScene(
-			std::make_unique<CustomizeScene>(
-				static_cast<int>(Application::GetWidth()),
-				static_cast<int>(Application::GetHeight())));
+		RequestCustomizeScene();
 		return;
 	}
 
@@ -73,25 +88,51 @@ void TitleScene::RunSystems()
 
 	if (WasSubmitTriggered())
 	{
-		SceneManager::GetInstance().RequestChangeScene(
-			std::make_unique<BattleSetupScene>(
-				static_cast<int>(Application::GetWidth()),
-				static_cast<int>(Application::GetHeight())));
+		RequestBattleSetupScene();
 	}
 }
 
 /// <summary>
-/// タイトル仮画像を画面全体へ描画する。
+/// タイトルの仮 UI を ImGui で表示する。
 /// </summary>
 /// <param name="renderer">描画に使用する Renderer。</param>
 void TitleScene::Draw(Renderer& renderer)
 {
 	(void)renderer;
-	Renderer::DrawFullscreenTexture(backgroundTexture, width, height);
+
+	const ImVec2 windowSize(360.0f, 190.0f);
+	const ImVec2 windowPos(
+		(static_cast<float>(width) - windowSize.x) * 0.5f,
+		(static_cast<float>(height) - windowSize.y) * 0.5f);
+
+	ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
+
+	constexpr ImGuiWindowFlags WindowFlags =
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoCollapse |
+		ImGuiWindowFlags_NoSavedSettings;
+
+	if (ImGui::Begin("Title", nullptr, WindowFlags))
+	{
+		ImGui::TextUnformatted("Build the Battle");
+		ImGui::Separator();
+
+		if (ImGui::Button("Battle Start", ImVec2(-1.0f, 42.0f)))
+		{
+			RequestBattleSetupScene();
+		}
+
+		if (ImGui::Button("Customize Scene", ImVec2(-1.0f, 42.0f)))
+		{
+			RequestCustomizeScene();
+		}
+	}
+	ImGui::End();
 }
 
 /// <summary>
-/// ウィンドウサイズ変更後の全画面画像描画サイズを更新する。
+/// ウィンドウサイズ変更後の UI 配置用サイズを更新する。
 /// </summary>
 /// <param name="newWidth">新しい幅。</param>
 /// <param name="newHeight">新しい高さ。</param>

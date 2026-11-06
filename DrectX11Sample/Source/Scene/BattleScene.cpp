@@ -118,11 +118,11 @@ void BattleScene::Enter()
 		Vector3(0.0f, 0.0f, 0.0f),
 		setupData.players[1].characterFolderPath);
 
-	world.RequestSpawn(
-		SpawnType::DebugCube,
-		"DebugCube",
-		Vector3(0.0f, 0.0f, 6.0f),
-		Vector3(20.0f, 32.0f, 0.0f));
+	//world.RequestSpawn(
+	//	SpawnType::DebugCube,
+	//	"DebugCube",
+	//	Vector3(0.0f, 0.0f, 6.0f),
+	//	Vector3(20.0f, 32.0f, 0.0f));
 
 	InitializeBattleHUD();
 	InitializeBattleSounds();
@@ -249,6 +249,7 @@ void BattleScene::Draw(Renderer& renderer)
 void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera)
 {
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
+	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX);
 
 	for (GameObject& object : world.GetGameObjects())
 	{

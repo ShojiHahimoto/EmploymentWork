@@ -10,43 +10,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -55,43 +55,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -100,43 +100,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": -90.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": -0.707, "z": 0.000, "w": 0.707 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 180.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 1.000, "z": -0.000, "w": -0.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 90.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.707, "z": 0.000, "w": 0.707 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 270.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.707, "z": -0.000, "w": -0.707 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 180.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 1.000, "z": -0.000, "w": -0.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 90.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.707, "z": 0.000, "w": 0.707 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 45.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.383, "z": 0.000, "w": 0.924 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -145,43 +145,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -190,43 +190,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -235,43 +235,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -280,43 +280,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -325,43 +325,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -370,43 +370,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -415,43 +415,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -460,43 +460,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -505,43 +505,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -550,43 +550,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -595,43 +595,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     },
@@ -640,43 +640,43 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 7,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 8,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 9,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 10,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 11,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 12,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 13,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 14,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         },
         {
           "frame": 15,
-          "rotationEulerDegrees": { "x": 0.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
         }
       ]
     }

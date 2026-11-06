@@ -321,6 +321,7 @@ std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory 
 		draft.hitReactionType = HitReactionType::Normal;
 	}
 	ClampAttackDataValues(draft);
+	RefreshFrameAdvantageInputs();
 
 	EnsureDraftMotionDataId();
 	CopyDisplayNameToBuffer();
@@ -350,8 +351,8 @@ CustomizeAttackEditorAction CustomizeAttackEditorController::DrawEditorControls(
 
 	ImGui::Separator();
 	ImGui::InputInt("Damage", &draft.damage);
-	ImGui::InputInt("Hitstun Frames", &draft.hitstunFrames);
-	ImGui::InputInt("Guardstun Frames", &draft.guardstunFrames);
+	ImGui::InputInt("Hit Frame Advantage", &hitFrameAdvantage);
+	ImGui::InputInt("Guard Frame Advantage", &guardFrameAdvantage);
 	int attackHeightIndex = FindAttackHeightIndex(draft.attackHeight);
 	if (ImGui::Combo("Attack Height", &attackHeightIndex, AttackHeightLabels, static_cast<int>(std::size(AttackHeightLabels))))
 	{
@@ -362,6 +363,8 @@ CustomizeAttackEditorAction CustomizeAttackEditorController::DrawEditorControls(
 	ImGui::InputInt("Startup", &draft.frame.startup);
 	ImGui::InputInt("Active", &draft.frame.active);
 	ImGui::InputInt("Recovery", &draft.frame.recovery);
+	ApplyFrameAdvantageInputsToDraft();
+	ImGui::TextDisabled("Saved stun frames: Hit %d / Guard %d", draft.hitstunFrames, draft.guardstunFrames);
 
 	ImGui::Separator();
 	if (selectedCategory == CustomizeAttackCategory::Special)
@@ -440,6 +443,7 @@ void CustomizeAttackEditorController::SyncDraftFromEditor()
 	draft.attackDataId = editingAttackDataId;
 	draft.displayName = displayNameBuffer.data();
 	draft.motionDataId = motionDataIdBuffer.data();
+	ApplyFrameAdvantageInputsToDraft();
 	EnsureDraftMotionDataId();
 	draft.attackKind = selectedCategory == CustomizeAttackCategory::Special
 		? AttackKind::Special
@@ -462,6 +466,18 @@ void CustomizeAttackEditorController::SyncDraftFromEditor()
 	}
 
 	ClampAttackDataValues(draft);
+}
+
+void CustomizeAttackEditorController::RefreshFrameAdvantageInputs()
+{
+	hitFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.hitstunFrames);
+	guardFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.guardstunFrames);
+}
+
+void CustomizeAttackEditorController::ApplyFrameAdvantageInputsToDraft()
+{
+	draft.hitstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, hitFrameAdvantage);
+	draft.guardstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, guardFrameAdvantage);
 }
 
 void CustomizeAttackEditorController::EnsureDraftMotionDataId()
@@ -587,6 +603,7 @@ void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::stri
 	draft.frame.active = 1;
 	draft.frame.recovery = 27;
 	draft.motionDataId = motionDataId;
+	RefreshFrameAdvantageInputs();
 	editingAttackDataId.clear();
 	motionDataIdBuffer.fill('\0');
 	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", motionDataId.c_str());

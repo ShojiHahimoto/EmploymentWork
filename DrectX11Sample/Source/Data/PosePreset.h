@@ -13,7 +13,10 @@ struct PosePresetBoneData
 	// MotionSkeletonDefinition 側の編集用部位名。
 	std::string boneName;
 
-	// MotionData と同じ内部保存値の Euler 回転。
+	// 保存・適用時に正とするローカル Quaternion 回転。
+	DirectX::SimpleMath::Quaternion localRotation = DirectX::SimpleMath::Quaternion::Identity;
+
+	// 旧 rotationEulerDegrees 読み込み互換と UI 表示確認用の Euler 回転。
 	DirectX::SimpleMath::Vector3 localRotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 };
 
@@ -51,6 +54,19 @@ public:
 	/// <param name="preset">保存するプリセット。</param>
 	/// <returns>保存に成功した場合は true。</returns>
 	static bool SavePreset(const std::string& presetId, const PosePresetData& preset);
+
+	/// <summary>
+	/// 新規保存に使う ASCII の安全なプリセット ID を作成する。
+	/// </summary>
+	/// <returns>既存ファイルと衝突しない pose_XXXX 形式の ID。</returns>
+	static std::string CreateUniquePresetId();
+
+	/// <summary>
+	/// 表示名が既存プリセットと重複しているか確認する。
+	/// </summary>
+	/// <param name="displayName">確認する表示名。</param>
+	/// <returns>同じ表示名のプリセットが既に存在する場合は true。</returns>
+	static bool DisplayNameExists(const std::string& displayName);
 
 	/// <summary>
 	/// 指定 ID のプリセットファイルが既に存在するか確認する。

@@ -1,8 +1,8 @@
 ﻿{
   "motionDataId": "Common/JumpStart",
   "displayName": "JumpStart",
-  "totalFrames": 5,
-  "looping": false,
+  "totalFrames": 30,
+  "looping": true,
   "rootOffsetKeys": [
     {
       "frame": 4,
@@ -15,7 +15,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": 32.000, "y": -5.500, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.275, "y": -0.046, "z": 0.013, "w": 0.960 }
         }
       ]
     },
@@ -24,7 +24,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -41.000, "y": -20.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.345, "y": -0.163, "z": -0.061, "w": 0.922 }
         }
       ]
     },
@@ -33,7 +33,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": 0.000, "y": 25.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
         }
       ]
     },
@@ -42,7 +42,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -60.500, "y": 99.500, "z": -50.500 }
+          "rotationQuaternion": { "x": -0.576, "y": 0.457, "z": 0.110, "w": 0.669 }
         }
       ]
     },
@@ -51,7 +51,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -47.000, "y": 8.000, "z": -37.500 }
+          "rotationQuaternion": { "x": -0.397, "y": -0.067, "z": -0.268, "w": 0.875 }
         }
       ]
     },
@@ -60,7 +60,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -5.000, "y": -86.000, "z": -25.500 }
+          "rotationQuaternion": { "x": 0.119, "y": -0.672, "z": -0.190, "w": 0.706 }
         }
       ]
     },
@@ -69,7 +69,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -3.500, "y": 39.000, "z": 1.000 }
+          "rotationQuaternion": { "x": -0.026, "y": 0.334, "z": 0.018, "w": 0.942 }
         }
       ]
     },
@@ -78,7 +78,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -11.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.100, "y": 0.000, "z": 0.000, "w": 0.995 }
         }
       ]
     },
@@ -87,7 +87,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -14.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.126, "y": 0.000, "z": 0.000, "w": 0.992 }
         }
       ]
     },
@@ -96,7 +96,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -44.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.375, "y": 0.000, "z": 0.000, "w": 0.927 }
         }
       ]
     },
@@ -105,7 +105,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -98.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.758, "y": 0.000, "z": 0.000, "w": 0.653 }
         }
       ]
     },
@@ -114,7 +114,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": 142.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.947, "y": 0.000, "z": 0.000, "w": 0.321 }
         }
       ]
     },
@@ -123,7 +123,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": 123.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": 0.879, "y": 0.000, "z": 0.000, "w": 0.477 }
         }
       ]
     },
@@ -132,7 +132,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -21.000, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
         }
       ]
     },
@@ -141,7 +141,7 @@
       "keyframes": [
         {
           "frame": 4,
-          "rotationEulerDegrees": { "x": -24.500, "y": 0.000, "z": 0.000 }
+          "rotationQuaternion": { "x": -0.212, "y": 0.000, "z": 0.000, "w": 0.977 }
         }
       ]
     }

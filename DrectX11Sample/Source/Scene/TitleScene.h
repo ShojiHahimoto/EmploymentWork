@@ -3,8 +3,6 @@
 #include "Scene/Scene.h"
 #include "World/World.h"
 
-#include <d3d11.h>
-
 class TitleScene : public Scene
 {
 public:
@@ -22,7 +20,6 @@ public:
 
 private:
 	World world;
-	ID3D11ShaderResourceView* backgroundTexture = nullptr;
 	int width = 0;
 	int height = 0;
 	bool customizeKeyPressedLastFrame = false;

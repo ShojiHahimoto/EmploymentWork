@@ -33,14 +33,13 @@ enum class MotionBodyPart : int
 
 inline constexpr int MotionBodyPartCount = static_cast<int>(MotionBodyPart::Count);
 
-/// <summary>
-/// モーション編集時に使う、部位ごとの甘めの回転可動域。
-/// </summary>
-struct MotionJointRotationLimit
+/// <summary>全姿勢編集で共有する、基準姿勢からのswing(X/Z)と長軸twist(Y)の度数範囲。</summary>
+struct MotionPoseRotationLimit
 {
 	bool enabled = false;
-	DirectX::SimpleMath::Vector3 minDegrees = DirectX::SimpleMath::Vector3::Zero;
-	DirectX::SimpleMath::Vector3 maxDegrees = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector3 minimum = DirectX::SimpleMath::Vector3(-180, -180, -180);
+	DirectX::SimpleMath::Vector3 maximum = DirectX::SimpleMath::Vector3(180, 180, 180);
+	float maxSwingDegrees = 175.0f;
 };
 
 /// <summary>
@@ -52,12 +51,14 @@ struct MotionBodyPartDefinition
 	const char* editorName = "";
 	MotionBodyPart parent = MotionBodyPart::None;
 	std::array<const char*, 4> modelBoneNames = {};
-	MotionJointRotationLimit rotationLimit;
 	DirectX::SimpleMath::Vector3 editorRotationSign = DirectX::SimpleMath::Vector3::One;
 };
 
 namespace MotionSkeleton
 {
+	/// <summary>数値回転・ギズモ・IKで同じ姿勢を許可する共通制限。</summary>
+	/// <param name="part">対象部位。</param><returns>度数設定。Euler角の上限ではない。</returns>
+	MotionPoseRotationLimit GetPoseRotationLimit(MotionBodyPart part);
 	/// <summary>
 	/// 15部位の共通定義一覧を取得する。
 	/// </summary>
@@ -77,13 +78,6 @@ namespace MotionSkeleton
 	/// <param name="index">0から始まる部位番号。</param>
 	/// <returns>HeadやRHandなどの正式名称。</returns>
 	const char* GetBodyPartName(int index);
-
-	/// <summary>
-	/// 部位番号に対応する編集用回転可動域を取得する。
-	/// </summary>
-	/// <param name="index">0から始まる部位番号。</param>
-	/// <returns>有効/無効フラグ付きの回転可動域。</returns>
-	const MotionJointRotationLimit& GetRotationLimit(int index);
 
 	/// <summary>
 	/// 内部保存値と編集UI表示値を変換するための軸符号を取得する。

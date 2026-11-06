@@ -6,6 +6,7 @@
 #include <WICTextureLoader.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -148,6 +149,34 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 		uint8_t b = 255;
 		uint8_t a = 255;
 	};
+
+	/// <summary>
+	/// 1 本のグリッド線を頂点配列へ追加する。
+	/// </summary>
+	/// <param name="vertices">書き込み先のライン頂点配列。</param>
+	/// <param name="start">線の始点。</param>
+	/// <param name="end">線の終点。</param>
+	/// <param name="color">線の色。</param>
+	void AddLine(
+		std::vector<DebugCubeVertex>& vertices,
+		const Vector3& start,
+		const Vector3& end,
+		const Color& color)
+	{
+		vertices.push_back({ start, color });
+		vertices.push_back({ end, color });
+	}
+
+	/// <summary>
+	/// 値を指定刻みの整数グリッドへ切り上げる。
+	/// </summary>
+	/// <param name="value">切り上げる値。</param>
+	/// <param name="step">グリッド間隔。</param>
+	/// <returns>step の倍数へ切り上げた値。</returns>
+	float CeilToStep(float value, float step)
+	{
+		return std::ceil(value / step) * step;
+	}
 }
 
 D3D_FEATURE_LEVEL Renderer::m_FeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -1124,6 +1153,134 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 	m_pDeviceContext->DrawIndexed(36, 0, 0);
 	m_pDeviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
+/// バトル背景として、白ベースのトレーニングルーム風グリッド空間を描画する。
+/// </summary>
+/// <param name="stageMinX">ロジック上の左画面端 X。</param>
+/// <param name="stageMaxX">ロジック上の右画面端 X。</param>
+void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
+{
+	if (!m_pDebugCubeInputLayout
+		|| !m_pDebugCubeVertexShader
+		|| !m_pDebugCubePixelShader
+		|| !m_pDebugCubeConstantBuffer)
+	{
+		return;
+	}
+
+	const float stageCenterX = (stageMinX + stageMaxX) * 0.5f;
+	const float stageHalfWidth = std::max(1.0f, (stageMaxX - stageMinX) * 0.5f);
+	const float nearZ = -6.0f;
+	const float farZ = 56.0f;
+	const float centerZ = (nearZ + farZ) * 0.5f;
+	const float halfDepth = (farZ - nearZ) * 0.5f;
+	const float wallHeight = 48.0f;
+	const float wallCenterY = wallHeight * 0.5f;
+	const float gridStep = 5.0f;
+	const float lineLift = 0.025f;
+	const Color panelColor(0.94f, 0.94f, 0.91f, 1.0f);
+	const Color gridColor(0.12f, 0.12f, 0.12f, 1.0f);
+	const Color centerLineColor(0.02f, 0.02f, 0.02f, 1.0f);
+
+	// 白い床・奥壁・左右端壁を先に敷き、後から黒いグリッド線を重ねる。
+	DrawDebugBox(
+		Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
+		* Matrix::CreateTranslation(stageCenterX, -0.04f, centerZ),
+		panelColor);
+	DrawDebugBox(
+		Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
+		* Matrix::CreateTranslation(stageCenterX, wallCenterY, farZ),
+		panelColor);
+	DrawDebugBox(
+		Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
+		* Matrix::CreateTranslation(stageMinX, wallCenterY, centerZ),
+		panelColor);
+	DrawDebugBox(
+		Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
+		* Matrix::CreateTranslation(stageMaxX, wallCenterY, centerZ),
+		panelColor);
+
+	// 中央線は通常グリッドより太めに見えるよう、細い箱として明示的に描く。
+	DrawDebugBox(
+		Matrix::CreateScale(0.045f, 0.012f, halfDepth)
+		* Matrix::CreateTranslation(0.0f, 0.01f, centerZ),
+		centerLineColor);
+	DrawDebugBox(
+		Matrix::CreateScale(0.045f, wallCenterY, 0.012f)
+		* Matrix::CreateTranslation(0.0f, wallCenterY, farZ - 0.04f),
+		centerLineColor);
+
+	std::vector<DebugCubeVertex> vertices;
+	vertices.reserve(512);
+
+	for (float x = CeilToStep(stageMinX, gridStep); x <= stageMaxX + 0.001f; x += gridStep)
+	{
+		if (std::abs(x) < 0.001f)
+		{
+			continue;
+		}
+
+		AddLine(vertices, Vector3(x, lineLift, nearZ), Vector3(x, lineLift, farZ), gridColor);
+		AddLine(vertices, Vector3(x, 0.0f, farZ - lineLift), Vector3(x, wallHeight, farZ - lineLift), gridColor);
+	}
+
+	for (float z = CeilToStep(nearZ, gridStep); z <= farZ + 0.001f; z += gridStep)
+	{
+		AddLine(vertices, Vector3(stageMinX, lineLift, z), Vector3(stageMaxX, lineLift, z), gridColor);
+		AddLine(vertices, Vector3(stageMinX + lineLift, 0.0f, z), Vector3(stageMinX + lineLift, wallHeight, z), gridColor);
+		AddLine(vertices, Vector3(stageMaxX - lineLift, 0.0f, z), Vector3(stageMaxX - lineLift, wallHeight, z), gridColor);
+	}
+
+	for (float y = 0.0f; y <= wallHeight + 0.001f; y += gridStep)
+	{
+		AddLine(vertices, Vector3(stageMinX, y, farZ - lineLift), Vector3(stageMaxX, y, farZ - lineLift), gridColor);
+		AddLine(vertices, Vector3(stageMinX + lineLift, y, nearZ), Vector3(stageMinX + lineLift, y, farZ), gridColor);
+		AddLine(vertices, Vector3(stageMaxX - lineLift, y, nearZ), Vector3(stageMaxX - lineLift, y, farZ), gridColor);
+	}
+
+	if (vertices.empty())
+	{
+		return;
+	}
+
+	D3D11_BUFFER_DESC vertexBufferDesc = {};
+	vertexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(DebugCubeVertex) * vertices.size());
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+	D3D11_SUBRESOURCE_DATA vertexData = {};
+	vertexData.pSysMem = vertices.data();
+
+	ID3D11Buffer* lineVertexBuffer = nullptr;
+	HRESULT hr = m_pDevice->CreateBuffer(&vertexBufferDesc, &vertexData, &lineVertexBuffer);
+	if (FAILED(hr) || !lineVertexBuffer)
+	{
+		return;
+	}
+
+	DebugCubeConstantBuffer constantBuffer = {};
+	constantBuffer.worldViewProjection = (Matrix::Identity * m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	m_pDeviceContext->UpdateSubresource(m_pDebugCubeConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
+
+	const UINT stride = sizeof(DebugCubeVertex);
+	const UINT offset = 0;
+	const float blendFactor[4] = {};
+
+	m_pDeviceContext->IASetInputLayout(m_pDebugCubeInputLayout);
+	m_pDeviceContext->IASetVertexBuffers(0, 1, &lineVertexBuffer, &stride, &offset);
+	m_pDeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+	m_pDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+	m_pDeviceContext->VSSetShader(m_pDebugCubeVertexShader, nullptr, 0);
+	m_pDeviceContext->VSSetConstantBuffers(0, 1, &m_pDebugCubeConstantBuffer);
+	m_pDeviceContext->PSSetShader(m_pDebugCubePixelShader, nullptr, 0);
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pDeviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
+	m_pDeviceContext->Draw(static_cast<UINT>(vertices.size()), 0);
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+
+	SAFE_RELEASE(lineVertexBuffer);
 }
 
 /// <summary>

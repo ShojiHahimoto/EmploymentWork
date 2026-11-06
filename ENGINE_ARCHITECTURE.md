@@ -266,10 +266,10 @@ HitCollisionSystem、HitResolveSystem、HitReactionSystem は、押し合いや�
 - ヒットストップ中も InputHistory / CommandInput / BattleResult / BattleHUD / Debug 表示は止めない
 - ヒットストップ中も入力履歴とコマンド候補の登録は進めるが、成立済みコマンド候補の有効期限はヒットストップ 1F ごとに 1F 延長し、停止中に先行入力だけが期限切れしないようにする
 - ラウンドタイマー、SE/BGM、エフェクトなどの演出系はヒットストップで止めない方針とする
-- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持するフレーム数として扱う
+- `AttackData.hitstunFrames` は、ヒットした相手が `PlayerActionState::Hitstun` を維持する実行時フレーム数として扱う
 - `AttackData.attackHeight` は `High / Mid / Low` を基本とし、未記載 JSON は `High` として扱う
 - ガード可否は技データへ個別に持たせず、攻撃属性とガード姿勢の組み合わせで決定する。`High` は立ち/しゃがみ両方、`Mid` は立ちのみ、`Low` はしゃがみのみでガードできる
-- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持するフレーム数として扱う
+- `AttackData.guardstunFrames` は、ガードした相手が `PlayerActionState::StandGuardstun / CrouchGuardstun` を維持する実行時フレーム数として扱う
 - ガード時は本来ダメージの 1/10 を HP へ適用する
 - 通常ガードは地上の `Idle / Crouch / FrontWalk / BackWalk` 中に後ろ入力をしている場合のみ成立する。右向き `4` / 左向き `6` は立ちガード、右向き `1` / 左向き `3` はしゃがみガードとして扱う
 - `StandGuard / CrouchGuard` は将来の事前ガード姿勢用ステートとして先に定義しておく。現段階では通常入力だけで常時このステートへ遷移させる処理は入れない
@@ -440,7 +440,7 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
 - `AttackList.json` の `attackDataId` は `assets/AttackData` からの相対 ID を基本とする。例: `debug_punch`、`Ground/slot_00`
 - Loader は手動編集しやすいよう、`Ground/slot_00.json` や `assets/AttackData/Ground/slot_00.json` のような書き方も読み込み時に吸収する
 - ファイル名だけで指定して複数候補が見つかる場合は曖昧な指定として扱うため、カテゴリ付き ID を推奨する
-- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、`hitstunFrames`、`guardstunFrames` を持つ
+- AttackData は `attackKind`、必殺技用の `commandId`、発動可能状態を示す `usableState`、実行時スタンフレームの `hitstunFrames`、`guardstunFrames` を持つ
 - AttackData は `hitReactionType` を持ち、技ごとの被弾反応を `Normal / Down / Burst / HardBurst` から選ぶ
 - 対戦開始または Spawn 時に JSON を読み込み、`CharacterParameterComponent` と `CharacterAttackDataComponent` にコピーする
 - 対戦中の System は JSON を直接参照せず、Component にコピー済みの値だけを参照する
@@ -643,22 +643,46 @@ InputHistoryComponent は、バトル系オブジェクトが入力履歴を保�
    - 2026-09-15 実装。姿勢プリセットは `assets/PosePreset/*.json` に保存し、保存時は常に 15 部位の全身姿勢を保存する。読み込み時はプリセット選択後に適用部位を複数選択し、選択部位だけを現在フレームの既存キーフレームへ適用する
    - モーション編集画面に常時表示する入口は `Save Pose Preset` と `Load Pose Preset` の 2 つとする。保存名は空欄不可、重複不可、ファイル名として危険な文字を禁止する
    - `T Pose` はコード直書きではなく `assets/PosePreset/TPose.json` として扱う。`Idle Pose` は保存プリセットではなく `Common/Idle` の 0F 姿勢を読み込み時に参照する特殊プリセットとして扱う
-   - 現在は第1〜第7段階実装済み。第7段階の動作確認後、次の合図では第8段階「ギズモの回転編集」へ進む。未確認の不具合があれば先に第7段階を修正する
+   - 2026-09-16 修正。日本語名を Windows ファイル名へ直接使うと文字化けや `std::filesystem` 例外の原因になるため、PosePreset のファイル名は `pose_0001.json` のような ASCII 安全 ID に固定し、日本語の名前は JSON 内の `displayName` として保存する。重複判定もファイル名ではなく `displayName` で行う
+   - 2026-09-29 時点で第1〜第8段階は実装済み。第9段階「編集専用 IK」は、ワールド座標ターゲットの数値編集と即時反映までを含めて実装する。次段階の移動ギズモは入力手段の追加であり、IK の保存方針や基本挙動を変えない
 
 8. ギズモの回転編集
    - まず回転、選択中部位、ローカル座標操作に限定する
    - ギズモで操作したワールド行列は、親ボーンの逆行列を使って選択部位のローカル姿勢へ戻して保存する
    - ギズモ操作結果にも数値入力と同じ可動域制限を適用する
    - ギズモは自作より既存の ImGui 対応ライブラリの利用を優先し、導入できない場合のみ小さな操作範囲で自作する
+   - 2026-09-24 実装。`Source/ThirdParty/ImGuizmo` の ImGuizmo を使い、モーション編集画面の本体プレビュー上に選択部位の回転ギズモを表示する。ギズモは現在フレームに姿勢キーフレームがあり、プレビュー停止中の場合だけ有効にする
+   - ImGuizmo が返すワールド行列は `MotionPose::WorldToLocalPose` で選択実ボーンのローカル姿勢へ戻し、`CustomizeMotionEditorController::ApplyGizmoRotationEdit` を通して既存の数値入力と同じ左右表示変換・可動域制限・MotionData 保存処理へ流す
+   - この段階では回転のみ対応し、移動ギズモ、IK、手足のエンドエフェクタ操作は未実装のままとする。ImGuizmo は外部ライブラリ扱いのため `System/imgui-docking` へ混ぜず `ThirdParty` 配下に置く
+   - 将来改善候補として、ギズモの画面上サイズを大きくし、カメラ距離に関係なく掴みやすい大きさを維持することを検討する。最終的にプレイヤーが触る編集機能になるため、3Dツール経験者だけでなく初心者にも扱いやすい操作感を優先する
+   - ギズモ操作中は行列または Quaternion の一時姿勢としてプレビューし、ドラッグ終了時に Euler 角へ変換して MotionData へ確定保存する方式を検討する。現状の毎フレーム `行列 -> Quaternion -> Euler -> 可動域制限 -> 保存` は、1軸操作中でも Euler 表示上は3軸すべてが動き、操作感を悪化させる可能性がある
+   - ドラッグ終了時にだけ Euler 変換と可動域制限を行う場合、離した瞬間に姿勢が補正される可能性がある。そのため、必要なら操作中も制限接近を色やメッセージで示す、または操作中だけソフトクランプする方式を検討する
+   - ドラッグ中に表示される「現在どれだけ回転しているかを示す1軸の回転リング」がカメラに対して見づらい角度になる場合、リングの見え方や当たり判定を改善する。これは画面基準の回転操作へ変えるという意味ではなく、本来の軸回転を維持したままドラッグ中の視認性と掴みやすさを上げる意図である
+   - 操作モードを Easy / Free のように分ける案は、UIが複雑になりすぎる可能性があるため現時点では採用しない。必要になった場合も、まずは単一操作体系のままギズモサイズ、判定、表示、確定タイミングを改善する
+   - 将来の編集補助候補として、Undo / Redo、左右ミラー、選択部位と子階層の強調表示、可動域制限の見える化、プリセットからの微調整導線を検討する。これらは現時点の必須実装ではないが、ユーザーから個別に実装指示が来た場合にここを参照する
 
 9. 編集専用 IK
+   - 2026-09-30: 手足のワールド軸数値編集にQuaternionのswing/twist可動域制限を追加。最新仕様と検証結果は [IK専用メモ](IK_DESIGN_NOTES.md) を優先する。ユーザーの操作確認は制限追加前。移動ギズモは第10段階。
    - 腕と脚の 2 ボーン IK、エンドエフェクタ、ポール方向、関節制限を追加する
    - 最初は IK 結果を FK 回転へ焼き込む方式とし、実行時の新しい IK 更新処理は作らない
    - モデルごとの骨の向き、左右反転、到達不能な目標位置、肘・膝の反転を検証する
+   - 2026-09-29 実装。IK 対象はコンボで選ばず、プレビュー上または部位プルダウンで選択中の関節から決める。対象は `RHand`, `LHand`, `RFeet`, `LFeet`, `RElbow`, `LElbow`, `RKnees`, `LKnees` の 8 種類とする
+   - 手足は肩/股関節からの2区間。肘膝の操作で背中/腰を動かす旧チェーンは廃止。根元固定の1区間では直線移動できないため、肘膝の移動入力は停止。肩股関節も現15部位の自由度と固定条件では直線移動できず停止する。円弧操作へ勝手に変更しない。
+   - 第9段階では完全な移動ギズモではなく、Motion Editor 右側の `IK Edit` でワールド基準の IK Target X/Y/Z を数値編集する。数値を動かした瞬間に IK を解き、プレビュー姿勢と現在フレームの回転キーへ即時反映する
+   - IK Target は保存データではなく、現在フレーム・現在選択関節の編集補助用一時値として扱う。フレームや選択関節が変わった場合は、その時点の対象関節ワールド位置をプレビュー姿勢から自動で取り直す
+   - IK Target の X/Y/Z はワールド座標の絶対値であり、IK 計算後の到達位置で入力値を上書きしない。到達できない場合は Solver 側で内部的に到達可能位置へ丸めるが、ユーザーが操作中のターゲット値は維持する
+   - IK 数値ドラッグ開始時のプレビュー姿勢を固定し、ドラッグ中は常にその固定姿勢から IK を解く。MotionData へ即時保存した結果を次フレームの IK 基準にすると回転差分が累積して暴れるため禁止する
+   - MotionIkの解析的2区間計算で位置を解き、実親行列からローカルQuaternionを復元する。復元後のFK位置を検証し、不正な結果は適用しない。
+   - 姿勢編集の制限はMotionRotationLimitsとGetPoseRotationLimitへ共通化。数値入力・回転ギズモ・IKともQuaternionで制御し、Eulerは表示/入力と旧ファイル互換読込のみ。前腕の曲げと長軸ひねりを分離し、IKは位置を固定したまま別の回転配分も探索する。既存の制限外姿勢は矯正せず、それ以上の逸脱だけを止める。
+   - IK 編集は、既存の全身姿勢キーフレームがあるフレームでのみ許可する。位置用の別キーフレームは作らず、回転キーフレームがある場所で手足位置を編集して姿勢を作る
+   - 到達不能時は操作直線が到達領域から最初に出る点で止める。半径方向のクランプは禁止。非操作軸と骨長を維持する。
+   - 肘/膝の曲がる方向は、IK 操作開始時点の中間関節位置から Pole 方向を推定し、既存の曲がり方をなるべく維持する
+   - IK の優先順位は、骨長を守る、可動域を守る、既存の肘/膝方向を守る、ターゲットへ近づける、の順とする。可動域制限で届かない場合は、無理にターゲットへ合わせず届かない姿勢で止める
+   - IK結果は既存姿勢キーのローカルQuaternionへ保存する。手首/足首自身のローカル回転は保持し、ワールド方向は親に追従させる。位置キーや実行時IKデータは保存しない。
 
 10. ギズモの移動編集
-   - 手・足の移動は IK の目標位置を移動する操作として扱う
-   - IK の計算結果をローカル回転へ変換し、実行用 MotionData へ FK キーとして保存する
+   - 手・足の移動は、第9段階で定義した IK Target のワールド位置をギズモで動かす入力手段として扱う
+   - IK の計算結果は第9段階と同じくローカル回転へ変換し、実行用 MotionData へ FK キーとして保存する。ギズモ用の位置キーやランタイム IK データは作らない
    - 攻撃中の実座標移動は `AttackData::movementKeys` のままとし、ギズモの見た目操作と混ぜない
 
 11. 肩・背中・腰の階層制約
@@ -730,10 +754,16 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 - 2026-09-12 時点で AttackEditor のパラメータ編集、AttackBox 編集、CancelSetting 編集、保存ボタン処理を `CustomizeAttackEditorController` へ移した。CustomizeScene は右ウィンドウの配置、プレビュー描画、MotionEditor への遷移要求、戻る要求だけを扱う
 - 2026-09-12 時点で MotionEditor の UI 操作、姿勢キー編集、攻撃移動キー編集、汎用モーション用オフセットキー編集、タイムライン描画を `CustomizeMotionEditorController` へ移した。CustomizeScene はプレビュー領域、再生操作欄、保存時に AttackData と MotionData を接続する処理だけを扱う
 - 今後 CustomizeScene をさらに分割する場合も、Scene に編集処理を戻さない。画面固有の実処理は `Source/Controller` の Controller へ置き、Scene は画面モード、遷移、Controller 間の接着に限定する
+- ImGuizmo の回転編集は X/Y/Z リングのみを表示し、スクリーン回転用の白リングは使わない。ドラッグ中は掴み始めたローカル軸を固定し、ImGuizmo から得た回転差分を Quaternion として開始時ローカル回転へ積む
+- ギズモドラッグ中は MotionData を毎フレーム書き換えない。プレビュー用 SkeletonPose の対象ボーンだけを Quaternion で直接更新し、ドラッグ終了時のみ Quaternion として MotionData へ保存する
+- 2026-09-29 変更。MotionData の回転保存は Quaternion を正とする。JSON 保存時は `rotationQuaternion` のみを書き出し、旧 `rotationEulerDegrees` は読み込み互換用としてのみ扱う。右側 UI の角度入力/表示は Euler のまま維持するが、数値入力時に Quaternion へ変換して保存する
+- 2026-09-29 変更。PosePreset と姿勢コピー/ペーストも Quaternion を正とする。PosePreset JSON 保存時は `rotationQuaternion` のみを書き出し、旧 `rotationEulerDegrees` は読み込み互換用としてのみ扱う。既存の Euler 形式プリセットは読み込み時に Quaternion へ変換されるため、UI から読み込んで保存し直すことで新形式へ移行できる
 - AttackData Editor は複数 AttackBox と単数の CancelSetting を編集できるが、発生タイミングは `frame.startup / active / recovery` を正とし、AttackBox 側にはフレーム情報を持たせない
 - `frame.startup` は前隙フレーム数ではなく、攻撃ボタンを押したフレームを 1F とした時に何フレーム目から攻撃判定が出るかを表す
 - `frame.startup` の最小値は 2F とする。1F は内部 `actionFrame=0` から攻撃判定が出るため、このプロジェクトでは使用しない
 - `frame.active` は攻撃判定が出ているフレーム数、`frame.recovery` は攻撃判定が消えた後の硬直フレーム数を表す
+- CustomizeScene の AttackData Editor では、`hitstunFrames / guardstunFrames` を直接入力せず、ヒット時硬直差 / ガード時硬直差として入力する。硬直差は発生 1F 目で当たった前提で、攻撃側の硬直が解けた時点で防御側に残る硬直フレーム数を表す。`0` は同時に動ける、正の値は攻撃側有利、負の値は防御側有利とする
+- 保存時は `hitstunFrames = 攻撃側残り硬直 + ヒット硬直差`、`guardstunFrames = 攻撃側残り硬直 + ガード硬直差` として 0 以上に丸め、JSON は従来通り実行時スタンフレーム数を保存する。持続後半で当たった場合は実戦上の硬直差がその分だけ有利になる
 - キャンセル設定は `canAttackCancel` で有効/無効を切り替える。有効フラグを OFF にしても編集中 draft の `cancelSetting` は消さず、再度 ON にした時に直前編集内容を復元する
 - キャンセル開始/終了フレームは内部データと JSON では 0 始まりを維持し、CustomizeScene の表示と入力だけプレビューに合わせて 1 始まりに変換する
 - `AttackUsableState` は `Ground / Air` のみとし、通常技はカテゴリで固定、必殺技だけ CustomizeScene で選択可能にする
@@ -785,3 +815,12 @@ CustomizeScene は技調整・キャラクター調整用の作業 Scene とす�
 6. Movement / Transform 最低限
 7. Spawn / Destroy 機構
 8. Collider / Collision（めり込み解消）
+
+## シーン実装の責務ルール
+
+- 対戦・トレーニング等の対戦関係はSystem駆動。それ以外はController等によるオブジェクト指向とする。
+- SceneへUI操作・編集・描画等の機能処理を新たに直書きしない。所有・開始終了・呼び出し・遷移調整のみを担う。
+- CustomizeSceneに残る既存の直書きは次の整理工程で委譲する。描画のみの分割では完了ではない。
+- プレビューの右ドラッグ旋回・中ドラッグ平行移動・ホイールズームはCustomizePreviewControllerが担当し、技編集とモーション編集で共用する。
+- カメラ操作はプレビュー内から開始し、UI・IK・ギズモと競合させない。カメラ移動は保存モーションへ影響させない。
+- 関節の空白クリック解除は正式な未選択状態とし、未選択時に別部位へ自動補正しない。

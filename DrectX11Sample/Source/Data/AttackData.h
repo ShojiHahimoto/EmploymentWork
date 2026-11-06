@@ -127,6 +127,39 @@ inline int GetAttackTotalFrames(const AttackFrameData& frame)
 }
 
 /// <summary>
+/// 攻撃判定の発生 1F 目でヒットした時、攻撃側に残っている操作不能フレーム数を取得する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <returns>ヒットフレームの次フレーム以降、攻撃側が操作可能になるまでの残りフレーム数。</returns>
+inline int GetAttackerRemainingFramesOnFirstActiveHit(const AttackFrameData& frame)
+{
+	const int firstActiveFrame = GetAttackActiveStartFrame(frame);
+	return std::max(0, GetAttackTotalFrames(frame) - firstActiveFrame - 1);
+}
+
+/// <summary>
+/// 保存済みスタンフレーム数を、発生 1F 目ヒット前提の硬直差へ変換する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <param name="stunFrames">保存済みのヒット/ガード硬直フレーム数。</param>
+/// <returns>攻撃側が動ける時点で防御側に残る硬直差。正なら攻撃側有利。</returns>
+inline int ConvertStunFramesToFrameAdvantage(const AttackFrameData& frame, int stunFrames)
+{
+	return std::max(0, stunFrames) - GetAttackerRemainingFramesOnFirstActiveHit(frame);
+}
+
+/// <summary>
+/// 発生 1F 目ヒット前提の硬直差を、実行時に使うスタンフレーム数へ変換する。
+/// </summary>
+/// <param name="frame">確認する技フレーム情報。</param>
+/// <param name="frameAdvantage">攻撃側が動ける時点で防御側に残したい硬直差。</param>
+/// <returns>0 以上に丸めたヒット/ガード硬直フレーム数。</returns>
+inline int ConvertFrameAdvantageToStunFrames(const AttackFrameData& frame, int frameAdvantage)
+{
+	return std::max(0, GetAttackerRemainingFramesOnFirstActiveHit(frame) + frameAdvantage);
+}
+
+/// <summary>
 /// 指定 actionFrame が攻撃判定の active 範囲内か確認する。
 /// </summary>
 /// <param name="frame">確認する技フレーム情報。</param>
@@ -181,9 +214,9 @@ struct AttackData
 	std::string displayName;
 	// ヒット時に相手 HP から減算する攻撃力。
 	int damage = 10;
-	// この攻撃がヒットした相手を Hitstun に固定するフレーム数。
+	// この攻撃がヒットした相手を Hitstun に固定する実行時フレーム数。Customize UI では硬直差から換算する。
 	int hitstunFrames = 30;
-	// この攻撃がガードされた相手を立ち/しゃがみガード硬直に固定するフレーム数。
+	// この攻撃がガードされた相手を立ち/しゃがみガード硬直に固定する実行時フレーム数。Customize UI では硬直差から換算する。
 	int guardstunFrames = 30;
 	// 通常攻撃か必殺技か。入力候補の作成と編集画面で使う。
 	AttackKind attackKind = AttackKind::Normal;
