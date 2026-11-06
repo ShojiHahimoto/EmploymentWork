@@ -1338,6 +1338,23 @@ void CustomizeMotionEditorController::DrawIkControls(
 {
     ImGui::Separator();
     ImGui::Text("IK Edit (World)");
+	// 数値欄とギズモは同じSolveIkTargetを使い、保存先も同じ全身姿勢キーにする。
+	if (previewController.hasTranslationGizmoEdit)
+	{
+		previewController.hasTranslationGizmoEdit = false;
+		const auto* editedChain = MotionIk::FindChain(static_cast<MotionBodyPart>(previewController.translationGizmoPart));
+		if (editedChain && previewController.translationGizmoFrame == keyFrame && HasMotionKeyframe(keyFrame))
+		{
+			for (int i = 0; i < 3; ++i)
+				SetMotionRotationQuaternionKey(draft, MotionSkeleton::GetBodyPartName(static_cast<int>(editedChain->parts[i])),
+					keyFrame, previewController.translationGizmoResult.localRotations[i]);
+			RefreshFrameEditValues(keyFrame);
+		}
+	}
+	ImGui::BeginDisabled(previewController.translationGizmoActive || ikTargetEditing);
+	ImGui::Checkbox("Move gizmo (World)", &previewController.translationGizmoEnabled);
+	ImGui::EndDisabled();
+	if (previewController.translationGizmoActive) return;
     const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBoneIndex));
     if (!HasMotionKeyframe(keyFrame) || !chain)
     {

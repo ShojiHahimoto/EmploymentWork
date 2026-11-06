@@ -303,6 +303,8 @@ namespace IMGUIZMO_NAMESPACE
    IMGUI_API void SetAxisMask(bool x, bool y, bool z);
    // Configure the limit where planes are hiden
    IMGUI_API void SetPlaneLimit(float value);
+   // Restrict translation picking and drawing to the three axis arrows.
+   IMGUI_API void SetTranslationAxesOnly(bool enabled);
    // from a x,y,z point in space and using Manipulation view/projection matrix, check if mouse is in pixel radius distance of that projected point
    IMGUI_API bool IsOver(float* position, float pixelRadius);
 

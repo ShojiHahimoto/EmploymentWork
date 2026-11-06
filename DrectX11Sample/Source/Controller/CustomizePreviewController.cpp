@@ -861,6 +861,8 @@ void CustomizePreviewController::DrawRotationGizmo(
 	if (!enabled || !skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
 	{
 		rotationGizmoDragActive = false;
+		if (translationGizmoActive) EndIkSolveSession();
+		translationGizmoActive = false;
 		return;
 	}
 	if (selectedBodyPartIndex < 0 || selectedBodyPartIndex >= MotionBodyPartCount)
@@ -900,6 +902,48 @@ void CustomizePreviewController::DrawRotationGizmo(
 	ImGuizmo::SetOrthographic(false);
 	ImGuizmo::SetRect(regionX, regionY, regionWidth, regionHeight);
 	ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
+	if (translationGizmoEnabled)
+	{
+		rotationGizmoDragActive = false;
+		const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBodyPartIndex));
+		if (!chain || chain->translationLocked) return;
+		if (translationGizmoActive && (translationGizmoPart != selectedBodyPartIndex || translationGizmoFrame != GetActionFrame()))
+		{
+			translationGizmoActive = false;
+			EndIkSolveSession();
+		}
+		// 要求位置の行列は到達位置で上書きしない。WORLDで関節回転に依存しない矢印を使う。
+		if (!translationGizmoActive) translationGizmoMatrix = Matrix::CreateTranslation(boneWorld.Translation());
+		ImGuizmo::SetRotationAngleLimit(false, 0, 0);
+		ImGuizmo::SetTranslationAxesOnly(true);
+		const bool changed = ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11,
+			ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &translationGizmoMatrix._11);
+		ImGuizmo::SetTranslationAxesOnly(false);
+		const bool usingGizmo = ImGuizmo::IsUsing();
+		const int handle = ImGuizmo::GetActiveHandleType();
+		const bool axisHandle = handle == ImGuizmo::MT_MOVE_X || handle == ImGuizmo::MT_MOVE_Y || handle == ImGuizmo::MT_MOVE_Z;
+		if (usingGizmo && !translationGizmoActive && axisHandle)
+		{
+			Stop();
+			translationGizmoActive = BeginIkSolveSession(GetActionFrame());
+			translationGizmoPart = selectedBodyPartIndex;
+			translationGizmoFrame = GetActionFrame();
+		}
+		if (changed && translationGizmoActive && axisHandle
+			&& SolveIkTarget(selectedBodyPartIndex, translationGizmoMatrix.Translation(), translationGizmoResult))
+		{
+			hasTranslationGizmoEdit = true;
+			for (int i = 0; i < 3; ++i)
+				skeletonPose.bonePoses[translationGizmoResult.boneIndices[i]].localRotation = translationGizmoResult.localRotations[i];
+			MotionPose::UpdateSkinningMatrices(skeletonPose, model);
+		}
+		if (!usingGizmo && translationGizmoActive)
+		{
+			translationGizmoActive = false;
+			EndIkSolveSession();
+		}
+		return;
+	}
 
 	if (rotationGizmoDragActive && rotationGizmoDragBodyPartIndex != selectedBodyPartIndex)
 	{

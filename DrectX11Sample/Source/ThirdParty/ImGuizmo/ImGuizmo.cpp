@@ -778,6 +778,8 @@ namespace IMGUIZMO_NAMESPACE
    };
 
    static Context gContext;
+   static bool translationAxesOnly = false;
+   void SetTranslationAxesOnly(bool enabled) { translationAxesOnly = enabled; }
 
    static const vec_t directionUnary[3] = { makeVect(1.f, 0.f, 0.f), makeVect(0.f, 1.f, 0.f), makeVect(0.f, 0.f, 1.f) };
    static const char* translationInfoMask[] = { "X : %5.3f", "Y : %5.3f", "Z : %5.3f",
@@ -1667,7 +1669,7 @@ namespace IMGUIZMO_NAMESPACE
          // draw plane
          if (!gContext.mbUsing || (gContext.mbUsing && type == MT_MOVE_YZ + i))
          {
-            if (belowPlaneLimit && Contains(op, TRANSLATE_PLANS[i]))
+            if (!translationAxesOnly && belowPlaneLimit && Contains(op, TRANSLATE_PLANS[i]))
             {
                ImVec2 screenQuadPts[4];
                for (int j = 0; j < 4; ++j)
@@ -1681,7 +1683,8 @@ namespace IMGUIZMO_NAMESPACE
          }
       }
 
-      drawList->AddCircleFilled(gContext.mScreenSquareCenter, gContext.mStyle.CenterCircleSize, colors[0], 32);
+      if (!translationAxesOnly)
+         drawList->AddCircleFilled(gContext.mScreenSquareCenter, gContext.mStyle.CenterCircleSize, colors[0], 32);
 
       if (gContext.mbUsing && (gContext.GetCurrentID() == gContext.mEditingID) && IsTranslateType(type))
       {
@@ -2204,7 +2207,7 @@ namespace IMGUIZMO_NAMESPACE
       // screen
       if (io.MousePos.x >= gContext.mScreenSquareMin.x && io.MousePos.x <= gContext.mScreenSquareMax.x &&
          io.MousePos.y >= gContext.mScreenSquareMin.y && io.MousePos.y <= gContext.mScreenSquareMax.y &&
-         Contains(op, TRANSLATE))
+         Contains(op, TRANSLATE) && !translationAxesOnly)
       {
          type = MT_MOVE_SCREEN;
       }
@@ -2238,7 +2241,7 @@ namespace IMGUIZMO_NAMESPACE
 
          const float dx = dirPlaneX.Dot3((posOnPlan - gContext.mModel.v.position) * (1.f / gContext.mScreenFactor));
          const float dy = dirPlaneY.Dot3((posOnPlan - gContext.mModel.v.position) * (1.f / gContext.mScreenFactor));
-         if (belowPlaneLimit && dx >= quadUV[0] && dx <= quadUV[4] && dy >= quadUV[1] && dy <= quadUV[3] && Contains(op, TRANSLATE_PLANS[i]))
+         if (!translationAxesOnly && belowPlaneLimit && dx >= quadUV[0] && dx <= quadUV[4] && dy >= quadUV[1] && dy <= quadUV[3] && Contains(op, TRANSLATE_PLANS[i]))
          {
             if ((!isAxisMasked || isMultipleAxesMasked) && !isNoAxesMasked)
                break;

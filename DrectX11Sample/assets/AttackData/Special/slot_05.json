@@ -1,0 +1,38 @@
+﻿{
+  "attackDataId": "Special/slot_05",
+  "displayName": "コマネチ",
+  "attackKind": "Special",
+  "commandId": "Hadouken",
+  "usableState": "Ground",
+  "attackHeight": "Mid",
+  "motionDataId": "Attack/Special/slot_05",
+  "hitSoundId": "",
+  "damage": 10000,
+  "hitstunFrames": 37,
+  "guardstunFrames": 21,
+  "hitReactionType": "Normal",
+  "frame": {
+    "startup": 15,
+    "active": 5,
+    "recovery": 15
+  },
+  "canAttackCancel": false,
+  "cancelSetting": {
+    "startFrame": 0,
+    "endFrame": 0,
+    "cancelTypes": []
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.500,
+        "y": 4.000
+      },
+      "size": {
+        "x": 2.000,
+        "y": 2.000
+      }
+    }
+  ],
+  "movementKeys": []
+}

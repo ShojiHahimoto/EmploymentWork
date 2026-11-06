@@ -20,6 +20,13 @@
 class CustomizePreviewController
 {
 public:
+	bool translationGizmoEnabled = false;
+	bool translationGizmoActive = false;
+	bool hasTranslationGizmoEdit = false;
+	MotionIkResult translationGizmoResult;
+	DirectX::SimpleMath::Matrix translationGizmoMatrix = DirectX::SimpleMath::Matrix::Identity;
+	int translationGizmoPart = -1;
+	int translationGizmoFrame = -1;
 	static constexpr int PreviewTextureWidth = 640;
 	static constexpr int PreviewTextureHeight = 360;
 
