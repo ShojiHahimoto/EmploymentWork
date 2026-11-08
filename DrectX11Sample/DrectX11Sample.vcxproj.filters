@@ -183,7 +183,7 @@
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\CustomizeAttackEditorImGuiView.cpp">
+    <ClCompile Include="Source\UI\CustomizeAttackEditorView.cpp">
       <Filter>ソース ファイル\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\UI\UIRoot.cpp">
@@ -511,7 +511,7 @@
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
-    <ClInclude Include="Source\UI\CustomizeAttackEditorImGuiView.h">
+    <ClInclude Include="Source\UI\CustomizeAttackEditorView.h">
       <Filter>ヘッダー ファイル\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\UI\UIRoot.h">

@@ -672,7 +672,7 @@ void Root::Draw(Renderer &renderer) const
 		if (e.type != ElementType::Label)
 		{
 			c.color = !e.enabled		   ? Theme::Disabled
-					  : e.id == capturedId ? Theme::Pressed
+					  : !capturedId.empty() && e.id == capturedId ? Theme::Pressed
 					  : e.hovered		   ? Theme::Hover
 										   : Theme::Surface;
 			commands.push_back(c);
@@ -699,6 +699,8 @@ void Root::Draw(Renderer &renderer) const
 		c.bounds = e.bounds.Inset(6, 2).ToNativeRect();
 		c.text = label;
 		c.fontSize = e.fontSize;
+		if (e.type == ElementType::Button)
+			c.horizontalAlignment = TextHorizontalAlignment::Center;
 		c.color = Color(0.12f, 0.16f, 0.18f, e.enabled ? 1.0f : 0.5f);
 		commands.push_back(c);
 	}

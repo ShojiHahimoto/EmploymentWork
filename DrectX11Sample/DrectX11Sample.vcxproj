@@ -39,7 +39,7 @@
     <ClCompile Include="Source\Scene\BattleSetupScene.cpp" />
     <ClCompile Include="Source\Controller\BattleSetupControllers.cpp" />
     <ClCompile Include="Source\Controller\CustomizeAttackEditorController.cpp" />
-    <ClCompile Include="Source\UI\CustomizeAttackEditorImGuiView.cpp" />
+    <ClCompile Include="Source\UI\CustomizeAttackEditorView.cpp" />
     <ClCompile Include="Source\UI\UIRoot.cpp" />
     <ClCompile Include="Source\UI\UIInputSystem.cpp" />
     <ClCompile Include="Source\UI\UIRenderer.cpp" />
@@ -136,7 +136,7 @@
     <ClInclude Include="Source\Scene\BattleSetupScene.h" />
     <ClInclude Include="Source\Controller\BattleSetupControllers.h" />
     <ClInclude Include="Source\Controller\CustomizeAttackEditorController.h" />
-    <ClInclude Include="Source\UI\CustomizeAttackEditorImGuiView.h" />
+    <ClInclude Include="Source\UI\CustomizeAttackEditorView.h" />
     <ClInclude Include="Source\UI\UIRoot.h" />
     <ClInclude Include="Source\UI\UIInputSystem.h" />
     <ClInclude Include="Source\UI\UIRenderer.h" />

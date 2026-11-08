@@ -110,6 +110,11 @@ void CustomizeFlowController::Exit()
 void CustomizeFlowController::RunSystems()
 {
 	UpdatePreviewPlayback();
+	if (mode == CustomizeMode::AttackEditor)
+	{
+		UpdateAttackEditorControls();
+		return; // 専用UIが文字編集中の取消と画面の戻る操作を区別する。
+	}
 
 	if (WasCancelTriggered())
 	{
@@ -408,31 +413,9 @@ void CustomizeFlowController::DrawAttackEditor(Renderer& renderer)
 	EnsureDraftAttackMotionDataId();
 	ClampPreviewCurrentFrame();
 
-	// モーション作成画面と同じ表示規則にして、左側の本体ウィンドウ上に直接プレビューする。
-	const CustomizePreviewLayout layout = CreateCustomizePreviewLayout(width, height);
-
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x, layout.origin.y + layout.previewBottom), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Playback", nullptr, layout.fixedFlags))
-	{
-		ImGui::Text("Editing: %s", attackEditor.GetEditingAttackDataId().c_str());
-		ImGui::Text("Frame: %d / %d", previewController.GetCurrentFrame(), GetPreviewTotalFrames());
-		ImGui::Text("Phase: %s", GetPreviewPhaseText());
-		DrawPreviewPlaybackControls();
-	}
-	ImGui::End();
-
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x + layout.splitX, layout.origin.y), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(std::max(1, width - layout.splitX)), static_cast<float>(std::max(1, height))), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Parameters", nullptr, layout.fixedFlags))
-	{
-		DrawAttackEditorControls();
-	}
-	ImGui::End();
-
-	RenderAttackPreview(renderer, &layout.previewRegion);
+	const RECT region = CustomizeAttackEditorView::PreviewRegion(width, height);
+	RenderAttackPreview(renderer, &region);
+	attackEditorView.Draw(renderer);
 }
 
 /// <summary>
@@ -535,25 +518,11 @@ void CustomizeFlowController::DrawPreviewPlaybackControls()
 }
 
 /// <summary>
-/// 技パラメータを編集する右側 ImGui ウィンドウを描画する。
+/// 専用UIの入力を更新し、画面遷移要求のみを処理する。
 /// </summary>
-void CustomizeFlowController::DrawAttackEditorWindow()
+void CustomizeFlowController::UpdateAttackEditorControls()
 {
-	ImGui::SetNextWindowPos(ImVec2(static_cast<float>(width) * 0.5f, 20.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Parameters"))
-	{
-		DrawAttackEditorControls();
-	}
-	ImGui::End();
-}
-
-/// <summary>
-/// 技パラメータ編集の中身を描画する。
-/// </summary>
-void CustomizeFlowController::DrawAttackEditorControls()
-{
-	const CustomizeAttackEditorAction action = attackEditorView.Draw(attackEditor, GetPreviewTotalFrames(), statusMessage);
+	const CustomizeAttackEditorAction action = attackEditorView.Update(attackEditor, previewController, width, height, statusMessage);
 	if (action == CustomizeAttackEditorAction::OpenMotionEditor)
 	{
 		LoadDraftMotionFromEditorId();
@@ -581,6 +550,7 @@ void CustomizeFlowController::SelectAttackSlot(CustomizeAttackCategory category,
 	editingCommonMotionId.clear();
 	selectedCategory = category;
 	statusMessage = attackEditor.SelectSlot(category, slotIndex);
+	attackEditorView.Reset();
 	motionEditor.ResetForAttackMotion();
 	previewController.SetCurrentFrame(0);
 	previewController.Stop();
