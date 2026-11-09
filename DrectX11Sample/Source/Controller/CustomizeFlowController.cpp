@@ -413,6 +413,7 @@ void CustomizeFlowController::DrawAttackEditor(Renderer& renderer)
 	EnsureDraftAttackMotionDataId();
 	ClampPreviewCurrentFrame();
 
+	attackEditorView.DrawBackdrop(renderer, width, height);
 	const RECT region = CustomizeAttackEditorView::PreviewRegion(width, height);
 	RenderAttackPreview(renderer, &region);
 	attackEditorView.Draw(renderer);

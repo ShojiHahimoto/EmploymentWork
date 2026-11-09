@@ -61,6 +61,7 @@ int main()
 	auto button = [&](bool enabled = true) {
 		root.BeginFrame(viewport, input);
 		root.AddButton("button", field, std::string_view("確認"), enabled);
+		root.AddRule({10, 20, 200, 21}); // 装飾線がボタンのクリックを遮らないことも確認する。
 		root.EndFrame();
 	};
 	input.pointerPosition = {20, 20};
@@ -221,6 +222,7 @@ int main()
 	assert(UIRenderer::Initialize(device.Get(), 640, 480));
 	assert(UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json"));
 	assert(UIRenderer::MeasureText(L"日本語", 18) > 0);
+	assert(UIRenderer::MeasureText(L"重要項目", 18, true) > 0);
 	Renderer renderer;
 	Root styledRoot;
 	int styledValue = 3, styledSelection = 1;

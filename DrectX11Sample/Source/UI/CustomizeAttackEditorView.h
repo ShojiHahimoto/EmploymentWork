@@ -24,6 +24,11 @@ public:
     /// <summary>更新済みのUIだけを描画する。入力処理は行わない。</summary>
     /// <param name="renderer">専用UIの描画先。</param>
     void Draw(Renderer& renderer) const;
+    /// <summary>白系キャンバスとプレビュー枠を3Dモデルより先に描画する。</summary>
+    /// <param name="renderer">専用UIの描画先。</param>
+    /// <param name="width">画面幅。</param>
+    /// <param name="height">画面高さ。</param>
+    void DrawBackdrop(Renderer& renderer, int width, int height) const;
     /// <summary>UIと重ならないプレビュー矩形を求める。</summary>
     /// <param name="width">画面幅。</param>
     /// <param name="height">画面高さ。</param>
@@ -46,9 +51,12 @@ private:
     /// <param name="minimum">最小値。</param>
     /// <param name="maximum">最大値。</param>
     void Integer(const char* id, const char* label, int& value, int minimum, int maximum);
-    /// <summary>基本情報・フレーム・リアクションの編集欄を登録する。</summary>
+    /// <summary>基本情報、フレーム設定、硬直差の編集欄を登録する。</summary>
     /// <param name="category">通常地上・通常空中・必殺技の区別。</param>
     void BuildParameters(CustomizeAttackCategory category);
+    /// <summary>技の種類、被弾時の挙動、必殺技コマンドを独立した欄へ登録する。</summary>
+    /// <param name="category">編集中の技分類。</param>
+    void BuildBehavior(CustomizeAttackCategory category);
     /// <summary>各攻撃判定の位置とサイズ、追加削除操作を登録する。</summary>
     void BuildHitboxes();
     /// <summary>内部0始まりのキャンセル設定を表示上1始まりで登録する。</summary>

@@ -3,12 +3,39 @@
 #include "Controller/CustomizePreviewController.h"
 #include "UI/UIInputSystem.h"
 #include "UI/UITheme.h"
+#include "UI/UIRenderer.h"
+#include "System/Renderer.h"
 
 #include <algorithm>
 #include <limits>
 
 namespace
 {
+    struct AttackEditorRegions
+    {
+        int split = 0;
+        int previewBottom = 0;
+        int timelineTop = 0;
+        RECT previewPanel{};
+        RECT preview{};
+    };
+
+    /// <summary>承認レイアウトの比率からプレビュー・操作欄・Timelineの境界を求める。</summary>
+    AttackEditorRegions MakeRegions(int width, int height)
+    {
+        AttackEditorRegions result;
+        result.split = std::max(1, width * 60 / 100);
+        result.previewBottom = std::max(1, height * 68 / 100);
+        result.timelineTop = std::max(result.previewBottom + 1, height * 77 / 100);
+        result.previewPanel = {8, height * 8 / 100 + 4, std::max(9, result.split - 8), std::max(9, result.previewBottom - 8)};
+        constexpr int inset = 10;
+        result.preview = {
+            result.previewPanel.left + inset, result.previewPanel.top + inset,
+            std::max(result.previewPanel.left + inset + 1, result.previewPanel.right - inset),
+            std::max(result.previewPanel.top + inset + 1, result.previewPanel.bottom - inset)};
+        return result;
+    }
+
     constexpr AttackHeight Heights[] = { AttackHeight::High, AttackHeight::Mid, AttackHeight::Low };
     constexpr HitReactionType Reactions[] = { HitReactionType::Normal, HitReactionType::Down,
         HitReactionType::Burst, HitReactionType::HardBurst };
@@ -35,23 +62,39 @@ void CustomizeAttackEditorView::Reset()
 
 RECT CustomizeAttackEditorView::PreviewRegion(int width, int height)
 {
-    return { 0, 0, std::max(1, width / 2), std::max(1, height - 140) };
+    return MakeRegions(width, height).preview;
+}
+
+void CustomizeAttackEditorView::DrawBackdrop(Renderer& renderer, int width, int height) const
+{
+    const AttackEditorRegions regions = MakeRegions(width, height);
+    Renderer::DrawScreenRect({0, 0, width, height}, DirectX::SimpleMath::Color(0.965f, 0.972f, 0.978f, 1.0f));
+
+    // 3D描画の前に枠を置き、あとから描くモデルが枠の内側を使う。
+    GameUI::Root backdrop;
+    backdrop.BeginFrame({0, 0, width, height}, {});
+    backdrop.AddPanel({regions.previewPanel.left, regions.previewPanel.top,
+        regions.previewPanel.right, regions.previewPanel.bottom}, GameUI::Theme::PanelImage);
+    backdrop.EndFrame();
+    backdrop.Draw(renderer);
 }
 
 void CustomizeAttackEditorView::Section(const char* text)
 {
-    rowY += 12;
-    root.AddSectionHeader(std::string("section/") + text,
-        { 12, rowY, panelWidth - 12, rowY + 30 }, text, 20);
-    rowY += 38;
+    if (rowY > 0) root.AddRule({12, rowY + 2, panelWidth - 12, rowY + 3});
+    rowY += 6;
+    root.AddImage(std::string("section/") + text + "/accent", {12, rowY + 4, 19, rowY + 24},
+        GameUI::Theme::SectionAccentImage);
+    root.AddLabel(std::string("section/") + text, {26, rowY, panelWidth - 12, rowY + 28}, text, true, 20, false, true);
+    rowY += 32;
 }
 
 GameUI::Rect CustomizeAttackEditorView::Row(const std::string& id, const char* label)
 {
-    const int split = panelWidth * 45 / 100;
+    const int split = panelWidth * 25 / 100;
     root.AddLabel(id + "/label", {12, rowY, split - 8, rowY + 32}, label, true, 16);
     GameUI::Rect result{ split, rowY, panelWidth - 20, rowY + 32 };
-    rowY += 40;
+    rowY += 36;
     return result;
 }
 
@@ -64,23 +107,56 @@ void CustomizeAttackEditorView::BuildParameters(CustomizeAttackCategory category
 {
     auto& data = edit.attackData;
     Section("基本設定");
-    root.AddTextInput("name", Row("name", "技の名前"), data.displayName,
+    root.AddTextInput("name", Row("name", "技名"), data.displayName,
         CustomizeAttackEditorController::AttackNameBufferSize - 1);
-    Integer("damage", "ダメージ", data.damage, 0, std::numeric_limits<int>::max());
-    root.AddDropdown("height", Row("height", "攻撃属性"), {"上段", "中段", "下段"}, heightIndex);
+    const int half = panelWidth / 2;
+    root.AddLabel("damage/label", {20, rowY, 114, rowY + 32}, "ダメージ", true, 16);
+    root.AddIntegerInput("damage", {114, rowY, half - 8, rowY + 32}, data.damage, 0, std::numeric_limits<int>::max());
+    root.AddLabel("height/label", {half + 8, rowY, half + 104, rowY + 32}, "攻撃属性", true, 16);
+    root.AddDropdown("height", {half + 104, rowY, panelWidth - 16, rowY + 32}, {"上段", "中段", "下段"}, heightIndex);
+    rowY += 36;
     Section("フレーム設定");
-    Integer("startup", "発生", data.frame.startup, 2, 100000);
-    Integer("active", "持続", data.frame.active, 0, 100000);
-    Integer("recovery", "硬直", data.frame.recovery, 0, 100000);
+    {
+        const int gap = 8;
+        const int columnWidth = std::max(1, (panelWidth - 24 - gap * 2) / 3);
+        const int columnX[] = {12, 12 + columnWidth + gap, 12 + (columnWidth + gap) * 2};
+        const char* labels[] = {"発生", "持続", "硬直"};
+        const char* ids[] = {"startup", "active", "recovery"};
+        int* values[] = {&data.frame.startup, &data.frame.active, &data.frame.recovery};
+        const int minimums[] = {2, 0, 0};
+        for (int i = 0; i < 3; ++i)
+        {
+            root.AddLabel(std::string("frame/") + ids[i] + "/label",
+                {columnX[i], rowY, columnX[i] + 48, rowY + 32}, labels[i], true, 16);
+            root.AddIntegerInput(ids[i], {columnX[i] + 48, rowY, columnX[i] + columnWidth, rowY + 32},
+                *values[i], minimums[i], 100000);
+        }
+        rowY += 36;
+    }
     Section("硬直差");
-    Integer("hitAdvantage", "ヒット時", edit.hitFrameAdvantage, -100000, 100000);
-    Integer("guardAdvantage", "ガード時", edit.guardFrameAdvantage, -100000, 100000);
+    {
+        const int gap = 12;
+        const int columnWidth = std::max(1, (panelWidth - 24 - gap) / 2);
+        root.AddLabel("hitAdvantage/label", {12, rowY, 104, rowY + 32}, "ヒット時", true, 16);
+        root.AddIntegerInput("hitAdvantage", {104, rowY, 12 + columnWidth, rowY + 32},
+            edit.hitFrameAdvantage, -100000, 100000);
+        const int secondX = 12 + columnWidth + gap;
+        root.AddLabel("guardAdvantage/label", {secondX, rowY, secondX + 92, rowY + 32}, "ガード時", true, 16);
+        root.AddIntegerInput("guardAdvantage", {secondX + 92, rowY, secondX + columnWidth, rowY + 32},
+            edit.guardFrameAdvantage, -100000, 100000);
+        rowY += 36;
+    }
+}
+
+void CustomizeAttackEditorView::BuildBehavior(CustomizeAttackCategory category)
+{
+    auto& data = edit.attackData;
     Section("攻撃の挙動");
     if (category == CustomizeAttackCategory::Special)
-        root.AddDropdown("usable", Row("usable", "使用状態"), {"地上", "空中"}, usableIndex);
+        root.AddDropdown("usable", Row("usable", "技の種類"), {"地上技", "空中技"}, usableIndex);
     else
-        root.AddLabel("usable/fixed", Row("usable", "使用状態"),
-            category == CustomizeAttackCategory::Air ? "空中（固定）" : "地上（固定）");
+        root.AddLabel("usable/fixed", Row("usable", "技の種類"),
+            category == CustomizeAttackCategory::Air ? "空中技（固定）" : "地上技（固定）");
     if (data.usableState == AttackUsableState::Air)
         root.AddLabel("reaction/fixed", Row("reaction", "被弾の挙動"), "ノーマル（固定）", true, 16);
     else
@@ -98,35 +174,52 @@ void CustomizeAttackEditorView::BuildHitboxes()
     {
         const std::string id = "box/" + std::to_string(i);
         auto& box = edit.attackData.hitboxes[i];
-        root.AddLabel(id, {12, rowY, panelWidth - 120, rowY + 30}, "判定 " + std::to_string(i + 1));
-        root.AddButton(id + "/delete", {panelWidth - 116, rowY, panelWidth - 20, rowY + 30},
-            "削除", edit.attackData.hitboxes.size() > 1);
-        rowY += 38;
-        root.AddFloatInput(id + "/x", Row(id + "/x", "位置 横"), box.offset.x, -1.0e6f, 1.0e6f, .05f);
-        root.AddFloatInput(id + "/y", Row(id + "/y", "位置 縦"), box.offset.y, -1.0e6f, 1.0e6f, .05f);
-        root.AddFloatInput(id + "/w", Row(id + "/w", "大きさ 幅"), box.size.x, 0, 100, .05f);
-        root.AddFloatInput(id + "/h", Row(id + "/h", "大きさ 高さ"), box.size.y, 0, 100, .05f);
+        if (edit.attackData.hitboxes.size() > 1)
+        {
+            root.AddLabel(id, {12, rowY, panelWidth - 120, rowY + 28}, "判定 " + std::to_string(i + 1));
+            root.AddButton(id + "/delete", {panelWidth - 96, rowY, panelWidth - 16, rowY + 28}, "削除");
+            rowY += 32;
+        }
+        for (int axisRow = 0; axisRow < 2; ++axisRow)
+        {
+            const bool position = axisRow == 0;
+            const int labelEnd = panelWidth * 24 / 100;
+            const int middle = panelWidth * 60 / 100;
+            root.AddNineSliceImage(id + "/row/" + std::to_string(axisRow), {20, rowY, labelEnd, rowY + 30},
+                GameUI::Theme::LabelBackgroundImage);
+            root.AddLabel(id + "/label/" + std::to_string(axisRow), {24, rowY, labelEnd, rowY + 30}, position ? "位置" : "大きさ", true, 16);
+            root.AddLabel(id + "/horizontal/" + std::to_string(axisRow), {labelEnd + 12, rowY, labelEnd + 50, rowY + 30}, "横", true, 16);
+            root.AddFloatInput(id + (position ? "/x" : "/w"), {labelEnd + 50, rowY, middle - 8, rowY + 30},
+                position ? box.offset.x : box.size.x, position ? -1.0e6f : 0.0f, position ? 1.0e6f : 100.0f, .05f);
+            root.AddLabel(id + "/vertical/" + std::to_string(axisRow), {middle + 8, rowY, middle + 46, rowY + 30}, "縦", true, 16);
+            root.AddFloatInput(id + (position ? "/y" : "/h"), {middle + 46, rowY, panelWidth - 16, rowY + 30},
+                position ? box.offset.y : box.size.y, position ? -1.0e6f : 0.0f, position ? 1.0e6f : 100.0f, .05f);
+            rowY += 34;
+        }
     }
-    root.AddButton("addBox", {12, rowY, panelWidth - 20, rowY + 32}, "＋ 攻撃判定を追加");
-    rowY += 40;
+    root.AddButton("addBox", {12, rowY, panelWidth - 20, rowY + 30}, "＋ 攻撃判定を追加");
+    rowY += 34;
 }
 
 void CustomizeAttackEditorView::BuildCancel()
 {
     Section("キャンセル設定");
-    root.AddCheckbox("cancel", {12, rowY, panelWidth - 20, rowY + 32},
-        "攻撃キャンセルを許可", edit.attackData.canAttackCancel);
-    rowY += 40;
-    if (!edit.attackData.canAttackCancel) return;
+    const int half = panelWidth / 2;
+    root.AddCheckbox("cancel", {12, rowY, half, rowY + 32},
+        "キャンセルを有効にする", edit.attackData.canAttackCancel);
+    if (!edit.attackData.canAttackCancel) { rowY += 36; return; }
     const int total = std::max(1, GetAttackTotalFrames(edit.attackData.frame));
-    Integer("cancelStart", "開始フレーム", cancelStart, 1, total);
-    Integer("cancelEnd", "終了フレーム", cancelEnd, 1, total);
-    root.AddCheckbox("normalCancel", {12, rowY, panelWidth - 20, rowY + 32}, "通常攻撃", normalCancel);
+    const int endX = panelWidth * 74 / 100;
+    root.AddLabel("cancelStart/label", {half - 4, rowY, half + 36, rowY + 32}, "開始", true, 16);
+    root.AddIntegerInput("cancelStart", {half + 36, rowY, endX - 8, rowY + 32}, cancelStart, 1, total);
+    root.AddLabel("cancelEnd/label", {endX - 4, rowY, endX + 36, rowY + 32}, "終了", true, 16);
+    root.AddIntegerInput("cancelEnd", {endX + 36, rowY, panelWidth - 16, rowY + 32}, cancelEnd, 1, total);
     rowY += 36;
-    root.AddCheckbox("specialCancel", {12, rowY, panelWidth - 20, rowY + 32}, "必殺技", specialCancel);
-    rowY += 36;
-    root.AddCheckbox("jumpCancel", {12, rowY, panelWidth - 20, rowY + 32}, "ジャンプ", jumpCancel);
-    rowY += 40;
+    const int column = (panelWidth - 24) / 3;
+    root.AddCheckbox("normalCancel", {12, rowY, 12 + column, rowY + 30}, "通常技", normalCancel);
+    root.AddCheckbox("specialCancel", {12 + column, rowY, 12 + column * 2, rowY + 30}, "必殺技", specialCancel);
+    root.AddCheckbox("jumpCancel", {12 + column * 2, rowY, panelWidth - 12, rowY + 30}, "ジャンプ", jumpCancel);
+    rowY += 34;
 }
 
 CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEditorController& controller,
@@ -148,43 +241,119 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     specialCancel = std::find(types.begin(), types.end(), AttackCancelType::Special) != types.end();
     jumpCancel = std::find(types.begin(), types.end(), AttackCancelType::Jump) != types.end();
     const bool hadCancel = data.canAttackCancel;
-    const RECT region = PreviewRegion(width, height);
-    const int split = region.right, bottom = region.bottom;
-    panelWidth = width - split;
+    const AttackEditorRegions regions = MakeRegions(width, height);
+    const int split = regions.split;
+    const int bottom = regions.timelineTop;
+    panelWidth = width - split - 8;
     root.BeginFrame({0, 0, width, height}, input);
-    root.AddPanel({split, 0, width, bottom});
-    root.AddPanel({split + 8, 4, width - 8, 46}, GameUI::Theme::HeaderImage);
-    root.AddImage("title/accent", {split + 12, 9, split + 32, 41}, GameUI::Theme::HeaderAccentImage);
-    root.AddLabel("title", {split + 40, 8, width - 16, 44}, "技の編集", true, 24);
+    const int headerHeight = std::max(44, height * 8 / 100);
+    root.AddPanel({0, 0, width, headerHeight}, GameUI::Theme::HeaderImage);
+    root.AddIconButton("back", {16, 8, 82, headerHeight - 10}, "", "back");
+    root.AddImage("title/accent", {94, 0, 128, headerHeight}, GameUI::Theme::HeaderAccentImage);
+    root.AddLabel("title", {136, 6, width * 28 / 100, headerHeight - 6}, "技の編集", true, 34, false, true);
+    const int nameX = width * 28 / 100;
+    root.AddLabel("header/name/label", {nameX, 8, nameX + 58, headerHeight - 10}, "技名", true, 20);
+    root.AddTextInput("header/name", {nameX + 62, 10, width * 56 / 100, headerHeight - 12}, data.displayName,
+        CustomizeAttackEditorController::AttackNameBufferSize - 1);
+    root.AddLabel("header/category/label", {width * 58 / 100, 8, width * 62 / 100, headerHeight - 10}, "分類", true, 20);
+    root.AddPanel({width * 63 / 100, 10, width * 75 / 100, headerHeight - 12}, GameUI::Theme::ButtonImage);
+    root.AddLabel("header/category", {width * 63 / 100 + 10, 10, width * 75 / 100, headerHeight - 12},
+        controller.GetSelectedCategory() == CustomizeAttackCategory::Special ? "必殺技" :
+        controller.GetSelectedCategory() == CustomizeAttackCategory::Air ? "空中技" : "地上技", true, 20);
+    root.AddPrimaryButton("save", {width * 89 / 100, 8, width - 16, headerHeight - 10}, "保存");
+    root.AddPanel({split, headerHeight + 4, width - 8, bottom - 8}, GameUI::Theme::PanelImage);
     rowY = 0;
-    root.BeginScrollArea("parameters", {split, 50, width, std::max(51, bottom - 102)}, contentHeight, scroll);
+    const int actionTop = bottom - 64;
+    root.BeginScrollArea("parameters", {split + 8, headerHeight + 12, width - 8,
+        std::max(headerHeight + 13, actionTop - 8)}, contentHeight, scroll);
     BuildParameters(controller.GetSelectedCategory());
+    BuildBehavior(controller.GetSelectedCategory());
     BuildHitboxes();
     BuildCancel();
     contentHeight = rowY + 16;
     root.EndScrollArea();
-    root.AddIconButton("motion", {split + 16, bottom - 92, width - 16, bottom - 56},
+    root.AddIconButton("motion", {split + panelWidth / 5, actionTop, width - panelWidth / 5, bottom - 22},
         "モーションを編集", "motion");
-    const int mid = split + panelWidth / 2;
-    root.AddPrimaryButton("save", {split + 16, bottom - 48, mid - 4, bottom - 12}, "保存");
-    root.AddIconButton("back", {mid + 4, bottom - 48, width - 16, bottom - 12}, "戻る", "back");
 
-    root.AddPanel({0, bottom, width, height}, GameUI::Theme::PlaybackPanelImage);
+    root.AddPanel({8, regions.previewBottom, split - 8, bottom - 8}, GameUI::Theme::PlaybackPanelImage);
     const int total = GetAttackTotalFrames(data.frame);
-    root.AddLabel("frame", {16, bottom + 8, width / 2, bottom + 38},
-        "現在フレーム  " + std::to_string(preview.GetCurrentFrame()) + " / " + std::to_string(total));
-    const int actionFrame = preview.GetActionFrame();
-    const char* phase = preview.GetCurrentFrame() == 0 ? "待機"
-        : actionFrame < data.frame.startup - 1 ? "前隙"
-        : actionFrame < GetAttackActiveEndFrameExclusive(data.frame) ? "持続" : "後隙";
-    root.AddLabel("phase", {width / 2, bottom + 8, width - 16, bottom + 38}, phase);
-    root.AddImageButton("previous", {16, bottom + 44, 72, bottom + 80}, "previous", "前へ");
-    root.AddImageButton("play", {80, bottom + 44, 144, bottom + 80}, "play", "再生");
-    root.AddImageButton("stop", {152, bottom + 44, 216, bottom + 80}, "pause", "停止");
-    root.AddImageButton("next", {224, bottom + 44, 280, bottom + 80}, "next", "次へ");
-    root.AddIconButton("camera", {300, bottom + 44, 484, bottom + 80},
-        "カメラを初期化", "camera");
-    root.AddLabel("status", {16, bottom + 90, width - 16, height - 8}, message, true, 16);
+    const int controlsY = regions.previewBottom + 10;
+    const int controlsBottom = bottom - 18;
+    const int buttonWidth = (split * 46 / 100 - 36) / 5;
+    const char* buttonIds[] = {"reset", "play", "stop", "previous", "next"};
+    const char* buttonImages[] = {"reset", "play", "pause", "previous", "next"};
+    const char* buttonLabels[] = {"先頭へ", "再生", "停止", "前へ", "次へ"};
+    for (int i = 0; i < 5; ++i)
+        root.AddImageButton(buttonIds[i], {20 + i * (buttonWidth + 8), controlsY,
+            20 + i * (buttonWidth + 8) + buttonWidth, controlsBottom}, buttonImages[i], buttonLabels[i], true, false);
+    const int frameX = split * 50 / 100;
+    root.AddRule({frameX - 8, controlsY + 6, frameX - 7, controlsBottom - 6});
+    root.AddLabel("frame", {frameX, controlsY, split * 75 / 100, controlsBottom},
+        "現在 " + std::to_string(preview.GetCurrentFrame()) + " / " + std::to_string(total) + " フレーム", true, 18);
+    root.AddIconButton("camera", {split * 76 / 100, controlsY, split - 20, controlsBottom}, "カメラを戻す", "camera");
+
+    const GameUI::Rect timeline{8, bottom + 4, width - 8, height - 4};
+    root.AddPanel(timeline, GameUI::Theme::PlaybackPanelImage);
+
+    const int trackLeft = 24;
+    const int trackRight = width - 24;
+    const int trackWidth = std::max(1, trackRight - trackLeft);
+    const int trackHeight = std::max(24, (height - bottom) * 23 / 100);
+    const int trackTop = height - trackHeight - 22;
+    const int startupFrames = std::max(0, data.frame.startup - 1);
+    const int activeFrames = std::max(0, data.frame.active);
+    const int recoveryFrames = std::max(0, data.frame.recovery);
+    // 0Fの待機姿勢は内部仕様のまま。完成画像にない待機用の帯は作らない。
+    const int phaseTotal = std::max(1, startupFrames + activeFrames + recoveryFrames);
+    const int startupWidth = static_cast<int>(static_cast<long long>(trackWidth) * startupFrames / phaseTotal);
+    const int activeWidth = static_cast<int>(static_cast<long long>(trackWidth) * activeFrames / phaseTotal);
+    const int recoveryWidth = trackWidth - startupWidth - activeWidth;
+    int phaseX = trackLeft;
+    if (startupWidth > 0)
+    {
+        root.AddNineSliceImage("timeline/startup", {phaseX, trackTop, phaseX + startupWidth, trackTop + trackHeight},
+            "phase_startup");
+        if (startupWidth > 56) root.AddLabel("timeline/startup/label",
+            {phaseX + 4, trackTop + 2, phaseX + startupWidth - 2, trackTop + trackHeight - 2},
+            "前隙（" + std::to_string(startupFrames) + "F）", true, 19, true);
+        phaseX += startupWidth;
+    }
+    if (activeWidth > 0)
+    {
+        root.AddNineSliceImage("timeline/active", {phaseX, trackTop, phaseX + activeWidth, trackTop + trackHeight},
+            "phase_active");
+        if (activeWidth > 56) root.AddLabel("timeline/active/label",
+            {phaseX + 2, trackTop + 2, phaseX + activeWidth - 2, trackTop + trackHeight - 2},
+            "持続（" + std::to_string(activeFrames) + "F）", true, 19, true);
+        phaseX += activeWidth;
+    }
+    if (recoveryWidth > 0)
+    {
+        root.AddNineSliceImage("timeline/recovery", {phaseX, trackTop, trackRight, trackTop + trackHeight},
+            "phase_recovery");
+        if (recoveryWidth > 56) root.AddLabel("timeline/recovery/label",
+            {phaseX + 2, trackTop + 2, trackRight - 2, trackTop + trackHeight - 2},
+            "後隙（" + std::to_string(recoveryFrames) + "F）", true, 19, true);
+    }
+    const int divisions = std::min(std::max(1, trackWidth / 36), total);
+    const int rulerY = bottom + (height - bottom) * 34 / 100;
+    root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
+    root.AddRule({trackLeft, trackTop - 30, trackRight, trackTop - 26});
+    for (int i = 0; i <= divisions; ++i)
+    {
+        const int x = trackLeft + trackWidth * i / divisions;
+        const int frame = total * i / divisions;
+        root.AddRule({x, rulerY - 10, x + 1, rulerY});
+        root.AddLabel("timeline/tick/" + std::to_string(i), {x - 10, rulerY - 38,
+            x + 28, rulerY - 14}, std::to_string(frame), true, 15);
+    }
+    const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
+    root.AddRule({playheadX, rulerY - 24, playheadX + 2, trackTop});
+    root.AddImage("timeline/playhead", {playheadX - 20, rulerY - 56, playheadX + 20, rulerY - 30},
+        "playhead");
+    root.AddLabel("timeline/playhead/value", {playheadX - 12, rulerY - 56, playheadX + 22, rulerY - 34},
+        std::to_string(preview.GetCurrentFrame()), true, 14);
+    root.AddLabel("status", {width * 76 / 100, 8, width * 88 / 100, headerHeight - 10}, message, true, 14);
     root.EndFrame();
 
     // UIの選択番号は保存しない。既存Controllerと同じ列挙値・内部0始まりへ戻す。
@@ -229,6 +398,7 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     preview.ClampCurrentFrame(updatedTotal);
     if (root.WasActivated("play")) preview.Play(updatedTotal);
     if (root.WasActivated("stop")) preview.Stop();
+    if (root.WasActivated("reset")) { preview.Stop(); preview.StepFrame(-preview.GetCurrentFrame(), updatedTotal); }
     if (root.WasActivated("previous")) preview.StepFrame(-1, updatedTotal);
     if (root.WasActivated("next")) preview.StepFrame(1, updatedTotal);
     if (root.WasActivated("camera")) preview.ResetCamera();

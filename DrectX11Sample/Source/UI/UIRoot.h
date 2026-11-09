@@ -110,6 +110,9 @@ namespace GameUI
 		/// <param name="bounds">パネルの画面矩形。</param>
 		/// <param name="imageId">9スライスで使う背景素材。</param>
 		void AddPanel(const Rect& bounds, std::string_view imageId = "panel");
+		/// <summary>入力を受け取らない区切り線または目盛りを登録する。</summary>
+		/// <param name="bounds">細い矩形で指定する描画範囲。</param>
+		void AddRule(const Rect& bounds);
 		/// <summary>淡色背景と縦アクセントを持つセクション見出しを登録する。</summary>
 		/// <param name="id">見出しの安定ID。</param>
 		/// <param name="bounds">見出しの矩形。</param>
@@ -139,7 +142,10 @@ namespace GameUI
 		/// <param name="text">UTF-8の表示文字列。</param>
 		/// <param name="enabled">無効表示にする場合はfalse。</param>
 		/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
-		void AddLabel(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true, float fontSize = 18.0f);
+		/// <param name="centered">trueなら文字を矩形の中央へ揃える。</param>
+		/// <param name="bold">trueなら太字で表示する。</param>
+		void AddLabel(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true,
+			float fontSize = 18.0f, bool centered = false, bool bold = false);
 		/// <summary>文字付きボタンを登録する。押下結果は WasActivated で照会できる。</summary>
 		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -158,8 +164,9 @@ namespace GameUI
 		/// <param name="imageId">ボタン全体を描く画像素材。</param>
 		/// <param name="fallbackText">画像がない場合に表示する文字列。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
+		/// <param name="showFocusOutline">キーボードフォーカス枠を描画するか。</param>
 		void AddImageButton(std::string_view id, const Rect& bounds, std::string_view imageId,
-			std::string_view fallbackText, bool enabled = true);
+			std::string_view fallbackText, bool enabled = true, bool showFocusOutline = true);
 		/// <summary>標準ボタン背景に透過アイコンと文字を組み合わせたボタンを登録する。</summary>
 		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -255,6 +262,7 @@ namespace GameUI
 	private:
 		enum class ElementType
 		{
+			Rule,
 			Panel,
 			Label,
 			Button,
@@ -272,6 +280,9 @@ namespace GameUI
 
 		struct Element
 		{
+			bool centered = false; // ラベルを矩形の中央へ揃える。
+			bool bold = false; // 強調表示用の太字。
+			bool showFocusOutline = true; // falseならフォーカス中の枠線だけを隠す。
 			ElementType type = ElementType::Panel; // 描画・入力の種別。
 			Rect bounds; // クライアント座標上の配置。
 			std::string id; // フレームをまたいで状態を維持する識別子。

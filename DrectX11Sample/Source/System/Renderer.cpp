@@ -520,7 +520,8 @@ void Renderer::RestoreBackBuffer()
 
 /// <summary>既存の描画領域と出力状態を退避して、専用 viewport / scissor を設定する。</summary>
 /// <param name="region">バックバッファ上のプレビュー矩形。</param>
-Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region)
+/// <param name="preserveBackground">先行する背景描画を保持するか。</param>
+Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region, bool preserveBackground)
 	: view(m_ViewMatrix), projection(m_ProjectionMatrix)
 {
 	auto* context = m_pDeviceContext;
@@ -531,7 +532,7 @@ Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region)
 	context->OMGetBlendState(&blend, blendFactor, &sampleMask);
 	context->OMGetRenderTargets(1, &target, &depthTarget);
 	RestoreBackBuffer();
-	DrawScreenRect(region, GetDefaultClearColor());
+	if (!preserveBackground) DrawScreenRect(region, GetDefaultClearColor());
 	// 色は矩形だけ塗る。深度クリアは全体に作用するため、シーン最初の3Dパスとして使用する。
 	context->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	const D3D11_VIEWPORT viewport = { static_cast<float>(region.left), static_cast<float>(region.top),

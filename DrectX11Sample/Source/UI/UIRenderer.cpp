@@ -10,9 +10,12 @@
 #include <wrl/client.h>
 
 #include <algorithm>
+#include <atomic>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <new>
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -39,18 +42,190 @@ ComPtr<ID2D1RenderTarget> surfaceTarget;
 ComPtr<ID2D1SolidColorBrush> brush;
 ComPtr<ID3D11Texture2D> compositeTexture;
 ComPtr<ID3D11ShaderResourceView> compositeTextureView;
+ComPtr<IDWriteFontCollection> privateFontCollection;
+ComPtr<IDWriteFontCollectionLoader> privateFontCollectionLoader;
 std::unordered_map<int, ComPtr<IDWriteTextFormat>> textFormats;
+std::vector<std::wstring> privateFontFiles;
 ID3D11Device *device = nullptr;
 int surfaceWidth = 0;
 int surfaceHeight = 0;
 bool initialized = false;
 std::vector<DrawCommand> cachedCommands;
 
+std::filesystem::path ResolveManifestPath(const std::string& manifestPath);
+
+/// <summary>ファイルパス一覧をDirectWriteへ渡すカスタムフォント列挙子。</summary>
+class PrivateFontFileEnumerator final : public IDWriteFontFileEnumerator
+{
+public:
+	PrivateFontFileEnumerator(IDWriteFactory* factory, const std::vector<std::wstring>& files)
+		: factory(factory), files(files)
+	{
+	}
+
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** object) override
+	{
+		if (!object) return E_POINTER;
+		*object = nullptr;
+		if (iid == __uuidof(IUnknown) || iid == __uuidof(IDWriteFontFileEnumerator))
+		{
+			*object = static_cast<IDWriteFontFileEnumerator*>(this);
+			AddRef();
+			return S_OK;
+		}
+		return E_NOINTERFACE;
+	}
+	ULONG STDMETHODCALLTYPE AddRef() override { return ++references; }
+	ULONG STDMETHODCALLTYPE Release() override
+	{
+		const ULONG remaining = --references;
+		if (remaining == 0) delete this;
+		return remaining;
+	}
+	HRESULT STDMETHODCALLTYPE MoveNext(BOOL* hasCurrentFile) override
+	{
+		if (!hasCurrentFile) return E_POINTER;
+		if (beforeFirst)
+		{
+			beforeFirst = false;
+			currentIndex = 0;
+		}
+		else if (currentIndex < files.size())
+		{
+			++currentIndex;
+		}
+		currentFile.Reset();
+		*hasCurrentFile = currentIndex < files.size() ? TRUE : FALSE;
+		return S_OK;
+	}
+	HRESULT STDMETHODCALLTYPE GetCurrentFontFile(IDWriteFontFile** fontFile) override
+	{
+		if (!fontFile) return E_POINTER;
+		*fontFile = nullptr;
+		if (beforeFirst || currentIndex >= files.size()) return E_FAIL;
+		if (!currentFile)
+		{
+			const HRESULT hr = factory->CreateFontFileReference(files[currentIndex].c_str(), nullptr,
+				currentFile.GetAddressOf());
+			if (FAILED(hr)) return hr;
+		}
+		*fontFile = currentFile.Get();
+		(*fontFile)->AddRef();
+		return S_OK;
+	}
+
+private:
+	std::atomic<ULONG> references{1};
+	ComPtr<IDWriteFactory> factory;
+	std::vector<std::wstring> files;
+	ComPtr<IDWriteFontFile> currentFile;
+	size_t currentIndex = 0;
+	bool beforeFirst = true;
+};
+
+/// <summary>登録した同梱フォント一覧からDirectWriteの列挙子を生成する。</summary>
+class PrivateFontCollectionLoader final : public IDWriteFontCollectionLoader
+{
+public:
+	explicit PrivateFontCollectionLoader(const std::vector<std::wstring>& files) : files(files) {}
+
+	HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** object) override
+	{
+		if (!object) return E_POINTER;
+		*object = nullptr;
+		if (iid == __uuidof(IUnknown) || iid == __uuidof(IDWriteFontCollectionLoader))
+		{
+			*object = static_cast<IDWriteFontCollectionLoader*>(this);
+			AddRef();
+			return S_OK;
+		}
+		return E_NOINTERFACE;
+	}
+	ULONG STDMETHODCALLTYPE AddRef() override { return ++references; }
+	ULONG STDMETHODCALLTYPE Release() override
+	{
+		const ULONG remaining = --references;
+		if (remaining == 0) delete this;
+		return remaining;
+	}
+	HRESULT STDMETHODCALLTYPE CreateEnumeratorFromKey(IDWriteFactory* factory, const void* collectionKey,
+		UINT32 collectionKeySize, IDWriteFontFileEnumerator** enumerator) override
+	{
+		if (!factory || !collectionKey || collectionKeySize != sizeof(uint32_t) || !enumerator)
+			return E_INVALIDARG;
+		*enumerator = new (std::nothrow) PrivateFontFileEnumerator(factory, files);
+		return *enumerator ? S_OK : E_OUTOFMEMORY;
+	}
+
+private:
+	std::atomic<ULONG> references{1};
+	std::vector<std::wstring> files;
+};
+
+void UnregisterPrivateFonts()
+{
+	privateFontCollection.Reset();
+	if (privateFontCollectionLoader && textFactory)
+		textFactory->UnregisterFontCollectionLoader(privateFontCollectionLoader.Get());
+	privateFontCollectionLoader.Reset();
+	privateFontFiles.clear();
+}
+
+bool RegisterPrivateFonts()
+{
+	const std::filesystem::path manifest = ResolveManifestPath("assets/texture/UI/Parts/assets.json");
+	const std::filesystem::path fontDirectory = manifest.parent_path().parent_path().parent_path()
+		.parent_path() / "font" / "static";
+	const std::filesystem::path files[] = {
+		fontDirectory / "NotoSansJP-Regular.ttf",
+		fontDirectory / "NotoSansJP-Bold.ttf"};
+	for (const auto& path : files)
+	{
+		std::error_code error;
+		if (!std::filesystem::is_regular_file(path, error)) continue;
+		privateFontFiles.push_back(std::filesystem::absolute(path, error).wstring());
+	}
+	if (privateFontFiles.empty())
+	{
+		DebugLog("[UI] Noto Sans JP font files were not registered; using system fallback.");
+		return false;
+	}
+
+	ComPtr<PrivateFontCollectionLoader> loader;
+	loader.Attach(new (std::nothrow) PrivateFontCollectionLoader(privateFontFiles));
+	if (!loader)
+	{
+		UnregisterPrivateFonts();
+		return false;
+	}
+	HRESULT hr = textFactory->RegisterFontCollectionLoader(loader.Get());
+	if (SUCCEEDED(hr))
+	{
+		privateFontCollectionLoader = loader;
+		const uint32_t collectionKey = 1;
+		hr = textFactory->CreateCustomFontCollection(loader.Get(), &collectionKey, sizeof(collectionKey),
+			privateFontCollection.GetAddressOf());
+	}
+	BOOL hasExpectedFamily = FALSE;
+	UINT32 familyIndex = 0;
+	if (SUCCEEDED(hr))
+		hr = privateFontCollection->FindFamilyName(L"Noto Sans JP", &familyIndex, &hasExpectedFamily);
+	if (SUCCEEDED(hr) && !hasExpectedFamily) hr = DWRITE_E_NOFONT;
+	if (FAILED(hr))
+	{
+		DebugLog("[UI] Could not create a private Noto Sans JP font collection. hr=", hr);
+		UnregisterPrivateFonts();
+		return false;
+	}
+	DebugLog("[UI] Registered bundled Noto Sans JP regular and bold fonts.");
+	return true;
+}
+
 bool Same(const DrawCommand &a, const DrawCommand &b)
 {
 	return EqualRect(&a.bounds, &b.bounds) && EqualRect(&a.clip, &b.clip) && a.type == b.type &&
 		   a.text == b.text && a.imageId == b.imageId && a.color == b.color && a.fontSize == b.fontSize &&
-		   a.strokeWidth == b.strokeWidth && a.horizontalAlignment == b.horizontalAlignment &&
+		   a.strokeWidth == b.strokeWidth && a.bold == b.bold && a.horizontalAlignment == b.horizontalAlignment &&
 		   a.verticalAlignment == b.verticalAlignment && a.wrapText == b.wrapText &&
 		   a.lineStart.x == b.lineStart.x && a.lineStart.y == b.lineStart.y && a.lineEnd.x == b.lineEnd.x &&
 		   a.lineEnd.y == b.lineEnd.y;
@@ -148,24 +323,38 @@ void DrawBitmapNineSlice(ID2D1RenderTarget* target, ID2D1Bitmap* bitmap,
 	}
 }
 
-IDWriteTextFormat *GetTextFormat(float requestedSize)
+IDWriteTextFormat *GetTextFormat(float requestedSize, bool bold = false)
 {
 	const int sizeKey = std::clamp(static_cast<int>(requestedSize + 0.5f), 8, 96);
-	auto found = textFormats.find(sizeKey);
+	const int cacheKey = sizeKey * 2 + (bold ? 1 : 0);
+	auto found = textFormats.find(cacheKey);
 	if (found != textFormats.end())
 	{
 		return found->second.Get();
 	}
 
 	ComPtr<IDWriteTextFormat> format;
-	HRESULT hr = textFactory->CreateTextFormat(L"Yu Gothic UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL,
-											   DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-											   static_cast<float>(sizeKey), L"ja-JP", format.GetAddressOf());
+	const DWRITE_FONT_WEIGHT weight = bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL;
+	HRESULT hr = E_FAIL;
+	if (privateFontCollection)
+		hr = textFactory->CreateTextFormat(L"Noto Sans JP", privateFontCollection.Get(), weight,
+			DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, static_cast<float>(sizeKey),
+			L"ja-JP", format.GetAddressOf());
+	if (FAILED(hr))
+		hr = textFactory->CreateTextFormat(L"Noto Sans JP", nullptr, weight,
+			DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, static_cast<float>(sizeKey),
+			L"ja-JP", format.GetAddressOf());
 	if (FAILED(hr))
 	{
-		hr = textFactory->CreateTextFormat(L"Segoe UI", nullptr, DWRITE_FONT_WEIGHT_NORMAL,
-										   DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL,
-										   static_cast<float>(sizeKey), L"ja-JP", format.GetAddressOf());
+		hr = textFactory->CreateTextFormat(L"Yu Gothic UI", nullptr, weight,
+			DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, static_cast<float>(sizeKey),
+			L"ja-JP", format.GetAddressOf());
+	}
+	if (FAILED(hr))
+	{
+		hr = textFactory->CreateTextFormat(L"Segoe UI", nullptr, weight,
+			DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, static_cast<float>(sizeKey),
+			L"ja-JP", format.GetAddressOf());
 	}
 	if (FAILED(hr))
 	{
@@ -173,7 +362,7 @@ IDWriteTextFormat *GetTextFormat(float requestedSize)
 	}
 
 	format->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
-	textFormats.emplace(sizeKey, format);
+	textFormats.emplace(cacheKey, format);
 	return format.Get();
 }
 } // namespace
@@ -204,6 +393,7 @@ bool UIRenderer::Initialize(ID3D11Device *d3dDevice, int width, int height)
 		Shutdown();
 		return false;
 	}
+	RegisterPrivateFonts();
 
 	hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER,
 						  IID_PPV_ARGS(imagingFactory.GetAddressOf()));
@@ -230,6 +420,7 @@ void UIRenderer::Shutdown()
 	ReleaseSurfaceResources();
 	imageAssets.clear();
 	textFormats.clear();
+	UnregisterPrivateFonts();
 	imagingFactory.Reset();
 	textFactory.Reset();
 	d2dFactory.Reset();
@@ -439,7 +630,7 @@ void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &comman
 			{
 				break;
 			}
-			IDWriteTextFormat *format = GetTextFormat(command.fontSize);
+			IDWriteTextFormat *format = GetTextFormat(command.fontSize, command.bold);
 			if (!format)
 			{
 				break;
@@ -511,14 +702,14 @@ bool UIRenderer::HasImage(std::string_view imageId)
 	return image != imageAssets.end() && image->second.targetBitmap != nullptr;
 }
 
-float UIRenderer::MeasureText(std::wstring_view text, float fontSize)
+float UIRenderer::MeasureText(std::wstring_view text, float fontSize, bool bold)
 {
 	if (!initialized || text.empty())
 	{
 		return 0.0f;
 	}
 
-	IDWriteTextFormat *format = GetTextFormat(fontSize);
+	IDWriteTextFormat *format = GetTextFormat(fontSize, bold);
 	if (!format)
 	{
 		return 0.0f;

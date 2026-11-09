@@ -20,6 +20,8 @@ namespace GameUI
 	{
 		FillRectangle,
 		StrokeRectangle,
+		FillRoundedRectangle,
+		StrokeRoundedRectangle,
 		Line,
 		Text,
 		Image,
@@ -53,6 +55,8 @@ namespace GameUI
 		std::string imageId; // assets.jsonで登録した画像ID。
 		float fontSize = 18.0f; // 96 DPI基準の文字サイズ。
 		float strokeWidth = 1.0f; // 枠線幅。
+		float cornerRadius = 0.0f; // 角丸矩形の角半径。
+		bool bold = false; // 文字を太字で描画する。
 		TextHorizontalAlignment horizontalAlignment = TextHorizontalAlignment::Near; // 横方向の文字揃え。
 		TextVerticalAlignment verticalAlignment = TextVerticalAlignment::Center; // 縦方向の文字揃え。
 		bool wrapText = false; // trueなら矩形内で折り返す。
@@ -102,8 +106,9 @@ namespace GameUI
 		/// <summary>描画に使うフォントサイズで文字列の横幅を測る。</summary>
 		/// <param name="text">測定するUTF-16文字列。</param>
 		/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+		/// <param name="bold">太字フォントを測る場合はtrue。</param>
 		/// <returns>文字列の横幅。描画前または失敗時は0。</returns>
-		static float MeasureText(std::wstring_view text, float fontSize);
+		static float MeasureText(std::wstring_view text, float fontSize, bool bold = false);
 
 	private:
 		struct ImageAsset

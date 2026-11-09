@@ -424,7 +424,7 @@ void CustomizePreviewController::Render(
 	std::optional<Renderer::ScopedRenderRegion> regionScope;
 	if (region)
 	{
-		regionScope.emplace(*region);
+		regionScope.emplace(*region, true);
 		CameraSystem::SetAspectRatio(camera,
 			static_cast<float>(region->right - region->left) / static_cast<float>(region->bottom - region->top));
 	}

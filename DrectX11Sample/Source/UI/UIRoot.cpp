@@ -171,6 +171,13 @@ void Root::AddPanel(const Rect &b, std::string_view imageId)
 	e.imageId = imageId;
 	RegisterElement(e);
 }
+void Root::AddRule(const Rect& bounds)
+{
+	Element e;
+	e.type = ElementType::Rule;
+	e.bounds = bounds;
+	RegisterElement(e);
+}
 void Root::AddSectionHeader(std::string_view id, const Rect& bounds, std::string_view text, float fontSize)
 {
 	AddPanel(bounds, Theme::LabelBackgroundImage);
@@ -178,7 +185,7 @@ void Root::AddSectionHeader(std::string_view id, const Rect& bounds, std::string
 	const std::string accentId = std::string(id) + "/accent";
 	AddImage(accentId, {bounds.left, bounds.top, bounds.left + accentWidth, bounds.bottom},
 		Theme::SectionAccentImage);
-	AddLabel(id, {bounds.left + 14, bounds.top, bounds.right - 6, bounds.bottom}, text, true, fontSize);
+	AddLabel(id, {bounds.left + 14, bounds.top, bounds.right - 6, bounds.bottom}, text, true, fontSize, false, true);
 }
 void Root::AddImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity)
 {
@@ -218,16 +225,21 @@ void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, 
 void Root::AddPrimaryButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled)
 {
 	AddButton(id, bounds, text, enabled);
-	if (Element* element = FindElement(std::string(id))) element->imageId = Theme::PrimaryButtonImage;
+	if (Element* element = FindElement(std::string(id)))
+	{
+		element->imageId = Theme::PrimaryButtonImage;
+		element->bold = true;
+	}
 }
 void Root::AddImageButton(std::string_view id, const Rect& bounds, std::string_view imageId,
-	std::string_view fallbackText, bool enabled)
+	std::string_view fallbackText, bool enabled, bool showFocusOutline)
 {
 	AddButton(id, bounds, fallbackText, enabled);
 	if (Element* element = FindElement(std::string(id)))
 	{
 		element->imageId = imageId;
 		element->stretchBackground = false;
+		element->showFocusOutline = showFocusOutline;
 	}
 }
 void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
@@ -236,7 +248,8 @@ void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_vi
 	AddButton(id, bounds, text, enabled);
 	if (Element* element = FindElement(std::string(id))) element->iconImageId = iconImageId;
 }
-void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled, float size)
+void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled,
+	float size, bool centered, bool bold)
 {
 	Element e;
 	e.type = ElementType::Label;
@@ -245,6 +258,8 @@ void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, b
 	e.label = text;
 	e.enabled = enabled;
 	e.fontSize = size;
+	e.centered = centered;
+	e.bold = bold;
 	RegisterElement(e);
 }
 void Root::AddTextInput(std::string_view id, const Rect &b, std::string &value, size_t limit, bool enabled)
@@ -389,7 +404,7 @@ const Root::Element *Root::FindTopButtonAt(POINT p) const
 	for (auto i = elements.rbegin(); i != elements.rend(); ++i)
 	{
 		if (!i->bounds.Intersect(i->clipBounds).Contains(p)) continue;
-		if (i->type == ElementType::Panel || i->type == ElementType::Label ||
+		if (i->type == ElementType::Rule || i->type == ElementType::Panel || i->type == ElementType::Label ||
 			i->type == ElementType::ScrollTrack || i->type == ElementType::ScrollThumb ||
 			i->type == ElementType::Image || i->type == ElementType::NineSliceImage)
 			continue;
@@ -594,7 +609,6 @@ void Root::EndFrame()
 	// 全部品の登録後に入力を一度だけ解決する。描画から更新処理を再実行しない。
 	if (endedFrame)
 		return;
-	EnsureValidFocus();
 	// Popups are appended after normal content to establish both draw and hit-test priority.
 	if (auto p = FindElement(expandedDropdownId))
 	{
@@ -625,6 +639,8 @@ void Root::EndFrame()
 			RegisterElement(e, false);
 		}
 	}
+	// Popup options must exist before validating the previous frame's pointer capture.
+	EnsureValidFocus();
 	std::string previous = focusedId;
 	if (input.focusLost)
 	{
@@ -717,8 +733,9 @@ void Root::EndFrame()
 		}
 		ApplyFocusedInput();
 	}
+	const auto hoveredElement = FindTopInteractiveAt(input.pointerPosition);
 	for (auto &e : elements)
-		e.hovered = (&e == FindTopInteractiveAt(input.pointerPosition));
+		e.hovered = (&e == hoveredElement);
 	for (auto it = textEditStates.begin(); it != textEditStates.end();)
 		if (!FindElement(it->first))
 			it = textEditStates.erase(it);
@@ -767,7 +784,8 @@ void Root::Draw(Renderer &renderer) const
 		commands.push_back(std::move(command));
 	};
 	auto pushText = [&commands](const Rect& bounds, const Rect& clip, const std::wstring& text,
-		float fontSize, const Color& color, TextHorizontalAlignment alignment = TextHorizontalAlignment::Near)
+		float fontSize, const Color& color, TextHorizontalAlignment alignment = TextHorizontalAlignment::Near,
+		bool bold = false)
 	{
 		if (bounds.IsEmpty() || text.empty()) return;
 		DrawCommand command;
@@ -778,6 +796,7 @@ void Root::Draw(Renderer &renderer) const
 		command.fontSize = fontSize;
 		command.color = color;
 		command.horizontalAlignment = alignment;
+		command.bold = bold;
 		commands.push_back(std::move(command));
 	};
 	auto focused = [this](const Element& element)
@@ -811,6 +830,11 @@ void Root::Draw(Renderer &renderer) const
 	for (auto &e : elements)
 	{
 		if (e.bounds.Intersect(e.clipBounds).IsEmpty()) continue;
+		if (e.type == ElementType::Rule)
+		{
+			pushFill(e.bounds, e.clipBounds, Theme::Border);
+			continue;
+		}
 		if (e.type == ElementType::Image || e.type == ElementType::NineSliceImage)
 		{
 			pushImage(e.bounds, e.clipBounds, e.imageId, e.type == ElementType::NineSliceImage, e.opacity);
@@ -833,7 +857,26 @@ void Root::Draw(Renderer &renderer) const
 		if (e.type == ElementType::Button)
 		{
 			const bool primary = e.imageId == Theme::PrimaryButtonImage;
-			const bool imageLoaded = pushImage(e.bounds, e.clipBounds, e.imageId,
+			Rect imageBounds = e.bounds;
+			if (!e.stretchBackground)
+			{
+				const float imageAspect = std::max(0.01f, UIRenderer::GetImageAspectRatio(e.imageId));
+				const float buttonWidth = static_cast<float>(e.bounds.right - e.bounds.left);
+				const float buttonHeight = static_cast<float>(e.bounds.bottom - e.bounds.top);
+				float imageWidth = buttonWidth;
+				float imageHeight = buttonHeight;
+				if (buttonWidth / std::max(1.0f, buttonHeight) > imageAspect)
+					imageWidth = buttonHeight * imageAspect;
+				else
+					imageHeight = buttonWidth / imageAspect;
+				const int fittedWidth = std::max(1, static_cast<int>(imageWidth + 0.5f));
+				const int fittedHeight = std::max(1, static_cast<int>(imageHeight + 0.5f));
+				const int centerX = (e.bounds.left + e.bounds.right) / 2;
+				const int centerY = (e.bounds.top + e.bounds.bottom) / 2;
+				imageBounds = {centerX - fittedWidth / 2, centerY - fittedHeight / 2,
+					centerX + (fittedWidth + 1) / 2, centerY + (fittedHeight + 1) / 2};
+			}
+			const bool imageLoaded = pushImage(imageBounds, e.clipBounds, e.imageId,
 				e.stretchBackground, e.enabled ? 1.0f : 0.48f);
 			if (!imageLoaded)
 			{
@@ -841,7 +884,7 @@ void Root::Draw(Renderer &renderer) const
 				pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
 			}
 			interactionOverlay(e);
-			if (focused(e)) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+			if (focused(e) && e.showFocusOutline) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
 
 			const bool fullImageButton = !e.stretchBackground && imageLoaded;
 			if (!e.iconImageId.empty() && !fullImageButton)
@@ -849,7 +892,8 @@ void Root::Draw(Renderer &renderer) const
 				const int iconSize = std::clamp(e.bounds.bottom - e.bounds.top - 10, 14, 24);
 				const int iconTop = e.bounds.top + ((e.bounds.bottom - e.bounds.top) - iconSize) / 2;
 				const int iconWidth = static_cast<int>(iconSize * UIRenderer::GetImageAspectRatio(e.iconImageId));
-				const Rect iconBounds{e.bounds.left + 8, iconTop, e.bounds.left + 8 + iconWidth, iconTop + iconSize};
+				const int iconLeft = e.label.empty() ? (e.bounds.left + e.bounds.right - iconWidth) / 2 : e.bounds.left + 8;
+				const Rect iconBounds{iconLeft, iconTop, iconLeft + iconWidth, iconTop + iconSize};
 				pushImage(iconBounds, e.clipBounds, e.iconImageId, false, e.enabled ? 1.0f : 0.5f);
 			}
 			if (!fullImageButton)
@@ -860,7 +904,7 @@ void Root::Draw(Renderer &renderer) const
 					* UIRenderer::GetImageAspectRatio(e.iconImageId)) + 8;
 				pushText(textBounds, e.clipBounds, getElementText(e), e.fontSize,
 					!e.enabled ? Theme::DisabledText : primary ? Theme::PrimaryText : Theme::Text,
-					TextHorizontalAlignment::Center);
+					TextHorizontalAlignment::Center, e.bold);
 			}
 			continue;
 		}
@@ -887,7 +931,8 @@ void Root::Draw(Renderer &renderer) const
 		if (e.type == ElementType::Label)
 		{
 			pushText(e.bounds.Inset(4, 1), e.clipBounds, getElementText(e), e.fontSize,
-				e.enabled ? Theme::Text : Theme::DisabledText);
+				e.enabled ? Theme::Text : Theme::DisabledText,
+				e.centered ? TextHorizontalAlignment::Center : TextHorizontalAlignment::Near, e.bold);
 			continue;
 		}
 
@@ -936,8 +981,10 @@ void Root::Draw(Renderer &renderer) const
 				e.bounds.top + ((e.bounds.bottom - e.bounds.top) + arrowHeight) / 2};
 			pushImage(arrowBounds, e.clipBounds, Theme::DropdownArrowImage, false, e.enabled ? 1.0f : 0.45f);
 		}
+		const bool numericInput = e.type == ElementType::IntegerInput || e.type == ElementType::FloatInput;
 		pushText(textBounds, e.clipBounds, getElementText(e), e.fontSize,
-			e.enabled ? Theme::Text : Theme::DisabledText);
+			e.enabled ? Theme::Text : Theme::DisabledText,
+			numericInput ? TextHorizontalAlignment::Center : TextHorizontalAlignment::Near, e.bold);
 	}
 	UIRenderer::Draw(renderer, commands);
 }
@@ -956,7 +1003,7 @@ bool Root::WantsPointerCapture() const
 	if (!capturedId.empty() || !expandedDropdownId.empty())
 		return true;
 	for (auto &e : elements)
-		if (e.type != ElementType::Image && e.type != ElementType::NineSliceImage &&
+		if (e.type != ElementType::Rule && e.type != ElementType::Image && e.type != ElementType::NineSliceImage &&
 			e.bounds.Intersect(e.clipBounds).Contains(input.pointerPosition))
 			return true;
 	return wheelConsumed;
