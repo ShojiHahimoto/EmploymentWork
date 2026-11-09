@@ -214,7 +214,12 @@ public:
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
-	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX);
+	/// <param name="nearZ">床と左右壁の手前端。</param>
+	/// <param name="farZ">奥壁の位置。</param>
+	/// <param name="wallHeight">壁の高さ。</param>
+	/// <param name="gridStep">グリッド線の間隔。</param>
+	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
+		float nearZ = -6.0f, float farZ = 56.0f, float wallHeight = 48.0f, float gridStep = 5.0f);
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,

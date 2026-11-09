@@ -1161,8 +1161,11 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// </summary>
 /// <param name="stageMinX">ロジック上の左画面端 X。</param>
 /// <param name="stageMaxX">ロジック上の右画面端 X。</param>
-void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
+void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
+	float nearZ, float farZ, float wallHeight, float gridStep)
 {
+	// 不正な寸法と0間隔による無限ループを防ぐ。既存バトルは従来の既定値を使用する。
+	if (!(stageMaxX > stageMinX) || !(farZ > nearZ) || !(wallHeight > 0.0f) || !(gridStep > 0.0f)) return;
 	if (!m_pDebugCubeInputLayout
 		|| !m_pDebugCubeVertexShader
 		|| !m_pDebugCubePixelShader
@@ -1173,13 +1176,9 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
 
 	const float stageCenterX = (stageMinX + stageMaxX) * 0.5f;
 	const float stageHalfWidth = std::max(1.0f, (stageMaxX - stageMinX) * 0.5f);
-	const float nearZ = -6.0f;
-	const float farZ = 56.0f;
 	const float centerZ = (nearZ + farZ) * 0.5f;
 	const float halfDepth = (farZ - nearZ) * 0.5f;
-	const float wallHeight = 48.0f;
 	const float wallCenterY = wallHeight * 0.5f;
-	const float gridStep = 5.0f;
 	const float lineLift = 0.025f;
 	const Color panelColor(0.94f, 0.94f, 0.91f, 1.0f);
 	const Color gridColor(0.12f, 0.12f, 0.12f, 1.0f);

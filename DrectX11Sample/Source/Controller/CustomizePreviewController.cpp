@@ -453,6 +453,16 @@ void CustomizePreviewController::Render(
 	TransformSystem::UpdateWorldTransform(cameraTransform);
 	CameraSystem::Update(camera, cameraTransform);
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
+	// 編集画面専用の空間寸法。バトルのステージ境界とは共有せず、
+	// プレビューのカメラ・深度・描画領域をそのまま使って床と壁を描く。
+	constexpr float previewRoomMinX = -30.0f;
+	constexpr float previewRoomMaxX = 30.0f;
+	constexpr float previewRoomNearZ = -30.0f;
+	constexpr float previewRoomFarZ = 38.0f;
+	constexpr float previewRoomHeight = 32.0f;
+	constexpr float previewGridStep = 4.0f;
+	renderer.DrawTrainingRoomBackground(previewRoomMinX, previewRoomMaxX,
+		previewRoomNearZ, previewRoomFarZ, previewRoomHeight, previewGridStep);
 
 	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
 	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
