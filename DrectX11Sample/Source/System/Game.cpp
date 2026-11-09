@@ -6,6 +6,7 @@
 #include "System/Application.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/SoundManager.h"
+#include "System/Debugger.h"
 
 #include <memory>
 #include "UI/UIInputSystem.h"
@@ -26,7 +27,14 @@ void Game::Init()
 
 	Input::InputSystem::Initialize();
 	GameUI::UIInputSystem::Reset();
-	GameUI::UIRenderer::Initialize(Renderer::GetDevice(), static_cast<int>(Application::GetWidth()), static_cast<int>(Application::GetHeight()));
+	if (GameUI::UIRenderer::Initialize(Renderer::GetDevice(), static_cast<int>(Application::GetWidth()), static_cast<int>(Application::GetHeight())))
+	{
+		GameUI::UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json");
+	}
+	else
+	{
+		DebugLog("[UI] Dedicated UI renderer initialization failed.");
+	}
 	SoundManager::GetInstance().Initialize();
 
 	SceneManager& sceneManager = SceneManager::GetInstance();

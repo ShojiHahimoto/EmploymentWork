@@ -106,9 +106,28 @@ namespace GameUI
 		/// <param name="viewport">このルートが入力と描画を受け持つ画面領域。</param>
 		/// <param name="input">このフレームの入力状態。</param>
 		void BeginFrame(const Rect& viewport, const InputFrame& input);
-		/// <summary>背景パネルを登録する。</summary>
+		/// <summary>指定素材を使う背景パネルを登録する。素材がなければ単色面にフォールバックする。</summary>
 		/// <param name="bounds">パネルの画面矩形。</param>
-		void AddPanel(const Rect& bounds);
+		/// <param name="imageId">9スライスで使う背景素材。</param>
+		void AddPanel(const Rect& bounds, std::string_view imageId = "panel");
+		/// <summary>淡色背景と縦アクセントを持つセクション見出しを登録する。</summary>
+		/// <param name="id">見出しの安定ID。</param>
+		/// <param name="bounds">見出しの矩形。</param>
+		/// <param name="text">UTF-8の見出し文字列。</param>
+		/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+		void AddSectionHeader(std::string_view id, const Rect& bounds, std::string_view text, float fontSize = 18.0f);
+		/// <summary>透過画像を指定矩形へ表示する部品を登録する。</summary>
+		/// <param name="id">描画部品の安定ID。</param>
+		/// <param name="bounds">画像の表示矩形。</param>
+		/// <param name="imageId">画像一覧JSONに登録された画像名。</param>
+		/// <param name="opacity">表示不透明度。</param>
+		void AddImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
+		/// <summary>9スライス設定付きの画像部品を登録する。</summary>
+		/// <param name="id">描画部品の安定ID。</param>
+		/// <param name="bounds">伸縮後の表示矩形。</param>
+		/// <param name="imageId">画像一覧JSONに登録された画像名。</param>
+		/// <param name="opacity">表示不透明度。</param>
+		void AddNineSliceImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
 		/// <summary>操作ボタンを登録する。ID は画面内で一意にする。</summary>
 		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -127,6 +146,28 @@ namespace GameUI
 		/// <param name="text">UTF-8のボタン表示文字列。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
 		void AddButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true);
+		/// <summary>強調用の色付きボタンを登録する。</summary>
+		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
+		/// <param name="bounds">ボタン矩形。</param>
+		/// <param name="text">UTF-8のボタン表示文字列。</param>
+		/// <param name="enabled">操作可能ならtrue。</param>
+		void AddPrimaryButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true);
+		/// <summary>素材自体に背景と図柄が含まれる画像ボタンを登録する。</summary>
+		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
+		/// <param name="bounds">ボタン矩形。</param>
+		/// <param name="imageId">ボタン全体を描く画像素材。</param>
+		/// <param name="fallbackText">画像がない場合に表示する文字列。</param>
+		/// <param name="enabled">操作可能ならtrue。</param>
+		void AddImageButton(std::string_view id, const Rect& bounds, std::string_view imageId,
+			std::string_view fallbackText, bool enabled = true);
+		/// <summary>標準ボタン背景に透過アイコンと文字を組み合わせたボタンを登録する。</summary>
+		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
+		/// <param name="bounds">ボタン矩形。</param>
+		/// <param name="text">UTF-8の表示文字列。</param>
+		/// <param name="iconImageId">透過アイコン素材。</param>
+		/// <param name="enabled">操作可能ならtrue。</param>
+		void AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
+			std::string_view iconImageId, bool enabled = true);
 		/// <summary>文字列リテラルがbool引数へ誤変換されないよう文字付きボタンへ転送する。</summary>
 		/// <param name="id">一意な部品ID。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -224,7 +265,9 @@ namespace GameUI
 			Dropdown,
 			DropdownOption,
 			ScrollTrack,
-			ScrollThumb
+			ScrollThumb,
+			Image,
+			NineSliceImage
 		};
 
 		struct Element
@@ -233,6 +276,10 @@ namespace GameUI
 			Rect bounds; // クライアント座標上の配置。
 			std::string id; // フレームをまたいで状態を維持する識別子。
 			std::string label; // UTF-8表示文字列。
+			std::string imageId; // 画像描画時に参照する画像アセット名。
+			std::string iconImageId; // ボタン内に重ねる透過アイコン。
+			float opacity = 1.0f; // 画像部品の全体不透明度。
+			bool stretchBackground = true; // falseなら背景素材全体を画像として描く。
 			std::wstring displayText; // 描画時に使うUTF-16表示文字列。
 			float fontSize = 18.0f; // 描画時の文字サイズ。
 			bool enabled = true; // false は hit test とフォーカス対象から除外。

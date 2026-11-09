@@ -2,6 +2,7 @@
 #pragma execution_character_set("utf-8")
 #include "Controller/CustomizePreviewController.h"
 #include "UI/UIInputSystem.h"
+#include "UI/UITheme.h"
 
 #include <algorithm>
 #include <limits>
@@ -40,7 +41,8 @@ RECT CustomizeAttackEditorView::PreviewRegion(int width, int height)
 void CustomizeAttackEditorView::Section(const char* text)
 {
     rowY += 12;
-    root.AddLabel(std::string("section/") + text, { 12, rowY, panelWidth - 12, rowY + 30 }, text, true, 20);
+    root.AddSectionHeader(std::string("section/") + text,
+        { 12, rowY, panelWidth - 12, rowY + 30 }, text, 20);
     rowY += 38;
 }
 
@@ -151,7 +153,9 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     panelWidth = width - split;
     root.BeginFrame({0, 0, width, height}, input);
     root.AddPanel({split, 0, width, bottom});
-    root.AddLabel("title", {split + 16, 8, width - 16, 44}, "技の編集", true, 24);
+    root.AddPanel({split + 8, 4, width - 8, 46}, GameUI::Theme::HeaderImage);
+    root.AddImage("title/accent", {split + 12, 9, split + 32, 41}, GameUI::Theme::HeaderAccentImage);
+    root.AddLabel("title", {split + 40, 8, width - 16, 44}, "技の編集", true, 24);
     rowY = 0;
     root.BeginScrollArea("parameters", {split, 50, width, std::max(51, bottom - 102)}, contentHeight, scroll);
     BuildParameters(controller.GetSelectedCategory());
@@ -159,12 +163,13 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     BuildCancel();
     contentHeight = rowY + 16;
     root.EndScrollArea();
-    root.AddButton("motion", {split + 16, bottom - 92, width - 16, bottom - 56}, "モーションを編集");
+    root.AddIconButton("motion", {split + 16, bottom - 92, width - 16, bottom - 56},
+        "モーションを編集", "motion");
     const int mid = split + panelWidth / 2;
-    root.AddButton("save", {split + 16, bottom - 48, mid - 4, bottom - 12}, "保存");
-    root.AddButton("back", {mid + 4, bottom - 48, width - 16, bottom - 12}, "戻る");
+    root.AddPrimaryButton("save", {split + 16, bottom - 48, mid - 4, bottom - 12}, "保存");
+    root.AddIconButton("back", {mid + 4, bottom - 48, width - 16, bottom - 12}, "戻る", "back");
 
-    root.AddPanel({0, bottom, width, height});
+    root.AddPanel({0, bottom, width, height}, GameUI::Theme::PlaybackPanelImage);
     const int total = GetAttackTotalFrames(data.frame);
     root.AddLabel("frame", {16, bottom + 8, width / 2, bottom + 38},
         "現在フレーム  " + std::to_string(preview.GetCurrentFrame()) + " / " + std::to_string(total));
@@ -173,11 +178,12 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
         : actionFrame < data.frame.startup - 1 ? "前隙"
         : actionFrame < GetAttackActiveEndFrameExclusive(data.frame) ? "持続" : "後隙";
     root.AddLabel("phase", {width / 2, bottom + 8, width - 16, bottom + 38}, phase);
-    root.AddButton("previous", {16, bottom + 44, 104, bottom + 80}, "前へ");
-    root.AddButton("play", {112, bottom + 44, 200, bottom + 80}, "再生");
-    root.AddButton("stop", {208, bottom + 44, 296, bottom + 80}, "停止");
-    root.AddButton("next", {304, bottom + 44, 392, bottom + 80}, "次へ");
-    root.AddButton("camera", {408, bottom + 44, 588, bottom + 80}, "カメラを初期化");
+    root.AddImageButton("previous", {16, bottom + 44, 72, bottom + 80}, "previous", "前へ");
+    root.AddImageButton("play", {80, bottom + 44, 144, bottom + 80}, "play", "再生");
+    root.AddImageButton("stop", {152, bottom + 44, 216, bottom + 80}, "pause", "停止");
+    root.AddImageButton("next", {224, bottom + 44, 280, bottom + 80}, "next", "次へ");
+    root.AddIconButton("camera", {300, bottom + 44, 484, bottom + 80},
+        "カメラを初期化", "camera");
     root.AddLabel("status", {16, bottom + 90, width - 16, height - 8}, message, true, 16);
     root.EndFrame();
 

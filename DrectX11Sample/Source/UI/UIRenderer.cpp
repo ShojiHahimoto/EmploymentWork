@@ -1,6 +1,8 @@
 ﻿#include "UI/UIRenderer.h"
 
 #include "System/Renderer.h"
+#include "Data/JsonValue.h"
+#include "System/Debugger.h"
 
 #include <d2d1.h>
 #include <dwrite.h>
@@ -8,7 +10,9 @@
 #include <wrl/client.h>
 
 #include <algorithm>
-#include <unordered_map>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
@@ -16,7 +20,14 @@
 
 namespace GameUI
 {
+float UIRenderer::GetImageAspectRatio(std::string_view imageId)
+{
+	const auto found = imageAssets.find(std::string(imageId));
+	return found != imageAssets.end() && found->second.height > 0
+		? static_cast<float>(found->second.width) / found->second.height : 1.0f;
+}
 using Microsoft::WRL::ComPtr;
+std::unordered_map<std::string, UIRenderer::ImageAsset> UIRenderer::imageAssets;
 
 namespace
 {
@@ -38,7 +49,7 @@ std::vector<DrawCommand> cachedCommands;
 bool Same(const DrawCommand &a, const DrawCommand &b)
 {
 	return EqualRect(&a.bounds, &b.bounds) && EqualRect(&a.clip, &b.clip) && a.type == b.type &&
-		   a.text == b.text && a.color == b.color && a.fontSize == b.fontSize &&
+		   a.text == b.text && a.imageId == b.imageId && a.color == b.color && a.fontSize == b.fontSize &&
 		   a.strokeWidth == b.strokeWidth && a.horizontalAlignment == b.horizontalAlignment &&
 		   a.verticalAlignment == b.verticalAlignment && a.wrapText == b.wrapText &&
 		   a.lineStart.x == b.lineStart.x && a.lineStart.y == b.lineStart.y && a.lineEnd.x == b.lineEnd.x &&
@@ -54,6 +65,87 @@ D2D1_RECT_F ToD2DRect(const RECT &rect)
 {
 	return D2D1::RectF(static_cast<float>(rect.left), static_cast<float>(rect.top),
 					   static_cast<float>(rect.right), static_cast<float>(rect.bottom));
+}
+
+std::filesystem::path ResolveManifestPath(const std::string& manifestPath)
+{
+	const std::filesystem::path requested(manifestPath);
+	std::error_code error;
+	if (requested.is_absolute() && std::filesystem::is_regular_file(requested, error)) return requested;
+	if (std::filesystem::is_regular_file(requested, error)) return std::filesystem::absolute(requested, error);
+
+	auto searchAncestors = [&](std::filesystem::path current) -> std::filesystem::path
+	{
+		for (int depth = 0; depth < 10 && !current.empty(); ++depth)
+		{
+			const std::filesystem::path candidates[] = {
+				current / requested,
+				current / "DrectX11Sample" / requested,
+				current / "assets/texture/UI/Parts/assets.json"};
+			for (const auto& candidate : candidates)
+				if (std::filesystem::is_regular_file(candidate, error)) return candidate;
+			const auto parent = current.parent_path();
+			if (parent == current) break;
+			current = parent;
+		}
+		return {};
+	};
+
+	std::filesystem::path current = std::filesystem::current_path(error);
+	if (auto candidate = searchAncestors(current); !candidate.empty()) return candidate;
+
+	std::wstring executablePath(32768, L'\0');
+	const DWORD length = GetModuleFileNameW(nullptr, executablePath.data(), static_cast<DWORD>(executablePath.size()));
+	if (length > 0 && length < executablePath.size())
+	{
+		executablePath.resize(length);
+		current = std::filesystem::path(executablePath).parent_path();
+		if (auto candidate = searchAncestors(current); !candidate.empty()) return candidate;
+	}
+	return requested;
+}
+
+void DrawBitmapNineSlice(ID2D1RenderTarget* target, ID2D1Bitmap* bitmap,
+	const D2D1_RECT_F& destination, int assetWidth, int assetHeight,
+	int sliceLeft, int sliceTop, int sliceRight, int sliceBottom, float opacity)
+{
+	const float sourceWidth = static_cast<float>(assetWidth);
+	const float sourceHeight = static_cast<float>(assetHeight);
+	const float destinationWidth = destination.right - destination.left;
+	const float destinationHeight = destination.bottom - destination.top;
+	if (destinationWidth <= 0 || destinationHeight <= 0 || sourceWidth <= 0 || sourceHeight <= 0) return;
+
+	const float left = static_cast<float>(std::clamp(sliceLeft, 0, assetWidth));
+	const float right = static_cast<float>(std::clamp(sliceRight, 0, assetWidth));
+	const float top = static_cast<float>(std::clamp(sliceTop, 0, assetHeight));
+	const float bottom = static_cast<float>(std::clamp(sliceBottom, 0, assetHeight));
+	if (left + right >= sourceWidth || top + bottom >= sourceHeight) return;
+	// 小さい表示先では角だけを縦横別に潰さず、素材全体の縮小率で角を揃えて縮める。
+	const float cornerScale = std::min({1.0f, destinationWidth / sourceWidth, destinationHeight / sourceHeight});
+	const float destinationLeft = left * cornerScale;
+	const float destinationRight = right * cornerScale;
+	const float destinationTop = top * cornerScale;
+	const float destinationBottom = bottom * cornerScale;
+	const float sourceX[] = {0.0f, left, sourceWidth - right, sourceWidth};
+	const float sourceY[] = {0.0f, top, sourceHeight - bottom, sourceHeight};
+	const float destinationX[] = {destination.left, destination.left + destinationLeft,
+		destination.right - destinationRight, destination.right};
+	const float destinationY[] = {destination.top, destination.top + destinationTop,
+		destination.bottom - destinationBottom, destination.bottom};
+	for (int row = 0; row < 3; ++row)
+	{
+		for (int column = 0; column < 3; ++column)
+		{
+			if (sourceX[column + 1] <= sourceX[column] || sourceY[row + 1] <= sourceY[row]
+				|| destinationX[column + 1] <= destinationX[column]
+				|| destinationY[row + 1] <= destinationY[row]) continue;
+			const D2D1_RECT_F source = D2D1::RectF(sourceX[column], sourceY[row],
+				sourceX[column + 1], sourceY[row + 1]);
+			const D2D1_RECT_F dest = D2D1::RectF(destinationX[column], destinationY[row],
+				destinationX[column + 1], destinationY[row + 1]);
+			target->DrawBitmap(bitmap, dest, opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, source);
+		}
+	}
 }
 
 IDWriteTextFormat *GetTextFormat(float requestedSize)
@@ -136,6 +228,7 @@ void UIRenderer::Shutdown()
 {
 	initialized = false;
 	ReleaseSurfaceResources();
+	imageAssets.clear();
 	textFormats.clear();
 	imagingFactory.Reset();
 	textFactory.Reset();
@@ -163,6 +256,122 @@ bool UIRenderer::Resize(int width, int height)
 	surfaceHeight = height;
 	initialized = CreateSurfaceResources();
 	return initialized;
+}
+
+bool UIRenderer::LoadAssets(const std::string& manifestPath)
+{
+	if (!imagingFactory || !surfaceTarget) return false;
+	const std::filesystem::path resolvedManifest = ResolveManifestPath(manifestPath);
+	std::ifstream stream(resolvedManifest, std::ios::binary);
+	if (!stream)
+	{
+		DebugLog("[UI] Could not open UI asset manifest: " + manifestPath);
+		return false;
+	}
+	std::string jsonText((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+	if (jsonText.size() >= 3 && static_cast<unsigned char>(jsonText[0]) == 0xEF
+		&& static_cast<unsigned char>(jsonText[1]) == 0xBB && static_cast<unsigned char>(jsonText[2]) == 0xBF)
+		jsonText.erase(0, 3);
+	JsonValue root;
+	std::string parseError;
+	if (!JsonParser::Parse(jsonText, root, parseError) || !root.Find("assets") || !root.Find("assets")->IsArray())
+	{
+		DebugLog("[UI] Invalid UI asset manifest: " + parseError);
+		return false;
+	}
+	const std::filesystem::path basePath = resolvedManifest.parent_path();
+	std::unordered_map<std::string, ImageAsset> loadedAssets;
+	for (const JsonValue& value : root.Find("assets")->AsArray())
+	{
+		const JsonValue* name = value.Find("name");
+		const JsonValue* file = value.Find("file");
+		const JsonValue* slice = value.Find("slice");
+		if (!name || !name->IsString() || !file || !file->IsString() || !slice || !slice->IsArray()
+			|| slice->AsArray().size() != 4)
+		{
+			DebugLog("[UI] Skipping malformed UI asset entry.");
+			continue;
+		}
+		const std::string id = name->AsString();
+		if (id.empty() || loadedAssets.contains(id))
+		{
+			DebugLog("[UI] Skipping empty or duplicate UI asset ID: " + id);
+			continue;
+		}
+		const std::filesystem::path imagePath = basePath / file->AsString();
+		ComPtr<IWICBitmapDecoder> decoder;
+		HRESULT hr = imagingFactory->CreateDecoderFromFilename(imagePath.c_str(), nullptr, GENERIC_READ,
+			WICDecodeMetadataCacheOnLoad, decoder.GetAddressOf());
+		ComPtr<IWICBitmapFrameDecode> frame;
+		if (SUCCEEDED(hr)) hr = decoder->GetFrame(0, frame.GetAddressOf());
+		ComPtr<IWICFormatConverter> converter;
+		if (SUCCEEDED(hr)) hr = imagingFactory->CreateFormatConverter(converter.GetAddressOf());
+		if (SUCCEEDED(hr)) hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppPBGRA,
+			WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+		ImageAsset asset;
+		if (SUCCEEDED(hr)) hr = imagingFactory->CreateBitmapFromSource(converter.Get(), WICBitmapCacheOnLoad,
+			asset.source.GetAddressOf());
+		UINT imageWidth = 0, imageHeight = 0;
+		if (SUCCEEDED(hr)) hr = asset.source->GetSize(&imageWidth, &imageHeight);
+		if (FAILED(hr) || imageWidth == 0 || imageHeight == 0)
+		{
+			DebugLog("[UI] Could not load UI image; skipping ID: ", id, " hr=", hr);
+			continue;
+		}
+		asset.width = static_cast<int>(imageWidth);
+		asset.height = static_cast<int>(imageHeight);
+		const auto& slices = slice->AsArray();
+		if (!slices[0].IsNumber() || !slices[1].IsNumber() || !slices[2].IsNumber() || !slices[3].IsNumber())
+		{
+			DebugLog("[UI] Skipping UI image with non-numeric slice: " + id);
+			continue;
+		}
+		asset.sliceLeft = static_cast<int>(slices[0].AsNumber());
+		asset.sliceTop = static_cast<int>(slices[1].AsNumber());
+		asset.sliceRight = static_cast<int>(slices[2].AsNumber());
+		asset.sliceBottom = static_cast<int>(slices[3].AsNumber());
+		if (asset.sliceLeft < 0 || asset.sliceTop < 0 || asset.sliceRight < 0 || asset.sliceBottom < 0
+			|| asset.sliceLeft + asset.sliceRight >= asset.width
+			|| asset.sliceTop + asset.sliceBottom >= asset.height)
+		{
+			DebugLog("[UI] Skipping UI image with invalid slice bounds: " + id);
+			continue;
+		}
+		loadedAssets.emplace(id, std::move(asset));
+	}
+	if (loadedAssets.empty())
+	{
+		DebugLog("[UI] No usable UI images were found in the manifest.");
+		return false;
+	}
+	imageAssets = std::move(loadedAssets);
+	cachedCommands.clear();
+	if (!CreateTargetBitmaps())
+	{
+		imageAssets.clear();
+		DebugLog("[UI] Could not create Direct2D UI image bitmaps.");
+		return false;
+	}
+	DebugLog("[UI] Loaded UI image assets: ", imageAssets.size());
+	return true;
+}
+
+void UIRenderer::UnloadAssets()
+{
+	imageAssets.clear();
+	cachedCommands.clear();
+}
+
+bool UIRenderer::CreateTargetBitmaps()
+{
+	if (!surfaceTarget) return false;
+	for (auto& [id, asset] : imageAssets)
+	{
+		asset.targetBitmap.Reset();
+		if (!asset.source || FAILED(surfaceTarget->CreateBitmapFromWicBitmap(asset.source.Get(), nullptr,
+			asset.targetBitmap.GetAddressOf()))) return false;
+	}
+	return true;
 }
 
 void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &commands)
@@ -193,6 +402,23 @@ void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &comman
 							  ? command.clip
 							  : RECT{0, 0, surfaceWidth, surfaceHeight};
 		surfaceTarget->PushAxisAlignedClip(ToD2DRect(clip), D2D1_ANTIALIAS_MODE_ALIASED);
+		if (command.type == DrawCommandType::Image || command.type == DrawCommandType::NineSliceImage)
+		{
+			const auto image = imageAssets.find(command.imageId);
+			if (image != imageAssets.end() && image->second.targetBitmap)
+			{
+				if (command.type == DrawCommandType::Image)
+					surfaceTarget->DrawBitmap(image->second.targetBitmap.Get(), bounds, command.color.w,
+						D2D1_BITMAP_INTERPOLATION_MODE_LINEAR);
+				else
+					DrawBitmapNineSlice(surfaceTarget.Get(), image->second.targetBitmap.Get(), bounds,
+						image->second.width, image->second.height, image->second.sliceLeft,
+						image->second.sliceTop, image->second.sliceRight, image->second.sliceBottom,
+						command.color.w);
+			}
+			surfaceTarget->PopAxisAlignedClip();
+			continue;
+		}
 		switch (command.type)
 		{
 		case DrawCommandType::FillRectangle:
@@ -279,6 +505,12 @@ bool UIRenderer::IsInitialized()
 	return initialized;
 }
 
+bool UIRenderer::HasImage(std::string_view imageId)
+{
+	const auto image = imageAssets.find(std::string(imageId));
+	return image != imageAssets.end() && image->second.targetBitmap != nullptr;
+}
+
 float UIRenderer::MeasureText(std::wstring_view text, float fontSize)
 {
 	if (!initialized || text.empty())
@@ -332,6 +564,7 @@ bool UIRenderer::CreateSurfaceResources()
 	{
 		return false;
 	}
+	if (!imageAssets.empty() && !CreateTargetBitmaps()) return false;
 
 	hr = surfaceTarget->CreateSolidColorBrush(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f), brush.GetAddressOf());
 	if (FAILED(hr))
@@ -361,6 +594,7 @@ bool UIRenderer::CreateSurfaceResources()
 void UIRenderer::ReleaseSurfaceResources()
 {
 	cachedCommands.clear();
+	for (auto& [id, asset] : imageAssets) asset.targetBitmap.Reset();
 	compositeTextureView.Reset();
 	compositeTexture.Reset();
 	brush.Reset();

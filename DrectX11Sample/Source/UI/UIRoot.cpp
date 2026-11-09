@@ -16,22 +16,6 @@ using DirectX::SimpleMath::Color;
 
 namespace GameUI
 {
-void DrawBorder(Renderer &renderer, const Rect &bounds, const Color &color)
-{
-	const Rect top{bounds.left, bounds.top, bounds.right, bounds.top + 1};
-	const Rect bottom{bounds.left, bounds.bottom - 1, bounds.right, bounds.bottom};
-	const Rect left{bounds.left, bounds.top, bounds.left + 1, bounds.bottom};
-	const Rect right{bounds.right - 1, bounds.top, bounds.right, bounds.bottom};
-	for (const Rect &edge : {top, bottom, left, right})
-	{
-		const Rect clipped = edge.Intersect(bounds);
-		if (!clipped.IsEmpty())
-		{
-			renderer.DrawScreenRect(clipped.ToNativeRect(), color);
-		}
-	}
-}
-
 const Color Theme::Background(0.94f, 0.96f, 0.97f, 1.0f);
 const Color Theme::Surface(1.0f, 1.0f, 1.0f, 1.0f);
 const Color Theme::Border(0.72f, 0.78f, 0.81f, 1.0f);
@@ -40,6 +24,11 @@ const Color Theme::Hover(0.86f, 0.94f, 0.94f, 1.0f);
 const Color Theme::Pressed(0.73f, 0.88f, 0.88f, 1.0f);
 const Color Theme::Disabled(0.87f, 0.89f, 0.90f, 1.0f);
 const Color Theme::Focus(0.05f, 0.42f, 0.44f, 1.0f);
+const Color Theme::HoverOverlay(0.03f, 0.52f, 0.50f, 0.13f);
+const Color Theme::PressedOverlay(0.02f, 0.38f, 0.39f, 0.22f);
+const Color Theme::Text(0.12f, 0.16f, 0.18f, 1.0f);
+const Color Theme::PrimaryText(1.0f, 1.0f, 1.0f, 1.0f);
+const Color Theme::DisabledText(0.35f, 0.39f, 0.40f, 0.58f);
 
 bool Rect::IsEmpty() const
 {
@@ -174,10 +163,41 @@ void Root::RegisterElement(Element e, bool transform)
 	}
 	elements.push_back(std::move(e));
 }
-void Root::AddPanel(const Rect &b)
+void Root::AddPanel(const Rect &b, std::string_view imageId)
 {
 	Element e;
+	e.type = ElementType::Panel;
 	e.bounds = b;
+	e.imageId = imageId;
+	RegisterElement(e);
+}
+void Root::AddSectionHeader(std::string_view id, const Rect& bounds, std::string_view text, float fontSize)
+{
+	AddPanel(bounds, Theme::LabelBackgroundImage);
+	const int accentWidth = std::min(6, std::max(1, bounds.right - bounds.left));
+	const std::string accentId = std::string(id) + "/accent";
+	AddImage(accentId, {bounds.left, bounds.top, bounds.left + accentWidth, bounds.bottom},
+		Theme::SectionAccentImage);
+	AddLabel(id, {bounds.left + 14, bounds.top, bounds.right - 6, bounds.bottom}, text, true, fontSize);
+}
+void Root::AddImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity)
+{
+	Element e;
+	e.type = ElementType::Image;
+	e.id = id;
+	e.imageId = imageId;
+	e.bounds = bounds;
+	e.opacity = std::isfinite(opacity) ? std::clamp(opacity, 0.0f, 1.0f) : 1.0f;
+	RegisterElement(e);
+}
+void Root::AddNineSliceImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity)
+{
+	Element e;
+	e.type = ElementType::NineSliceImage;
+	e.id = id;
+	e.imageId = imageId;
+	e.bounds = bounds;
+	e.opacity = std::isfinite(opacity) ? std::clamp(opacity, 0.0f, 1.0f) : 1.0f;
 	RegisterElement(e);
 }
 void Root::AddButton(std::string_view id, const Rect &b, bool enabled)
@@ -191,8 +211,30 @@ void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, 
 	e.id = id;
 	e.bounds = b;
 	e.label = text;
+	e.imageId = Theme::ButtonImage;
 	e.enabled = enabled;
 	RegisterElement(e);
+}
+void Root::AddPrimaryButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled)
+{
+	AddButton(id, bounds, text, enabled);
+	if (Element* element = FindElement(std::string(id))) element->imageId = Theme::PrimaryButtonImage;
+}
+void Root::AddImageButton(std::string_view id, const Rect& bounds, std::string_view imageId,
+	std::string_view fallbackText, bool enabled)
+{
+	AddButton(id, bounds, fallbackText, enabled);
+	if (Element* element = FindElement(std::string(id)))
+	{
+		element->imageId = imageId;
+		element->stretchBackground = false;
+	}
+}
+void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
+	std::string_view iconImageId, bool enabled)
+{
+	AddButton(id, bounds, text, enabled);
+	if (Element* element = FindElement(std::string(id))) element->iconImageId = iconImageId;
 }
 void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled, float size)
 {
@@ -337,14 +379,22 @@ const Root::Element *Root::FindButton(const std::string &id) const
 }
 bool Root::IsFocusable(const Element &e) const
 {
-	return e.enabled && !e.id.empty() && e.type != ElementType::Panel && e.type != ElementType::Label && e.type != ElementType::ScrollTrack && e.type != ElementType::ScrollThumb &&
+	return e.enabled && !e.id.empty() && e.type != ElementType::Panel && e.type != ElementType::Label &&
+		   e.type != ElementType::ScrollTrack && e.type != ElementType::ScrollThumb &&
+		   e.type != ElementType::Image && e.type != ElementType::NineSliceImage &&
 		   !e.bounds.Intersect(e.clipBounds).IsEmpty();
 }
 const Root::Element *Root::FindTopButtonAt(POINT p) const
 {
 	for (auto i = elements.rbegin(); i != elements.rend(); ++i)
-		if (i->bounds.Intersect(i->clipBounds).Contains(p))
-			return IsFocusable(*i) ? &*i : nullptr;
+	{
+		if (!i->bounds.Intersect(i->clipBounds).Contains(p)) continue;
+		if (i->type == ElementType::Panel || i->type == ElementType::Label ||
+			i->type == ElementType::ScrollTrack || i->type == ElementType::ScrollThumb ||
+			i->type == ElementType::Image || i->type == ElementType::NineSliceImage)
+			continue;
+		return IsFocusable(*i) ? &*i : nullptr;
+	}
 	return nullptr;
 }
 Root::Element *Root::FindTopButtonAt(POINT p)
@@ -379,6 +429,32 @@ void Root::ActivateElement(Element &e)
 	{
 		*e.booleanValue = !*e.booleanValue;
 		e.changed = true;
+	}
+	if ((e.integerValue || e.floatValue) && input.pointerReleased && e.bounds.Contains(input.pointerPosition))
+	{
+		const int spinnerWidth = std::min(28, std::max(20, (e.bounds.right - e.bounds.left) / 5));
+		if (input.pointerPosition.x >= e.bounds.right - spinnerWidth)
+		{
+			UpdateNumericElement(e, true);
+			const int direction = input.pointerPosition.y < e.bounds.top + (e.bounds.bottom - e.bounds.top) / 2 ? 1 : -1;
+			if (e.integerValue)
+			{
+				const int step = std::max(1, static_cast<int>(e.numericStep + 0.5f));
+				const int updated = static_cast<int>(std::clamp(
+					static_cast<long long>(*e.integerValue) + static_cast<long long>(direction * step),
+					static_cast<long long>(e.integerMinimum), static_cast<long long>(e.integerMaximum)));
+				e.changed |= updated != *e.integerValue;
+				*e.integerValue = updated;
+			}
+			if (e.floatValue)
+			{
+				const float updated = std::clamp(*e.floatValue + direction * e.numericStep,
+					e.floatMinimum, e.floatMaximum);
+				e.changed |= updated != *e.floatValue;
+				*e.floatValue = updated;
+			}
+			return;
+		}
 	}
 	if (e.type == ElementType::Dropdown)
 		expandedDropdownId = expandedDropdownId == e.id ? "" : e.id;
@@ -650,59 +726,218 @@ void Root::EndFrame()
 			++it;
 	endedFrame = true;
 }
+/// <summary>素材を先に描き、部品の状態表現と動的な文字をその上へ重ねる。</summary>
 void Root::Draw(Renderer &renderer) const
 {
 	if (!endedFrame)
 		return;
 	std::vector<DrawCommand> commands;
-	for (auto &e : elements)
+	auto pushImage = [&commands](const Rect& bounds, const Rect& clip, std::string_view imageId,
+		bool nineSlice, float opacity = 1.0f)
 	{
-		Rect clip = e.bounds.Intersect(e.clipBounds);
-		if (clip.IsEmpty())
-			continue;
-		DrawCommand c;
-		c.bounds = e.bounds.ToNativeRect();
-		c.clip = e.clipBounds.ToNativeRect();
-		if (e.type == ElementType::ScrollTrack || e.type == ElementType::ScrollThumb)
+		if (bounds.IsEmpty() || !UIRenderer::HasImage(imageId)) return false;
+		DrawCommand command;
+		command.type = nineSlice ? DrawCommandType::NineSliceImage : DrawCommandType::Image;
+		command.bounds = bounds.ToNativeRect();
+		command.clip = clip.ToNativeRect();
+		command.imageId = imageId;
+		command.color.w = opacity;
+		commands.push_back(std::move(command));
+		return true;
+	};
+	auto pushFill = [&commands](const Rect& bounds, const Rect& clip, const Color& color)
+	{
+		if (bounds.IsEmpty()) return;
+		DrawCommand command;
+		command.type = DrawCommandType::FillRectangle;
+		command.bounds = bounds.ToNativeRect();
+		command.clip = clip.ToNativeRect();
+		command.color = color;
+		commands.push_back(std::move(command));
+	};
+	auto pushStroke = [&commands](const Rect& bounds, const Rect& clip, const Color& color, float width)
+	{
+		if (bounds.IsEmpty()) return;
+		DrawCommand command;
+		command.type = DrawCommandType::StrokeRectangle;
+		command.bounds = bounds.ToNativeRect();
+		command.clip = clip.ToNativeRect();
+		command.color = color;
+		command.strokeWidth = width;
+		commands.push_back(std::move(command));
+	};
+	auto pushText = [&commands](const Rect& bounds, const Rect& clip, const std::wstring& text,
+		float fontSize, const Color& color, TextHorizontalAlignment alignment = TextHorizontalAlignment::Near)
+	{
+		if (bounds.IsEmpty() || text.empty()) return;
+		DrawCommand command;
+		command.type = DrawCommandType::Text;
+		command.bounds = bounds.ToNativeRect();
+		command.clip = clip.ToNativeRect();
+		command.text = text;
+		command.fontSize = fontSize;
+		command.color = color;
+		command.horizontalAlignment = alignment;
+		commands.push_back(std::move(command));
+	};
+	auto focused = [this](const Element& element)
+	{
+		return keyboardFocusActive && focusedId == element.id;
+	};
+	auto interactionOverlay = [&](const Element& element)
+	{
+		if (!element.enabled) return;
+		if (capturedId == element.id) pushFill(element.bounds, element.clipBounds, Theme::PressedOverlay);
+		else if (element.hovered) pushFill(element.bounds, element.clipBounds, Theme::HoverOverlay);
+	};
+	auto getElementText = [this](const Element& element)
+	{
+		std::wstring text = Wide(element.label);
+		if (element.textValue || element.integerValue || element.floatValue)
 		{
-			c.color = e.type == ElementType::ScrollThumb ? Theme::Accent : Theme::Disabled;
-			commands.push_back(c);
-			continue;
-		}
-		if (e.type != ElementType::Label)
-		{
-			c.color = !e.enabled		   ? Theme::Disabled
-					  : !capturedId.empty() && e.id == capturedId ? Theme::Pressed
-					  : e.hovered		   ? Theme::Hover
-										   : Theme::Surface;
-			commands.push_back(c);
-			c.type = DrawCommandType::StrokeRectangle;
-			c.color = keyboardFocusActive && focusedId == e.id ? Theme::Focus : Theme::Border;
-			commands.push_back(c);
-		}
-		std::wstring label = Wide(e.label);
-		if (e.textValue || e.integerValue || e.floatValue)
-		{
-			auto s = textEditStates.find(e.id);
-			if (s != textEditStates.end())
+			const auto state = textEditStates.find(element.id);
+			if (state != textEditStates.end())
 			{
-				label = s->second.text;
-				if (e.id == focusedId && keyboardFocusActive)
-					label.insert(s->second.cursor, input.compositionText + L"|");
+				text = state->second.text;
+				if (element.id == focusedId && keyboardFocusActive)
+					text.insert(state->second.cursor, input.compositionText + L"|");
 			}
 		}
-		if (e.booleanValue)
-			label = (*e.booleanValue ? L"[x] " : L"[ ] ") + label;
-		if (e.type == ElementType::Dropdown && !e.options.empty())
-			label = Wide(e.options[*e.selectedIndex]) + L" v";
-		c.type = DrawCommandType::Text;
-		c.bounds = e.bounds.Inset(6, 2).ToNativeRect();
-		c.text = label;
-		c.fontSize = e.fontSize;
+		if (element.type == ElementType::Dropdown && !element.options.empty() && element.selectedIndex)
+			text = Wide(element.options[*element.selectedIndex]);
+		return text;
+	};
+
+	for (auto &e : elements)
+	{
+		if (e.bounds.Intersect(e.clipBounds).IsEmpty()) continue;
+		if (e.type == ElementType::Image || e.type == ElementType::NineSliceImage)
+		{
+			pushImage(e.bounds, e.clipBounds, e.imageId, e.type == ElementType::NineSliceImage, e.opacity);
+			continue;
+		}
+		if (e.type == ElementType::Panel)
+		{
+			if (!pushImage(e.bounds, e.clipBounds, e.imageId, true))
+			{
+				pushFill(e.bounds, e.clipBounds, Theme::Surface);
+				pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
+			}
+			continue;
+		}
+		if (e.type == ElementType::ScrollTrack || e.type == ElementType::ScrollThumb)
+		{
+			pushFill(e.bounds, e.clipBounds, e.type == ElementType::ScrollThumb ? Theme::Accent : Theme::Disabled);
+			continue;
+		}
 		if (e.type == ElementType::Button)
-			c.horizontalAlignment = TextHorizontalAlignment::Center;
-		c.color = Color(0.12f, 0.16f, 0.18f, e.enabled ? 1.0f : 0.5f);
-		commands.push_back(c);
+		{
+			const bool primary = e.imageId == Theme::PrimaryButtonImage;
+			const bool imageLoaded = pushImage(e.bounds, e.clipBounds, e.imageId,
+				e.stretchBackground, e.enabled ? 1.0f : 0.48f);
+			if (!imageLoaded)
+			{
+				pushFill(e.bounds, e.clipBounds, primary ? Theme::Accent : Theme::Surface);
+				pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
+			}
+			interactionOverlay(e);
+			if (focused(e)) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+
+			const bool fullImageButton = !e.stretchBackground && imageLoaded;
+			if (!e.iconImageId.empty() && !fullImageButton)
+			{
+				const int iconSize = std::clamp(e.bounds.bottom - e.bounds.top - 10, 14, 24);
+				const int iconTop = e.bounds.top + ((e.bounds.bottom - e.bounds.top) - iconSize) / 2;
+				const int iconWidth = static_cast<int>(iconSize * UIRenderer::GetImageAspectRatio(e.iconImageId));
+				const Rect iconBounds{e.bounds.left + 8, iconTop, e.bounds.left + 8 + iconWidth, iconTop + iconSize};
+				pushImage(iconBounds, e.clipBounds, e.iconImageId, false, e.enabled ? 1.0f : 0.5f);
+			}
+			if (!fullImageButton)
+			{
+				Rect textBounds = e.bounds.Inset(8, 2);
+				if (!e.iconImageId.empty()) textBounds.left += static_cast<int>(
+					std::clamp(e.bounds.bottom - e.bounds.top - 10, 14, 24)
+					* UIRenderer::GetImageAspectRatio(e.iconImageId)) + 8;
+				pushText(textBounds, e.clipBounds, getElementText(e), e.fontSize,
+					!e.enabled ? Theme::DisabledText : primary ? Theme::PrimaryText : Theme::Text,
+					TextHorizontalAlignment::Center);
+			}
+			continue;
+		}
+		if (e.type == ElementType::Checkbox)
+		{
+			interactionOverlay(e);
+			const int iconSize = std::clamp(e.bounds.bottom - e.bounds.top - 8, 16, 24);
+			const int iconTop = e.bounds.top + ((e.bounds.bottom - e.bounds.top) - iconSize) / 2;
+			const Rect iconBounds{e.bounds.left + 5, iconTop, e.bounds.left + 5 + iconSize, iconTop + iconSize};
+			const bool checked = e.booleanValue && *e.booleanValue;
+			const std::string_view checkboxImage = checked ? Theme::CheckboxOnImage : Theme::CheckboxOffImage;
+			if (!pushImage(iconBounds, e.clipBounds, checkboxImage, false, e.enabled ? 1.0f : 0.48f))
+			{
+				pushFill(iconBounds, e.clipBounds, Theme::Surface);
+				pushStroke(iconBounds, e.clipBounds, Theme::Border, 1.0f);
+				if (checked) pushText(iconBounds, e.clipBounds, L"✓", 17.0f, Theme::Accent, TextHorizontalAlignment::Center);
+			}
+			if (focused(e)) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+			const Rect textBounds{iconBounds.right + 8, e.bounds.top + 2, e.bounds.right - 6, e.bounds.bottom - 2};
+			pushText(textBounds, e.clipBounds, getElementText(e), e.fontSize,
+				e.enabled ? Theme::Text : Theme::DisabledText);
+			continue;
+		}
+		if (e.type == ElementType::Label)
+		{
+			pushText(e.bounds.Inset(4, 1), e.clipBounds, getElementText(e), e.fontSize,
+				e.enabled ? Theme::Text : Theme::DisabledText);
+			continue;
+		}
+
+		std::string_view fieldImage = Theme::TextFieldImage;
+		if (e.type == ElementType::Dropdown || e.type == ElementType::DropdownOption)
+			fieldImage = Theme::ButtonImage;
+		const bool selectedOption = e.type == ElementType::DropdownOption && e.selectedIndex
+			&& *e.selectedIndex == e.optionIndex;
+		if (selectedOption) fieldImage = Theme::LabelBackgroundImage;
+		if (!pushImage(e.bounds, e.clipBounds, fieldImage, true, e.enabled ? 1.0f : 0.5f))
+		{
+			pushFill(e.bounds, e.clipBounds, Theme::Surface);
+			pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
+		}
+		interactionOverlay(e);
+		if (focused(e)) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+
+		Rect textBounds = e.bounds.Inset(8, 2);
+		if (e.type == ElementType::IntegerInput || e.type == ElementType::FloatInput)
+		{
+			// 背景だけを伸縮し、増減アイコンはクリック領域内で縦横比を維持する。
+			const int width = std::min(28, std::max(20, (e.bounds.right - e.bounds.left) / 5));
+			const int middle = (e.bounds.top + e.bounds.bottom) / 2;
+			textBounds.right -= width;
+			for (int index = 0; index < 2; ++index)
+			{
+				const char* icon = index == 0 ? "up" : "down";
+				const float aspect = UIRenderer::GetImageAspectRatio(icon);
+				const int availableHeight = std::max(1, (e.bounds.bottom - e.bounds.top) / 2 - 4);
+				const int iconWidth = std::max(1, std::min(width - 8, static_cast<int>(availableHeight * aspect)));
+				const int iconHeight = std::max(1, static_cast<int>(iconWidth / aspect));
+				const int left = e.bounds.right - width + (width - iconWidth) / 2;
+				const int top = (index == 0 ? e.bounds.top : middle) + (middle - e.bounds.top - iconHeight) / 2;
+				pushImage({left, top, left + iconWidth, top + iconHeight}, e.clipBounds,
+					icon, false, e.enabled ? 1.0f : 0.45f);
+			}
+		}
+		if (e.type == ElementType::Dropdown)
+		{
+			textBounds.right -= 24;
+			const int arrowWidth = std::min(14, std::max(8, e.bounds.right - e.bounds.left - 8));
+			const int arrowHeight = std::min(10, std::max(6, e.bounds.bottom - e.bounds.top - 6));
+			const Rect arrowBounds{e.bounds.right - arrowWidth - 8,
+				e.bounds.top + ((e.bounds.bottom - e.bounds.top) - arrowHeight) / 2,
+				e.bounds.right - 8,
+				e.bounds.top + ((e.bounds.bottom - e.bounds.top) + arrowHeight) / 2};
+			pushImage(arrowBounds, e.clipBounds, Theme::DropdownArrowImage, false, e.enabled ? 1.0f : 0.45f);
+		}
+		pushText(textBounds, e.clipBounds, getElementText(e), e.fontSize,
+			e.enabled ? Theme::Text : Theme::DisabledText);
 	}
 	UIRenderer::Draw(renderer, commands);
 }
@@ -721,7 +956,8 @@ bool Root::WantsPointerCapture() const
 	if (!capturedId.empty() || !expandedDropdownId.empty())
 		return true;
 	for (auto &e : elements)
-		if (e.bounds.Intersect(e.clipBounds).Contains(input.pointerPosition))
+		if (e.type != ElementType::Image && e.type != ElementType::NineSliceImage &&
+			e.bounds.Intersect(e.clipBounds).Contains(input.pointerPosition))
 			return true;
 	return wheelConsumed;
 }
