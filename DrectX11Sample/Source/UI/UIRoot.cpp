@@ -243,10 +243,14 @@ void Root::AddImageButton(std::string_view id, const Rect& bounds, std::string_v
 	}
 }
 void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
-	std::string_view iconImageId, bool enabled)
+	std::string_view iconImageId, bool enabled, bool showFocusOutline)
 {
 	AddButton(id, bounds, text, enabled);
-	if (Element* element = FindElement(std::string(id))) element->iconImageId = iconImageId;
+	if (Element* element = FindElement(std::string(id)))
+	{
+		element->iconImageId = iconImageId;
+		element->showFocusOutline = showFocusOutline;
+	}
 }
 void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled,
 	float size, bool centered, bool bold)
@@ -262,7 +266,7 @@ void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, b
 	e.bold = bold;
 	RegisterElement(e);
 }
-void Root::AddTextInput(std::string_view id, const Rect &b, std::string &value, size_t limit, bool enabled)
+void Root::AddTextInput(std::string_view id, const Rect &b, std::string &value, size_t limit, bool enabled, bool bold)
 {
 	Element e;
 	e.type = ElementType::TextInput;
@@ -270,6 +274,7 @@ void Root::AddTextInput(std::string_view id, const Rect &b, std::string &value, 
 	e.bounds = b;
 	e.textValue = &value;
 	e.maxUtf8Bytes = limit;
+	e.bold = bold;
 	e.enabled = enabled;
 	RegisterElement(e);
 }
@@ -566,6 +571,11 @@ void Root::ApplyFocusedInput()
 		{
 			UpdateNumericElement(*e, true);
 			textEditStates[e->id].original = e->textValue ? *e->textValue : "";
+			// 値の確定後は編集を終了する。IME変換中のEnterは上のcomposing判定で除外する。
+			focusedId.clear();
+			capturedId.clear();
+			keyboardFocusActive = false;
+			return;
 		}
 		int direction = Pressed(input, Key::Up) ? 1 : Pressed(input, Key::Down) ? -1 : 0;
 		if (!wheelConsumed && e->bounds.Intersect(e->clipBounds).Contains(input.pointerPosition) &&
@@ -749,6 +759,7 @@ void Root::Draw(Renderer &renderer) const
 	if (!endedFrame)
 		return;
 	std::vector<DrawCommand> commands;
+	commands.reserve(elements.size() * 4);
 	auto pushImage = [&commands](const Rect& bounds, const Rect& clip, std::string_view imageId,
 		bool nineSlice, float opacity = 1.0f)
 	{
@@ -937,12 +948,16 @@ void Root::Draw(Renderer &renderer) const
 		}
 
 		std::string_view fieldImage = Theme::TextFieldImage;
-		if (e.type == ElementType::Dropdown || e.type == ElementType::DropdownOption)
-			fieldImage = Theme::ButtonImage;
+		if (e.type == ElementType::Dropdown) fieldImage = Theme::ButtonImage;
 		const bool selectedOption = e.type == ElementType::DropdownOption && e.selectedIndex
 			&& *e.selectedIndex == e.optionIndex;
-		if (selectedOption) fieldImage = Theme::LabelBackgroundImage;
-		if (!pushImage(e.bounds, e.clipBounds, fieldImage, true, e.enabled ? 1.0f : 0.5f))
+		// 候補行は隙間のない不透明な面で重ね、背後の項目を完全に隠す。
+		if (e.type == ElementType::DropdownOption)
+		{
+			pushFill(e.bounds, e.clipBounds, Theme::Surface);
+			if (selectedOption) pushFill(e.bounds, e.clipBounds, Theme::HoverOverlay);
+		}
+		else if (!pushImage(e.bounds, e.clipBounds, fieldImage, true, e.enabled ? 1.0f : 0.5f))
 		{
 			pushFill(e.bounds, e.clipBounds, Theme::Surface);
 			pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
@@ -961,7 +976,7 @@ void Root::Draw(Renderer &renderer) const
 			{
 				const char* icon = index == 0 ? "up" : "down";
 				const float aspect = UIRenderer::GetImageAspectRatio(icon);
-				const int availableHeight = std::max(1, (e.bounds.bottom - e.bounds.top) / 2 - 4);
+				const int availableHeight = std::max(1, std::min(7, (e.bounds.bottom - e.bounds.top) / 2 - 4));
 				const int iconWidth = std::max(1, std::min(width - 8, static_cast<int>(availableHeight * aspect)));
 				const int iconHeight = std::max(1, static_cast<int>(iconWidth / aspect));
 				const int left = e.bounds.right - width + (width - iconWidth) / 2;

@@ -156,6 +156,7 @@ int main()
 	input.keysPressed[static_cast<size_t>(Key::Enter)] = true;
 	numeric();
 	assert(number == -20);
+	assert(!root.WantsKeyboardCapture() && !root.WantsTextInput() && root.GetFocusedId().empty());
 	input = {};
 	input.pointerPosition = {190, 15};
 	input.pointerPressed = input.pointerReleased = true;
@@ -188,6 +189,22 @@ int main()
 	input.pointerPressed = input.pointerReleased = true;
 	dropdown();
 	assert(selected == 1);
+	// 実操作では押下と解放は別フレーム。候補を再登録しても捕捉を失わない。
+	input = {};
+	input.pointerPosition = {20, 20};
+	input.pointerPressed = input.pointerReleased = true;
+	dropdown();
+	input = {};
+	input.pointerPosition = {20, 150};
+	input.pointerPressed = input.pointerDown = true;
+	dropdown();
+	assert(selected == 1);
+	input.pointerPressed = false;
+	dropdown();
+	input.pointerDown = false;
+	input.pointerReleased = true;
+	dropdown();
+	assert(selected == 2 && root.WasChanged("select"));
 
 	int offset = 0;
 	input = {};
@@ -263,6 +280,11 @@ int main()
 	nineSliceCommand.bounds = {20, 20, 400, 100};
 	UIRenderer::Draw(renderer, {nineSliceCommand});
 	assert(composites == 6);
+	// 背景と操作UIを交互に描いても、それぞれの合成テクスチャが有効であること。
+	UIRenderer::Draw(renderer, {command});
+	UIRenderer::Draw(renderer, {nineSliceCommand});
+	UIRenderer::Draw(renderer, {command});
+	assert(composites == 9);
 	UIRenderer::Shutdown();
 	context.Reset();
 	device.Reset();

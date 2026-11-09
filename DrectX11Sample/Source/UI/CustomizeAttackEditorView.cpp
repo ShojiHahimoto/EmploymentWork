@@ -254,7 +254,7 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     const int nameX = width * 28 / 100;
     root.AddLabel("header/name/label", {nameX, 8, nameX + 58, headerHeight - 10}, "技名", true, 20);
     root.AddTextInput("header/name", {nameX + 62, 10, width * 56 / 100, headerHeight - 12}, data.displayName,
-        CustomizeAttackEditorController::AttackNameBufferSize - 1);
+        CustomizeAttackEditorController::AttackNameBufferSize - 1, true, true);
     root.AddLabel("header/category/label", {width * 58 / 100, 8, width * 62 / 100, headerHeight - 10}, "分類", true, 20);
     root.AddPanel({width * 63 / 100, 10, width * 75 / 100, headerHeight - 12}, GameUI::Theme::ButtonImage);
     root.AddLabel("header/category", {width * 63 / 100 + 10, 10, width * 75 / 100, headerHeight - 12},
@@ -288,15 +288,15 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
             20 + i * (buttonWidth + 8) + buttonWidth, controlsBottom}, buttonImages[i], buttonLabels[i], true, false);
     const int frameX = split * 50 / 100;
     root.AddRule({frameX - 8, controlsY + 6, frameX - 7, controlsBottom - 6});
-    root.AddLabel("frame", {frameX, controlsY, split * 75 / 100, controlsBottom},
+    root.AddLabel("frame", {frameX, controlsY, split * 73 / 100, controlsBottom},
         "現在 " + std::to_string(preview.GetCurrentFrame()) + " / " + std::to_string(total) + " フレーム", true, 18);
-    root.AddIconButton("camera", {split * 76 / 100, controlsY, split - 20, controlsBottom}, "カメラを戻す", "camera");
+    root.AddIconButton("camera", {split * 74 / 100, controlsY, split - 20, controlsBottom}, "カメラリセット", "camera", true, false);
 
     const GameUI::Rect timeline{8, bottom + 4, width - 8, height - 4};
     root.AddPanel(timeline, GameUI::Theme::PlaybackPanelImage);
 
-    const int trackLeft = 24;
-    const int trackRight = width - 24;
+    const int trackLeft = 40;
+    const int trackRight = width - 40;
     const int trackWidth = std::max(1, trackRight - trackLeft);
     const int trackHeight = std::max(24, (height - bottom) * 23 / 100);
     const int trackTop = height - trackHeight - 22;
@@ -337,6 +337,7 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     }
     const int divisions = std::min(std::max(1, trackWidth / 36), total);
     const int rulerY = bottom + (height - bottom) * 34 / 100;
+    const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
     root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
     root.AddRule({trackLeft, trackTop - 30, trackRight, trackTop - 26});
     for (int i = 0; i <= divisions; ++i)
@@ -344,15 +345,16 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
         const int x = trackLeft + trackWidth * i / divisions;
         const int frame = total * i / divisions;
         root.AddRule({x, rulerY - 10, x + 1, rulerY});
-        root.AddLabel("timeline/tick/" + std::to_string(i), {x - 10, rulerY - 38,
-            x + 28, rulerY - 14}, std::to_string(frame), true, 15);
+        // 現在位置の数字は緑の目印内に一度だけ描く。近接する目盛り文字も重ねない。
+        if (std::abs(x - playheadX) >= 28)
+            root.AddLabel("timeline/tick/" + std::to_string(i), {x - 22, rulerY - 38,
+                x + 22, rulerY - 14}, std::to_string(frame), true, 15, true);
     }
-    const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
     root.AddRule({playheadX, rulerY - 24, playheadX + 2, trackTop});
-    root.AddImage("timeline/playhead", {playheadX - 20, rulerY - 56, playheadX + 20, rulerY - 30},
+    root.AddImage("timeline/playhead", {playheadX - 20, rulerY - 39, playheadX + 20, rulerY - 9},
         "playhead");
-    root.AddLabel("timeline/playhead/value", {playheadX - 12, rulerY - 56, playheadX + 22, rulerY - 34},
-        std::to_string(preview.GetCurrentFrame()), true, 14);
+    root.AddLabel("timeline/playhead/value", {playheadX - 20, rulerY - 38, playheadX + 20, rulerY - 14},
+        std::to_string(preview.GetCurrentFrame()), true, 15, true);
     root.AddLabel("status", {width * 76 / 100, 8, width * 88 / 100, headerHeight - 10}, message, true, 14);
     root.EndFrame();
 

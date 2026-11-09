@@ -1,4 +1,4 @@
-param()
+﻿param()
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $root = Split-Path -Parent $PSScriptRoot
@@ -86,6 +86,18 @@ foreach($e in $entries) {
     if($e.name -in @('panel','button','button_primary','number_field','label_background','header','playback_panel')) {$e.slice=@(28,28,28,28)}
     if($e.name -eq 'phase_startup') {$e.slice=@(42,42,0,42)}
     if($e.name -eq 'phase_recovery') {$e.slice=@(0,42,42,42)}
+}
+# 単体で生成した影なし素材も再出力時に保持する。
+foreach($asset in @(
+    @{name='panel_flat_white'; source='panel_flat_white_rounded.png'; slice=@(110,110,110,110)},
+    @{name='button_primary_clean'; source='button_primary_clean.png'; slice=@(160,160,160,160)}
+)) {
+    $file=$asset.name+'.png'
+    Copy-Item -LiteralPath (Join-Path $source $asset.source) -Destination (Join-Path $output $file)
+    $bitmap=[System.Drawing.Bitmap]::FromFile((Join-Path $output $file))
+    try {
+        $entries+=@{name=$asset.name; file=$file; source=$asset.source; width=$bitmap.Width; height=$bitmap.Height; slice=$asset.slice}
+    } finally {$bitmap.Dispose()}
 }
 $json=@{version=1; sliceOrder=@('left','top','right','bottom'); assets=$entries} | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText((Join-Path $output 'assets.json'),$json,[Text.UTF8Encoding]::new($true))

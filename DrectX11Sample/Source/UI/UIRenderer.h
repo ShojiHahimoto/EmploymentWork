@@ -20,8 +20,6 @@ namespace GameUI
 	{
 		FillRectangle,
 		StrokeRectangle,
-		FillRoundedRectangle,
-		StrokeRoundedRectangle,
 		Line,
 		Text,
 		Image,
@@ -55,7 +53,6 @@ namespace GameUI
 		std::string imageId; // assets.jsonで登録した画像ID。
 		float fontSize = 18.0f; // 96 DPI基準の文字サイズ。
 		float strokeWidth = 1.0f; // 枠線幅。
-		float cornerRadius = 0.0f; // 角丸矩形の角半径。
 		bool bold = false; // 文字を太字で描画する。
 		TextHorizontalAlignment horizontalAlignment = TextHorizontalAlignment::Near; // 横方向の文字揃え。
 		TextVerticalAlignment verticalAlignment = TextVerticalAlignment::Center; // 縦方向の文字揃え。

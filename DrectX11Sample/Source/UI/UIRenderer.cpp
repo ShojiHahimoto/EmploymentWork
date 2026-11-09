@@ -42,6 +42,8 @@ ComPtr<ID2D1RenderTarget> surfaceTarget;
 ComPtr<ID2D1SolidColorBrush> brush;
 ComPtr<ID3D11Texture2D> compositeTexture;
 ComPtr<ID3D11ShaderResourceView> compositeTextureView;
+ComPtr<ID3D11Texture2D> previousCompositeTexture;
+ComPtr<ID3D11ShaderResourceView> previousCompositeTextureView;
 ComPtr<IDWriteFontCollection> privateFontCollection;
 ComPtr<IDWriteFontCollectionLoader> privateFontCollectionLoader;
 std::unordered_map<int, ComPtr<IDWriteTextFormat>> textFormats;
@@ -51,6 +53,7 @@ int surfaceWidth = 0;
 int surfaceHeight = 0;
 bool initialized = false;
 std::vector<DrawCommand> cachedCommands;
+std::vector<DrawCommand> previousCachedCommands;
 
 std::filesystem::path ResolveManifestPath(const std::string& manifestPath);
 
@@ -537,6 +540,7 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 	}
 	imageAssets = std::move(loadedAssets);
 	cachedCommands.clear();
+	previousCachedCommands.clear();
 	if (!CreateTargetBitmaps())
 	{
 		imageAssets.clear();
@@ -551,6 +555,7 @@ void UIRenderer::UnloadAssets()
 {
 	imageAssets.clear();
 	cachedCommands.clear();
+	previousCachedCommands.clear();
 }
 
 bool UIRenderer::CreateTargetBitmaps()
@@ -572,6 +577,17 @@ void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &comman
 		return;
 	}
 
+	if (commands.size() == cachedCommands.size() &&
+		std::equal(commands.begin(), commands.end(), cachedCommands.begin(), Same))
+	{
+		renderer.DrawFullscreenTexture(compositeTextureView.Get(), surfaceWidth, surfaceHeight);
+		return;
+	}
+	// 背景と操作UIの二層を保持する。一方の描画で他方のキャッシュを破棄しない。
+	// 直前に使った層を残し、古い方だけを書き換える2エントリのLRUキャッシュ。
+	compositeTexture.Swap(previousCompositeTexture);
+	compositeTextureView.Swap(previousCompositeTextureView);
+	cachedCommands.swap(previousCachedCommands);
 	if (commands.size() == cachedCommands.size() &&
 		std::equal(commands.begin(), commands.end(), cachedCommands.begin(), Same))
 	{
@@ -779,12 +795,20 @@ bool UIRenderer::CreateSurfaceResources()
 	}
 	hr = device->CreateShaderResourceView(compositeTexture.Get(), nullptr,
 										  compositeTextureView.GetAddressOf());
+	if (FAILED(hr)) return false;
+	hr = device->CreateTexture2D(&textureDescription, nullptr, previousCompositeTexture.GetAddressOf());
+	if (FAILED(hr)) return false;
+	hr = device->CreateShaderResourceView(previousCompositeTexture.Get(), nullptr,
+		previousCompositeTextureView.GetAddressOf());
 	return SUCCEEDED(hr);
 }
 
 void UIRenderer::ReleaseSurfaceResources()
 {
 	cachedCommands.clear();
+	previousCachedCommands.clear();
+	previousCompositeTextureView.Reset();
+	previousCompositeTexture.Reset();
 	for (auto& [id, asset] : imageAssets) asset.targetBitmap.Reset();
 	compositeTextureView.Reset();
 	compositeTexture.Reset();

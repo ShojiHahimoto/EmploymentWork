@@ -7,6 +7,14 @@
   ],
   "assets": [
     {
+      "name": "panel_flat_white", "file": "panel_flat_white.png",
+      "width": 1254, "height": 1254, "slice": [110, 110, 110, 110]
+    },
+    {
+      "name": "button_primary_clean", "file": "button_primary_clean.png",
+      "width": 2172, "height": 724, "slice": [160, 160, 160, 160]
+    },
+    {
       "file": "panel.png",
       "sourceRect": [
         53,

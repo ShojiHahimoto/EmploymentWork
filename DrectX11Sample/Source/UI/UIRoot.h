@@ -174,7 +174,7 @@ namespace GameUI
 		/// <param name="iconImageId">透過アイコン素材。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
 		void AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
-			std::string_view iconImageId, bool enabled = true);
+			std::string_view iconImageId, bool enabled = true, bool showFocusOutline = true);
 		/// <summary>文字列リテラルがbool引数へ誤変換されないよう文字付きボタンへ転送する。</summary>
 		/// <param name="id">一意な部品ID。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -190,7 +190,8 @@ namespace GameUI
 		/// <param name="value">UTF-8文字列。変更はこの参照へ即時反映する。</param>
 		/// <param name="maxUtf8Bytes">保存先へ反映する最大UTF-8バイト数。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
-		void AddTextInput(std::string_view id, const Rect& bounds, std::string& value, size_t maxUtf8Bytes, bool enabled = true);
+		/// <param name="bold">入力文字を太字で表示する場合はtrue。</param>
+		void AddTextInput(std::string_view id, const Rect& bounds, std::string& value, size_t maxUtf8Bytes, bool enabled = true, bool bold = false);
 		/// <summary>整数を直接入力し、上下キーやホイールでも調整できる欄を登録する。</summary>
 		/// <param name="id">編集状態を保持する一意な識別子。</param>
 		/// <param name="bounds">入力欄の画面矩形。</param>
