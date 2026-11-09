@@ -63,6 +63,7 @@ private:
     void BuildCancel();
 
     GameUI::Root root; // 入力捕捉と描画部品。Drawまで参照先を維持する。
+    bool timelineDragging = false; // Timelineで押し始めたドラッグを領域外でも維持する。
     CustomizeAttackEditorEditState edit; // UI部品が参照する当フレームの編集スナップショット。
     int heightIndex = 0, usableIndex = 0, reactionIndex = 0, commandIndex = 0;
     int cancelStart = 1, cancelEnd = 1;

@@ -11,6 +11,8 @@
 
 namespace
 {
+    // この総フレーム数以上では数字だけ5刻みにする。目盛り線は各フレームに残す。
+    constexpr int TimelineSparseLabelThreshold = 35;
     struct AttackEditorRegions
     {
         int split = 0;
@@ -57,6 +59,7 @@ void CustomizeAttackEditorView::Reset()
 {
     root = GameUI::Root{};
     scroll = 0;
+    timelineDragging = false;
     message.clear();
 }
 
@@ -280,10 +283,10 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     const int controlsY = regions.previewBottom + 10;
     const int controlsBottom = bottom - 18;
     const int buttonWidth = (split * 46 / 100 - 36) / 5;
-    const char* buttonIds[] = {"reset", "play", "stop", "previous", "next"};
-    const char* buttonImages[] = {"reset", "play", "pause", "previous", "next"};
-    const char* buttonLabels[] = {"先頭へ", "再生", "停止", "前へ", "次へ"};
-    for (int i = 0; i < 5; ++i)
+    const char* buttonIds[] = {"play", "stop", "previous", "next"};
+    const char* buttonImages[] = {"play", "pause", "previous", "next"};
+    const char* buttonLabels[] = {"再生", "停止", "先頭へ", "末尾へ"};
+    for (int i = 0; i < 4; ++i)
         root.AddImageButton(buttonIds[i], {20 + i * (buttonWidth + 8), controlsY,
             20 + i * (buttonWidth + 8) + buttonWidth, controlsBottom}, buttonImages[i], buttonLabels[i], true, false);
     const int frameX = split * 50 / 100;
@@ -298,6 +301,20 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     const int trackLeft = 40;
     const int trackRight = width - 40;
     const int trackWidth = std::max(1, trackRight - trackLeft);
+    // 押下直後から反映し、ドラッグ中は画面外でも端へクランプする。
+    // 再生と手動シークが競合しないよう、操作開始時に再生を止める。
+    if (input.focusLost) timelineDragging = false;
+    if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition))
+    {
+        timelineDragging = true;
+        preview.Stop();
+    }
+    if (timelineDragging)
+    {
+        const double fraction = static_cast<double>(std::clamp<long>(input.pointerPosition.x - trackLeft, 0, trackWidth)) / trackWidth;
+        preview.SetCurrentFrame(static_cast<int>(fraction * total + 0.5));
+        if (input.pointerReleased || !input.pointerDown) timelineDragging = false;
+    }
     const int trackHeight = std::max(24, (height - bottom) * 23 / 100);
     const int trackTop = height - trackHeight - 22;
     const int startupFrames = std::max(0, data.frame.startup - 1);
@@ -335,18 +352,21 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
             {phaseX + 2, trackTop + 2, trackRight - 2, trackTop + trackHeight - 2},
             "後隙（" + std::to_string(recoveryFrames) + "F）", true, 19, true);
     }
-    const int divisions = std::min(std::max(1, trackWidth / 36), total);
+    const int divisions = std::max(1, total);
+    const int labelStep = total >= TimelineSparseLabelThreshold ? 5 : 1;
     const int rulerY = bottom + (height - bottom) * 34 / 100;
     const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
     root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
     root.AddRule({trackLeft, trackTop - 30, trackRight, trackTop - 26});
     for (int i = 0; i <= divisions; ++i)
     {
-        const int x = trackLeft + trackWidth * i / divisions;
+        const int x = trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * i / divisions);
         const int frame = total * i / divisions;
         root.AddRule({x, rulerY - 10, x + 1, rulerY});
         // 現在位置の数字は緑の目印内に一度だけ描く。近接する目盛り文字も重ねない。
-        if (std::abs(x - playheadX) >= 28)
+        const bool endpoint = frame == 0 || frame == total;
+        const bool nearLastLabel = frame != total && total - frame < labelStep;
+        if ((endpoint || (frame % labelStep == 0 && !nearLastLabel)) && std::abs(x - playheadX) >= 28)
             root.AddLabel("timeline/tick/" + std::to_string(i), {x - 22, rulerY - 38,
                 x + 22, rulerY - 14}, std::to_string(frame), true, 15, true);
     }
@@ -400,9 +420,8 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     preview.ClampCurrentFrame(updatedTotal);
     if (root.WasActivated("play")) preview.Play(updatedTotal);
     if (root.WasActivated("stop")) preview.Stop();
-    if (root.WasActivated("reset")) { preview.Stop(); preview.StepFrame(-preview.GetCurrentFrame(), updatedTotal); }
-    if (root.WasActivated("previous")) preview.StepFrame(-1, updatedTotal);
-    if (root.WasActivated("next")) preview.StepFrame(1, updatedTotal);
+    if (root.WasActivated("previous")) { preview.Stop(); preview.SetCurrentFrame(0); }
+    if (root.WasActivated("next")) { preview.Stop(); preview.SetCurrentFrame(updatedTotal); }
     if (root.WasActivated("camera")) preview.ResetCamera();
     if (root.WasActivated("save"))
     {
