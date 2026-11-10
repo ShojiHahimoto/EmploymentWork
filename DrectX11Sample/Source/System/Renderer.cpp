@@ -1203,6 +1203,10 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
 		panelColor);
 
 	// 中央線は通常グリッドより太めに見えるよう、細い箱として明示的に描く。
+	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
+		* Matrix::CreateTranslation(stageCenterX, wallCenterY, nearZ), panelColor);
+	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
+		* Matrix::CreateTranslation(stageCenterX, wallHeight, centerZ), panelColor);
 	DrawDebugBox(
 		Matrix::CreateScale(0.045f, 0.012f, halfDepth)
 		* Matrix::CreateTranslation(0.0f, 0.01f, centerZ),
@@ -1223,18 +1227,22 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
 		}
 
 		AddLine(vertices, Vector3(x, lineLift, nearZ), Vector3(x, lineLift, farZ), gridColor);
+		AddLine(vertices, Vector3(x, wallHeight - lineLift, nearZ), Vector3(x, wallHeight - lineLift, farZ), gridColor);
+		AddLine(vertices, Vector3(x, 0, nearZ + lineLift), Vector3(x, wallHeight, nearZ + lineLift), gridColor);
 		AddLine(vertices, Vector3(x, 0.0f, farZ - lineLift), Vector3(x, wallHeight, farZ - lineLift), gridColor);
 	}
 
 	for (float z = CeilToStep(nearZ, gridStep); z <= farZ + 0.001f; z += gridStep)
 	{
 		AddLine(vertices, Vector3(stageMinX, lineLift, z), Vector3(stageMaxX, lineLift, z), gridColor);
+		AddLine(vertices, Vector3(stageMinX, wallHeight - lineLift, z), Vector3(stageMaxX, wallHeight - lineLift, z), gridColor);
 		AddLine(vertices, Vector3(stageMinX + lineLift, 0.0f, z), Vector3(stageMinX + lineLift, wallHeight, z), gridColor);
 		AddLine(vertices, Vector3(stageMaxX - lineLift, 0.0f, z), Vector3(stageMaxX - lineLift, wallHeight, z), gridColor);
 	}
 
 	for (float y = 0.0f; y <= wallHeight + 0.001f; y += gridStep)
 	{
+		AddLine(vertices, Vector3(stageMinX, y, nearZ + lineLift), Vector3(stageMaxX, y, nearZ + lineLift), gridColor);
 		AddLine(vertices, Vector3(stageMinX, y, farZ - lineLift), Vector3(stageMaxX, y, farZ - lineLift), gridColor);
 		AddLine(vertices, Vector3(stageMinX + lineLift, y, nearZ), Vector3(stageMinX + lineLift, y, farZ), gridColor);
 		AddLine(vertices, Vector3(stageMaxX - lineLift, y, nearZ), Vector3(stageMaxX - lineLift, y, farZ), gridColor);

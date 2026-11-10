@@ -24,6 +24,14 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
+ constexpr float PreviewRoomMinX = -30.0f, PreviewRoomMaxX = 30.0f;
+ constexpr float PreviewRoomNearZ = -30.0f, PreviewRoomFarZ = 38.0f;
+ constexpr float PreviewRoomHeight = 32.0f, PreviewGridStep = 4.0f;
+ // 近クリップ面と壁厚を含む余白。描画寸法とカメラ境界を同じ定数から求める。
+ constexpr float PreviewCameraWallMargin = 1.0f;
+	// 操作感度は壁補正・距離基準の切替とは独立。初期距離14での従来のパン速度を基準にする。
+	constexpr float PreviewPanReferenceDistance = 14.0f;
+	constexpr float PreviewZoomUnitsPerNotch = 1.4f; // ホイール1目盛りの移動量。実距離に比例させない。
 	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
 	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
 	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
@@ -336,6 +344,7 @@ void CustomizePreviewController::ResetCamera()
 	cameraYawDegrees = 0.0f;
 	cameraPitchDegrees = -2.5f;
 	cameraDistance = 14.0f;
+	actualCameraDistance = cameraDistance;
 	cameraTargetOffset = Vector3::Zero;
 	cameraDragTarget = Vector3::Zero;
 	cameraDragButton = -1;
@@ -455,14 +464,8 @@ void CustomizePreviewController::Render(
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
 	// 編集画面専用の空間寸法。バトルのステージ境界とは共有せず、
 	// プレビューのカメラ・深度・描画領域をそのまま使って床と壁を描く。
-	constexpr float previewRoomMinX = -30.0f;
-	constexpr float previewRoomMaxX = 30.0f;
-	constexpr float previewRoomNearZ = -30.0f;
-	constexpr float previewRoomFarZ = 38.0f;
-	constexpr float previewRoomHeight = 32.0f;
-	constexpr float previewGridStep = 4.0f;
-	renderer.DrawTrainingRoomBackground(previewRoomMinX, previewRoomMaxX,
-		previewRoomNearZ, previewRoomFarZ, previewRoomHeight, previewGridStep);
+	renderer.DrawTrainingRoomBackground(PreviewRoomMinX, PreviewRoomMaxX,
+		PreviewRoomNearZ, PreviewRoomFarZ, PreviewRoomHeight, PreviewGridStep);
 
 	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
 	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
@@ -734,6 +737,8 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) cameraDragButton = ImGuiMouseButton_Right;
 		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) cameraDragButton = ImGuiMouseButton_Middle;
 		if (cameraDragButton >= 0) cameraDragTarget = baseTarget + cameraTargetOffset;
+		// 平行移動へ切り替えた時点の実距離を採用し、以前の距離への自動復帰を解除する。
+		if (cameraDragButton == ImGuiMouseButton_Middle) cameraDistance = actualCameraDistance;
 	}
 	if (cameraDragButton >= 0)
 	{
@@ -748,25 +753,55 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 			const Vector3 right(std::cos(yaw), 0, -std::sin(yaw));
 			const Vector3 forward(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch));
 			const Vector3 up = forward.Cross(right);
-			// 距離と画角から1ピクセルのワールド移動量を求め、画面上の掴み心地を揃える。
-			const float units = 2 * cameraDistance * std::tan(XMConvertToRadians(camera.fovYDegrees) * 0.5f)
+			// 壁で距離が短縮されても操作量を縮めない。実距離は位置・壁判定だけに使う。
+			const float units = 2 * PreviewPanReferenceDistance * std::tan(XMConvertToRadians(camera.fovYDegrees) * 0.5f)
 				/ static_cast<float>(std::max(1L, region.bottom - region.top));
-			cameraDragTarget += (-right * io.MouseDelta.x + up * io.MouseDelta.y) * units;
+			Vector3 movement = (-right * io.MouseDelta.x + up * io.MouseDelta.y) * units;
+			const Vector3 cameraPosition = cameraDragTarget - forward * actualCameraDistance;
+			const Vector3 lower(PreviewRoomMinX + PreviewCameraWallMargin, PreviewCameraWallMargin,
+				PreviewRoomNearZ + PreviewCameraWallMargin);
+			const Vector3 upper(PreviewRoomMaxX - PreviewCameraWallMargin, PreviewRoomHeight - PreviewCameraWallMargin,
+				PreviewRoomFarZ - PreviewCameraWallMargin);
+			// 同じ移動量を両点へ適用できる範囲に制限する。距離補正でパンを代用しない。
+			const auto clampMove = [](float delta, float target, float eye, float lo, float hi)
+			{
+				return std::clamp(delta, std::max(lo + 0.1f - target, lo - eye),
+					std::min(hi - 0.1f - target, hi - eye));
+			};
+			movement.x = clampMove(movement.x, cameraDragTarget.x, cameraPosition.x, lower.x, upper.x);
+			movement.y = clampMove(movement.y, cameraDragTarget.y, cameraPosition.y, lower.y, upper.y);
+			movement.z = clampMove(movement.z, cameraDragTarget.z, cameraPosition.z, lower.z, upper.z);
+			cameraDragTarget += movement;
 		}
 		// 再生中にモデルが移動しても、操作中の注視点を勝手に追従させない。
 		cameraTargetOffset = cameraDragTarget - baseTarget;
 	}
 	if (inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive() && io.MouseWheel != 0)
-		cameraDistance = std::clamp(cameraDistance * std::pow(0.9f, io.MouseWheel), 5.0f, 30.0f);
+	{
+		// 壁の向こうに残った指定距離ではなく、今見えている位置からズームする。
+		cameraDistance = std::clamp(actualCameraDistance - PreviewZoomUnitsPerNotch * io.MouseWheel, 0.01f, 30.0f);
+		actualCameraDistance = cameraDistance;
+	}
 }
 
 /// <summary>注視点オフセットと旋回角度からカメラTransformを更新する。</summary>
 void CustomizePreviewController::UpdateCameraTransform()
 {
 	cameraPitchDegrees = std::clamp(cameraPitchDegrees, -45.0f, 65.0f);
-	cameraDistance = std::clamp(cameraDistance, 5.0f, 30.0f);
+	cameraDistance = std::clamp(cameraDistance, 0.01f, 30.0f);
 
-	const Vector3 targetPosition = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0.0f, 4.0f, 0.0f) + cameraTargetOffset;
+	const Vector3 baseTarget = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0.0f, 4.0f, 0.0f);
+	const Vector3 requestedTarget = baseTarget + cameraTargetOffset;
+	const Vector3 minimum(PreviewRoomMinX + PreviewCameraWallMargin, PreviewCameraWallMargin,
+		PreviewRoomNearZ + PreviewCameraWallMargin);
+	const Vector3 maximum(PreviewRoomMaxX - PreviewCameraWallMargin, PreviewRoomHeight - PreviewCameraWallMargin,
+		PreviewRoomFarZ - PreviewCameraWallMargin);
+	// 注視点を室内に保つ。ドラッグの蓄積値にも補正を戻し、壁際で操作が引っ掛からないようにする。
+	const Vector3 targetPosition(std::clamp(requestedTarget.x, minimum.x + 0.1f, maximum.x - 0.1f),
+		std::clamp(requestedTarget.y, minimum.y + 0.1f, maximum.y - 0.1f),
+		std::clamp(requestedTarget.z, minimum.z + 0.1f, maximum.z - 0.1f));
+	cameraTargetOffset = targetPosition - baseTarget;
+	if (cameraDragButton >= 0) cameraDragTarget = targetPosition;
 	const float yawRadians = XMConvertToRadians(cameraYawDegrees);
 	const float pitchRadians = XMConvertToRadians(cameraPitchDegrees);
 	const float cosPitch = std::cos(pitchRadians);
@@ -775,7 +810,23 @@ void CustomizePreviewController::UpdateCameraTransform()
 		std::sin(pitchRadians),
 		std::cos(yawRadians) * cosPitch);
 
-	const Vector3 cameraPosition = targetPosition - forward * cameraDistance;
+	// 注視点から本来のカメラ位置への線分と、余白付き室内AABBの交点を求める。
+	// XYZ別の位置クランプと異なり、旋回角度と注視点を変えずに距離だけを縮める。
+	const Vector3 direction = -forward;
+	float allowedDistance = cameraDistance;
+	const auto limitAxis = [&](float target, float axis, float lower, float upper)
+	{
+		if (axis > 0.00001f) allowedDistance = std::min(allowedDistance, (upper - target) / axis);
+		else if (axis < -0.00001f) allowedDistance = std::min(allowedDistance, (lower - target) / axis);
+	};
+	limitAxis(targetPosition.x, direction.x, minimum.x, maximum.x);
+	limitAxis(targetPosition.y, direction.y, minimum.y, maximum.y);
+	limitAxis(targetPosition.z, direction.z, minimum.z, maximum.z);
+	allowedDistance = std::max(0.001f, allowedDistance);
+	// 接近時は即時に壁内へ戻し、余裕ができた場合のみ固定フレームの係数で復帰する。
+	actualCameraDistance = actualCameraDistance > allowedDistance ? allowedDistance
+		: std::min(allowedDistance, actualCameraDistance + (allowedDistance - actualCameraDistance) * 0.15f);
+	const Vector3 cameraPosition = targetPosition + direction * actualCameraDistance;
 	TransformSystem::SetLocalPosition(cameraTransform, cameraPosition);
 	// 位置の球面計算とEuler回転のPitch符号を別々に扱わない。
 	// 実際の位置から注視点へのLookAtを作り、その逆行列からカメラの向きを復元する。

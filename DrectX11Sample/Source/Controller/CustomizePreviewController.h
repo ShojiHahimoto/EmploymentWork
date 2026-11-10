@@ -275,6 +275,7 @@ private:
 	float cameraYawDegrees = 0.0f;
 	float cameraPitchDegrees = -2.5f;
 	float cameraDistance = 14.0f;
+	float actualCameraDistance = 14.0f; // 壁補正後の距離。cameraDistanceはユーザー指定値として保持する。
 	// カメラ操作だけの状態。モーションや本体Transformには保存しない。
 	DirectX::SimpleMath::Vector3 cameraTargetOffset = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 cameraDragTarget = DirectX::SimpleMath::Vector3::Zero;
