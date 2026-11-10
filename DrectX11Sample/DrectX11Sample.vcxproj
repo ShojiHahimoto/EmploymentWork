@@ -46,6 +46,7 @@
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
+    <ClCompile Include="Source\UI\CustomizeMotionEditorImGui.cpp" />
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp" />
     <ClCompile Include="Source\Controller\ResultNavigationController.cpp" />
     <ClCompile Include="Source\Controller\ResultPresentationController.cpp" />

@@ -16,6 +16,49 @@
 class CustomizeMotionEditorController
 {
 public:
+	/// <summary>UIに依存せず攻撃移動キーを追加する。既存の補間位置を初期値にする。</summary>
+	/// <param name="attackData">編集対象。</param>
+	/// <param name="frame">内部フレーム。</param>
+	/// <param name="offset">追加した位置の出力先。</param>
+	void AddAttackMovementKeyframe(AttackData& attackData, int frame, DirectX::SimpleMath::Vector2& offset);
+	/// <summary>指定フレームの攻撃移動キーを削除し、編集値を再取得する。</summary>
+	/// <param name="attackData">編集対象。</param>
+	/// <param name="frame">内部フレーム。</param>
+	/// <param name="offset">削除後の補間位置。</param>
+	void DeleteAttackMovementKeyframe(AttackData& attackData, int frame, DirectX::SimpleMath::Vector2& offset);
+	/// <summary>既存の攻撃移動キーだけを更新する。姿勢キーとは独立して扱う。</summary>
+	/// <param name="attackData">編集対象。</param>
+	/// <param name="frame">内部フレーム。</param>
+	/// <param name="offset">前後・上下の移動量。</param>
+	void UpdateAttackMovementKeyframe(AttackData& attackData, int frame, const DirectX::SimpleMath::Vector2& offset);
+	/// <summary>指定フレームに攻撃移動キーがあるか取得する。</summary>
+	/// <param name="attackData">参照対象。</param>
+	/// <param name="frame">内部フレーム。</param>
+	/// <returns>キーがあればtrue。</returns>
+	bool HasAttackMovementKeyframe(const AttackData& attackData, int frame) const;
+	/// <summary>選択部位を更新し、以前のIK操作を終了して編集値を同期する。</summary>
+	/// <param name="preview">プレビュー制御。</param>
+	/// <param name="part">部位番号。-1は選択解除。</param>
+	/// <param name="frame">内部フレーム。</param>
+	void SelectBodyPart(CustomizePreviewController& preview, int part, int frame);
+	/// <summary>UI・ギズモ共通のIK編集開始。位置は一時目標であり保存しない。</summary>
+	/// <param name="preview">姿勢・IK計算を提供するプレビュー。</param>
+	/// <param name="frame">姿勢キーのある内部フレーム。</param>
+	/// <returns>編集セッションを開始できた場合true。</returns>
+	bool BeginIkEdit(CustomizePreviewController& preview, int frame);
+	/// <summary>ワールド位置の要求をIKで解き、回転キーへ反映する。</summary>
+	/// <param name="preview">IK計算を提供するプレビュー。</param>
+	/// <param name="frame">開始時と同じ内部フレーム。</param>
+	/// <param name="target">ワールド基準の目標位置。</param>
+	/// <returns>操作結果。</returns>
+	std::string UpdateIkEdit(CustomizePreviewController& preview, int frame, const DirectX::SimpleMath::Vector3& target);
+	/// <summary>IKの開始姿勢を解放し、次の操作へ持ち越さない。</summary>
+	/// <param name="preview">終了するプレビュー。</param>
+	void EndIkEdit(CustomizePreviewController& preview);
+	/// <summary>旧ギズモの確定済みIK結果を回転キーへ取り込む。描画APIには依存しない。</summary>
+	/// <param name="preview">操作結果を持つプレビュー。</param>
+	/// <param name="frame">反映先の内部フレーム。</param>
+	void ConsumeTranslationEdit(CustomizePreviewController& preview, int frame);
 	static constexpr int MotionNameBufferSize = 128;
 	static constexpr int PresetNameBufferSize = 128;
 	static constexpr int MotionEditorBoneCount = MotionBodyPartCount;
@@ -67,7 +110,7 @@ public:
 	std::string SaveDraft(const std::string& motionDataId, int totalFrames, bool looping);
 
 	/// <summary>
-	/// 現在の下書き内容を ImGui 入力用バッファへコピーする。
+	/// 現在の下書き内容を UI 共通の入力用バッファへコピーする。
 	/// </summary>
 	/// <param name="actionFrame">現在の内部 actionFrame。0F Idle の場合は -1。</param>
 	void CopyEditorBuffers(int actionFrame);
@@ -208,7 +251,7 @@ public:
 	/// <summary>
 	/// 表示名入力用バッファを取得する。
 	/// </summary>
-	/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
+	/// <returns>UI の文字入力に渡す UTF-8 固定長バッファ。</returns>
 	std::array<char, MotionNameBufferSize>& GetDisplayNameBuffer();
 
 	/// <summary>
@@ -234,6 +277,12 @@ public:
 	/// </summary>
 	/// <returns>Copy Pose 済みなら true。</returns>
 	bool HasCopiedPose() const;
+
+	/// <summary>現在姿勢を指定名のプリセットとして保存する。UIの入力バッファには依存しない。</summary>
+	/// <param name="keyFrame">保存元の内部フレーム。</param>
+	/// <param name="name">重複しないプリセット名。</param>
+	/// <returns>保存結果。</returns>
+	std::string SavePosePreset(int keyFrame, const std::string& name);
 
 private:
 	/// <summary>
