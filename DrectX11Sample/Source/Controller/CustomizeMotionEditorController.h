@@ -41,6 +41,17 @@ public:
 	/// <param name="part">部位番号。-1は選択解除。</param>
 	/// <param name="frame">内部フレーム。</param>
 	void SelectBodyPart(CustomizePreviewController& preview, int part, int frame);
+	/// <summary>プリセット等の対象に使う選択部位を取得する。Gizmoのアクティブ部位とは分ける。</summary>
+	/// <returns>選択された部位だけtrue。</returns>
+	std::array<bool, MotionBodyPartCount> GetSelectedBodyParts() const;
+	/// <summary>複数選択モードを取得する。</summary>
+	/// <returns>複数選択中ならtrue。</returns>
+	bool IsMultipleSelectionEnabled() const { return multipleSelectionEnabled; }
+	/// <summary>モード切替時はアクティブ部位を基準に選択を同期する。</summary>
+	/// <param name="enabled">複数選択を使う場合true。</param>
+	void SetMultipleSelectionEnabled(bool enabled);
+	/// <summary>全ての編集部位を選択する。一括のGizmo変形は行わない。</summary>
+	void SelectAllBodyParts();
 	/// <summary>UI・ギズモ共通のIK編集開始。位置は一時目標であり保存しない。</summary>
 	/// <param name="preview">姿勢・IK計算を提供するプレビュー。</param>
 	/// <param name="frame">姿勢キーのある内部フレーム。</param>
@@ -60,31 +71,16 @@ public:
 	/// <param name="frame">反映先の内部フレーム。</param>
 	void ConsumeTranslationEdit(CustomizePreviewController& preview, int frame);
 	static constexpr int MotionNameBufferSize = 128;
-	static constexpr int PresetNameBufferSize = 128;
 	static constexpr int MotionEditorBoneCount = MotionBodyPartCount;
-
-	/// <summary>
-	/// MotionData 編集 UI と、キーフレーム編集操作を描画/実行する。
-	/// </summary>
-	/// <param name="attackData">攻撃モーション時に移動キーを編集する AttackData。</param>
-	/// <param name="previewController">現在フレームとタイムライン操作に使うプレビュー制御。</param>
-	/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
-	/// <param name="totalFrames">0F Idle を含まない総フレーム数。</param>
-	/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
-	/// <param name="attackMovementKeyOffset">攻撃移動キーの編集値。</param>
-	/// <returns>Save MotionData が押された場合は true。</returns>
-	bool DrawEditor(
-		AttackData& attackData,
-		CustomizePreviewController& previewController,
-		bool editingCommonMotion,
-		int totalFrames,
-		std::string& statusMessage,
-		DirectX::SimpleMath::Vector2& attackMovementKeyOffset);
 
 	/// <summary>
 	/// 攻撃モーション編集用に、MotionData 下書きと編集バッファを初期化する。
 	/// </summary>
 	void ResetForAttackMotion();
+	/// <summary>履歴から下書きを復元し、表示用入力値を同期する。コピー済み姿勢や選択部位は維持する。</summary>
+	/// <param name="restored">復元するモーション。</param>
+	/// <param name="actionFrame">表示する内部フレーム。</param>
+	void RestoreDraft(const MotionData& restored, int actionFrame);
 
 	/// <summary>
 	/// MotionData ID から編集用下書きを読み込み、存在しなければ新規下書きを作る。
@@ -286,25 +282,6 @@ public:
 
 private:
 	/// <summary>
-	/// 姿勢プリセットの保存/読み込み UI を描画し、選択部位への適用を行う。
-	/// </summary>
-	/// <param name="keyFrame">現在の内部 actionFrame。</param>
-	/// <param name="totalFrames">MotionData の総フレーム数。</param>
-	/// <param name="statusMessage">処理結果メッセージの書き込み先。</param>
-	void DrawPosePresetControls(int keyFrame, int totalFrames, std::string& statusMessage);
-
-	/// <summary>
-	/// 編集専用 2 ボーン IK のワールド座標ターゲット UI を描画し、変更された瞬間に回転キーへ焼き込む。
-	/// </summary>
-	/// <param name="previewController">現在表示中のプレビュー姿勢と IK 計算に使う Controller。</param>
-	/// <param name="keyFrame">現在の内部 actionFrame。姿勢キーフレームがある場合だけ IK 編集できる。</param>
-	/// <param name="statusMessage">処理結果メッセージの書き込み先。</param>
-	void DrawIkControls(
-		CustomizePreviewController& previewController,
-		int keyFrame,
-		std::string& statusMessage);
-
-	/// <summary>
 	/// 選択中 IK 対象関節のワールド位置を、現在のプレビュー姿勢から一時ターゲット入力へ読み込む。
 	/// </summary>
 	/// <param name="previewController">現在表示中のプレビュー姿勢を持つ Controller。</param>
@@ -321,13 +298,6 @@ private:
 	std::string ApplySelectedIkTarget(CustomizePreviewController& previewController, int keyFrame);
 
 	/// <summary>
-	/// 現在フレームの全身姿勢をプリセットとして保存する。
-	/// </summary>
-	/// <param name="keyFrame">保存元の内部 actionFrame。</param>
-	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
-	std::string SaveCurrentPoseAsPreset(int keyFrame);
-
-	/// <summary>
 	/// 保存前に MotionData のフレーム範囲とキー順を整える。
 	/// </summary>
 	void NormalizeDraftForSave();
@@ -336,15 +306,12 @@ private:
 	bool hasDraft = false;
 	std::array<char, MotionNameBufferSize> displayNameBuffer = {};
 	int selectedBoneIndex = 0;
+	bool multipleSelectionEnabled = false;
+	std::array<bool, MotionBodyPartCount> selectedBodyParts{};
 	DirectX::SimpleMath::Vector3 rotationEulerDegrees = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 rootOffsetKey = DirectX::SimpleMath::Vector3::Zero;
 	std::array<DirectX::SimpleMath::Quaternion, MotionEditorBoneCount> copiedPoseRotations = {};
 	bool hasCopiedPose = false;
-	std::array<char, PresetNameBufferSize> presetNameBuffer = {};
-	std::array<bool, MotionEditorBoneCount> presetApplyMask = {};
-	bool showSavePresetPanel = false;
-	bool showLoadPresetPanel = false;
-	int selectedPresetIndex = 0;
 	DirectX::SimpleMath::Vector3 ikTargetWorldPosition = DirectX::SimpleMath::Vector3::Zero;
 	bool hasIkTargetWorldPosition = false;
 	bool ikTargetEditing = false; // アクティブな位置入力だけが開始姿勢を保持する。

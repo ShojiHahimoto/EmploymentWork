@@ -59,6 +59,18 @@ Rect Rect::Inset(int horizontal, int vertical) const
 	return Rect{left + horizontal, top + vertical, right - horizontal, bottom - vertical};
 }
 
+std::vector<Rect> Rect::Subtract(const Rect& other) const
+{
+	if (IsEmpty()) return {};
+	const Rect overlap = Intersect(other);
+	if (overlap.IsEmpty()) return {*this};
+	std::vector<Rect> result;
+	for (const Rect part : {Rect{left, top, right, overlap.top}, Rect{left, overlap.bottom, right, bottom},
+		Rect{left, overlap.top, overlap.left, overlap.bottom}, Rect{overlap.right, overlap.top, right, overlap.bottom}})
+		if (!part.IsEmpty()) result.push_back(part);
+	return result;
+}
+
 RECT Rect::ToNativeRect() const
 {
 	return RECT{left, top, right, bottom};
@@ -136,6 +148,8 @@ bool Pressed(const InputFrame &f, Key k)
 } // namespace
 void Root::BeginFrame(const Rect &v, const InputFrame &f)
 {
+	if (f.pointerPressed || f.focusMove || !f.textInput.empty() || f.focusLost
+		|| std::any_of(f.keysPressed.begin(), f.keysPressed.end(), [](bool key) { return key; })) wheelEditId.clear();
 	viewport = v;
 	input = f;
 	elements.clear();
@@ -243,13 +257,15 @@ void Root::AddImageButton(std::string_view id, const Rect& bounds, std::string_v
 	}
 }
 void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
-	std::string_view iconImageId, bool enabled, bool showFocusOutline)
+	std::string_view iconImageId, bool enabled, bool showFocusOutline, bool primary, float fontSize)
 {
 	AddButton(id, bounds, text, enabled);
 	if (Element* element = FindElement(std::string(id)))
 	{
 		element->iconImageId = iconImageId;
+		element->fontSize = fontSize;
 		element->showFocusOutline = showFocusOutline;
+		if (primary) { element->imageId = Theme::PrimaryButtonImage; element->bold = true; }
 	}
 }
 void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled,
@@ -307,10 +323,11 @@ void Root::AddFloatInput(std::string_view id, const Rect &b, float &value, float
 	e.enabled = enabled && std::isfinite(lo) && std::isfinite(hi);
 	RegisterElement(e);
 }
-void Root::AddCheckbox(std::string_view id, const Rect &b, std::string_view text, bool &value, bool enabled)
+void Root::AddCheckbox(std::string_view id, const Rect &b, std::string_view text, bool &value, bool enabled, float fontSize)
 {
 	Element e;
 	e.type = ElementType::Checkbox;
+	e.fontSize = fontSize;
 	e.id = id;
 	e.bounds = b;
 	e.label = text;
@@ -583,6 +600,7 @@ void Root::ApplyFocusedInput()
 		{
 			direction = input.wheelDelta / 120;
 			wheelConsumed = true;
+			if (e->integerValue || e->floatValue) wheelEditId = e->id;
 		}
 		if (direction && (e->integerValue || e->floatValue))
 		{
@@ -654,6 +672,7 @@ void Root::EndFrame()
 	std::string previous = focusedId;
 	if (input.focusLost)
 	{
+		if (auto old = FindElement(focusedId)) UpdateNumericElement(*old, true);
 		capturedId.clear();
 		focusedId.clear();
 		expandedDropdownId.clear();
@@ -698,6 +717,12 @@ void Root::EndFrame()
 			capturedId = hit ? hit->id : "";
 			focusedId = capturedId;
 			keyboardFocusActive = hit != nullptr;
+			if (hit && (hit->integerValue || hit->floatValue))
+			{
+				const int spinnerWidth = std::min(28, std::max(20, (hit->bounds.right - hit->bounds.left) / 5));
+				// 直接入力の確定と、その後の矢印クリックを別操作にする。増減自体は従来どおり解放時。
+				if (input.pointerPosition.x >= hit->bounds.right - spinnerWidth) UpdateNumericElement(*hit, true);
+			}
 			if (!hit || (hit->type != ElementType::DropdownOption && hit->id != expandedDropdownId))
 				expandedDropdownId.clear();
 		}
@@ -752,6 +777,37 @@ void Root::EndFrame()
 		else
 			++it;
 	endedFrame = true;
+}
+
+Root::EditInteraction Root::GetEditInteraction() const
+{
+	for (const auto& e : elements)
+	{
+		if (!e.integerValue && !e.floatValue && !e.textValue) continue;
+		const int spinnerWidth = std::min(28, std::max(20, (e.bounds.right - e.bounds.left) / 5));
+		if (e.activated && (e.integerValue || e.floatValue) && input.pointerPosition.x >= e.bounds.right - spinnerWidth)
+			return {"step/" + e.id, false, false};
+		if (e.changed && (!keyboardFocusActive || e.id != focusedId)) return {"text/" + e.id, false, false};
+	}
+	if (WantsTextInput())
+	{
+		const auto* e = FindElement(focusedId);
+		if (wheelEditId == focusedId) return {"wheel/" + focusedId, false, true};
+		if ((e->integerValue || e->floatValue) && (Pressed(input, Key::Up) || Pressed(input, Key::Down)))
+			return {"step/" + focusedId, false, false};
+		return {"text/" + focusedId, true, false};
+	}
+	return {};
+}
+
+bool Root::ShouldCollapseInlineSection(std::string_view prefix, const Rect& section, const Rect& auxiliary) const
+{
+	if (input.focusLost) return true;
+	if (focusedId.starts_with(prefix)) return false; // プルダウン候補も同じ項目に含める。
+	const auto* focused = FindElement(focusedId);
+	if (focused && (focused->type == ElementType::ScrollTrack || focused->type == ElementType::ScrollThumb)) return false;
+	if (focused) return true;
+	return input.pointerPressed && !section.Contains(input.pointerPosition) && !auxiliary.Contains(input.pointerPosition);
 }
 /// <summary>素材を先に描き、部品の状態表現と動的な文字をその上へ重ねる。</summary>
 void Root::Draw(Renderer &renderer) const

@@ -7,12 +7,28 @@
   ],
   "assets": [
     {
-      "name": "panel_flat_white", "file": "panel_flat_white.png",
-      "width": 1254, "height": 1254, "slice": [110, 110, 110, 110]
+      "name": "panel_flat_white",
+      "file": "panel_flat_white.png",
+      "width": 1254,
+      "height": 1254,
+      "slice": [
+        110,
+        110,
+        110,
+        110
+      ]
     },
     {
-      "name": "button_primary_clean", "file": "button_primary_clean.png",
-      "width": 2172, "height": 724, "slice": [160, 160, 160, 160]
+      "name": "button_primary_clean",
+      "file": "button_primary_clean.png",
+      "width": 2172,
+      "height": 724,
+      "slice": [
+        160,
+        160,
+        160,
+        160
+      ]
     },
     {
       "file": "panel.png",
@@ -502,6 +518,174 @@
       ],
       "height": 223,
       "width": 50
+    },
+    {
+      "width": 209,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "undo",
+      "file": "undo.png",
+      "height": 189
+    },
+    {
+      "width": 210,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "redo",
+      "file": "redo.png",
+      "height": 193
+    },
+    {
+      "width": 207,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "rotate",
+      "file": "rotate.png",
+      "height": 205
+    },
+    {
+      "width": 235,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "translate",
+      "file": "translate.png",
+      "height": 232
+    },
+    {
+      "width": 204,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "add",
+      "file": "add.png",
+      "height": 198
+    },
+    {
+      "width": 206,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "delete",
+      "file": "delete.png",
+      "height": 228
+    },
+    {
+      "width": 222,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "copy",
+      "file": "copy.png",
+      "height": 230
+    },
+    {
+      "width": 203,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "paste",
+      "file": "paste.png",
+      "height": 242
+    },
+    {
+      "width": 239,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "mirror",
+      "file": "mirror.png",
+      "height": 233
+    },
+    {
+      "width": 224,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "preset_save",
+      "file": "preset_save.png",
+      "height": 220
+    },
+    {
+      "width": 245,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "preset_load",
+      "file": "preset_load.png",
+      "height": 193
+    },
+    {
+      "width": 211,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "select_all",
+      "file": "select_all.png",
+      "height": 213
+    },
+    {
+      "width": 217,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "deselect_all",
+      "file": "deselect_all.png",
+      "height": 215
+    },
+    {
+      "width": 199,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "keyframe_movement",
+      "file": "keyframe_movement.png",
+      "height": 199
     }
   ],
   "version": 1

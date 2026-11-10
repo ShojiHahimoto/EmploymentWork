@@ -1,6 +1,7 @@
 ﻿#include "UI/CustomizeAttackEditorView.h"
 #pragma execution_character_set("utf-8")
 #include "Controller/CustomizePreviewController.h"
+#include "Controller/CustomizeMotionEditorController.h"
 #include "UI/UIInputSystem.h"
 #include "UI/UITheme.h"
 #include "UI/UIRenderer.h"
@@ -60,7 +61,28 @@ void CustomizeAttackEditorView::Reset()
     root = GameUI::Root{};
     scroll = 0;
     timelineDragging = false;
+    movementSelected = false;
+    presetPanelMode = 0;
+    presetName.clear();
+    presetPanelBounds = {};
     message.clear();
+    previewToolbarRects.clear();
+}
+
+std::string CustomizeAttackEditorView::UserNotification(const std::string& status)
+{
+    if (status.empty()) return {};
+    if (status.starts_with("Saved pose preset:")) return "ポーズプリセットを保存しました。";
+    if (status.starts_with("Applied pose preset:")) return "ポーズプリセットを適用しました。";
+    if (status == "Preset name is empty.") return "プリセット名を入力してください。";
+    if (status == "Preset display name already exists.") return "同じ名前のプリセットが存在します。";
+    if (status.find("failed") != std::string::npos || status.find("Failed") != std::string::npos)
+        return "処理に失敗しました。内容を確認して再度お試しください。";
+    if (status.find("requires") != std::string::npos || status.starts_with("Add a "))
+        return "編集するフレームにキーフレームを追加してください。";
+    // 日本語で用意した利用者向け通知だけはそのまま表示する。読み込み進捗等の英語は隠す。
+    if (static_cast<unsigned char>(status.front()) >= 0x80) return status;
+    return {};
 }
 
 RECT CustomizeAttackEditorView::PreviewRegion(int width, int height)
@@ -226,11 +248,20 @@ void CustomizeAttackEditorView::BuildCancel()
 }
 
 CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEditorController& controller,
-    CustomizePreviewController& preview, int width, int height, std::string& status)
+    CustomizePreviewController& preview, int width, int height, std::string& status,
+    CustomizeMotionEditorController& motion, bool motionScreen, bool commonMotion, bool canUndo, bool canRedo)
 {
+    const bool canCommitTextForUndo = root.WantsTextInput();
+    motionScreenActive = motionScreen;
+    previewToolbarRects.clear();
+    message = UserNotification(status);
+    const bool hadPresetPanel = presetPanelMode != 0;
+    multipleSelectionEnabled = motion.IsMultipleSelectionEnabled();
+    motionName = motion.GetDisplayNameBuffer().data();
     // 数値・日本語入力中の取消は編集欄へ渡す。次の取消、または戻るボタンで画面を戻す。
     const bool hadKeyboardCapture = root.WantsKeyboardCapture();
-    const auto& input = GameUI::UIInputSystem::GetFrame();
+    const GameUI::InputFrame input = suppressInputOnce ? GameUI::InputFrame{} : GameUI::UIInputSystem::GetFrame();
+    suppressInputOnce = false;
     edit = controller.GetEditState();
     auto& data = edit.attackData;
     heightIndex = IndexOf(Heights, data.attackHeight);
@@ -253,22 +284,50 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     root.AddPanel({0, 0, width, headerHeight}, GameUI::Theme::HeaderImage);
     root.AddIconButton("back", {16, 8, 82, headerHeight - 10}, "", "back");
     root.AddImage("title/accent", {94, 0, 128, headerHeight}, GameUI::Theme::HeaderAccentImage);
-    root.AddLabel("title", {136, 6, width * 28 / 100, headerHeight - 6}, "技の編集", true, 34, false, true);
+    root.AddLabel("title", {136, 6, width * 28 / 100, headerHeight - 6}, "技の編集", true, 34.0f, false, true);
     const int nameX = width * 28 / 100;
-    root.AddLabel("header/name/label", {nameX, 8, nameX + 58, headerHeight - 10}, "技名", true, 20);
-    root.AddTextInput("header/name", {nameX + 62, 10, width * 56 / 100, headerHeight - 12}, data.displayName,
+    root.AddLabel("header/name/label", {nameX, 8, nameX + 58, headerHeight - 10}, commonMotion ? "名前" : "技名", true, 20);
+    root.AddTextInput("header/name", {nameX + 62, 10, width * 56 / 100, headerHeight - 12}, commonMotion ? motionName : data.displayName,
         CustomizeAttackEditorController::AttackNameBufferSize - 1, true, true);
+    if (!commonMotion)
+    {
     root.AddLabel("header/category/label", {width * 58 / 100, 8, width * 62 / 100, headerHeight - 10}, "分類", true, 20);
     root.AddPanel({width * 63 / 100, 10, width * 75 / 100, headerHeight - 12}, GameUI::Theme::ButtonImage);
     root.AddLabel("header/category", {width * 63 / 100 + 10, 10, width * 75 / 100, headerHeight - 12},
         controller.GetSelectedCategory() == CustomizeAttackCategory::Special ? "必殺技" :
         controller.GetSelectedCategory() == CustomizeAttackCategory::Air ? "空中技" : "地上技", true, 20);
+    }
+    root.AddIconButton("undo", {width * 78 / 100, 8, width * 83 / 100, headerHeight - 10}, "", "undo", canUndo || canCommitTextForUndo, false);
+    root.AddIconButton("redo", {width * 84 / 100, 8, width * 89 / 100 - 8, headerHeight - 10}, "", "redo", canRedo, false);
     root.AddPrimaryButton("save", {width * 89 / 100, 8, width - 16, headerHeight - 10}, "保存");
     root.AddPanel({split, headerHeight + 4, width - 8, bottom - 8}, GameUI::Theme::PanelImage);
     rowY = 0;
     const int actionTop = bottom - 64;
+    if (motionScreen)
+    {
+        BuildMotionControls(motion, preview, commonMotion, headerHeight + 4, bottom - 8, split, width);
+        const RECT toolbar = PreviewToolbar(width, height);
+        const int x = toolbar.left, y = toolbar.top;
+        previewToolbarRects.push_back(toolbar);
+        root.AddPanel({x, y, toolbar.right, toolbar.bottom}, GameUI::Theme::PlaybackPanelImage);
+        root.AddIconButton("gizmo/rotate", {x + 4, y + 4, x + 82, toolbar.bottom - 4}, "回転", "rotate", true, false, !movementSelected && !preview.translationGizmoEnabled, 16);
+        root.AddIconButton("gizmo/move", {x + 86, y + 4, x + 164, toolbar.bottom - 4}, "移動", "translate", true, false, movementSelected || preview.translationGizmoEnabled, 16);
+        root.AddCheckbox("selection/multiple", {x + 170, y + 4, x + 274, toolbar.bottom - 4}, "複数選択", multipleSelectionEnabled, true, 16);
+        root.AddCheckbox("preview/markers", {x + 280, y + 4, toolbar.right - 4, toolbar.bottom - 4}, "マーカー", showMarkers, true, 16);
+        if (multipleSelectionEnabled)
+        {
+            const RECT all{x + 100, toolbar.bottom + 6, x + 206, toolbar.bottom + 36};
+            const RECT none{x + 212, toolbar.bottom + 6, x + 318, toolbar.bottom + 36};
+            previewToolbarRects.push_back(all);
+            previewToolbarRects.push_back(none);
+            root.AddIconButton("select/all", {all.left, all.top, all.right, all.bottom}, "全選択", "select_all", true, false, false, 16);
+            root.AddIconButton("select/none", {none.left, none.top, none.right, none.bottom}, "全解除", "deselect_all", true, false, false, 16);
+        }
+    }
+    else
+    {
     root.BeginScrollArea("parameters", {split + 8, headerHeight + 12, width - 8,
-        std::max(headerHeight + 13, actionTop - 8)}, contentHeight, scroll);
+        std::max(headerHeight + 13, actionTop - 34)}, contentHeight, scroll);
     BuildParameters(controller.GetSelectedCategory());
     BuildBehavior(controller.GetSelectedCategory());
     BuildHitboxes();
@@ -277,9 +336,10 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     root.EndScrollArea();
     root.AddIconButton("motion", {split + panelWidth / 5, actionTop, width - panelWidth / 5, bottom - 22},
         "モーションを編集", "motion");
+    }
 
     root.AddPanel({8, regions.previewBottom, split - 8, bottom - 8}, GameUI::Theme::PlaybackPanelImage);
-    const int total = GetAttackTotalFrames(data.frame);
+    const int total = commonMotion ? std::max(1, motion.GetDraft().totalFrames) : GetAttackTotalFrames(data.frame);
     const int controlsY = regions.previewBottom + 10;
     const int controlsBottom = bottom - 18;
     const int buttonWidth = (split * 46 / 100 - 36) / 5;
@@ -298,13 +358,13 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     const GameUI::Rect timeline{8, bottom + 4, width - 8, height - 4};
     root.AddPanel(timeline, GameUI::Theme::PlaybackPanelImage);
 
-    const int trackLeft = 40;
+    const int trackLeft = 138;
     const int trackRight = width - 40;
     const int trackWidth = std::max(1, trackRight - trackLeft);
     // 押下直後から反映し、ドラッグ中は画面外でも端へクランプする。
     // 再生と手動シークが競合しないよう、操作開始時に再生を止める。
     if (input.focusLost) timelineDragging = false;
-    if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition))
+    if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition) && input.pointerPosition.x >= trackLeft)
     {
         timelineDragging = true;
         preview.Stop();
@@ -316,7 +376,7 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
         if (input.pointerReleased || !input.pointerDown) timelineDragging = false;
     }
     const int trackHeight = std::max(24, (height - bottom) * 23 / 100);
-    const int trackTop = height - trackHeight - 22;
+    const int trackTop = height - trackHeight - 12;
     const int startupFrames = std::max(0, data.frame.startup - 1);
     const int activeFrames = std::max(0, data.frame.active);
     const int recoveryFrames = std::max(0, data.frame.recovery);
@@ -354,10 +414,41 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     }
     const int divisions = std::max(1, total);
     const int labelStep = total >= TimelineSparseLabelThreshold ? 5 : 1;
-    const int rulerY = bottom + (height - bottom) * 34 / 100;
+    const int rulerY = bottom + (height - bottom) * 25 / 100;
     const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
     root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
-    root.AddRule({trackLeft, trackTop - 30, trackRight, trackTop - 26});
+    const int poseY = rulerY + 18;
+    const int moveY = poseY + 36;
+    const auto trackLabel = [&](const char* id, const char* label, const char* image, int y)
+    {
+        root.AddPanel({18, y - 15, 126, y + 15}, GameUI::Theme::ButtonImage);
+        root.AddImage(std::string(id) + "/icon", {26, y - 10, 46, y + 10}, image);
+        root.AddLabel(id, {50, y - 14, 122, y + 14}, label, true, 16, true, true);
+    };
+    trackLabel("timeline/pose", "ポーズ", "motion", poseY);
+    trackLabel("timeline/movement", "移動", "translate", moveY);
+    root.AddRule({trackLeft, poseY, trackRight, poseY + 3});
+    root.AddRule({trackLeft, moveY, trackRight, moveY + 3});
+    // 表示フレームは内部キー+1。0は待機姿勢なのでキーを表示しない。
+    for (int frame = 0; frame < total; ++frame)
+    {
+        const int x = trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * (frame + 1) / std::max(1, total));
+        const bool pose = motion.HasMotionKeyframe(frame);
+        const bool move = commonMotion ? motion.HasRootOffsetKeyframe(frame) : motion.HasAttackMovementKeyframe(data, frame);
+        for (int lane = 0; lane < 2; ++lane)
+        {
+            if (lane == 0 ? !pose : !move) continue;
+            const int y = lane == 0 ? poseY : moveY;
+            root.AddImage("key/" + std::to_string(lane) + "/" + std::to_string(frame), {x - 9, y - 9, x + 9, y + 9}, lane == 0 ? "keyframe" : "keyframe_movement");
+            if (input.pointerPressed && std::abs(input.pointerPosition.x - x) <= 10 && std::abs(input.pointerPosition.y - y) <= 10)
+            {
+                preview.Stop(); preview.SetCurrentFrame(frame + 1); movementSelected = lane == 1;
+                timelineDragging = false;
+                motion.EndIkEdit(preview);
+                motion.RefreshFrameEditValues(frame);
+            }
+        }
+    }
     for (int i = 0; i <= divisions; ++i)
     {
         const int x = trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * i / divisions);
@@ -375,7 +466,7 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
         "playhead");
     root.AddLabel("timeline/playhead/value", {playheadX - 20, rulerY - 38, playheadX + 20, rulerY - 14},
         std::to_string(preview.GetCurrentFrame()), true, 15, true);
-    root.AddLabel("status", {width * 76 / 100, 8, width * 88 / 100, headerHeight - 10}, message, true, 14);
+    if (!motionScreen) root.AddLabel("status", {split + 24, bottom - 92, width - 24, bottom - 66}, message, true, 13);
     root.EndFrame();
 
     // UIの選択番号は保存しない。既存Controllerと同じ列挙値・内部0始まりへ戻す。
@@ -415,8 +506,20 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
         box.size = {2.0f, 2.0f};
         result.attackData.hitboxes.push_back(box);
     }
-    controller.ApplyEditState(result);
-    const int updatedTotal = GetAttackTotalFrames(controller.GetDraft().frame);
+    if (motionScreen)
+    {
+        edit = result;
+        ApplyMotionControls(motion, preview, commonMotion, status,
+            {regions.preview.left, regions.preview.top, regions.preview.right, regions.preview.bottom});
+        result = edit;
+    }
+    if (!commonMotion) controller.ApplyEditState(result);
+    const int updatedTotal = commonMotion ? std::max(1, motion.GetDraft().totalFrames) : GetAttackTotalFrames(controller.GetDraft().frame);
+    if (!commonMotion && motion.HasDraft())
+    {
+        motion.GetDraft().totalFrames = updatedTotal;
+        motion.GetDraft().looping = false;
+    }
     preview.ClampCurrentFrame(updatedTotal);
     if (root.WasActivated("play")) preview.Play(updatedTotal);
     if (root.WasActivated("stop")) preview.Stop();
@@ -425,12 +528,14 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
     if (root.WasActivated("camera")) preview.ResetCamera();
     if (root.WasActivated("save"))
     {
-        status = controller.SaveDraft();
-        message = status.starts_with("Saved:") ? "保存しました" : "保存に失敗しました";
+        return CustomizeAttackEditorAction::Save;
     }
-    if (root.WasActivated("motion")) return controller.RequestOpenMotionEditor();
+    if (hadPresetPanel && !input.composing && (input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)])) presetPanelMode = 0;
+    if (root.WasActivated("undo")) return CustomizeAttackEditorAction::Undo;
+    if (root.WasActivated("redo")) return CustomizeAttackEditorAction::Redo;
+    if (root.WasActivated("motion")) return motionScreen ? (commonMotion ? CustomizeAttackEditorAction::Back : CustomizeAttackEditorAction::OpenAttackEditor) : controller.RequestOpenMotionEditor();
     if (root.WasActivated("back")) return controller.RequestBack();
-    if (!hadKeyboardCapture && !input.composing
+    if (!hadPresetPanel && presetPanelMode == 0 && !hadKeyboardCapture && !input.composing
         && (input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)]))
         return controller.RequestBack();
     return CustomizeAttackEditorAction::None;
@@ -439,4 +544,13 @@ CustomizeAttackEditorAction CustomizeAttackEditorView::Update(CustomizeAttackEdi
 void CustomizeAttackEditorView::Draw(Renderer& renderer) const
 {
     root.Draw(renderer);
+}
+
+void CustomizeAttackEditorView::ResetAfterHistory()
+{
+    root = GameUI::Root{};
+    presetPanelMode = 0;
+    timelineDragging = false;
+    suppressInputOnce = true;
+    // スクロール・マーカー表示・編集トラックは利用者の操作状態として維持する。
 }

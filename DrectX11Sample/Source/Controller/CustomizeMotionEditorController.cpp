@@ -1,6 +1,7 @@
 ﻿#include "Controller/CustomizeMotionEditorController.h"
 
 #include "Data/MotionDataLoader.h"
+#include "Controller/KeyframeEditing.h"
 #include "System/MotionRotationLimits.h"
 #include "Data/MotionDataSaver.h"
 #include "Data/PosePreset.h"
@@ -380,18 +381,13 @@ namespace
 		const Quaternion& localRotation)
 	{
 		MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(motionData, boneName);
-		MotionBoneKeyframeData* targetKeyframe = FindMotionKeyframe(*targetTrack, frame);
-		if (!targetKeyframe)
-		{
-			targetKeyframe = &targetTrack->keyframes.emplace_back();
-			targetKeyframe->frame = frame;
-		}
+		auto& targetKeyframe = KeyframeEditing::FindOrInsert(targetTrack->keyframes, frame);
 
 		Quaternion normalizedRotation = localRotation;
 		normalizedRotation.Normalize();
-		targetKeyframe->hasRotation = true;
-		targetKeyframe->localRotation = normalizedRotation;
-		targetKeyframe->localRotationEulerDegrees = QuaternionToEulerDegrees(normalizedRotation);
+		targetKeyframe.hasRotation = true;
+		targetKeyframe.localRotation = normalizedRotation;
+		targetKeyframe.localRotationEulerDegrees = QuaternionToEulerDegrees(normalizedRotation);
 	}
 
 	/// <summary>
@@ -494,14 +490,7 @@ namespace
 	/// <param name="offset">保存する見た目オフセット。</param>
 	void SetMotionRootOffsetKey(MotionData& motionData, int frame, const Vector3& offset)
 	{
-		MotionRootOffsetKeyData* targetKeyframe = FindMotionRootOffsetKeyframe(motionData, frame);
-		if (!targetKeyframe)
-		{
-			targetKeyframe = &motionData.rootOffsetKeys.emplace_back();
-			targetKeyframe->frame = frame;
-		}
-
-		targetKeyframe->offset = offset;
+		KeyframeEditing::FindOrInsert(motionData.rootOffsetKeys, frame).offset = offset;
 	}
 
 	/// <summary>
@@ -512,14 +501,7 @@ namespace
 	/// <param name="offset">保存する前後/上下移動量。</param>
 	void SetAttackMovementKey(AttackData& attackData, int frame, const Vector2& offset)
 	{
-		AttackMovementKeyData* targetKeyframe = FindAttackMovementKeyframe(attackData, frame);
-		if (!targetKeyframe)
-		{
-			targetKeyframe = &attackData.movementKeys.emplace_back();
-			targetKeyframe->frame = frame;
-		}
-
-		targetKeyframe->offset = offset;
+		KeyframeEditing::FindOrInsert(attackData.movementKeys, frame).offset = offset;
 	}
 }
 
@@ -550,9 +532,47 @@ bool CustomizeMotionEditorController::HasAttackMovementKeyframe(const AttackData
 void CustomizeMotionEditorController::SelectBodyPart(CustomizePreviewController& preview, int part, int frame)
 {
 	EndIkEdit(preview);
-	selectedBoneIndex = part >= 0 && part < MotionEditorBoneCount ? part : -1;
+	if (part < 0 || part >= MotionEditorBoneCount)
+	{
+		selectedBoneIndex = -1;
+		selectedBodyParts.fill(false);
+	}
+	else if (multipleSelectionEnabled)
+	{
+		selectedBodyParts[part] = !selectedBodyParts[part];
+		if (selectedBodyParts[part]) selectedBoneIndex = part;
+		else if (selectedBoneIndex == part)
+		{
+			const auto next = std::find(selectedBodyParts.begin(), selectedBodyParts.end(), true);
+			selectedBoneIndex = next == selectedBodyParts.end() ? -1 : static_cast<int>(next - selectedBodyParts.begin());
+		}
+	}
+	else selectedBoneIndex = part;
 	hasIkTargetWorldPosition = false;
 	if (selectedBoneIndex >= 0 && HasMotionKeyframe(frame)) RefreshFrameEditValues(frame);
+}
+
+std::array<bool, MotionBodyPartCount> CustomizeMotionEditorController::GetSelectedBodyParts() const
+{
+	if (multipleSelectionEnabled) return selectedBodyParts;
+	std::array<bool, MotionBodyPartCount> selected{};
+	if (selectedBoneIndex >= 0 && selectedBoneIndex < MotionBodyPartCount) selected[selectedBoneIndex] = true;
+	return selected;
+}
+
+void CustomizeMotionEditorController::SetMultipleSelectionEnabled(bool enabled)
+{
+	if (multipleSelectionEnabled == enabled) return;
+	selectedBodyParts.fill(false);
+	if (selectedBoneIndex >= 0 && selectedBoneIndex < MotionBodyPartCount) selectedBodyParts[selectedBoneIndex] = true;
+	multipleSelectionEnabled = enabled;
+}
+
+void CustomizeMotionEditorController::SelectAllBodyParts()
+{
+	if (!multipleSelectionEnabled) return;
+	selectedBodyParts.fill(true);
+	if (selectedBoneIndex < 0 || selectedBoneIndex >= MotionBodyPartCount) selectedBoneIndex = 0;
 }
 
 bool CustomizeMotionEditorController::BeginIkEdit(CustomizePreviewController& preview, int frame)
@@ -661,6 +681,8 @@ std::string CustomizeMotionEditorController::SaveDraft(const std::string& motion
 
 void CustomizeMotionEditorController::CopyEditorBuffers(int actionFrame)
 {
+	multipleSelectionEnabled = false;
+	selectedBodyParts.fill(false);
 	displayNameBuffer.fill('\0');
 	selectedBoneIndex = 3;
 	rotationEulerDegrees = Vector3::Zero;
@@ -678,6 +700,14 @@ void CustomizeMotionEditorController::CopyEditorBuffers(int actionFrame)
 		selectedBoneIndex = ClampBodyPartIndex(MotionSkeleton::FindBodyPartIndex(track.boneName));
 	}
 
+	RefreshFrameEditValues(actionFrame);
+}
+
+void CustomizeMotionEditorController::RestoreDraft(const MotionData& restored, int actionFrame)
+{
+	draft = restored;
+	hasDraft = true;
+	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", draft.displayName.c_str());
 	RefreshFrameEditValues(actionFrame);
 }
 
@@ -795,15 +825,6 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(CustomizePre
 	SetMotionRotationQuaternionKey(draft, boneName, keyFrame, constrained);
 	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(selectedBoneIndex, QuaternionToEulerDegrees(constrained));
 
-	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);
-	std::sort(
-		targetTrack->keyframes.begin(),
-		targetTrack->keyframes.end(),
-		[](const MotionBoneKeyframeData& left, const MotionBoneKeyframeData& right)
-		{
-			return left.frame < right.frame;
-		});
-
 	return "Set MotionData keyframe.";
 }
 
@@ -836,15 +857,6 @@ std::string CustomizeMotionEditorController::ApplyGizmoRotationEdit(
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
 	draft.totalFrames = std::max(1, totalFrames);
 	SetMotionRotationQuaternionKey(draft, boneName, keyFrame, localRotation);
-
-	MotionBoneTrackData* targetTrack = FindOrCreateMotionTrack(draft, boneName);
-	std::sort(
-		targetTrack->keyframes.begin(),
-		targetTrack->keyframes.end(),
-		[](const MotionBoneKeyframeData& left, const MotionBoneKeyframeData& right)
-		{
-			return left.frame < right.frame;
-		});
 
 	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(
 		selectedBoneIndex,
@@ -1008,11 +1020,6 @@ std::string CustomizeMotionEditorController::ApplySelectedIkTarget(
     return result.atReachLimit ? "IK: reached the limit on the selected axis." : "IK pose updated.";
 }
 
-std::string CustomizeMotionEditorController::SaveCurrentPoseAsPreset(int keyFrame)
-{
-	return SavePosePreset(keyFrame, presetNameBuffer.data());
-}
-
 std::string CustomizeMotionEditorController::SavePosePreset(int keyFrame, const std::string& displayName)
 {
 	if (!HasMotionKeyframe(keyFrame))
@@ -1048,8 +1055,6 @@ std::string CustomizeMotionEditorController::SavePosePreset(int keyFrame, const 
 		return "Failed to save pose preset.";
 	}
 
-	presetNameBuffer.fill('\0');
-	showSavePresetPanel = false;
 	return "Saved pose preset: " + displayName;
 }
 

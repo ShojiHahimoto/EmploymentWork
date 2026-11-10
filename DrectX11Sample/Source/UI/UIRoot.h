@@ -34,6 +34,10 @@ namespace GameUI
 		/// <param name="other">交差判定する矩形。</param>
 		/// <returns>交差部分または空矩形。</returns>
 		Rect Intersect(const Rect& other) const;
+		/// <summary>指定矩形を除いた領域を、互いに重ならない最大4矩形として返す。</summary>
+		/// <param name="other">除外する範囲。</param>
+		/// <returns>描画・入力に利用できる残りの範囲。</returns>
+		std::vector<Rect> Subtract(const Rect& other) const;
 		/// <summary>指定量だけ内側へ縮めた矩形を返す。</summary>
 		/// <param name="horizontal">左右それぞれから引く量。</param>
 		/// <param name="vertical">上下それぞれから引く量。</param>
@@ -102,6 +106,17 @@ namespace GameUI
 	class Root
 	{
 	public:
+		/// <summary>編集履歴へ渡す入力の区切り。</summary>
+		struct EditInteraction { std::string id; bool ongoing = false; bool wheel = false; };
+		/// <summary>文字入力・数値ステップ・ホイールの操作単位を取得する。</summary>
+		/// <returns>編集欄がなければ空ID。単発ボタン操作は呼び出し側が扱う。</returns>
+		EditInteraction GetEditInteraction() const;
+		/// <summary>展開した項目を、別項目へのフォーカス移動で閉じるか判定する。</summary>
+		/// <param name="prefix">展開項目とプルダウン候補に共通のID接頭辞。</param>
+		/// <param name="section">展開項目の画面上の範囲。</param>
+		/// <param name="auxiliary">適用部位の選択など、開いたまま操作できる補助領域。</param>
+		/// <returns>別項目への移動やフォーカス喪失でtrue。</returns>
+		bool ShouldCollapseInlineSection(std::string_view prefix, const Rect& section, const Rect& auxiliary = {}) const;
 		/// <summary>描画領域と入力を設定し、当フレームの部品登録を開始する。</summary>
 		/// <param name="viewport">このルートが入力と描画を受け持つ画面領域。</param>
 		/// <param name="input">このフレームの入力状態。</param>
@@ -173,8 +188,10 @@ namespace GameUI
 		/// <param name="text">UTF-8の表示文字列。</param>
 		/// <param name="iconImageId">透過アイコン素材。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
+		/// <param name="primary">選択中のモードなどを強調色で表示する場合true。</param>
+		/// <param name="fontSize">表示文字サイズ。省略時は他の標準ボタンと同じ。</param>
 		void AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
-			std::string_view iconImageId, bool enabled = true, bool showFocusOutline = true);
+			std::string_view iconImageId, bool enabled = true, bool showFocusOutline = true, bool primary = false, float fontSize = 18.0f);
 		/// <summary>文字列リテラルがbool引数へ誤変換されないよう文字付きボタンへ転送する。</summary>
 		/// <param name="id">一意な部品ID。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -217,7 +234,8 @@ namespace GameUI
 		/// <param name="text">UTF-8の説明文字列。</param>
 		/// <param name="checked">変更対象のチェック状態。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
-		void AddCheckbox(std::string_view id, const Rect& bounds, std::string_view text, bool& checked, bool enabled = true);
+		/// <param name="fontSize">表示文字サイズ。</param>
+		void AddCheckbox(std::string_view id, const Rect& bounds, std::string_view text, bool& checked, bool enabled = true, float fontSize = 18.0f);
 		/// <summary>候補一覧から一つを選ぶドロップダウンを登録する。</summary>
 		/// <param name="id">開閉状態を保持する一意なID。</param>
 		/// <param name="bounds">選択欄の矩形。</param>
@@ -368,6 +386,7 @@ namespace GameUI
 		std::vector<ScrollContext> scrollStack; // 入れ子スクロール領域の座標変換。
 		std::unordered_map<std::string, TextEditState> textEditStates; // フレームをまたぐ文字入力の編集位置。
 		std::unordered_map<std::string, int> dropdownScrollOffsets; // 長い候補一覧の表示位置。
+		std::string wheelEditId; // 同じ数値欄への連続ホイールを文字入力と区別する。
 		std::string focusedId; // キーボード操作対象の安定ID。
 		std::string capturedId; // 押し始めたボタン。外へドラッグしても所有を維持する。
 		std::string expandedDropdownId; // 現在開いている選択リスト。

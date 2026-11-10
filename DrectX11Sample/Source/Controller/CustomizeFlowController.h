@@ -5,6 +5,7 @@
 #include "Controller/CustomizeCharacterEditorController.h"
 #include "Controller/CustomizeMotionEditorController.h"
 #include "Controller/CustomizePreviewController.h"
+#include "Controller/CustomizeEditHistory.h"
 #include "Controller/CustomizeTypes.h"
 #include "System/Renderer.h"
 #include "UI/CustomizeAttackEditorView.h"
@@ -38,6 +39,7 @@ private:
 	CustomizeAttackEditorController attackEditor;
 	CustomizeAttackEditorView attackEditorView;
 	CustomizeMotionEditorController motionEditor;
+	CustomizeEditHistory editHistory; // 攻撃/モーション画面で共有し、スロットを抜けたら破棄する。
 	CustomizeCharacterEditorController characterEditor;
 	DirectX::SimpleMath::Vector2 attackMovementKeyOffset = DirectX::SimpleMath::Vector2::Zero;
 	bool editingCommonMotion = false;
@@ -56,12 +58,15 @@ private:
 	void DrawCommonMotionSelect();
 	void DrawAttackEditor(Renderer& renderer);
 	void DrawMotionEditorScreen(Renderer& renderer);
-	void DrawPreviewPlaybackControls();
 	void UpdateAttackEditorControls();
+	/// <summary>保存対象だけを複製し、現在フレームを復元用に付ける。</summary>
+	/// <returns>カメラやコピー用姿勢を含まない編集状態。</returns>
+	CustomizeEditSnapshot CaptureEditSnapshot();
+	/// <summary>履歴の下書きを復元し、古い入力・Gizmoの捕捉を終了する。</summary>
+	/// <param name="snapshot">復元する状態。</param>
+	void RestoreEditSnapshot(const CustomizeEditSnapshot& snapshot);
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SelectCommonMotionSlot(int slotIndex);
-	void SaveDraftAttack();
-	void SyncDraftFromEditor();
 	void EnsureDraftAttackMotionDataId();
 	void LoadDraftMotionFromEditorId();
 	void SaveDraftMotion();
@@ -70,7 +75,6 @@ private:
 	void UpdatePreviewPlayback();
 	void RenderAttackPreview(Renderer& renderer, const RECT* region = nullptr);
 	void ClampPreviewCurrentFrame();
-	void StepPreviewFrame(int frameDelta);
 
 	int GetPreviewTotalFrames() const;
 	int GetPreviewActionFrame() const;

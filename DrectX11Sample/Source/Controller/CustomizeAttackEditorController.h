@@ -10,6 +10,10 @@ enum class CustomizeAttackEditorAction
 {
 	None,
 	OpenMotionEditor,
+	OpenAttackEditor,
+	Save,
+	Undo,
+	Redo,
 	Back
 };
 

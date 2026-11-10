@@ -55,7 +55,92 @@ const Input::InputActionState &Input::InputSystem::GetActionState(int, Input::In
 }
 int main()
 {
+	// 配置方向に依存しないUI除外。左上UIの右側や非表示行まで消していた回帰を防ぐ。
+	const Rect previewArea{0, 0, 640, 360};
+	for (const Rect excluded : {Rect{4, 4, 328, 38}, Rect{312, 4, 636, 38},
+		Rect{104, 44, 210, 74}, Rect{700, 0, 800, 40}, Rect{0, 0, 640, 360}})
+	{
+		const auto parts = previewArea.Subtract(excluded);
+		for (int y = 0; y < 360; y += 3)
+			for (int x = 0; x < 640; x += 3)
+			{
+				int count = 0;
+				for (const Rect& part : parts) count += part.Contains({x, y});
+				assert(count == (excluded.Contains({x, y}) ? 0 : 1));
+			}
+	}
+	assert((Rect{0, 0, 0, 0}.Subtract({4, 4, 10, 10}).empty()));
 	const Rect viewport{0, 0, 640, 480}, field{10, 10, 200, 50};
+	{
+		Root inlineRoot;
+		const Rect section{260, 10, 620, 180}, preview{0, 10, 240, 300};
+		std::string poseName;
+		int choice = 0;
+		const auto inlineFrame = [&](const InputFrame& f)
+		{
+			inlineRoot.BeginFrame(viewport, f);
+			inlineRoot.AddTextInput("preset/name", {270, 20, 600, 50}, poseName, 127);
+			inlineRoot.AddDropdown("preset/list", {270, 60, 600, 90}, {"Pose A", "Pose B"}, choice);
+			inlineRoot.AddButton("other/button", {270, 300, 600, 340}, "Other");
+			inlineRoot.EndFrame();
+		};
+		InputFrame f;
+		f.pointerPressed = f.pointerReleased = true; f.pointerPosition = {280, 30};
+		inlineFrame(f);
+		assert(!inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f = {}; f.keysPressed[static_cast<size_t>(Key::Enter)] = true;
+		inlineFrame(f);
+		assert(!inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f = {}; f.pointerPressed = f.pointerReleased = true; f.pointerPosition = {280, 70};
+		inlineFrame(f);
+		assert(!inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f.pointerPosition = {280, 135};
+		inlineFrame(f);
+		assert(choice == 1 && !inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f.pointerPosition = {40, 200};
+		inlineFrame(f);
+		assert(!inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f.pointerPosition = {280, 310};
+		inlineFrame(f);
+		assert(inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+		f = {}; f.focusLost = true;
+		inlineFrame(f);
+		assert(inlineRoot.ShouldCollapseInlineSection("preset/", section, preview));
+	}
+	{
+		Root editRoot;
+		int value = 5;
+		const auto numericFrame = [&](const InputFrame& f)
+		{
+			editRoot.BeginFrame(viewport, f);
+			editRoot.AddIntegerInput("history/number", field, value, 0, 999);
+			editRoot.EndFrame();
+		};
+		InputFrame f;
+		f.pointerPosition = {20, 20};
+		f.pointerPressed = f.pointerReleased = true;
+		numericFrame(f);
+		assert(editRoot.GetEditInteraction().ongoing); // 数値欄本体のクリックはステップ操作ではない。
+		f = {}; f.textInput = L"2";
+		numericFrame(f);
+		assert(value == 5 && editRoot.GetEditInteraction().ongoing);
+		f = {}; f.keysPressed[static_cast<size_t>(Key::Enter)] = true;
+		numericFrame(f);
+		assert(value == 52 && !editRoot.GetEditInteraction().ongoing);
+		f = {}; f.pointerPosition = {190, 15}; f.pointerPressed = f.pointerDown = true;
+		numericFrame(f);
+		f = {}; f.pointerPosition = {190, 15}; f.pointerReleased = true;
+		numericFrame(f);
+		assert(value == 53 && editRoot.GetEditInteraction().id == "step/history/number");
+		f = {}; f.pointerPosition = {30, 20}; f.wheelDelta = 120;
+		numericFrame(f);
+		assert(value == 54 && editRoot.GetEditInteraction().wheel);
+		numericFrame({});
+		assert(editRoot.GetEditInteraction().wheel); // 0.3秒の区切りは履歴側で判断する。
+		f = {}; f.focusLost = true;
+		numericFrame(f);
+		assert(!editRoot.GetEditInteraction().ongoing);
+	}
 	Root root;
 	InputFrame input;
 	auto button = [&](bool enabled = true) {
@@ -238,6 +323,10 @@ int main()
 	testContext = context.Get();
 	assert(UIRenderer::Initialize(device.Get(), 640, 480));
 	assert(UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json"));
+	// モーション編集用素材も本番マニフェストに登録され、再出力後に欠落しないこと。
+	for (const char* image : {"undo", "redo", "rotate", "translate", "add", "delete", "copy", "paste",
+		"mirror", "preset_save", "preset_load", "select_all", "deselect_all", "keyframe_movement"})
+		assert(UIRenderer::HasImage(image));
 	assert(UIRenderer::MeasureText(L"日本語", 18) > 0);
 	assert(UIRenderer::MeasureText(L"重要項目", 18, true) > 0);
 	Renderer renderer;

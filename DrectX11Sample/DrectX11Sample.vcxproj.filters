@@ -200,7 +200,10 @@
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\CustomizeMotionEditorImGui.cpp">
+    <ClCompile Include="Source\Controller\CustomizeEditHistory.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\CustomizeMotionEditorControls.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">
@@ -532,6 +535,12 @@
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\KeyframeEditing.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeEditHistory.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizePreviewController.h">

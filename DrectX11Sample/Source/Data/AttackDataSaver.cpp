@@ -273,5 +273,6 @@ bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const Atta
 	file.write(reinterpret_cast<const char*>(utf8Bom), sizeof(utf8Bom));
 	const std::string text = json.str();
 	file.write(text.data(), static_cast<std::streamsize>(text.size()));
-	return true;
+	file.close();
+	return !file.fail();
 }

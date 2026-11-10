@@ -6,6 +6,7 @@
 #include "System/Debugger.h"
 #include "System/MotionPose.h"
 #include "System/TransformSystem.h"
+#include "UI/UIRoot.h"
 #include "System/imgui-docking/imgui.h"
 #include "ThirdParty/ImGuizmo/ImGuizmo.h"
 
@@ -444,6 +445,20 @@ void CustomizePreviewController::Render(
 	}
 
 	const int actionFrame = GetActionFrame();
+	const int editMode = rootMovementGizmoEnabled ? 2 : rotationGizmoEnabled ? (translationGizmoEnabled ? 1 : 0) : -1;
+	if (actionFrame != previousGizmoFrame || editMode != previousGizmoMode || selectedBodyPartIndex != previousGizmoPart || editorInputBlocked)
+	{
+		// ImGuizmo内部にも開始行列が残るため、自前フラグと同時に捕捉を終了する。
+		ImGuizmo::Enable(false);
+		ImGuizmo::Enable(true);
+		rotationGizmoDragActive = false;
+		translationGizmoActive = false;
+		rootMovementActive = false;
+		EndIkSolveSession();
+	}
+	previousGizmoFrame = actionFrame;
+	previousGizmoMode = editMode;
+	previousGizmoPart = selectedBodyPartIndex;
 	const Vector2 movementOffset = !editingCommonMotion && actionFrame >= 0
 		? GetAttackMovementOffsetAtFrameForPreview(attackData, actionFrame)
 		: Vector2::Zero;
@@ -456,8 +471,9 @@ void CustomizePreviewController::Render(
 		+ Vector3(movementOffset.x, movementOffset.y, 0.0f)
 		+ visualOffset);
 
-	if (region) UpdateCameraInput(*region);
-	UpdateCameraTransform();
+	if (region && !editorInputBlocked) UpdateCameraInput(*region);
+	// 距離の壁補正・復帰も投影先を動かすため、全身移動ドラッグ中はカメラ行列自体を固定する。
+	if (!rootMovementActive) UpdateCameraTransform();
 	TransformSystem::UpdateWorldTransform(playerTransform);
 	TransformSystem::UpdateWorldTransform(cameraTransform);
 	CameraSystem::Update(camera, cameraTransform);
@@ -531,7 +547,50 @@ void CustomizePreviewController::Render(
 		// 3Dのビューポート制限はImGuiには伝わらないため、オーバーレイも明示的に切り取る。
 		overlay->PushClipRect(ImVec2(origin.x + region->left, origin.y + region->top),
 			ImVec2(origin.x + region->right, origin.y + region->bottom), true);
-		DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex, rotationGizmoEnabled);
+		const ImVec2 mouse = ImGui::GetIO().MousePos;
+		const bool onToolbar = IsOverEditorToolbar(POINT{static_cast<LONG>(mouse.x - origin.x), static_cast<LONG>(mouse.y - origin.y)});
+		const bool blocked = editorInputBlocked || (onToolbar && !ImGuizmo::IsUsing());
+		ImGuizmo::Enable(!blocked);
+		if (rootMovementGizmoEnabled)
+		{
+			// 表示位置は腰、保存値はモデル原点からの移動量。両者を混ぜない。
+			if (!rootMovementActive)
+			{
+				const Vector3 playerPosition = TransformSystem::GetLocalPosition(playerTransform);
+				rootMovementStartOffset = playerPosition - GetPreviewPlayerBasePosition();
+				rootMovementStartHandle = playerPosition + Vector3(0, 4, 0);
+				GetBodyPartWorldPosition(static_cast<int>(MotionBodyPart::Waist), rootMovementStartHandle);
+				rootMovementMatrix = Matrix::CreateTranslation(rootMovementStartHandle);
+			}
+			ImGuizmo::SetDrawlist(overlay);
+			ImGuizmo::SetOrthographic(false);
+			ImGuizmo::SetRect(origin.x + region->left, origin.y + region->top,
+				static_cast<float>(region->right - region->left), static_cast<float>(region->bottom - region->top));
+			ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
+			ImGuizmo::SetRotationAngleLimit(false, 0, 0);
+			ImGuizmo::SetTranslationAxesOnly(true);
+			const auto axes = editingCommonMotion ? ImGuizmo::TRANSLATE : ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
+			if (ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11, axes, ImGuizmo::WORLD, &rootMovementMatrix._11))
+			{
+				// 毎フレームの加算ではなく、開始位置＋ハンドルの絶対変位を採用する。
+				rootMovementOffset = rootMovementStartOffset + (rootMovementMatrix.Translation() - rootMovementStartHandle);
+				if (!editingCommonMotion) rootMovementOffset.z = 0;
+				rootMovementChanged = true;
+				Stop();
+				// データの確定を待たず、同じ描画フレームにも全身移動を反映する。
+				TransformSystem::SetLocalPosition(playerTransform, GetPreviewPlayerBasePosition() + rootMovementOffset);
+				TransformSystem::UpdateWorldTransform(playerTransform);
+			}
+			ImGuizmo::SetTranslationAxesOnly(false);
+			rootMovementActive = ImGuizmo::IsUsing();
+		}
+		else
+		{
+			rootMovementActive = false;
+			// Enable(false)で新規入力だけを止める。ツールバー上でも描画は続ける。
+			DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex, rotationGizmoEnabled && !editorInputBlocked);
+		}
+		ImGuizmo::Enable(true);
 		overlay->PopClipRect();
 	}
 
@@ -564,15 +623,50 @@ void CustomizePreviewController::Render(
 		Renderer::RestoreBackBuffer();
 	}
 
-	if (region && previewModel && previewSkinningMatrices)
+	if (region && previewModel && previewSkinningMatrices && !editorInputBlocked && showJointMarkers)
 	{
 		const ImVec2 origin = ImGui::GetMainViewport()->Pos;
 		ImDrawList* overlay = ImGui::GetForegroundDrawList();
-		overlay->PushClipRect(ImVec2(origin.x + region->left, origin.y + region->top),
-			ImVec2(origin.x + region->right, origin.y + region->bottom), true);
-		DrawJointMarkers(*region, *previewModel, selectedBodyPartIndex);
-		overlay->PopClipRect();
+		// ImGui前景描画が専用UIより手前になるので、ツールバーの背後には関節を描かない。
+		const auto drawMarkersClipped = [&](const RECT& clip)
+		{
+			if (clip.right <= clip.left || clip.bottom <= clip.top) return;
+			overlay->PushClipRect(ImVec2(origin.x + clip.left, origin.y + clip.top),
+				ImVec2(origin.x + clip.right, origin.y + clip.bottom), true);
+			DrawJointMarkers(*region, *previewModel, selectedBodyPartIndex);
+			overlay->PopClipRect();
+		};
+		// 左上/右上など配置を仮定せず、表示中の部品を差し引く。
+		// 非表示の2段目や、部品間の空白は描画・入力の対象に残す。
+		std::vector<GameUI::Rect> visible{{region->left, region->top, region->right, region->bottom}};
+		for (const RECT& excluded : editorToolbarExclusions)
+		{
+			std::vector<GameUI::Rect> next;
+			for (const auto& area : visible)
+			{
+				const auto parts = area.Subtract({excluded.left, excluded.top, excluded.right, excluded.bottom});
+				next.insert(next.end(), parts.begin(), parts.end());
+			}
+			visible = std::move(next);
+		}
+		for (const auto& area : visible) drawMarkersClipped(area.ToNativeRect());
 	}
+}
+
+bool CustomizePreviewController::IsOverEditorToolbar(POINT point) const
+{
+	return std::any_of(editorToolbarExclusions.begin(), editorToolbarExclusions.end(),
+		[point](const RECT& bounds) { return PtInRect(&bounds, point) != FALSE; });
+}
+
+void CustomizePreviewController::CancelGizmoEditing()
+{
+	ImGuizmo::Enable(false);
+	ImGuizmo::Enable(true);
+	rotationGizmoDragActive = translationGizmoActive = rootMovementActive = false;
+	hasGizmoRotationEdit = hasTranslationGizmoEdit = rootMovementChanged = false;
+	previousGizmoFrame = -100000;
+	EndIkSolveSession();
 }
 
 bool CustomizePreviewController::ConsumeGizmoRotationEdit(
@@ -725,9 +819,12 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 {
 	const ImGuiIO& io = ImGui::GetIO();
 	const ImVec2 origin = ImGui::GetMainViewport()->Pos;
+	const POINT clientMouse{static_cast<LONG>(io.MousePos.x - origin.x), static_cast<LONG>(io.MousePos.y - origin.y)};
+	if (IsOverEditorToolbar(clientMouse)) return;
 	const bool inside = io.MousePos.x >= origin.x + region.left && io.MousePos.x < origin.x + region.right
 		&& io.MousePos.y >= origin.y + region.top && io.MousePos.y < origin.y + region.bottom;
-	const Vector3 baseTarget = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0, 4, 0);
+	// 操作の基準も固定の初期位置に揃える。再生・シーク・オフセット編集には追従しない。
+	const Vector3 baseTarget = GetPreviewPlayerBasePosition() + Vector3(0, 4, 0);
 	// 開始判定だけを領域内に限定。ドラッグ中は領域外でもボタン解除まで追跡する。
 	if (cameraDragButton >= 0 && (!ImGui::IsMouseDown(cameraDragButton) || io.AppFocusLost)) cameraDragButton = -1;
 	const bool editing = ImGuizmo::IsUsing() || rotationGizmoDragActive || translationGizmoActive || hasIkSolveBasePose;
@@ -773,7 +870,7 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 			movement.z = clampMove(movement.z, cameraDragTarget.z, cameraPosition.z, lower.z, upper.z);
 			cameraDragTarget += movement;
 		}
-		// 再生中にモデルが移動しても、操作中の注視点を勝手に追従させない。
+		// パンで変更した注視点だけを固定基準からのオフセットとして保持する。
 		cameraTargetOffset = cameraDragTarget - baseTarget;
 	}
 	if (inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive() && io.MouseWheel != 0)
@@ -790,7 +887,8 @@ void CustomizePreviewController::UpdateCameraTransform()
 	cameraPitchDegrees = std::clamp(cameraPitchDegrees, -45.0f, 65.0f);
 	cameraDistance = std::clamp(cameraDistance, 0.01f, 30.0f);
 
-	const Vector3 baseTarget = TransformSystem::GetLocalPosition(playerTransform) + Vector3(0.0f, 4.0f, 0.0f);
+	// モデルの現在位置ではなく編集空間の固定点を使う。リセットも同じ基準へ戻る。
+	const Vector3 baseTarget = GetPreviewPlayerBasePosition() + Vector3(0.0f, 4.0f, 0.0f);
 	const Vector3 requestedTarget = baseTarget + cameraTargetOffset;
 	const Vector3 minimum(PreviewRoomMinX + PreviewCameraWallMargin, PreviewCameraWallMargin,
 		PreviewRoomNearZ + PreviewCameraWallMargin);
@@ -889,7 +987,8 @@ void CustomizePreviewController::DrawJointMarkers(
 		mousePosition.x >= regionMin.x
 		&& mousePosition.x <= regionMax.x
 		&& mousePosition.y >= regionMin.y
-		&& mousePosition.y <= regionMax.y;
+		&& mousePosition.y <= regionMax.y
+		&& !IsOverEditorToolbar(POINT{static_cast<LONG>(mousePosition.x - viewportOrigin.x), static_cast<LONG>(mousePosition.y - viewportOrigin.y)});
 
 	std::array<ImVec2, MotionBodyPartCount> markerPositions = {};
 	std::array<bool, MotionBodyPartCount> markerVisible = {};
@@ -975,17 +1074,18 @@ void CustomizePreviewController::DrawJointMarkers(
 			continue;
 		}
 
-		const bool selected = bodyPartIndex == selectedBodyPartIndex;
+		const bool selected = selectedMarkerParts[bodyPartIndex];
 		const bool hovered = bodyPartIndex == nearestBodyPartIndex;
 		const float radius = selected ? JointMarkerRadius + 3.0f : hovered ? JointMarkerRadius + 2.0f : JointMarkerRadius;
 		const ImU32 fillColor = selected
 			? IM_COL32(255, 230, 40, 245)
 			: hovered
-				? IM_COL32(255, 245, 120, 235)
-				: IM_COL32(255, 220, 20, 205);
+				? IM_COL32(70, 225, 205, 235)
+				: IM_COL32(0, 180, 170, 225);
 		drawList->AddCircleFilled(markerPositions[bodyPartIndex], radius, fillColor, 18);
 		drawList->AddCircle(markerPositions[bodyPartIndex], radius, IM_COL32(0, 35, 55, 230), 18, 2.0f);
-		if (selected || hovered)
+		// 複数選択時も名前はアクティブ部位とホバーに絞り、全選択で文字が重なるのを防ぐ。
+		if (bodyPartIndex == selectedBodyPartIndex || hovered)
 		{
 			drawList->AddText(
 				ImVec2(markerPositions[bodyPartIndex].x + 10.0f, markerPositions[bodyPartIndex].y - 10.0f),

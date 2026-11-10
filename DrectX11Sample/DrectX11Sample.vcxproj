@@ -46,7 +46,8 @@
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
-    <ClCompile Include="Source\UI\CustomizeMotionEditorImGui.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeEditHistory.cpp" />
+    <ClCompile Include="Source\UI\CustomizeMotionEditorControls.cpp" />
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp" />
     <ClCompile Include="Source\Controller\ResultNavigationController.cpp" />
     <ClCompile Include="Source\Controller\ResultPresentationController.cpp" />
@@ -145,6 +146,8 @@
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
     <ClInclude Include="Source\Controller\CustomizeFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />
+    <ClInclude Include="Source\Controller\KeyframeEditing.h" />
+    <ClInclude Include="Source\Controller\CustomizeEditHistory.h" />
     <ClInclude Include="Source\Controller\CustomizePreviewController.h" />
     <ClInclude Include="Source\Controller\ResultNavigationController.h" />
     <ClInclude Include="Source\Controller\ResultPresentationController.h" />

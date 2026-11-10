@@ -99,6 +99,12 @@ foreach($asset in @(
         $entries+=@{name=$asset.name; file=$file; source=$asset.source; width=$bitmap.Width; height=$bitmap.Height; slice=$asset.slice}
     } finally {$bitmap.Dispose()}
 }
+# モーション編集と共有する透過アイコンも再出力で欠落させない。
+$motionManifest = Join-Path $output 'motion_assets.json'
+if (Test-Path -LiteralPath $motionManifest) {
+    $motionEntries = (Get-Content -LiteralPath $motionManifest -Raw | ConvertFrom-Json).assets
+    foreach ($entry in $motionEntries) { if ($entry.name -notin $entries.name) { $entries += $entry } }
+}
 $json=@{version=1; sliceOrder=@('left','top','right','bottom'); assets=$entries} | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText((Join-Path $output 'assets.json'),$json,[Text.UTF8Encoding]::new($true))
 Write-Output "Exported $($entries.Count) assets to $output"

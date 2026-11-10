@@ -13,6 +13,7 @@
 
 #include <array>
 #include <string>
+#include <vector>
 
 /// <summary>
 /// カスタマイズ画面の3Dプレビュー状態と描画を管理する。
@@ -20,6 +21,30 @@
 class CustomizePreviewController
 {
 public:
+	/// <summary>履歴を一つにまとめるため、回転・IK・全身移動ドラッグの継続状態を取得する。</summary>
+	/// <returns>いずれかの編集ドラッグ中ならtrue。</returns>
+	bool IsGizmoEditing() const { return rotationGizmoDragActive || translationGizmoActive || rootMovementActive; }
+	/// <summary>Undo/Redo時にギズモの内部捕捉と未消費結果を破棄する。</summary>
+	void CancelGizmoEditing();
+	// 全身移動キー用。関節IKのターゲットやチェーンには流用しない。
+	bool rootMovementGizmoEnabled = false;
+	bool rootMovementChanged = false;
+	bool rootMovementActive = false;
+	DirectX::SimpleMath::Vector3 rootMovementOffset = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Matrix rootMovementMatrix = DirectX::SimpleMath::Matrix::Identity;
+	DirectX::SimpleMath::Vector3 rootMovementStartOffset = DirectX::SimpleMath::Vector3::Zero;
+	DirectX::SimpleMath::Vector3 rootMovementStartHandle = DirectX::SimpleMath::Vector3::Zero;
+	std::vector<RECT> editorToolbarExclusions; // 実際に表示したUI矩形だけを除外する。
+	/// <summary>クライアント座標がプレビュー上の専用UIに重なるか確認する。</summary>
+	/// <param name="point">ウィンドウ左上を原点とする位置。</param>
+	/// <returns>表示中の部品と重なればtrue。</returns>
+	bool IsOverEditorToolbar(POINT point) const;
+	bool editorInputBlocked = false;
+	bool showJointMarkers = true; // 非表示中は関節のヒットテストも行わない。Gizmoは維持する。
+	std::array<bool, MotionBodyPartCount> selectedMarkerParts{}; // 複数選択の表示。Gizmoはアクティブ部位だけを操作する。
+	int previousGizmoFrame = -100000;
+	int previousGizmoMode = -1;
+	int previousGizmoPart = -1;
 	/// <summary>カメラの角度・距離・注視点オフセットとマウス操作状態を初期化する。</summary>
 	void ResetCamera();
 	/// <summary>両編集画面で共用するカメラ初期化ボタンを描画する。</summary>
