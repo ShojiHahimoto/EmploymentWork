@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include "Controller/TitleMenuController.h"
+#include "Controller/TitleNavigationController.h"
+#include "Controller/TitlePresentationController.h"
 #include "Scene/Scene.h"
 #include "World/World.h"
 
@@ -20,12 +23,9 @@ public:
 
 private:
 	World world;
-	int width = 0;
-	int height = 0;
-	bool customizeKeyPressedLastFrame = false;
-	bool battleShortcutKeyPressedLastFrame = false;
-
-	bool WasSubmitTriggered() const;
-	bool WasCustomizeTriggered();
-	bool WasBattleShortcutTriggered();
+	TitlePresentationController presentationController;
+	int width = 1;
+	int height = 1;
+	TitleMenuController menuController;
+	TitleNavigationController navigationController;
 };

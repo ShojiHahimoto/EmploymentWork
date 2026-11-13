@@ -70,13 +70,21 @@ public:
 		int height = 0;
 	};
 
+	struct ScreenRectDraw
+	{
+		// クライアント領域の描画先と、その矩形へ適用する色。
+		RECT destination = {};
+		DirectX::SimpleMath::Color color = DirectX::SimpleMath::Color(1.0f, 1.0f, 1.0f, 1.0f);
+	};
+
 	/// <summary>本体ウィンドウの矩形へ描画し、終了時に描画領域・カメラ・出力状態を戻す。</summary>
 	class ScopedRenderRegion
 	{
 	public:
 		/// <summary>指定矩形をプレビュー描画先にする。バックバッファ内の有効矩形を渡す。</summary>
 		/// <param name="region">クライアント座標での描画領域。</param>
-		ScopedRenderRegion(const RECT& region);
+		/// <param name="preserveBackground">trueなら先に描いたUI背景を青色で塗り直さない。</param>
+		ScopedRenderRegion(const RECT& region, bool preserveBackground = false);
 		/// <summary>変更した出力状態を復元し、取得した COM 参照を解放する。</summary>
 		~ScopedRenderRegion();
 		ScopedRenderRegion(const ScopedRenderRegion&) = delete;
@@ -206,7 +214,12 @@ public:
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
-	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX);
+	/// <param name="nearZ">床と左右壁の手前端。</param>
+	/// <param name="farZ">奥壁の位置。</param>
+	/// <param name="wallHeight">壁の高さ。</param>
+	/// <param name="gridStep">グリッド線の間隔。</param>
+	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
+		float nearZ = -6.0f, float farZ = 56.0f, float wallHeight = 48.0f, float gridStep = 5.0f);
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,
@@ -221,6 +234,9 @@ public:
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);
 	static void DrawScreenRect(const RECT& destination, const DirectX::SimpleMath::Color& color);
+	/// <summary>単色矩形の配列を 1 回の SpriteBatch で描画する。</summary>
+	/// <param name="draws">画面座標と色の描画要求。</param>
+	static void DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws);
 	static void DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const DirectX::SimpleMath::Color& color);
 	static void DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height);
 	static void SetDepthEnable(bool Enable);

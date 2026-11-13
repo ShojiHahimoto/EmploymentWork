@@ -1,0 +1,19 @@
+﻿{
+  "sliceOrder": ["left", "top", "right", "bottom"],
+  "assets": [
+    {
+      "name": "title_logo_temporary",
+      "file": "title_logo_temporary.png",
+      "width": 2172,
+      "height": 724,
+      "slice": [0, 0, 0, 0]
+    },
+    {
+      "name": "battle_fists",
+      "file": "battle_fists.png",
+      "width": 1254,
+      "height": 1254,
+      "slice": [0, 0, 0, 0]
+    }
+  ]
+}

@@ -162,5 +162,6 @@ bool MotionDataSaver::SaveMotionData(const std::string& motionDataId, const Moti
 	file.write(reinterpret_cast<const char*>(utf8Bom), sizeof(utf8Bom));
 	const std::string text = json.str();
 	file.write(text.data(), static_cast<std::streamsize>(text.size()));
-	return true;
+	file.close();
+	return !file.fail();
 }

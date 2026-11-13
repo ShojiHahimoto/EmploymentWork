@@ -1,19 +1,28 @@
 ﻿#include "Controller/CustomizeFlowController.h"
 
+#pragma execution_character_set("utf-8")
 #include "Data/AttackDataSaver.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
+#include "UI/UIInputSystem.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TitleScene.h"
 #include "System/imgui-docking/imgui.h"
 
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 
 using namespace DirectX::SimpleMath;
 
 namespace
 {
+	/// <summary>UI操作の区切りだけに使う単調増加時刻を返す。</summary>
+	/// <returns>秒単位の時刻。ゲームのΔTimeや進行フレームには使用しない。</returns>
+	double EditHistoryTime()
+	{
+		return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+	}
 	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
 	constexpr const char* CategoryLabels[] = { "Ground", "Air", "Special" };
 	constexpr const char* CommonMotionLabels[] = {
@@ -31,36 +40,6 @@ namespace
 		"Down",
 		"Wakeup"
 	};
-	struct CustomizePreviewLayout
-	{
-		int splitX = 1;
-		int previewBottom = 1;
-		RECT previewRegion = {};
-		ImVec2 origin = ImVec2(0.0f, 0.0f);
-		ImGuiID viewportId = 0;
-		ImGuiWindowFlags fixedFlags = 0;
-	};
-
-	/// <summary>
-	/// カスタマイズ画面共通の左プレビュー・右編集欄レイアウトを計算する。
-	/// </summary>
-	/// <param name="width">現在のクライアント幅。</param>
-	/// <param name="height">現在のクライアント高さ。</param>
-	/// <returns>プレビュー矩形と固定 ImGui ウィンドウ用情報。</returns>
-	CustomizePreviewLayout CreateCustomizePreviewLayout(int width, int height)
-	{
-		CustomizePreviewLayout layout;
-		layout.splitX = std::max(1, width / 2);
-		layout.previewBottom = std::max(1, height - 140);
-		layout.previewRegion = { 0, 0, layout.splitX, layout.previewBottom };
-
-		const ImGuiViewport* mainViewport = ImGui::GetMainViewport();
-		layout.origin = mainViewport->Pos;
-		layout.viewportId = mainViewport->ID;
-		layout.fixedFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
-			| ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoSavedSettings;
-		return layout;
-	}
 
 	/// <summary>
 	/// CustomizeAttackCategory を配列アクセス用の番号へ変換する。
@@ -93,6 +72,12 @@ void CustomizeFlowController::Enter()
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 	mode = CustomizeMode::MainMenu;
 	statusMessage.clear();
+	creationMenuSelection = previousMenuDirection = 0;
+	pendingMenuRequest = -1;
+	menuSubmitReady = false;
+#if defined(_DEBUG)
+	pendingCommonMotionRequest = false;
+#endif
 	InitializePreview();
 }
 
@@ -101,6 +86,7 @@ void CustomizeFlowController::Enter()
 /// </summary>
 void CustomizeFlowController::Exit()
 {
+	editHistory.Reset();
 	ReleasePreview();
 }
 
@@ -110,6 +96,23 @@ void CustomizeFlowController::Exit()
 void CustomizeFlowController::RunSystems()
 {
 	UpdatePreviewPlayback();
+	if (mode == CustomizeMode::MainMenu)
+	{
+		if (WasCancelTriggered()) { pendingMenuRequest = -1; RequestTitleScene(); return; }
+		UpdateCreationMenu();
+		return;
+	}
+	if (mode == CustomizeMode::AttackEditor || mode == CustomizeMode::MotionEditor)
+	{
+		UpdateAttackEditorControls();
+		return; // 専用UIが文字編集中の取消と画面の戻る操作を区別する。
+	}
+	if (mode == CustomizeMode::AttackCategorySelect)
+	{
+		if (WasCancelTriggered()) { NavigateBack(); return; }
+		UpdateAttackCategorySelect();
+		return;
+	}
 
 	if (WasCancelTriggered())
 	{
@@ -126,10 +129,13 @@ void CustomizeFlowController::Draw(Renderer& renderer)
 	switch (mode)
 	{
 	case CustomizeMode::MainMenu:
-		DrawMainMenu();
+		creationMenuView.Draw(renderer, width, height, creationMenuSelection);
+#if defined(_DEBUG)
+		DrawDebugMenu();
+#endif
 		break;
 	case CustomizeMode::AttackCategorySelect:
-		DrawAttackCategorySelect();
+		categoryMenuView.Draw(renderer, width, height, categoryMenuSelection, true);
 		break;
 	case CustomizeMode::AttackSlotSelect:
 		DrawAttackSlotSelect();
@@ -153,7 +159,7 @@ void CustomizeFlowController::Draw(Renderer& renderer)
 		mode = characterEditor.DrawAttackPicker(statusMessage);
 		break;
 	default:
-		DrawMainMenu();
+		creationMenuView.Draw(renderer, width, height, creationMenuSelection);
 		break;
 	}
 }
@@ -240,10 +246,13 @@ void CustomizeFlowController::NavigateBack()
 		mode = CustomizeMode::AttackCategorySelect;
 		break;
 	case CustomizeMode::AttackEditor:
+		editHistory.Reset();
 		mode = CustomizeMode::AttackSlotSelect;
 		break;
 	case CustomizeMode::MotionEditor:
-		mode = editingCommonMotion ? CustomizeMode::CommonMotionSelect : CustomizeMode::AttackEditor;
+		editHistory.Reset();
+		previewController.ResetCamera();
+		mode = editingCommonMotion ? CustomizeMode::CommonMotionSelect : CustomizeMode::AttackSlotSelect;
 		break;
 	case CustomizeMode::CommonMotionSelect:
 		mode = CustomizeMode::MainMenu;
@@ -264,67 +273,87 @@ void CustomizeFlowController::NavigateBack()
 }
 
 /// <summary>
-/// カスタマイズシーン最初の選択画面を描画する。
+/// 開発用の汎用モーション編集入口だけを描画する。ゲーム用UIとは独立させる。
 /// </summary>
-void CustomizeFlowController::DrawMainMenu()
+#if defined(_DEBUG)
+void CustomizeFlowController::DrawDebugMenu()
 {
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360.0f, 180.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Customize"))
-	{
-		if (ImGui::Button("Attack Data Editor", ImVec2(220.0f, 32.0f)))
-		{
-			mode = CustomizeMode::AttackCategorySelect;
-		}
-
-		if (ImGui::Button("Character Editor", ImVec2(220.0f, 32.0f)))
-		{
-			characterEditor.RefreshSlotSummaries();
-			mode = CustomizeMode::CharacterSlotSelect;
-		}
-
-		if (ImGui::Button("Common Motion Editor", ImVec2(220.0f, 32.0f)))
-		{
-			mode = CustomizeMode::CommonMotionSelect;
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back To Title", ImVec2(220.0f, 28.0f)))
-		{
-			RequestTitleScene();
-		}
-	}
+	// ゲーム用メニューと分離し、Releaseには入口をコンパイルしない。
+	if (ImGui::Begin("Customize Debug"))
+		if (ImGui::Button("Common Motion Editor")) pendingCommonMotionRequest = true;
 	ImGui::End();
+}
+#endif
+
+void CustomizeFlowController::RequestCreationMenu(bool character)
+{
+	creationMenuSelection = character ? 1 : 0;
+	pendingMenuRequest = creationMenuSelection;
+}
+
+/// <summary>共通UIアクションと表示側の要求を消費する。遷移処理をImGuiから切り離す。</summary>
+void CustomizeFlowController::UpdateCreationMenu()
+{
+	const int uiRequest = creationMenuView.Update(GameUI::UIInputSystem::GetFrame(), width, height, creationMenuSelection);
+	if (uiRequest == 2)
+	{
+		RequestTitleScene();
+		return;
+	}
+	if (uiRequest >= 0) RequestCreationMenu(uiRequest == 1);
+#if defined(_DEBUG)
+	if (pendingCommonMotionRequest)
+	{
+		pendingCommonMotionRequest = false;
+		mode = CustomizeMode::CommonMotionSelect;
+		return;
+	}
+#endif
+	const auto& move = Input::InputSystem::GetActionState(0, Input::InputActionId::Move);
+	const auto& submit = Input::InputSystem::GetActionState(0, Input::InputActionId::Submit);
+	const int direction = move.value.axis.y > 0.5f ? -1 : move.value.axis.y < -0.5f ? 1 : 0;
+	if (direction && direction != previousMenuDirection) creationMenuSelection = direction > 0 ? 1 : 0;
+	previousMenuDirection = direction;
+	if (!submit.press) menuSubmitReady = true;
+	if (menuSubmitReady && submit.trigger) pendingMenuRequest = creationMenuSelection;
+	const int request = pendingMenuRequest;
+	pendingMenuRequest = -1;
+	if (request < 0) return;
+	menuSubmitReady = false;
+	if (request == 1)
+	{
+		characterEditor.RefreshSlotSummaries();
+		mode = CustomizeMode::CharacterSlotSelect;
+	}
+	else
+	{
+		categorySubmitReady = false;
+		previousCategoryDirection = 0;
+		categoryMenuSelection = static_cast<int>(selectedCategory);
+		mode = CustomizeMode::AttackCategorySelect;
+	}
 }
 
 /// <summary>
-/// 作成する技カテゴリを選択する画面を描画する。
+/// 専用UIと共通アクションの操作からカテゴリを確定する。描画時には遷移しない。
 /// </summary>
-void CustomizeFlowController::DrawAttackCategorySelect()
+void CustomizeFlowController::UpdateAttackCategorySelect()
 {
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360.0f, 220.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Attack Category"))
-	{
-		for (int index = 0; index < static_cast<int>(std::size(CategoryLabels)); ++index)
-		{
-			ImGui::PushID(index);
-			if (ImGui::Button(CategoryLabels[index], ImVec2(220.0f, 32.0f)))
-			{
-				selectedCategory = static_cast<CustomizeAttackCategory>(index);
-				RefreshAttackSlotSummaries(selectedCategory);
-				mode = CustomizeMode::AttackSlotSelect;
-			}
-			ImGui::PopID();
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			NavigateBack();
-		}
-	}
-	ImGui::End();
+	int request=categoryMenuView.Update(GameUI::UIInputSystem::GetFrame(),width,height,categoryMenuSelection,true);
+	if (request==3) { NavigateBack(); return; }
+	const auto& move=Input::InputSystem::GetActionState(0,Input::InputActionId::Move);
+	const auto& submit=Input::InputSystem::GetActionState(0,Input::InputActionId::Submit);
+	const int direction=move.value.axis.y>0.5f ? -1 : move.value.axis.y< -0.5f ? 1 : 0;
+	if (direction && direction!=previousCategoryDirection)
+		categoryMenuSelection=std::clamp(categoryMenuSelection+direction,0,2);
+	previousCategoryDirection=direction;
+	if (!submit.press) categorySubmitReady=true;
+	if (request<0 && categorySubmitReady && submit.trigger) request=categoryMenuSelection;
+	if (request<0) return;
+	selectedCategory=static_cast<CustomizeAttackCategory>(request);
+	RefreshAttackSlotSummaries(selectedCategory);
+	categorySubmitReady=false;
+	mode=CustomizeMode::AttackSlotSelect;
 }
 
 /// <summary>
@@ -406,33 +435,13 @@ void CustomizeFlowController::DrawCommonMotionSelect()
 void CustomizeFlowController::DrawAttackEditor(Renderer& renderer)
 {
 	EnsureDraftAttackMotionDataId();
+	if (!motionEditor.HasDraft()) LoadDraftMotionFromEditorId();
 	ClampPreviewCurrentFrame();
 
-	// モーション作成画面と同じ表示規則にして、左側の本体ウィンドウ上に直接プレビューする。
-	const CustomizePreviewLayout layout = CreateCustomizePreviewLayout(width, height);
-
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x, layout.origin.y + layout.previewBottom), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Playback", nullptr, layout.fixedFlags))
-	{
-		ImGui::Text("Editing: %s", attackEditor.GetEditingAttackDataId().c_str());
-		ImGui::Text("Frame: %d / %d", previewController.GetCurrentFrame(), GetPreviewTotalFrames());
-		ImGui::Text("Phase: %s", GetPreviewPhaseText());
-		DrawPreviewPlaybackControls();
-	}
-	ImGui::End();
-
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x + layout.splitX, layout.origin.y), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(std::max(1, width - layout.splitX)), static_cast<float>(std::max(1, height))), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Parameters", nullptr, layout.fixedFlags))
-	{
-		DrawAttackEditorControls();
-	}
-	ImGui::End();
-
-	RenderAttackPreview(renderer, &layout.previewRegion);
+	attackEditorView.DrawBackdrop(renderer, width, height);
+	const RECT region = CustomizeAttackEditorView::PreviewRegion(width, height);
+	RenderAttackPreview(renderer, &region);
+	attackEditorView.Draw(renderer);
 }
 
 /// <summary>
@@ -441,122 +450,47 @@ void CustomizeFlowController::DrawAttackEditor(Renderer& renderer)
 /// <param name="renderer">本体のプレビュー矩形へ描画する Renderer。</param>
 void CustomizeFlowController::DrawMotionEditorScreen(Renderer& renderer)
 {
-	if (!editingCommonMotion)
-	{
-		EnsureDraftAttackMotionDataId();
-	}
-	if (!motionEditor.HasDraft())
-	{
-		LoadDraftMotionFromEditorId();
-	}
-
-	ClampPreviewCurrentFrame();
-	// 左側は本体バックバッファ。ImGui は操作欄だけに限定し、3D領域を覆わない。
-	const CustomizePreviewLayout layout = CreateCustomizePreviewLayout(width, height);
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x, layout.origin.y + layout.previewBottom), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(layout.splitX), static_cast<float>(std::max(1, height - layout.previewBottom))), ImGuiCond_Always);
-	if (ImGui::Begin("Motion Playback", nullptr, layout.fixedFlags))
-	{
-		ImGui::Text("Frame: %d / %d", previewController.GetCurrentFrame(), GetPreviewTotalFrames());
-		ImGui::Text("Phase: %s", GetPreviewPhaseText());
-		DrawPreviewPlaybackControls();
-	}
-	ImGui::End();
-	ImGui::SetNextWindowViewport(layout.viewportId);
-	ImGui::SetNextWindowPos(ImVec2(layout.origin.x + layout.splitX, layout.origin.y), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(std::max(1, width - layout.splitX)), static_cast<float>(std::max(1, height))), ImGuiCond_Always);
-	if (ImGui::Begin("Motion Editor", nullptr, layout.fixedFlags))
-	{
-		if (editingCommonMotion)
-		{
-			ImGui::Text("Common Motion: %s", CommonMotionLabels[selectedCommonMotionIndex]);
-		}
-		else
-		{
-			ImGui::Text("Attack: %s", attackEditor.GetEditingAttackDataId().c_str());
-		}
-		ImGui::Text("MotionData ID: %s", attackEditor.GetMotionDataIdBuffer().data());
-		ImGui::Separator();
-		ImGui::Text("Preview Camera");
-		ImGui::SliderFloat("Camera Yaw", &previewController.GetCameraYawDegrees(), -180.0f, 180.0f);
-		ImGui::SliderFloat("Camera Pitch", &previewController.GetCameraPitchDegrees(), -45.0f, 65.0f);
-		ImGui::SliderFloat("Camera Distance", &previewController.GetCameraDistance(), 5.0f, 30.0f);
-		if (motionEditor.DrawEditor(
-			attackEditor.GetDraft(),
-			previewController,
-			editingCommonMotion,
-			GetPreviewTotalFrames(),
-			statusMessage,
-			attackMovementKeyOffset))
-		{
-			SaveDraftMotion();
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button(editingCommonMotion ? "Back To Common Motion Select" : "Back To Attack Editor", ImVec2(240.0f, 30.0f)))
-		{
-			NavigateBack();
-		}
-	}
-	ImGui::End();
-	// 数値変更・フレーム移動と同じ描画フレームに姿勢を反映する。
-	RenderAttackPreview(renderer, &layout.previewRegion);
+    DrawAttackEditor(renderer);
 }
-
-/// <summary>
-/// プレビュー再生と1フレーム送り・戻しの共通操作を描画する。
-/// </summary>
-void CustomizeFlowController::DrawPreviewPlaybackControls()
+/// <summary>共通編集UIの操作結果を受け、保存と画面遷移を振り分ける。</summary>
+void CustomizeFlowController::UpdateAttackEditorControls()
 {
-	previewController.DrawCameraResetButton();
-	if (ImGui::Button("Play", ImVec2(72.0f, 28.0f)))
+	if (!motionEditor.HasDraft()) LoadDraftMotionFromEditorId();
+	const auto before = CaptureEditSnapshot();
+	const bool gizmoWasActive = previewController.IsGizmoEditing();
+	const CustomizeAttackEditorAction action = attackEditorView.Update(attackEditor, previewController, width, height, statusMessage,
+		motionEditor, mode == CustomizeMode::MotionEditor, editingCommonMotion, editHistory.CanUndo(), editHistory.CanRedo());
+	const auto after = CaptureEditSnapshot();
+	const auto interaction = attackEditorView.GetEditInteraction();
+	const bool changed = !CustomizeEditHistory::Equal(before, after);
+	if (changed || interaction.ongoing) previewController.Stop();
+	// UIの空更新では、描画側で継続しているGizmoドラッグを確定しない。
+	if (!gizmoWasActive || changed)
+		editHistory.Observe(before, after, interaction.id, interaction.ongoing, interaction.wheel, EditHistoryTime());
+	if (action != CustomizeAttackEditorAction::None)
 	{
-		previewController.Play(GetPreviewTotalFrames());
+		editHistory.Commit();
+		previewController.CancelGizmoEditing();
 	}
-	ImGui::SameLine();
-	if (ImGui::Button("Stop", ImVec2(72.0f, 28.0f)))
+	if (action == CustomizeAttackEditorAction::Undo || action == CustomizeAttackEditorAction::Redo)
 	{
 		previewController.Stop();
+		previewController.CancelGizmoEditing();
+		CustomizeEditSnapshot restored;
+		const bool found = action == CustomizeAttackEditorAction::Undo ? editHistory.Undo(restored) : editHistory.Redo(restored);
+		statusMessage = found ? (action == CustomizeAttackEditorAction::Undo ? "操作を元に戻しました。" : "操作をやり直しました。") : "対象の操作はありません。";
+		if (found) RestoreEditSnapshot(restored);
+		return;
 	}
-	if (ImGui::GetContentRegionAvail().x >= 320.0f)
+	if (action == CustomizeAttackEditorAction::Save) { SaveDraftMotion(); return; }
+	if (action == CustomizeAttackEditorAction::OpenAttackEditor)
 	{
-		ImGui::SameLine();
+		mode = CustomizeMode::AttackEditor;
+		return; // 編集画面同士の切替なので、下書きとカメラを維持する。
 	}
-	if (ImGui::Button("< 1F", ImVec2(72.0f, 28.0f)))
-	{
-		StepPreviewFrame(-1);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("1F >", ImVec2(72.0f, 28.0f)))
-	{
-		StepPreviewFrame(1);
-	}
-}
-
-/// <summary>
-/// 技パラメータを編集する右側 ImGui ウィンドウを描画する。
-/// </summary>
-void CustomizeFlowController::DrawAttackEditorWindow()
-{
-	ImGui::SetNextWindowPos(ImVec2(static_cast<float>(width) * 0.5f, 20.0f), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(static_cast<float>(width) * 0.5f - 20.0f, static_cast<float>(height) - 40.0f), ImGuiCond_Always);
-	if (ImGui::Begin("Attack Parameters"))
-	{
-		DrawAttackEditorControls();
-	}
-	ImGui::End();
-}
-
-/// <summary>
-/// 技パラメータ編集の中身を描画する。
-/// </summary>
-void CustomizeFlowController::DrawAttackEditorControls()
-{
-	const CustomizeAttackEditorAction action = attackEditor.DrawEditorControls(GetPreviewTotalFrames(), statusMessage);
 	if (action == CustomizeAttackEditorAction::OpenMotionEditor)
 	{
-		LoadDraftMotionFromEditorId();
+		if (!motionEditor.HasDraft()) LoadDraftMotionFromEditorId();
 		mode = CustomizeMode::MotionEditor;
 		ClampPreviewCurrentFrame();
 		return;
@@ -577,10 +511,12 @@ void CustomizeFlowController::DrawAttackEditorControls()
 /// <param name="slotIndex">カテゴリ内スロット番号。</param>
 void CustomizeFlowController::SelectAttackSlot(CustomizeAttackCategory category, int slotIndex)
 {
+	editHistory.Reset();
 	editingCommonMotion = false;
 	editingCommonMotionId.clear();
 	selectedCategory = category;
 	statusMessage = attackEditor.SelectSlot(category, slotIndex);
+	attackEditorView.Reset();
 	motionEditor.ResetForAttackMotion();
 	previewController.SetCurrentFrame(0);
 	previewController.Stop();
@@ -594,6 +530,7 @@ void CustomizeFlowController::SelectAttackSlot(CustomizeAttackCategory category,
 /// <param name="slotIndex">CommonMotionLabels 配列上の番号。</param>
 void CustomizeFlowController::SelectCommonMotionSlot(int slotIndex)
 {
+	editHistory.Reset();
 	editingCommonMotion = true;
 	selectedCommonMotionIndex = std::clamp(slotIndex, 0, CommonMotionSlotCount - 1);
 	editingCommonMotionId = BuildCommonMotionDataId(selectedCommonMotionIndex);
@@ -603,28 +540,8 @@ void CustomizeFlowController::SelectCommonMotionSlot(int slotIndex)
 	previewController.SetCurrentFrame(0);
 	previewController.Stop();
 	attackMovementKeyOffset = Vector2::Zero;
+	attackEditorView.Reset();
 	mode = CustomizeMode::MotionEditor;
-}
-
-/// <summary>
-/// 編集中の draft を JSON として保存する。
-/// </summary>
-void CustomizeFlowController::SaveDraftAttack()
-{
-	statusMessage = attackEditor.SaveDraft();
-}
-
-/// <summary>
-/// ImGui 入力欄の内容を draftAttack に反映する。
-/// </summary>
-void CustomizeFlowController::SyncDraftFromEditor()
-{
-	if (editingCommonMotion)
-	{
-		return;
-	}
-
-	attackEditor.SyncDraftFromEditor();
 }
 
 /// <summary>
@@ -659,43 +576,28 @@ void CustomizeFlowController::LoadDraftMotionFromEditorId()
 /// </summary>
 void CustomizeFlowController::SaveDraftMotion()
 {
-	if (!motionEditor.HasDraft())
-	{
-		statusMessage = "No MotionData draft.";
-		return;
-	}
-
-	if (editingCommonMotion)
-	{
-		editingCommonMotionId = attackEditor.GetMotionDataIdBuffer().data();
-	}
-	else
-	{
-		AttackData& draftAttack = attackEditor.GetDraft();
-		draftAttack.motionDataId = attackEditor.GetMotionDataIdBuffer().data();
-		EnsureDraftAttackMotionDataId();
-	}
-
-	const std::string motionDataId = editingCommonMotion
-		? editingCommonMotionId
-		: attackEditor.GetDraft().motionDataId;
-	const int totalFrames = editingCommonMotion
-		? motionEditor.GetDraft().totalFrames
-		: GetPreviewTotalFrames();
-	statusMessage = motionEditor.SaveDraft(motionDataId, totalFrames, editingCommonMotion && motionEditor.GetDraft().looping);
-	if (statusMessage.rfind("Saved MotionData:", 0) == 0)
-	{
-		if (!editingCommonMotion)
-		{
-			SyncDraftFromEditor();
-			AttackDataSaver::SaveAttackData(attackEditor.GetEditingAttackDataId(), attackEditor.GetDraft());
-		}
-	}
+    if (!motionEditor.HasDraft()) LoadDraftMotionFromEditorId();
+    EnsureDraftAttackMotionDataId();
+    const std::string motionId = GetEditingMotionDataId();
+    const int total = GetPreviewTotalFrames();
+    const std::string motionResult = motionEditor.SaveDraft(motionId, total,
+        editingCommonMotion && motionEditor.GetDraft().looping);
+    if (!motionResult.starts_with("Saved MotionData:"))
+    {
+        statusMessage = motionResult;
+        return;
+    }
+    if (!editingCommonMotion)
+    {
+        const std::string attackResult = attackEditor.SaveDraft();
+        if (!attackResult.starts_with("Saved:"))
+        {
+            statusMessage = "MotionData saved, but AttackData save failed. Retry saving both files.";
+            return;
+        }
+    }
+    statusMessage = editingCommonMotion ? "モーションを保存しました。" : "技とモーションを保存しました。";
 }
-
-/// <summary>
-/// 技調整プレビュー用のモデル、カメラ、RenderTexture を初期化する。
-/// </summary>
 void CustomizeFlowController::InitializePreview()
 {
 	previewController.Initialize();
@@ -740,11 +642,23 @@ void CustomizeFlowController::UpdatePreviewPlayback()
 /// <param name="region">本体の描画矩形。nullptr の場合は従来の RenderTexture。</param>
 void CustomizeFlowController::RenderAttackPreview(Renderer& renderer, const RECT* region)
 {
+	const auto beforeEdit = CaptureEditSnapshot();
 	const int actionFrame = GetPreviewActionFrame();
+	const bool motionMode = mode == CustomizeMode::MotionEditor;
+	const bool movementMode = motionMode && attackEditorView.IsMovementSelected();
+	previewController.rootMovementGizmoEnabled = movementMode && !previewController.IsPlaying()
+		&& (editingCommonMotion ? motionEditor.HasRootOffsetKeyframe(actionFrame)
+			: motionEditor.HasAttackMovementKeyframe(attackEditor.GetDraft(), actionFrame));
+	if (motionMode) previewController.editorToolbarExclusions = attackEditorView.PreviewToolbarExclusions();
+	else previewController.editorToolbarExclusions.clear();
+	previewController.editorInputBlocked = false; // プリセットはパネル内展開なのでプレビュー全体を遮断しない。
+	previewController.showJointMarkers = attackEditorView.AreMarkersVisible();
+	previewController.selectedMarkerParts = motionEditor.GetSelectedBodyParts();
 	const bool rotationGizmoEnabled =
 		mode == CustomizeMode::MotionEditor
 		&& region != nullptr
 		&& !previewController.IsPlaying()
+		&& !movementMode
 		&& motionEditor.HasMotionKeyframe(actionFrame);
 
 	previewController.Render(
@@ -757,6 +671,26 @@ void CustomizeFlowController::RenderAttackPreview(Renderer& renderer, const RECT
 		GetEditingMotionDataId(),
 		motionEditor.GetSelectedBoneIndex(),
 		rotationGizmoEnabled);
+	if (motionMode)
+	{
+		const int picked = previewController.ConsumePickedBodyPartIndex();
+		if (!movementMode && picked != -1) motionEditor.SelectBodyPart(previewController, picked == -2 ? -1 : picked, actionFrame);
+		motionEditor.ConsumeTranslationEdit(previewController, actionFrame);
+	}
+	if (previewController.rootMovementChanged)
+	{
+		previewController.rootMovementChanged = false;
+		if (previewController.rootMovementGizmoEnabled)
+		{
+			const Vector3 offset = previewController.rootMovementOffset;
+			if (editingCommonMotion)
+			{
+				motionEditor.GetRootOffsetKey() = offset;
+				statusMessage = motionEditor.SetRootOffsetKeyframe(actionFrame);
+			}
+			else motionEditor.UpdateAttackMovementKeyframe(attackEditor.GetDraft(), actionFrame, Vector2(offset.x, offset.y));
+		}
+	}
 
 	int gizmoBodyPartIndex = -1;
 	int gizmoAxisIndex = -1;
@@ -773,6 +707,37 @@ void CustomizeFlowController::RenderAttackPreview(Renderer& renderer, const RECT
 			GetPreviewTotalFrames(),
 			gizmoLocalRotation);
 	}
+	const auto afterEdit = CaptureEditSnapshot();
+	if (previewController.IsGizmoEditing() || editHistory.IsPending("gizmo") || !CustomizeEditHistory::Equal(beforeEdit, afterEdit))
+		editHistory.Observe(beforeEdit, afterEdit, "gizmo", previewController.IsGizmoEditing(), false, EditHistoryTime());
+}
+
+CustomizeEditSnapshot CustomizeFlowController::CaptureEditSnapshot()
+{
+	CustomizeEditSnapshot snapshot;
+	snapshot.attack = attackEditor.GetEditState();
+	snapshot.motion = motionEditor.GetDraft();
+	snapshot.motion.displayName = motionEditor.GetDisplayNameBuffer().data();
+	snapshot.commonMotion = editingCommonMotion;
+	snapshot.previewFrame = previewController.GetCurrentFrame();
+	return snapshot;
+}
+
+void CustomizeFlowController::RestoreEditSnapshot(const CustomizeEditSnapshot& snapshot)
+{
+	previewController.Stop();
+	previewController.CancelGizmoEditing();
+	motionEditor.EndIkEdit(previewController);
+	if (!editingCommonMotion) attackEditor.ApplyEditState(snapshot.attack);
+	previewController.SetCurrentFrame(snapshot.previewFrame);
+	motionEditor.RestoreDraft(snapshot.motion, snapshot.previewFrame - 1);
+	ClampPreviewCurrentFrame();
+	motionEditor.RefreshFrameEditValues(GetPreviewActionFrame());
+	attackMovementKeyOffset = motionEditor.GetAttackMovementOffsetAtFrame(attackEditor.GetDraft(), GetPreviewActionFrame());
+	attackEditorView.ResetAfterHistory();
+	// 描画用の値参照も復元直後に作り直す。空入力を使い、Undoボタンを二度実行しない。
+	attackEditorView.Update(attackEditor, previewController, width, height, statusMessage,
+		motionEditor, mode == CustomizeMode::MotionEditor, editingCommonMotion, editHistory.CanUndo(), editHistory.CanRedo());
 }
 
 /// <summary>
@@ -781,22 +746,6 @@ void CustomizeFlowController::RenderAttackPreview(Renderer& renderer, const RECT
 void CustomizeFlowController::ClampPreviewCurrentFrame()
 {
 	previewController.ClampCurrentFrame(GetPreviewTotalFrames());
-}
-
-/// <summary>
-/// プレビュー再生を止め、指定フレーム数だけ手動で進める。
-/// </summary>
-/// <param name="frameDelta">進めるフレーム数。負数なら戻す。</param>
-void CustomizeFlowController::StepPreviewFrame(int frameDelta)
-{
-	previewController.StepFrame(frameDelta, GetPreviewTotalFrames());
-
-	const int actionFrame = GetPreviewActionFrame();
-	const AttackData& draftAttack = attackEditor.GetDraft();
-	motionEditor.RefreshFrameEditValues(actionFrame);
-	attackMovementKeyOffset = actionFrame >= 0
-		? motionEditor.GetAttackMovementOffsetAtFrame(draftAttack, actionFrame)
-		: Vector2::Zero;
 }
 
 /// <summary>

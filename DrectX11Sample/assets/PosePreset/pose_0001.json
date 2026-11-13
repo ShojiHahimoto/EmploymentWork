@@ -1,0 +1,66 @@
+﻿{
+  "presetId": "pose_0001",
+  "displayName": "ストレート",
+  "bones": [
+    {
+      "boneName": "Head",
+      "rotationQuaternion": { "x": 0.083, "y": 0.202, "z": -0.056, "w": 0.974 }
+    },
+    {
+      "boneName": "Spine",
+      "rotationQuaternion": { "x": -0.196, "y": -0.174, "z": -0.035, "w": 0.964 }
+    },
+    {
+      "boneName": "Waist",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+    },
+    {
+      "boneName": "RShoulder",
+      "rotationQuaternion": { "x": 0.169, "y": -0.100, "z": -0.566, "w": 0.801 }
+    },
+    {
+      "boneName": "LShoulder",
+      "rotationQuaternion": { "x": -0.535, "y": -0.124, "z": -0.080, "w": 0.832 }
+    },
+    {
+      "boneName": "RElbow",
+      "rotationQuaternion": { "x": -0.000, "y": -0.021, "z": -0.000, "w": 1.000 }
+    },
+    {
+      "boneName": "LElbow",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.877, "w": 0.481 }
+    },
+    {
+      "boneName": "RHand",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+    },
+    {
+      "boneName": "LHand",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+    },
+    {
+      "boneName": "RHipjoint",
+      "rotationQuaternion": { "x": 0.276, "y": 0.000, "z": 0.000, "w": 0.961 }
+    },
+    {
+      "boneName": "LHipjoint",
+      "rotationQuaternion": { "x": -0.267, "y": 0.000, "z": 0.000, "w": 0.964 }
+    },
+    {
+      "boneName": "RKnees",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+    },
+    {
+      "boneName": "LKnees",
+      "rotationQuaternion": { "x": 0.834, "y": 0.000, "z": 0.000, "w": 0.552 }
+    },
+    {
+      "boneName": "RFeet",
+      "rotationQuaternion": { "x": -0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
+    },
+    {
+      "boneName": "LFeet",
+      "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+    }
+  ]
+}

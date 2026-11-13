@@ -1,5 +1,6 @@
 ﻿#include "System/Application.h"
 #include "System/Game.h"
+#include "UI/UIInputSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include <chrono>
 #include <thread>
@@ -241,6 +242,8 @@ void Application::Destroy()
 //---------------------------------------------------------------------------
 LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	// Passive observation only: the bridge never owns Win32 capture or consumes messages.
+	GameUI::UIInputSystem::HandleWindowMessage(hWnd, uMsg, wParam, lParam);
 	if (DebugImGuiSystem::HandleWndProc(hWnd, uMsg, wParam, lParam))
 	{
 		return true;

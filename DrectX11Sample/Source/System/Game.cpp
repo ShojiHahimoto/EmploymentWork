@@ -6,8 +6,11 @@
 #include "System/Application.h"
 #include "System/DebugImGuiSystem.h"
 #include "System/SoundManager.h"
+#include "System/Debugger.h"
 
 #include <memory>
+#include "UI/UIInputSystem.h"
+#include "UI/UIRenderer.h"
 
 void Game::Init()
 {
@@ -23,6 +26,15 @@ void Game::Init()
 		Renderer::GetDeviceContext());
 
 	Input::InputSystem::Initialize();
+	GameUI::UIInputSystem::Reset();
+	if (GameUI::UIRenderer::Initialize(Renderer::GetDevice(), static_cast<int>(Application::GetWidth()), static_cast<int>(Application::GetHeight())))
+	{
+		GameUI::UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json");
+	}
+	else
+	{
+		DebugLog("[UI] Dedicated UI renderer initialization failed.");
+	}
 	SoundManager::GetInstance().Initialize();
 
 	SceneManager& sceneManager = SceneManager::GetInstance();
@@ -37,6 +49,7 @@ void Game::Init()
 void Game::Update()
 {
 	Input::InputSystem::Update();
+	GameUI::UIInputSystem::Update(Application::GetWindow());
 
 	SceneManager& sceneManager = SceneManager::GetInstance();
 	sceneManager.RunSystems();
@@ -73,6 +86,7 @@ void Game::OnResize(int width, int height)
 	}
 
 	SceneManager::GetInstance().OnResize(width, height);
+	GameUI::UIRenderer::Resize(width, height);
 }
 
 void Game::Uninit()
@@ -81,6 +95,8 @@ void Game::Uninit()
 	Input::InputSystem::Shutdown();
 	SoundManager::GetInstance().Shutdown();
 	DebugImGuiSystem::Shutdown();
+	GameUI::UIInputSystem::Reset();
+	GameUI::UIRenderer::Shutdown();
 	rendererInitialized = false;
 
 	renderer.Uninit();

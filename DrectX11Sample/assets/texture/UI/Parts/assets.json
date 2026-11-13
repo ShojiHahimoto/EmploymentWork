@@ -1,0 +1,697 @@
+﻿{
+  "sliceOrder": [
+    "left",
+    "top",
+    "right",
+    "bottom"
+  ],
+  "assets": [
+    { "name": "customize_menu_normal", "file": "CustomizeMenu/button_normal.png", "slice": [0,0,0,0] },
+    { "name": "customize_menu_selected", "file": "CustomizeMenu/button_selected.png", "slice": [0,0,0,0] },
+    { "name": "title_v2_logo", "file": "TitleV2/title_logo.png", "slice": [0,0,0,0] },
+    { "name": "title_v2_normal", "file": "TitleV2/button_normal.png", "slice": [0,0,0,0] },
+    { "name": "title_v2_selected", "file": "TitleV2/button_selected.png", "slice": [0,0,0,0] },
+    {
+      "name": "panel_flat_white",
+      "file": "panel_flat_white.png",
+      "width": 1254,
+      "height": 1254,
+      "slice": [
+        110,
+        110,
+        110,
+        110
+      ]
+    },
+    {
+      "name": "button_primary_clean",
+      "file": "button_primary_clean.png",
+      "width": 2172,
+      "height": 724,
+      "slice": [
+        160,
+        160,
+        160,
+        160
+      ]
+    },
+    {
+      "file": "panel.png",
+      "sourceRect": [
+        53,
+        98,
+        364,
+        232
+      ],
+      "height": 134,
+      "name": "panel",
+      "source": "ui_parts_base_v1.png",
+      "width": 311,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "file": "button.png",
+      "sourceRect": [
+        448,
+        113,
+        710,
+        222
+      ],
+      "height": 109,
+      "name": "button",
+      "source": "ui_parts_base_v1.png",
+      "width": 262,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "file": "button_primary.png",
+      "sourceRect": [
+        818,
+        114,
+        1089,
+        221
+      ],
+      "height": 107,
+      "name": "button_primary",
+      "source": "ui_parts_base_v1.png",
+      "width": 271,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "file": "number_field.png",
+      "sourceRect": [
+        1198,
+        122,
+        1460,
+        207
+      ],
+      "height": 85,
+      "name": "number_field",
+      "source": "ui_parts_base_v1.png",
+      "width": 262,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "name": "checkbox_off",
+      "sourceRect": [
+        151,
+        367,
+        246,
+        465
+      ],
+      "file": "checkbox_off.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 98,
+      "width": 95
+    },
+    {
+      "name": "checkbox_on",
+      "sourceRect": [
+        523,
+        364,
+        625,
+        467
+      ],
+      "file": "checkbox_on.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 103,
+      "width": 102
+    },
+    {
+      "file": "label_background.png",
+      "sourceRect": [
+        809,
+        371,
+        1097,
+        457
+      ],
+      "height": 86,
+      "name": "label_background",
+      "source": "ui_parts_base_v1.png",
+      "width": 288,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "name": "back",
+      "sourceRect": [
+        151,
+        609,
+        246,
+        682
+      ],
+      "file": "back.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 73,
+      "width": 95
+    },
+    {
+      "name": "reset",
+      "sourceRect": [
+        527,
+        599,
+        626,
+        694
+      ],
+      "file": "reset.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 95,
+      "width": 99
+    },
+    {
+      "name": "play",
+      "sourceRect": [
+        848,
+        589,
+        1065,
+        709
+      ],
+      "file": "play.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 120,
+      "width": 217
+    },
+    {
+      "name": "pause",
+      "sourceRect": [
+        1231,
+        588,
+        1449,
+        712
+      ],
+      "file": "pause.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 124,
+      "width": 218
+    },
+    {
+      "name": "previous",
+      "sourceRect": [
+        96,
+        825,
+        300,
+        955
+      ],
+      "file": "previous.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 130,
+      "width": 204
+    },
+    {
+      "name": "next",
+      "sourceRect": [
+        477,
+        825,
+        678,
+        956
+      ],
+      "file": "next.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 131,
+      "width": 201
+    },
+    {
+      "name": "camera",
+      "sourceRect": [
+        890,
+        834,
+        1015,
+        928
+      ],
+      "file": "camera.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 94,
+      "width": 125
+    },
+    {
+      "name": "keyframe",
+      "sourceRect": [
+        1282,
+        830,
+        1383,
+        931
+      ],
+      "file": "keyframe.png",
+      "source": "ui_parts_base_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 101,
+      "width": 101
+    },
+    {
+      "file": "header.png",
+      "sourceRect": [
+        769,
+        478,
+        1108,
+        591
+      ],
+      "height": 113,
+      "name": "header",
+      "source": "ui_parts_extra_v1.png",
+      "width": 339,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "file": "playback_panel.png",
+      "sourceRect": [
+        1159,
+        476,
+        1506,
+        591
+      ],
+      "height": 115,
+      "name": "playback_panel",
+      "source": "ui_parts_extra_v1.png",
+      "width": 347,
+      "slice": [
+        28,
+        28,
+        28,
+        28
+      ]
+    },
+    {
+      "name": "playhead",
+      "sourceRect": [
+        1245,
+        776,
+        1414,
+        886
+      ],
+      "file": "playhead.png",
+      "source": "ui_parts_extra_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 110,
+      "width": 169
+    },
+    {
+      "name": "pencil",
+      "sourceRect": [
+        150,
+        219,
+        417,
+        495
+      ],
+      "file": "pencil.png",
+      "source": "ui_icons_v2.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 276,
+      "width": 267
+    },
+    {
+      "name": "up",
+      "sourceRect": [
+        721,
+        291,
+        907,
+        432
+      ],
+      "file": "up.png",
+      "source": "ui_icons_v2.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 141,
+      "width": 186
+    },
+    {
+      "name": "down",
+      "sourceRect": [
+        1260,
+        292,
+        1453,
+        433
+      ],
+      "file": "down.png",
+      "source": "ui_icons_v2.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 141,
+      "width": 193
+    },
+    {
+      "name": "motion",
+      "sourceRect": [
+        1740,
+        202,
+        2056,
+        524
+      ],
+      "file": "motion.png",
+      "source": "ui_icons_v2.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 322,
+      "width": 316
+    },
+    {
+      "name": "header_accent",
+      "sourceRect": [
+        134,
+        315,
+        889,
+        1275
+      ],
+      "file": "header_accent.png",
+      "source": "header_accent_v1.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 960,
+      "width": 755
+    },
+    {
+      "name": "phase_startup",
+      "file": "phase_startup.png",
+      "source": "ui_geometry_v2_proof.png",
+      "slice": [
+        42,
+        42,
+        0,
+        42
+      ],
+      "height": 148,
+      "width": 550
+    },
+    {
+      "name": "phase_active",
+      "file": "phase_active.png",
+      "source": "ui_geometry_v2_proof.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 148,
+      "width": 539
+    },
+    {
+      "name": "phase_recovery",
+      "file": "phase_recovery.png",
+      "source": "ui_geometry_v2_proof.png",
+      "slice": [
+        0,
+        42,
+        42,
+        42
+      ],
+      "height": 148,
+      "width": 547
+    },
+    {
+      "name": "section_accent",
+      "file": "section_accent.png",
+      "source": "ui_geometry_v2_proof.png",
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "height": 223,
+      "width": 50
+    },
+    {
+      "width": 209,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "undo",
+      "file": "undo.png",
+      "height": 189
+    },
+    {
+      "width": 210,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "redo",
+      "file": "redo.png",
+      "height": 193
+    },
+    {
+      "width": 207,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "rotate",
+      "file": "rotate.png",
+      "height": 205
+    },
+    {
+      "width": 235,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "translate",
+      "file": "translate.png",
+      "height": 232
+    },
+    {
+      "width": 204,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "add",
+      "file": "add.png",
+      "height": 198
+    },
+    {
+      "width": 206,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "delete",
+      "file": "delete.png",
+      "height": 228
+    },
+    {
+      "width": 222,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "copy",
+      "file": "copy.png",
+      "height": 230
+    },
+    {
+      "width": 203,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "paste",
+      "file": "paste.png",
+      "height": 242
+    },
+    {
+      "width": 239,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "mirror",
+      "file": "mirror.png",
+      "height": 233
+    },
+    {
+      "width": 224,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "preset_save",
+      "file": "preset_save.png",
+      "height": 220
+    },
+    {
+      "width": 245,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "preset_load",
+      "file": "preset_load.png",
+      "height": 193
+    },
+    {
+      "width": 211,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "select_all",
+      "file": "select_all.png",
+      "height": 213
+    },
+    {
+      "width": 217,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "deselect_all",
+      "file": "deselect_all.png",
+      "height": 215
+    },
+    {
+      "width": 199,
+      "slice": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "name": "keyframe_movement",
+      "file": "keyframe_movement.png",
+      "height": 199
+    }
+  ],
+  "version": 1
+}

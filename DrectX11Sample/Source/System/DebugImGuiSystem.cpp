@@ -230,6 +230,12 @@ bool DebugImGuiSystem::HandleWndProc(HWND windowHandle, UINT message, WPARAM wPa
 	}
 
 	const bool handledByImGui = ImGui_ImplWin32_WndProcHandler(windowHandle, message, wParam, lParam) != 0;
+	// このbackendはWM_IME_COMPOSITIONを内部でDefWindowProcWへ渡す。
+	// 専用UIへ入力中も、Application側で同じメッセージを再処理してはならない。
+	if (message == WM_IME_COMPOSITION)
+	{
+		return true;
+	}
 	if (!handledByImGui)
 	{
 		return false;

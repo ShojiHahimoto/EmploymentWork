@@ -1,4 +1,4 @@
-﻿# コーディングルール
+# コーディングルール
 
 このファイルは、実装時に守る技術的なルールをまとめる。
 エンジン設計思想は `ENGINE_ARCHITECTURE.md` を基準にする。
@@ -28,6 +28,11 @@
 - 改行コードを CRLF に統一し、Windows / Visual Studio 上での不要な差分を減らす
 
 外部パッケージ、ビルド成果物、`.git` 配下は対象外とする。
+
+専用UIへ渡す日本語の通常文字列リテラルは実行時にもUTF-8である必要がある。
+UTF-8 BOMはソースの読み取り形式の指定であり、実行文字列のUTF-8化とは別。
+既存UIと同じく、該当cppには `#pragma execution_character_set("utf-8")` を指定する。
+プロジェクトのCharacterSet=Unicodeだけでstd::stringの日本語がUTF-8になるとは考えない。
 
 ## コメント方針
 

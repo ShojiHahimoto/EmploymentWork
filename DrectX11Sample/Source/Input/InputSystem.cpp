@@ -267,6 +267,7 @@ namespace Input
 
 		// UI はメニュー操作用。Gameplay と同時には有効にしない。
 		addKeyboardAxis2D(InputActionMapId::UI, InputActionId::Move, KeyboardKey::Left, KeyboardKey::Right, KeyboardKey::Down, KeyboardKey::Up);
+		addKeyboardAxis2D(InputActionMapId::UI, InputActionId::Move, KeyboardKey::A, KeyboardKey::D, KeyboardKey::S, KeyboardKey::W);
 		addKeyboardButton(InputActionMapId::UI, InputActionId::Submit, KeyboardKey::F);
 		addKeyboardButton(InputActionMapId::UI, InputActionId::Cancel, KeyboardKey::Escape);
 		for (int gamepadIndex = 0; gamepadIndex < MaxXInputGamepads; ++gamepadIndex)

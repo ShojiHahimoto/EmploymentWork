@@ -520,7 +520,8 @@ void Renderer::RestoreBackBuffer()
 
 /// <summary>既存の描画領域と出力状態を退避して、専用 viewport / scissor を設定する。</summary>
 /// <param name="region">バックバッファ上のプレビュー矩形。</param>
-Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region)
+/// <param name="preserveBackground">先行する背景描画を保持するか。</param>
+Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region, bool preserveBackground)
 	: view(m_ViewMatrix), projection(m_ProjectionMatrix)
 {
 	auto* context = m_pDeviceContext;
@@ -531,7 +532,7 @@ Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region)
 	context->OMGetBlendState(&blend, blendFactor, &sampleMask);
 	context->OMGetRenderTargets(1, &target, &depthTarget);
 	RestoreBackBuffer();
-	DrawScreenRect(region, GetDefaultClearColor());
+	if (!preserveBackground) DrawScreenRect(region, GetDefaultClearColor());
 	// 色は矩形だけ塗る。深度クリアは全体に作用するため、シーン最初の3Dパスとして使用する。
 	context->ClearDepthStencilView(m_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 	const D3D11_VIEWPORT viewport = { static_cast<float>(region.left), static_cast<float>(region.top),
@@ -1160,8 +1161,11 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// </summary>
 /// <param name="stageMinX">ロジック上の左画面端 X。</param>
 /// <param name="stageMaxX">ロジック上の右画面端 X。</param>
-void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
+void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
+	float nearZ, float farZ, float wallHeight, float gridStep)
 {
+	// 不正な寸法と0間隔による無限ループを防ぐ。既存バトルは従来の既定値を使用する。
+	if (!(stageMaxX > stageMinX) || !(farZ > nearZ) || !(wallHeight > 0.0f) || !(gridStep > 0.0f)) return;
 	if (!m_pDebugCubeInputLayout
 		|| !m_pDebugCubeVertexShader
 		|| !m_pDebugCubePixelShader
@@ -1172,13 +1176,9 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
 
 	const float stageCenterX = (stageMinX + stageMaxX) * 0.5f;
 	const float stageHalfWidth = std::max(1.0f, (stageMaxX - stageMinX) * 0.5f);
-	const float nearZ = -6.0f;
-	const float farZ = 56.0f;
 	const float centerZ = (nearZ + farZ) * 0.5f;
 	const float halfDepth = (farZ - nearZ) * 0.5f;
-	const float wallHeight = 48.0f;
 	const float wallCenterY = wallHeight * 0.5f;
-	const float gridStep = 5.0f;
 	const float lineLift = 0.025f;
 	const Color panelColor(0.94f, 0.94f, 0.91f, 1.0f);
 	const Color gridColor(0.12f, 0.12f, 0.12f, 1.0f);
@@ -1203,6 +1203,10 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
 		panelColor);
 
 	// 中央線は通常グリッドより太めに見えるよう、細い箱として明示的に描く。
+	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
+		* Matrix::CreateTranslation(stageCenterX, wallCenterY, nearZ), panelColor);
+	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
+		* Matrix::CreateTranslation(stageCenterX, wallHeight, centerZ), panelColor);
 	DrawDebugBox(
 		Matrix::CreateScale(0.045f, 0.012f, halfDepth)
 		* Matrix::CreateTranslation(0.0f, 0.01f, centerZ),
@@ -1223,18 +1227,22 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX)
 		}
 
 		AddLine(vertices, Vector3(x, lineLift, nearZ), Vector3(x, lineLift, farZ), gridColor);
+		AddLine(vertices, Vector3(x, wallHeight - lineLift, nearZ), Vector3(x, wallHeight - lineLift, farZ), gridColor);
+		AddLine(vertices, Vector3(x, 0, nearZ + lineLift), Vector3(x, wallHeight, nearZ + lineLift), gridColor);
 		AddLine(vertices, Vector3(x, 0.0f, farZ - lineLift), Vector3(x, wallHeight, farZ - lineLift), gridColor);
 	}
 
 	for (float z = CeilToStep(nearZ, gridStep); z <= farZ + 0.001f; z += gridStep)
 	{
 		AddLine(vertices, Vector3(stageMinX, lineLift, z), Vector3(stageMaxX, lineLift, z), gridColor);
+		AddLine(vertices, Vector3(stageMinX, wallHeight - lineLift, z), Vector3(stageMaxX, wallHeight - lineLift, z), gridColor);
 		AddLine(vertices, Vector3(stageMinX + lineLift, 0.0f, z), Vector3(stageMinX + lineLift, wallHeight, z), gridColor);
 		AddLine(vertices, Vector3(stageMaxX - lineLift, 0.0f, z), Vector3(stageMaxX - lineLift, wallHeight, z), gridColor);
 	}
 
 	for (float y = 0.0f; y <= wallHeight + 0.001f; y += gridStep)
 	{
+		AddLine(vertices, Vector3(stageMinX, y, nearZ + lineLift), Vector3(stageMaxX, y, nearZ + lineLift), gridColor);
 		AddLine(vertices, Vector3(stageMinX, y, farZ - lineLift), Vector3(stageMaxX, y, farZ - lineLift), gridColor);
 		AddLine(vertices, Vector3(stageMinX + lineLift, y, nearZ), Vector3(stageMinX + lineLift, y, farZ), gridColor);
 		AddLine(vertices, Vector3(stageMaxX - lineLift, y, nearZ), Vector3(stageMaxX - lineLift, y, farZ), gridColor);
@@ -1490,6 +1498,31 @@ void Renderer::DrawScreenRect(const RECT& destination, const Color& color)
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
 	m_pSpriteBatch->Begin();
 	m_pSpriteBatch->Draw(m_pWhiteTextureView, destination, color);
+	m_pSpriteBatch->End();
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
+}
+
+/// <summary>
+/// UI などの単色矩形を 1 回の SpriteBatch でまとめて描画する。
+/// </summary>
+/// <param name="draws">画面座標と色の描画要求。</param>
+void Renderer::DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws)
+{
+	if (!m_pWhiteTextureView || !m_pSpriteBatch || draws.empty())
+	{
+		return;
+	}
+
+	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	m_pSpriteBatch->Begin();
+	for (const ScreenRectDraw& draw : draws)
+	{
+		if (draw.destination.right > draw.destination.left
+			&& draw.destination.bottom > draw.destination.top)
+		{
+			m_pSpriteBatch->Draw(m_pWhiteTextureView, draw.destination, draw.color);
+		}
+	}
 	m_pSpriteBatch->End();
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
 }
