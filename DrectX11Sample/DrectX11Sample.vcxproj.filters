@@ -555,6 +555,9 @@
     <ClInclude Include="Source\Controller\TitleMenuController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
+    <ClInclude Include="Source\UI\CustomizeMenuView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Controller\TitlePresentationController.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -4,6 +4,7 @@
 #include "Data/AttackDataSaver.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
+#include "UI/UIInputSystem.h"
 #include "Scene/SceneManager.h"
 #include "Scene/TitleScene.h"
 #include "System/imgui-docking/imgui.h"
@@ -71,6 +72,12 @@ void CustomizeFlowController::Enter()
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 	mode = CustomizeMode::MainMenu;
 	statusMessage.clear();
+	creationMenuSelection = previousMenuDirection = 0;
+	pendingMenuRequest = -1;
+	menuSubmitReady = false;
+#if defined(_DEBUG)
+	pendingCommonMotionRequest = false;
+#endif
 	InitializePreview();
 }
 
@@ -89,10 +96,22 @@ void CustomizeFlowController::Exit()
 void CustomizeFlowController::RunSystems()
 {
 	UpdatePreviewPlayback();
+	if (mode == CustomizeMode::MainMenu)
+	{
+		if (WasCancelTriggered()) { pendingMenuRequest = -1; RequestTitleScene(); return; }
+		UpdateCreationMenu();
+		return;
+	}
 	if (mode == CustomizeMode::AttackEditor || mode == CustomizeMode::MotionEditor)
 	{
 		UpdateAttackEditorControls();
 		return; // 専用UIが文字編集中の取消と画面の戻る操作を区別する。
+	}
+	if (mode == CustomizeMode::AttackCategorySelect)
+	{
+		if (WasCancelTriggered()) { NavigateBack(); return; }
+		UpdateAttackCategorySelect();
+		return;
 	}
 
 	if (WasCancelTriggered())
@@ -110,10 +129,13 @@ void CustomizeFlowController::Draw(Renderer& renderer)
 	switch (mode)
 	{
 	case CustomizeMode::MainMenu:
-		DrawMainMenu();
+		creationMenuView.Draw(renderer, width, height, creationMenuSelection);
+#if defined(_DEBUG)
+		DrawDebugMenu();
+#endif
 		break;
 	case CustomizeMode::AttackCategorySelect:
-		DrawAttackCategorySelect();
+		categoryMenuView.Draw(renderer, width, height, categoryMenuSelection, true);
 		break;
 	case CustomizeMode::AttackSlotSelect:
 		DrawAttackSlotSelect();
@@ -137,7 +159,7 @@ void CustomizeFlowController::Draw(Renderer& renderer)
 		mode = characterEditor.DrawAttackPicker(statusMessage);
 		break;
 	default:
-		DrawMainMenu();
+		creationMenuView.Draw(renderer, width, height, creationMenuSelection);
 		break;
 	}
 }
@@ -251,67 +273,87 @@ void CustomizeFlowController::NavigateBack()
 }
 
 /// <summary>
-/// カスタマイズシーン最初の選択画面を描画する。
+/// 開発用の汎用モーション編集入口だけを描画する。ゲーム用UIとは独立させる。
 /// </summary>
-void CustomizeFlowController::DrawMainMenu()
+#if defined(_DEBUG)
+void CustomizeFlowController::DrawDebugMenu()
 {
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360.0f, 180.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Customize"))
-	{
-		if (ImGui::Button("Attack Data Editor", ImVec2(220.0f, 32.0f)))
-		{
-			mode = CustomizeMode::AttackCategorySelect;
-		}
-
-		if (ImGui::Button("Character Editor", ImVec2(220.0f, 32.0f)))
-		{
-			characterEditor.RefreshSlotSummaries();
-			mode = CustomizeMode::CharacterSlotSelect;
-		}
-
-		if (ImGui::Button("Common Motion Editor", ImVec2(220.0f, 32.0f)))
-		{
-			mode = CustomizeMode::CommonMotionSelect;
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back To Title", ImVec2(220.0f, 28.0f)))
-		{
-			RequestTitleScene();
-		}
-	}
+	// ゲーム用メニューと分離し、Releaseには入口をコンパイルしない。
+	if (ImGui::Begin("Customize Debug"))
+		if (ImGui::Button("Common Motion Editor")) pendingCommonMotionRequest = true;
 	ImGui::End();
+}
+#endif
+
+void CustomizeFlowController::RequestCreationMenu(bool character)
+{
+	creationMenuSelection = character ? 1 : 0;
+	pendingMenuRequest = creationMenuSelection;
+}
+
+/// <summary>共通UIアクションと表示側の要求を消費する。遷移処理をImGuiから切り離す。</summary>
+void CustomizeFlowController::UpdateCreationMenu()
+{
+	const int uiRequest = creationMenuView.Update(GameUI::UIInputSystem::GetFrame(), width, height, creationMenuSelection);
+	if (uiRequest == 2)
+	{
+		RequestTitleScene();
+		return;
+	}
+	if (uiRequest >= 0) RequestCreationMenu(uiRequest == 1);
+#if defined(_DEBUG)
+	if (pendingCommonMotionRequest)
+	{
+		pendingCommonMotionRequest = false;
+		mode = CustomizeMode::CommonMotionSelect;
+		return;
+	}
+#endif
+	const auto& move = Input::InputSystem::GetActionState(0, Input::InputActionId::Move);
+	const auto& submit = Input::InputSystem::GetActionState(0, Input::InputActionId::Submit);
+	const int direction = move.value.axis.y > 0.5f ? -1 : move.value.axis.y < -0.5f ? 1 : 0;
+	if (direction && direction != previousMenuDirection) creationMenuSelection = direction > 0 ? 1 : 0;
+	previousMenuDirection = direction;
+	if (!submit.press) menuSubmitReady = true;
+	if (menuSubmitReady && submit.trigger) pendingMenuRequest = creationMenuSelection;
+	const int request = pendingMenuRequest;
+	pendingMenuRequest = -1;
+	if (request < 0) return;
+	menuSubmitReady = false;
+	if (request == 1)
+	{
+		characterEditor.RefreshSlotSummaries();
+		mode = CustomizeMode::CharacterSlotSelect;
+	}
+	else
+	{
+		categorySubmitReady = false;
+		previousCategoryDirection = 0;
+		categoryMenuSelection = static_cast<int>(selectedCategory);
+		mode = CustomizeMode::AttackCategorySelect;
+	}
 }
 
 /// <summary>
-/// 作成する技カテゴリを選択する画面を描画する。
+/// 専用UIと共通アクションの操作からカテゴリを確定する。描画時には遷移しない。
 /// </summary>
-void CustomizeFlowController::DrawAttackCategorySelect()
+void CustomizeFlowController::UpdateAttackCategorySelect()
 {
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360.0f, 220.0f), ImGuiCond_FirstUseEver);
-	if (ImGui::Begin("Attack Category"))
-	{
-		for (int index = 0; index < static_cast<int>(std::size(CategoryLabels)); ++index)
-		{
-			ImGui::PushID(index);
-			if (ImGui::Button(CategoryLabels[index], ImVec2(220.0f, 32.0f)))
-			{
-				selectedCategory = static_cast<CustomizeAttackCategory>(index);
-				RefreshAttackSlotSummaries(selectedCategory);
-				mode = CustomizeMode::AttackSlotSelect;
-			}
-			ImGui::PopID();
-		}
-
-		ImGui::Separator();
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			NavigateBack();
-		}
-	}
-	ImGui::End();
+	int request=categoryMenuView.Update(GameUI::UIInputSystem::GetFrame(),width,height,categoryMenuSelection,true);
+	if (request==3) { NavigateBack(); return; }
+	const auto& move=Input::InputSystem::GetActionState(0,Input::InputActionId::Move);
+	const auto& submit=Input::InputSystem::GetActionState(0,Input::InputActionId::Submit);
+	const int direction=move.value.axis.y>0.5f ? -1 : move.value.axis.y< -0.5f ? 1 : 0;
+	if (direction && direction!=previousCategoryDirection)
+		categoryMenuSelection=std::clamp(categoryMenuSelection+direction,0,2);
+	previousCategoryDirection=direction;
+	if (!submit.press) categorySubmitReady=true;
+	if (request<0 && categorySubmitReady && submit.trigger) request=categoryMenuSelection;
+	if (request<0) return;
+	selectedCategory=static_cast<CustomizeAttackCategory>(request);
+	RefreshAttackSlotSummaries(selectedCategory);
+	categorySubmitReady=false;
+	mode=CustomizeMode::AttackSlotSelect;
 }
 
 /// <summary>

@@ -6,6 +6,8 @@
     "bottom"
   ],
   "assets": [
+    { "name": "customize_menu_normal", "file": "CustomizeMenu/button_normal.png", "slice": [0,0,0,0] },
+    { "name": "customize_menu_selected", "file": "CustomizeMenu/button_selected.png", "slice": [0,0,0,0] },
     { "name": "title_v2_logo", "file": "TitleV2/title_logo.png", "slice": [0,0,0,0] },
     { "name": "title_v2_normal", "file": "TitleV2/button_normal.png", "slice": [0,0,0,0] },
     { "name": "title_v2_selected", "file": "TitleV2/button_selected.png", "slice": [0,0,0,0] },

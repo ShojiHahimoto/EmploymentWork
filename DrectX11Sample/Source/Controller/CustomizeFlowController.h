@@ -9,6 +9,7 @@
 #include "Controller/CustomizeTypes.h"
 #include "System/Renderer.h"
 #include "UI/CustomizeAttackEditorView.h"
+#include "UI/CustomizeMenuView.h"
 #include "World/World.h"
 
 #include <string>
@@ -23,6 +24,9 @@ public:
 	void RunSystems();
 	void Draw(Renderer& renderer);
 	void OnResize(int newWidth, int newHeight);
+	/// <summary>表示方式によらず、メニュー選択を次の更新へ予約する。</summary>
+	/// <param name="character">trueはキャラクター作成、falseは技作成。</param>
+	void RequestCreationMenu(bool character);
 
 	World& GetWorld();
 	const World& GetWorld() const;
@@ -32,6 +36,15 @@ private:
 
 	World& world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
+	int creationMenuSelection = 0; // 0:技作成、1:キャラクター作成。今後の専用UIも共有する。
+	GameUI::CustomizeMenuView creationMenuView;
+	int previousMenuDirection = 0;
+	int pendingMenuRequest = -1; // 描画側では遷移せず更新で一度だけ消費する。
+	bool menuSubmitReady = false; // 入場時の決定押しっぱなしを防ぐ。
+#if defined(_DEBUG)
+	bool pendingCommonMotionRequest = false;
+#endif
+	void UpdateCreationMenu();
 	CustomizeAttackCategory selectedCategory = CustomizeAttackCategory::Ground;
 	int width = 0;
 	int height = 0;
@@ -52,8 +65,14 @@ private:
 	void RequestTitleScene();
 	void NavigateBack();
 
-	void DrawMainMenu();
-	void DrawAttackCategorySelect();
+#if defined(_DEBUG)
+	void DrawDebugMenu();
+#endif
+	void UpdateAttackCategorySelect();
+	GameUI::CustomizeMenuView categoryMenuView;
+	int categoryMenuSelection = 0;
+	int previousCategoryDirection = 0;
+	bool categorySubmitReady = false;
 	void DrawAttackSlotSelect();
 	void DrawCommonMotionSelect();
 	void DrawAttackEditor(Renderer& renderer);

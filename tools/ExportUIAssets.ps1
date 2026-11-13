@@ -109,6 +109,9 @@ foreach ($state in @('logo','normal','selected')) {
     $file = if ($state -eq 'logo') { 'title_logo.png' } else { 'button_'+$state+'.png' }
     $entries += @{name=('title_v2_'+$state); file=('TitleV2/'+$file); slice=@(0,0,0,0)}
 }
+foreach ($state in @('normal','selected')) {
+    $entries += @{name=('customize_menu_'+$state); file=('CustomizeMenu/button_'+$state+'.png'); slice=@(0,0,0,0)}
+}
 $json=@{version=1; sliceOrder=@('left','top','right','bottom'); assets=$entries} | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText((Join-Path $output 'assets.json'),$json,[Text.UTF8Encoding]::new($true))
 Write-Output "Exported $($entries.Count) assets to $output"

@@ -1,6 +1,7 @@
 ﻿#include "Input/InputSystem.h"
 #include "System/Renderer.h"
 #include "Controller/TitleMenuController.h"
+#include "UI/CustomizeMenuView.h"
 #include "UI/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UIRoot.h"
@@ -434,7 +435,37 @@ int main()
 		title.Draw(renderer);
 		capturePath = nullptr;
 	}
+	{
+		CustomizeMenuView menu;
+		int selection = 0;
+		InputFrame f;
+		f.pointerPosition = {350,570}; f.pointerDelta = {1,0};
+		assert(menu.Update(f,1672,941,selection) == -1 && selection == 1);
+		selection=0; f.pointerDelta={};
+		assert(menu.Update(f,1672,941,selection) == -1 && selection == 0);
+		f.pointerPressed=f.pointerDown=true;
+		menu.Update(f,1672,941,selection);
+		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
+		assert(menu.Update(f,1672,941,selection) == 1);
+		assert(UIRenderer::HasImage("customize_menu_normal"));
+		assert(UIRenderer::HasImage("customize_menu_selected"));
+		menu.Draw(renderer,800,600,selection);
+		for (int index=0;index<3;++index)
+		{
+			f={}; f.pointerPosition={350,270+190*index};
+			f.pointerPressed=f.pointerDown=true;
+			menu.Update(f,1672,941,selection,true);
+			f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
+			assert(menu.Update(f,1672,941,selection,true)==index);
+		}
+		f={}; f.pointerPosition={55,40}; f.pointerPressed=f.pointerDown=true;
+		menu.Update(f,1672,941,selection,true);
+		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
+		assert(menu.Update(f,1672,941,selection,true)==3);
+		menu.Draw(renderer,800,600,selection,true);
+	}
 	UIRenderer::Shutdown();
+
 	context.Reset();
 	device.Reset();
 	CoUninitialize();
