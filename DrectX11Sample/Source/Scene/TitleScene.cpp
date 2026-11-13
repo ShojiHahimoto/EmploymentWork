@@ -8,6 +8,8 @@
 TitleScene::TitleScene(int initialWidth, int initialHeight)
 	: menuController(initialWidth, initialHeight)
 {
+	width = initialWidth;
+	height = initialHeight;
 }
 
 /// <summary>
@@ -16,6 +18,8 @@ TitleScene::TitleScene(int initialWidth, int initialHeight)
 void TitleScene::Enter()
 {
 	navigationController.Enter();
+	menuController.Enter();
+	presentationController.Enter(world);
 }
 
 /// <summary>
@@ -31,6 +35,8 @@ void TitleScene::Exit()
 /// </summary>
 void TitleScene::RunSystems()
 {
+	menuController.Update();
+	presentationController.Update(world);
 	navigationController.RunSystems(menuController.ConsumeCommand());
 }
 
@@ -40,8 +46,8 @@ void TitleScene::RunSystems()
 /// <param name="renderer">Scene描画に使う Renderer。</param>
 void TitleScene::Draw(Renderer& renderer)
 {
-	(void)renderer;
-	menuController.Draw();
+	presentationController.Draw(world, renderer, width, height);
+	menuController.Draw(renderer);
 }
 
 /// <summary>
@@ -51,6 +57,7 @@ void TitleScene::Draw(Renderer& renderer)
 /// <param name="newHeight">新しい高さ。</param>
 void TitleScene::OnResize(int newWidth, int newHeight)
 {
+	if (newWidth > 0 && newHeight > 0) { width = newWidth; height = newHeight; }
 	menuController.OnResize(newWidth, newHeight);
 }
 

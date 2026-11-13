@@ -1,15 +1,18 @@
 ﻿#include "Input/InputSystem.h"
 #include "System/Renderer.h"
+#include "Controller/TitleMenuController.h"
 #include "UI/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UIRoot.h"
 #include <cassert>
 #include <iostream>
 #include <wrl/client.h>
+#include <ScreenGrab.h>
 using namespace GameUI;
 using Microsoft::WRL::ComPtr;
 static ID3D11DeviceContext *testContext = nullptr;
 static int composites = 0;
+static const wchar_t* capturePath = nullptr;
 ID3D11DeviceContext *Renderer::GetDeviceContext()
 {
 	return testContext;
@@ -42,6 +45,8 @@ void Renderer::DrawFullscreenTexture(ID3D11ShaderResourceView *view, int width, 
 			visiblePixels += static_cast<unsigned char *>(mapped.pData)[y * mapped.RowPitch + x * 4 + 3] != 0;
 	testContext->Unmap(staging.Get(), 0);
 	assert(visiblePixels > 20);
+	if (capturePath)
+		assert(SUCCEEDED(DirectX::SaveWICTextureToFile(testContext, source.Get(), GUID_ContainerFormatPng, capturePath)));
 	++composites;
 }
 Input::InputActionMapId Input::InputSystem::GetActionMap()
@@ -55,6 +60,48 @@ const Input::InputActionState &Input::InputSystem::GetActionState(int, Input::In
 }
 int main()
 {
+	// タイトルの左右選択、静止マウス、決定押しっぱなし、クリック捕捉の回帰確認。
+	{
+		TitleMenuController title(1672, 941);
+		title.Enter();
+		InputFrame f;
+		title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		title.UpdateInput(f, 0, false);
+		title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::StartBattleSetup);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		f.pointerPosition = {400, 820}; // 左ボタン上にマウスが静止。
+		title.UpdateInput(f, 1, false);
+		title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::OpenCustomize);
+		title.UpdateInput(f, 0, false);
+		f.pointerDelta = {1, 0};
+		title.UpdateInput(f, 0, false);
+		f.pointerDelta = {};
+		title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::StartBattleSetup);
+		title.UpdateInput(f, 0, false);
+		f.pointerPosition = {1100, 820}; f.pointerPressed = f.pointerDown = true;
+		title.UpdateInput(f, 0, false);
+		f.pointerPressed = f.pointerDown = false; f.pointerReleased = true;
+		title.UpdateInput(f, 0, true); // 同時決定でもクリック先を一度だけ発行。
+		assert(title.ConsumeCommand() == TitleMenuCommand::OpenCustomize);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		f = {}; f.pointerPosition = {400, 820}; f.pointerPressed = f.pointerDown = true;
+		title.UpdateInput(f, 0, false);
+		f.pointerPressed = f.pointerDown = false; f.pointerReleased = true; f.pointerPosition = {800, 500};
+		title.UpdateInput(f, 0, false);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		title.Enter();
+		f = {}; f.focusLost = true;
+		title.UpdateInput(f, 1, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+		f = {}; title.UpdateInput(f, 0, true);
+		assert(title.ConsumeCommand() == TitleMenuCommand::None);
+	}
 	// 配置方向に依存しないUI除外。左上UIの右側や非表示行まで消していた回帰を防ぐ。
 	const Rect previewArea{0, 0, 640, 360};
 	for (const Rect excluded : {Rect{4, 4, 328, 38}, Rect{312, 4, 636, 38},
@@ -374,6 +421,19 @@ int main()
 	UIRenderer::Draw(renderer, {nineSliceCommand});
 	UIRenderer::Draw(renderer, {command});
 	assert(composites == 9);
+	for (const char* id : {"title_v2_logo", "title_v2_normal", "title_v2_selected"})
+		assert(UIRenderer::HasImage(id));
+	for (const auto size : {POINT{1280,720}, POINT{1920,1080}, POINT{800,600}})
+	{
+		assert(UIRenderer::Resize(size.x, size.y));
+		TitleMenuController title(size.x, size.y);
+		title.Enter();
+		title.Draw(renderer); // WARP上で非透明ピクセルが存在することも確認。
+		title.UpdateInput({}, 1, false);
+		capturePath = size.x == 1280 ? L"x64/UIFoundationTests/title-v2-1280.png" : nullptr;
+		title.Draw(renderer);
+		capturePath = nullptr;
+	}
 	UIRenderer::Shutdown();
 	context.Reset();
 	device.Reset();

@@ -152,6 +152,7 @@
     <ClInclude Include="Source\Controller\ResultNavigationController.h" />
     <ClInclude Include="Source\Controller\ResultPresentationController.h" />
     <ClInclude Include="Source\Controller\TitleMenuController.h" />
+    <ClInclude Include="Source\Controller\TitlePresentationController.h" />
     <ClInclude Include="Source\Controller\TitleNavigationController.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />

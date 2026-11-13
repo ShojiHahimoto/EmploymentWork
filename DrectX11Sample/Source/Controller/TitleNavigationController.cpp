@@ -23,9 +23,9 @@ void TitleNavigationController::Enter()
 }
 
 /// <summary>
-/// メニュー操作、UI Submit、開発用ショートカットから遷移先を決める。
+/// メニューで確定した選択と開発用ショートカットから遷移先を決める。
 /// </summary>
-/// <param name="menuCommand">メニュー描画側が受け取ったクリック操作。</param>
+/// <param name="menuCommand">メニュー更新側が確定した操作。</param>
 void TitleNavigationController::RunSystems(TitleMenuCommand menuCommand)
 {
 	if (WasCustomizeTriggered() || menuCommand == TitleMenuCommand::OpenCustomize)
@@ -40,27 +40,10 @@ void TitleNavigationController::RunSystems(TitleMenuCommand menuCommand)
 		return;
 	}
 
-	if (WasSubmitTriggered() || menuCommand == TitleMenuCommand::StartBattleSetup)
+	if (menuCommand == TitleMenuCommand::StartBattleSetup)
 	{
 		RequestBattleSetupScene();
 	}
-}
-
-/// <summary>
-/// どちらかのプレイヤーに割り当てられた Submit 入力を検出する。
-/// </summary>
-/// <returns>Submit が今フレーム押された場合は true。</returns>
-bool TitleNavigationController::WasSubmitTriggered() const
-{
-	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
-	{
-		if (Input::InputSystem::GetActionState(playerIndex, Input::InputActionId::Submit).trigger)
-		{
-			return true;
-		}
-	}
-
-	return false;
 }
 
 /// <summary>

@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 Push-Location $root
 try {
@@ -11,6 +11,7 @@ try {
     & cl /nologo /std:c++20 /EHsc /MDd /D_DEBUG /DNOMINMAX /utf-8 /I"DrectX11Sample\Source" /I"$package\include" `
         'tools\tests\UIFoundationTests.cpp' 'DrectX11Sample\Source\UI\UIRoot.cpp' `
         'DrectX11Sample\Source\UI\UIRenderer.cpp' 'DrectX11Sample\Source\UI\UIInputSystem.cpp' `
+        'DrectX11Sample\Source\Controller\TitleMenuController.cpp' `
         'DrectX11Sample\Source\Data\JsonValue.cpp' 'DrectX11Sample\Source\System\Debugger.cpp' `
         /Fo"$output\\" /Fe"$testExecutable" `
         /link "$package\native\lib\x64\Debug\DirectXTK.lib" user32.lib ole32.lib

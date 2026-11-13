@@ -12,7 +12,6 @@ private:
 	bool customizeKeyPressedLastFrame = false;
 	bool battleShortcutKeyPressedLastFrame = false;
 
-	bool WasSubmitTriggered() const;
 	bool WasCustomizeTriggered();
 	bool WasBattleShortcutTriggered();
 	void RequestBattleSetupScene();
