@@ -22,7 +22,9 @@ void CustomizeScene::RunSystems()
 
 void CustomizeScene::Draw(Renderer& renderer)
 {
-	flowController.Draw(renderer);
+	flowController.DrawBackdrop(renderer);
+	flowController.DrawPreview(renderer);
+	flowController.DrawInterface(renderer);
 }
 
 void CustomizeScene::OnResize(int newWidth, int newHeight)

@@ -359,12 +359,14 @@ void CustomizePreviewController::DrawCameraResetButton()
 
 bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int totalFrames)
 {
+	//再生中でないならfalse
 	if (!enabled || !playing)
 	{
 		return false;
 	}
 
 	++currentFrame;
+	//最終フレームに到達したらfalse
 	if (currentFrame >= totalFrames)
 	{
 		if (looping)

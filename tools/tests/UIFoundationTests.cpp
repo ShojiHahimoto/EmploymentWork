@@ -1,7 +1,6 @@
 ﻿#include "Input/InputSystem.h"
 #include "System/Renderer.h"
 #include "Controller/TitleMenuController.h"
-#include "UI/CustomizeMenuView.h"
 #include "UI/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UIRoot.h"
@@ -436,33 +435,37 @@ int main()
 		capturePath = nullptr;
 	}
 	{
-		CustomizeMenuView menu;
-		int selection = 0;
-		InputFrame f;
-		f.pointerPosition = {350,570}; f.pointerDelta = {1,0};
-		assert(menu.Update(f,1672,941,selection) == -1 && selection == 1);
-		selection=0; f.pointerDelta={};
-		assert(menu.Update(f,1672,941,selection) == -1 && selection == 0);
-		f.pointerPressed=f.pointerDown=true;
-		menu.Update(f,1672,941,selection);
-		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-		assert(menu.Update(f,1672,941,selection) == 1);
+		Root menu;
+		const auto update = [&](const InputFrame& frame)
+		{
+			menu.BeginFrame({0, 0, 1672, 941}, frame);
+			menu.AddButton("back", {18, 12, 96, 66});
+			for (int index = 0; index < 3; ++index)
+			{
+				const int top = 220 + index * 190;
+				menu.AddButton(std::to_string(index), {91, top, 617, top + 136});
+			}
+			menu.EndFrame();
+		};
+
 		assert(UIRenderer::HasImage("customize_menu_normal"));
 		assert(UIRenderer::HasImage("customize_menu_selected"));
-		menu.Draw(renderer,800,600,selection);
 		for (int index=0;index<3;++index)
 		{
-			f={}; f.pointerPosition={350,270+190*index};
+			InputFrame f;
+			f.pointerPosition={350,270+190*index};
 			f.pointerPressed=f.pointerDown=true;
-			menu.Update(f,1672,941,selection,true);
+			update(f);
 			f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-			assert(menu.Update(f,1672,941,selection,true)==index);
+			update(f);
+			assert(menu.WasActivated(std::to_string(index)));
 		}
-		f={}; f.pointerPosition={55,40}; f.pointerPressed=f.pointerDown=true;
-		menu.Update(f,1672,941,selection,true);
+		InputFrame f;
+		f.pointerPosition={55,40}; f.pointerPressed=f.pointerDown=true;
+		update(f);
 		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-		assert(menu.Update(f,1672,941,selection,true)==3);
-		menu.Draw(renderer,800,600,selection,true);
+		update(f);
+		assert(menu.WasActivated("back"));
 	}
 	UIRenderer::Shutdown();
 

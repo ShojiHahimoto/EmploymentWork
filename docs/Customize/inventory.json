@@ -1,0 +1,5247 @@
+{
+  "files": [
+    {
+      "path": "Scene/CustomizeScene.h",
+      "sha256": "5cc84125b8a5a5a1cb2a4cf8c81c5f5337fd1bb38033912b9d4e2e4c32a622ca",
+      "functions": []
+    },
+    {
+      "path": "Scene/CustomizeScene.cpp",
+      "sha256": "da743308da83491675b43689a138aa905d090bb24e42aa639112261c8eeabb32",
+      "functions": [
+        {
+          "name": "CustomizeScene::CustomizeScene",
+          "line": 3,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::Enter",
+          "line": 7,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::Exit",
+          "line": 12,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::RunSystems",
+          "line": 18,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::Draw",
+          "line": 23,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::OnResize",
+          "line": 28,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::GetWorld",
+          "line": 33,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeScene::GetWorld",
+          "line": 38,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeTypes.h",
+      "sha256": "46e8c83e612382f97cd2486054c1c8432acb07e1e526ff9d545dc3f44bbd07ea",
+      "functions": []
+    },
+    {
+      "path": "Controller/CustomizeFlowController.h",
+      "sha256": "e8421d02e44e0047515000344ed958504abed618f01e2956daec24eda97a5390",
+      "functions": []
+    },
+    {
+      "path": "Controller/CustomizeFlowController.cpp",
+      "sha256": "62128f39c9792db0606eb0923104a16b442b6f81e81dcf73a584e4efdd9c691f",
+      "functions": [
+        {
+          "name": "EditHistoryTime",
+          "line": 22,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ToCategoryIndex",
+          "line": 49,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::CustomizeFlowController",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::Enter",
+          "line": 70,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::Exit",
+          "line": 87,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RunSystems",
+          "line": 96,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::Draw",
+          "line": 127,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::OnResize",
+          "line": 172,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetWorld",
+          "line": 187,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetWorld",
+          "line": 196,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::WasCancelTriggered",
+          "line": 205,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RequestTitleScene",
+          "line": 223,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::NavigateBack",
+          "line": 232,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::DrawDebugMenu",
+          "line": 279,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RequestCreationMenu",
+          "line": 288,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::UpdateCreationMenu",
+          "line": 295,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::UpdateAttackCategorySelect",
+          "line": 340,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::DrawAttackSlotSelect",
+          "line": 362,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::DrawCommonMotionSelect",
+          "line": 406,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::DrawAttackEditor",
+          "line": 435,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::DrawMotionEditorScreen",
+          "line": 451,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::UpdateAttackEditorControls",
+          "line": 456,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::SelectAttackSlot",
+          "line": 512,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::SelectCommonMotionSlot",
+          "line": 531,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::EnsureDraftAttackMotionDataId",
+          "line": 550,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::LoadDraftMotionFromEditorId",
+          "line": 563,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::SaveDraftMotion",
+          "line": 577,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::InitializePreview",
+          "line": 601,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::ReleasePreview",
+          "line": 609,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::UpdatePreviewPlayback",
+          "line": 617,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RenderAttackPreview",
+          "line": 643,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::CaptureEditSnapshot",
+          "line": 715,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RestoreEditSnapshot",
+          "line": 726,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::ClampPreviewCurrentFrame",
+          "line": 746,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetPreviewTotalFrames",
+          "line": 755,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetPreviewActionFrame",
+          "line": 770,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetPreviewPhaseText",
+          "line": 779,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetEditingMotionDataId",
+          "line": 816,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::GetAttackSlotCount",
+          "line": 831,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::RefreshAttackSlotSummaries",
+          "line": 840,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::BuildAttackSlotButtonLabel",
+          "line": 851,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::BuildAttackDataId",
+          "line": 862,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::BuildMotionDataId",
+          "line": 873,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::BuildCommonMotionDataId",
+          "line": 883,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeFlowController::CopyMotionEditorBuffers",
+          "line": 892,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeAttackEditorController.h",
+      "sha256": "082d6b3a37567062fbd2c7450abcab54aadd717fbceed5db232ea4a2761c0eaa",
+      "functions": []
+    },
+    {
+      "path": "Controller/CustomizeAttackEditorController.cpp",
+      "sha256": "8970828d62967a1605653788b08b4a178dc12775fb9a50f93b452a3253cc517a",
+      "functions": [
+        {
+          "name": "ToCategoryIndex",
+          "line": 28,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "BuildAttackDataPath",
+          "line": 38,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "BuildMotionDataPath",
+          "line": 48,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "IsAttackMotionDataId",
+          "line": 58,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetFixedNormalUsableState",
+          "line": 68,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ClampAttackDataValues",
+          "line": 79,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::SelectSlot",
+          "line": 129,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::SaveDraft",
+          "line": 178,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetEditState",
+          "line": 190,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::ApplyEditState",
+          "line": 199,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::RequestOpenMotionEditor",
+          "line": 211,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::RequestBack",
+          "line": 217,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::SyncDraftFromEditor",
+          "line": 223,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::NormalizeDraftForSelectedCategory",
+          "line": 232,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::RefreshFrameAdvantageInputs",
+          "line": 258,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::ApplyFrameAdvantageInputsToDraft",
+          "line": 264,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::EnsureDraftMotionDataId",
+          "line": 270,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::RefreshSlotSummaries",
+          "line": 301,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::BuildSlotButtonLabel",
+          "line": 336,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::BuildAttackDataId",
+          "line": 356,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::BuildMotionDataId",
+          "line": 364,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetSlotCount",
+          "line": 372,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::PrepareCommonMotionPreview",
+          "line": 386,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetDraft",
+          "line": 399,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetDraft",
+          "line": 404,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetEditingAttackDataId",
+          "line": 409,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetSelectedCategory",
+          "line": 414,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetSelectedSlotIndex",
+          "line": 419,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetDisplayNameBuffer",
+          "line": 424,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetMotionDataIdBuffer",
+          "line": 429,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::GetMotionDataIdBuffer",
+          "line": 434,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::CreateDefaultAttackData",
+          "line": 439,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::CopyDisplayNameToBuffer",
+          "line": 467,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorController::CopyMotionDataIdToBuffer",
+          "line": 473,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeMotionEditorController.h",
+      "sha256": "e03e602025681ca2acda3d63ff2171c29de4eccdd6752076d5bff9fe5cce5bae",
+      "functions": [
+        {
+          "name": "IsMultipleSelectionEnabled",
+          "line": 49,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeMotionEditorController.cpp",
+      "sha256": "a9c9e0854de6957c7b7fee0f8b50987723f0786c5a5112b0487a9a8017c6abe1",
+      "functions": [
+        {
+          "name": "IsBlank",
+          "line": 31,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "BuildIdlePosePreset",
+          "line": 47,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindPresetBoneRotation",
+          "line": 78,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ClampBodyPartIndex",
+          "line": 100,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ApplyAxisSign",
+          "line": 111,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ConvertInternalRotationToEditorRotation",
+          "line": 122,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ConvertEditorRotationToInternalRotation",
+          "line": 134,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "QuaternionToEulerDegrees",
+          "line": 145,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindOrCreateMotionTrack",
+          "line": 160,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindMotionTrack",
+          "line": 181,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindMotionKeyframe",
+          "line": 200,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindMotionKeyframe",
+          "line": 219,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindMotionRootOffsetKeyframe",
+          "line": 238,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindMotionRootOffsetKeyframe",
+          "line": 257,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindAttackMovementKeyframe",
+          "line": 276,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "FindAttackMovementKeyframe",
+          "line": 295,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetMotionRotationEulerAtFrame",
+          "line": 315,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetMotionRotationQuaternionAtFrame",
+          "line": 327,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "SetMotionRotationQuaternionKey",
+          "line": 377,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetMotionRootOffsetAtFrame",
+          "line": 399,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetAttackMovementOffsetAtFrame",
+          "line": 445,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "SetMotionRootOffsetKey",
+          "line": 491,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "SetAttackMovementKey",
+          "line": 502,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::AddAttackMovementKeyframe",
+          "line": 508,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::DeleteAttackMovementKeyframe",
+          "line": 515,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::UpdateAttackMovementKeyframe",
+          "line": 522,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::HasAttackMovementKeyframe",
+          "line": 527,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SelectBodyPart",
+          "line": 532,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetSelectedBodyParts",
+          "line": 555,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SetMultipleSelectionEnabled",
+          "line": 563,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SelectAllBodyParts",
+          "line": 571,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::BeginIkEdit",
+          "line": 578,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::UpdateIkEdit",
+          "line": 591,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::EndIkEdit",
+          "line": 600,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::ConsumeTranslationEdit",
+          "line": 606,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::ResetForAttackMotion",
+          "line": 618,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::LoadDraft",
+          "line": 625,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SaveDraft",
+          "line": 656,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::CopyEditorBuffers",
+          "line": 682,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::RestoreDraft",
+          "line": 706,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::RefreshFrameEditValues",
+          "line": 714,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetAttackMovementOffsetAtFrame",
+          "line": 737,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::AddWholeBodyKeyframe",
+          "line": 742,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::DeleteWholeBodyKeyframe",
+          "line": 765,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SetSelectedRotationKey",
+          "line": 801,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::ApplyGizmoRotationEdit",
+          "line": 831,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::HasMotionKeyframe",
+          "line": 867,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::AddRootOffsetKeyframe",
+          "line": 885,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::DeleteRootOffsetKeyframe",
+          "line": 901,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SetRootOffsetKeyframe",
+          "line": 925,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::HasRootOffsetKeyframe",
+          "line": 944,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::CopyWholeBodyPose",
+          "line": 954,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::PasteWholeBodyPose",
+          "line": 971,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::CaptureCurrentIkTarget",
+          "line": 992,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::ApplySelectedIkTarget",
+          "line": 1003,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::SavePosePreset",
+          "line": 1023,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::ApplyPosePreset",
+          "line": 1061,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetDraft",
+          "line": 1107,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetDraft",
+          "line": 1112,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::HasDraft",
+          "line": 1117,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetDisplayNameBuffer",
+          "line": 1122,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetSelectedBoneIndex",
+          "line": 1128,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetRotationEulerDegrees",
+          "line": 1133,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::GetRootOffsetKey",
+          "line": 1138,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::HasCopiedPose",
+          "line": 1143,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeMotionEditorController::NormalizeDraftForSave",
+          "line": 1148,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizePreviewController.h",
+      "sha256": "01a05ce119a1d87044baa5f9056f550f0dc48d83ad4e401a4236267b157633e6",
+      "functions": [
+        {
+          "name": "IsGizmoEditing",
+          "line": 26,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizePreviewController.cpp",
+      "sha256": "f888903f1fff5a30c27ef3e155ee7ceda430d9ea4c10447c3820500517a8ccbc",
+      "functions": [
+        {
+          "name": "GetPreviewPlayerBasePosition",
+          "line": 48,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetAttackMovementOffsetAtFrameForPreview",
+          "line": 59,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetMotionRootOffsetAtFrameForPreview",
+          "line": 120,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ProjectToPreviewScreen",
+          "line": 201,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetRotationAxisIndex",
+          "line": 232,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetLocalAxisByIndex",
+          "line": 252,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetBodyPartWorldMatrix",
+          "line": 277,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::Initialize",
+          "line": 303,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::Release",
+          "line": 336,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::ResetCamera",
+          "line": 343,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::DrawCameraResetButton",
+          "line": 355,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::UpdatePlayback",
+          "line": 360,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::Play",
+          "line": 384,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::Stop",
+          "line": 393,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::StepFrame",
+          "line": 398,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::ClampCurrentFrame",
+          "line": 405,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::Render",
+          "line": 410,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::IsOverEditorToolbar",
+          "line": 656,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::CancelGizmoEditing",
+          "line": 662,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::ConsumeGizmoRotationEdit",
+          "line": 672,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::BeginIkSolveSession",
+          "line": 692,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetBodyPartBindRotation",
+          "line": 710,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::EndIkSolveSession",
+          "line": 720,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetBodyPartWorldPosition",
+          "line": 727,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::SolveIkTarget",
+          "line": 749,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::ConsumePickedBodyPartIndex",
+          "line": 764,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetCurrentFrame",
+          "line": 771,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::SetCurrentFrame",
+          "line": 776,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetActionFrame",
+          "line": 781,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::HasRenderedActionFrame",
+          "line": 786,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::IsPlaying",
+          "line": 791,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetRenderTexture",
+          "line": 796,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetCameraYawDegrees",
+          "line": 801,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetCameraPitchDegrees",
+          "line": 806,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::GetCameraDistance",
+          "line": 811,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::UpdateCameraInput",
+          "line": 818,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::UpdateCameraTransform",
+          "line": 885,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::DrawAttackBoxes",
+          "line": 939,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::DrawJointMarkers",
+          "line": 968,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizePreviewController::DrawRotationGizmo",
+          "line": 1098,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeCharacterEditorController.h",
+      "sha256": "4f7e7c65187e55971af6341f95e68d0cc0461c09a712364c1f80ade669369f61",
+      "functions": []
+    },
+    {
+      "path": "Controller/CustomizeCharacterEditorController.cpp",
+      "sha256": "ab9f438055e4af9b69c49b8ac0db338f133ab96f9ac6c46d67e94508da751650",
+      "functions": [
+        {
+          "name": "ToCharacterSlotGroupIndex",
+          "line": 41,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ToAttackButtonShortLabel",
+          "line": 51,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "BuildAttackDataIdFromPath",
+          "line": 69,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::DrawSlotSelect",
+          "line": 83,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::DrawEditor",
+          "line": 125,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::DrawAttackPicker",
+          "line": 169,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::BuildCharacterId",
+          "line": 252,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::BuildCharacterFolderPath",
+          "line": 257,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::BuildSlotButtonLabel",
+          "line": 262,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::SelectSlot",
+          "line": 281,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::SaveDraft",
+          "line": 350,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::RefreshSlotSummaries",
+          "line": 375,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::RefreshAttackSlotNames",
+          "line": 400,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::AssignAttackToCurrentSlot",
+          "line": 432,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::IsAttackCompatibleWithSlotGroup",
+          "line": 443,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetAttackSlotDrafts",
+          "line": 463,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetAttackSlotDrafts",
+          "line": 478,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetDraftParameter",
+          "line": 493,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetCharacterNameBuffer",
+          "line": 498,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::SetPickingSlotGroup",
+          "line": 504,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::SetPickingSlotIndex",
+          "line": 509,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetPickingSlotGroup",
+          "line": 514,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::GetPickingSlotIndex",
+          "line": 519,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::CreateAttackSlotDraft",
+          "line": 524,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::BuildAttackSlotsForSave",
+          "line": 557,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::AreRequiredAttackSlotsFilled",
+          "line": 586,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::CopyCharacterNameToBuffer",
+          "line": 611,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeCharacterEditorController::DrawAttackSlotGroup",
+          "line": 621,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/CustomizeEditHistory.h",
+      "sha256": "f711270d2e90916199ba4925148f0d4a55c9973ce863e719c933071a56cdfbc9",
+      "functions": []
+    },
+    {
+      "path": "Controller/CustomizeEditHistory.cpp",
+      "sha256": "6e882c9b6dc809ef9290ae3b3837ce3f79f2e0f94bd9f4958ac37cdd6da541b7",
+      "functions": [
+        {
+          "name": "EqualItems",
+          "line": 11,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "EqualAttack",
+          "line": 22,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Equal",
+          "line": 39,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Reset",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Observe",
+          "line": 65,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Commit",
+          "line": 83,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Undo",
+          "line": 96,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::Redo",
+          "line": 104,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::CanUndo",
+          "line": 112,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::CanRedo",
+          "line": 113,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeEditHistory::IsPending",
+          "line": 114,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Controller/KeyframeEditing.h",
+      "sha256": "ceae7b3c7ec1a712ec81edc90be77d54423fcdd0eb16e71c757d5cfcdadc454a",
+      "functions": [
+        {
+          "name": "FindOrInsert",
+          "line": 12,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/CustomizeAttackEditorView.h",
+      "sha256": "9cc07cabd721d7b47907db2866b0811195125c6147030815b1265eef34b34448",
+      "functions": [
+        {
+          "name": "GetEditInteraction",
+          "line": 30,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "IsMovementSelected",
+          "line": 39,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "AreMarkersVisible",
+          "line": 42,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "PreviewToolbarExclusions",
+          "line": 50,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/CustomizeAttackEditorView.cpp",
+      "sha256": "e6496fab0e40f8e1c940bd63de381e5d20a52372c89eac24f0132ce6647a1fcc",
+      "functions": [
+        {
+          "name": "MakeRegions",
+          "line": 27,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "IndexOf",
+          "line": 52,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CustomizeAttackEditorView::Reset",
+          "line": 59,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::UserNotification",
+          "line": 72,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::PreviewRegion",
+          "line": 88,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::DrawBackdrop",
+          "line": 93,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::Section",
+          "line": 107,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::Row",
+          "line": 117,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::Integer",
+          "line": 126,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildParameters",
+          "line": 131,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildBehavior",
+          "line": 176,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildHitboxes",
+          "line": 195,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildCancel",
+          "line": 229,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::Update",
+          "line": 250,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::Draw",
+          "line": 544,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::ResetAfterHistory",
+          "line": 549,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/CustomizeMotionEditorControls.cpp",
+      "sha256": "497e2ab4cdf4bd71335de9bb4d65cb14a195d6fba6bc54fcb4eda4832af5facc",
+      "functions": [
+        {
+          "name": "CustomizeAttackEditorView::PreviewToolbar",
+          "line": 10,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildMotionControls",
+          "line": 17,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::ApplyMotionControls",
+          "line": 71,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CustomizeAttackEditorView::BuildInlinePosePreset",
+          "line": 134,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/CustomizeMenuView.h",
+      "sha256": "1ab771e1343f8929447899960f3d5597f583b8cedc3028d6ed0146a58614db7b",
+      "functions": [
+        {
+          "name": "Update",
+          "line": 19,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "Draw",
+          "line": 44,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ButtonRect",
+          "line": 90,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "Map",
+          "line": 98,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/UIRoot.h",
+      "sha256": "139b71c62b80f5efb1dcefb27b6b4c17972983024b59c876e95ab6ae9d37b299",
+      "functions": [
+        {
+          "name": "AddButton",
+          "line": 200,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "UI/UIRoot.cpp",
+      "sha256": "fe1dfd0163140b005e476dd7da5d5c425330d04527d192a23fc7ff9943cd78a6",
+      "functions": [
+        {
+          "name": "Rect::IsEmpty",
+          "line": 33,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Rect::Contains",
+          "line": 38,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Rect::Intersect",
+          "line": 43,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Rect::Inset",
+          "line": 57,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Rect::Subtract",
+          "line": 62,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Rect::ToNativeRect",
+          "line": 74,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Layout::VerticalStack",
+          "line": 79,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Wide",
+          "line": 104,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Utf8",
+          "line": 115,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Prev",
+          "line": 127,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Next",
+          "line": 136,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Pressed",
+          "line": 144,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::BeginFrame",
+          "line": 149,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::RegisterElement",
+          "line": 160,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::AddPanel",
+          "line": 180,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddRule",
+          "line": 188,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddSectionHeader",
+          "line": 195,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddImage",
+          "line": 204,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddNineSliceImage",
+          "line": 214,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddButton",
+          "line": 224,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddButton",
+          "line": 228,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddPrimaryButton",
+          "line": 239,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddImageButton",
+          "line": 248,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddIconButton",
+          "line": 259,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddLabel",
+          "line": 271,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddTextInput",
+          "line": 285,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddIntegerInput",
+          "line": 297,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddFloatInput",
+          "line": 311,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddCheckbox",
+          "line": 326,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::AddDropdown",
+          "line": 338,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::BeginScrollArea",
+          "line": 352,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::EndScrollArea",
+          "line": 375,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::FindElement",
+          "line": 396,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::FindElement",
+          "line": 400,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::FindButton",
+          "line": 409,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::FindButton",
+          "line": 413,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::IsFocusable",
+          "line": 417,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::FindTopButtonAt",
+          "line": 424,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::FindTopButtonAt",
+          "line": 437,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::FindTopInteractiveAt",
+          "line": 441,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::EnsureValidFocus",
+          "line": 445,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::ActivateElement",
+          "line": 460,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::UpdateNumericElement",
+          "line": 510,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::UpdateTextElement",
+          "line": 540,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::ApplyFocusedInput",
+          "line": 578,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Root::EndFrame",
+          "line": 635,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::GetEditInteraction",
+          "line": 782,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::ShouldCollapseInlineSection",
+          "line": 803,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::Draw",
+          "line": 813,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::WasActivated",
+          "line": 1062,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::WasChanged",
+          "line": 1067,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::WantsPointerCapture",
+          "line": 1072,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::WantsKeyboardCapture",
+          "line": 1082,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::WantsTextInput",
+          "line": 1086,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Root::GetFocusedId",
+          "line": 1091,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "UI/UIInputSystem.h",
+      "sha256": "79f649969a289bd5486a65bac9f8d6cb9e09fce836f1351cca872efba99eb99f",
+      "functions": []
+    },
+    {
+      "path": "UI/UIInputSystem.cpp",
+      "sha256": "4085a7d4eb09b4b7c41a1f9672efe8fa51d6f0dcd891dc4ac16243924e6d198e",
+      "functions": [
+        {
+          "name": "AddKeyPress",
+          "line": 35,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ReadCompositionString",
+          "line": 40,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "UIInputSystem::HandleWindowMessage",
+          "line": 66,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIInputSystem::Update",
+          "line": 200,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIInputSystem::GetFrame",
+          "line": 284,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIInputSystem::Reset",
+          "line": 289,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "UI/UIRenderer.h",
+      "sha256": "b276634920a635ecf54de0c198e5f8906df39079fdd0b9ba9f6f3184ac7ced40",
+      "functions": []
+    },
+    {
+      "path": "UI/UIRenderer.cpp",
+      "sha256": "a5f7521cce6649693ccbe57390ef85c103dec1c765b4360dcec2a7aaeb7774b1",
+      "functions": [
+        {
+          "name": "UIRenderer::GetImageAspectRatio",
+          "line": 26,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PrivateFontFileEnumerator",
+          "line": 64,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "QueryInterface",
+          "line": 69,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "AddRef",
+          "line": 81,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Release",
+          "line": 82,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "MoveNext",
+          "line": 88,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetCurrentFontFile",
+          "line": 104,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "PrivateFontCollectionLoader",
+          "line": 133,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "QueryInterface",
+          "line": 135,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "AddRef",
+          "line": 147,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Release",
+          "line": 148,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "CreateEnumeratorFromKey",
+          "line": 154,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "UnregisterPrivateFonts",
+          "line": 168,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "RegisterPrivateFonts",
+          "line": 177,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Same",
+          "line": 227,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ToD2DColor",
+          "line": 237,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ToD2DRect",
+          "line": 242,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ResolveManifestPath",
+          "line": 248,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "DrawBitmapNineSlice",
+          "line": 286,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetTextFormat",
+          "line": 329,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "UIRenderer::Initialize",
+          "line": 373,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::Shutdown",
+          "line": 420,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::Resize",
+          "line": 437,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::LoadAssets",
+          "line": 455,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::UnloadAssets",
+          "line": 554,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::CreateTargetBitmaps",
+          "line": 561,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "UIRenderer::Draw",
+          "line": 573,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::IsInitialized",
+          "line": 710,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::HasImage",
+          "line": 715,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::MeasureText",
+          "line": 721,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "UIRenderer::CreateSurfaceResources",
+          "line": 750,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "UIRenderer::ReleaseSurfaceResources",
+          "line": 806,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "UI/UITheme.h",
+      "sha256": "69678be43ef8587fa4f4a234538f1381e8232ea06f7321de08418e603ba80ff1",
+      "functions": []
+    },
+    {
+      "path": "Data/AttackData.h",
+      "sha256": "30779523e8104526c506d03a7bd2ba75395b7ed18539b53d0d31c9e7e722d089",
+      "functions": [
+        {
+          "name": "GetAttackActiveStartFrame",
+          "line": 94,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetAttackActiveFrameCount",
+          "line": 104,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetAttackActiveEndFrameExclusive",
+          "line": 114,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetAttackTotalFrames",
+          "line": 124,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetAttackerRemainingFramesOnFirstActiveHit",
+          "line": 134,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertStunFramesToFrameAdvantage",
+          "line": 146,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertFrameAdvantageToStunFrames",
+          "line": 157,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "IsAttackFrameActive",
+          "line": 168,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/AttackDataSaver.h",
+      "sha256": "a89930b78b448f9ecb5fa011125dd2c4f1b6f9750fa2462e23604604142e4f0e",
+      "functions": []
+    },
+    {
+      "path": "Data/AttackDataSaver.cpp",
+      "sha256": "b1b814bd0df323d72bdcf99f6c9bf6eb1cca7ba03ab826b54d97fed90d4ad98e",
+      "functions": [
+        {
+          "name": "EscapeJsonString",
+          "line": 21,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackKindText",
+          "line": 57,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackCommandIdText",
+          "line": 74,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackUsableStateText",
+          "line": 99,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackHeightText",
+          "line": 117,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToHitReactionTypeText",
+          "line": 136,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteVector2",
+          "line": 158,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AttackDataSaver::SaveAttackData",
+          "line": 173,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/CharacterData.h",
+      "sha256": "cdc82e9ab614d5ce1a73ed2ea38117a256e252ed7013dc798850a984350b8988",
+      "functions": []
+    },
+    {
+      "path": "Data/CharacterDataLoader.h",
+      "sha256": "9dd0996b7beefe0c58cf1b3e201ad013e7e2e1985c1208c66c1cf7c1be9166d9",
+      "functions": []
+    },
+    {
+      "path": "Data/CharacterDataLoader.cpp",
+      "sha256": "1e7743bc3df83aea5877fd9128f3564d5ed54e8dcbb9831893d1ebc209b1e34f",
+      "functions": [
+        {
+          "name": "WithJsonExtension",
+          "line": 21,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ResolveAttackDataPath",
+          "line": 38,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadTextFile",
+          "line": 117,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "RemoveUtf8Bom",
+          "line": 135,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadJsonFile",
+          "line": 155,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetString",
+          "line": 182,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetInt",
+          "line": 195,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetFloat",
+          "line": 208,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetBool",
+          "line": 221,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetVector2",
+          "line": 233,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetVector3",
+          "line": 246,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadCharacterBoxFromJson",
+          "line": 259,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseCancelType",
+          "line": 279,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseAttackKind",
+          "line": 301,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseAttackCommandId",
+          "line": 319,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseAttackUsableState",
+          "line": 353,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseHitReactionType",
+          "line": 371,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseAttackHeight",
+          "line": 397,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseAttackButtonId",
+          "line": 419,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackUsableStateText",
+          "line": 449,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "IsAttackSlotCompatible",
+          "line": 468,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadParameterFromJson",
+          "line": 492,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AppendAttackSlotsFromJsonArray",
+          "line": 534,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadAttackSlotsFromJson",
+          "line": 575,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadAttackFrameFromJson",
+          "line": 612,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadCancelSettingObject",
+          "line": 626,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadCancelSettingFromJson",
+          "line": 650,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadHitboxesFromJson",
+          "line": 689,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadMovementKeysFromJson",
+          "line": 728,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CharacterDataLoader::LoadCharacterData",
+          "line": 766,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CharacterDataLoader::LoadAttackData",
+          "line": 835,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/CharacterDataSaver.h",
+      "sha256": "ed86ba77ddb48cd9781f6c672603206855ecace17bdf71d475d167a19bbfbe33",
+      "functions": []
+    },
+    {
+      "path": "Data/CharacterDataSaver.cpp",
+      "sha256": "a15330db20c2d32bea259ff09defece37ed938de1a80acbf34fff21c2c1571ae",
+      "functions": [
+        {
+          "name": "EscapeJsonString",
+          "line": 19,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToAttackButtonIdText",
+          "line": 55,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteVector2",
+          "line": 79,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteVector3",
+          "line": 93,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteCharacterBox",
+          "line": 108,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteUtf8BomTextFile",
+          "line": 126,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildParameterJson",
+          "line": 146,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteAttackSlotArray",
+          "line": 184,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildAttackListJson",
+          "line": 218,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CharacterDataSaver::SaveCharacterData",
+          "line": 243,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/MotionData.h",
+      "sha256": "44728716dbb746ae2c9507d599c661816b1ac7cd33e7448b1fd0be9df485f93b",
+      "functions": []
+    },
+    {
+      "path": "Data/MotionDataLoader.h",
+      "sha256": "8c6711b837994b35a296f7510ff7a25dbf8481e30811b288d418d1158d5f6df6",
+      "functions": []
+    },
+    {
+      "path": "Data/MotionDataLoader.cpp",
+      "sha256": "83ca4b5f53d0fb491331fda093d54f8ce28ae0421661a5596dbe6ea231535999",
+      "functions": [
+        {
+          "name": "WithJsonExtension",
+          "line": 25,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ResolveMotionDataPath",
+          "line": 42,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadTextFile",
+          "line": 78,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "RemoveUtf8Bom",
+          "line": 96,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadJsonFile",
+          "line": 116,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetString",
+          "line": 143,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetInt",
+          "line": 156,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetFloat",
+          "line": 169,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetBool",
+          "line": 182,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetVector3",
+          "line": 194,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetQuaternion",
+          "line": 208,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "QuaternionToEulerDegrees",
+          "line": 224,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetEulerDegreesAsQuaternion",
+          "line": 238,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadKeyframeFromJson",
+          "line": 255,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadBoneTrackFromJson",
+          "line": 305,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadRootOffsetKeysFromJson",
+          "line": 350,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionDataLoader::LoadMotionData",
+          "line": 386,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionDataManager::LoadMotionData",
+          "line": 434,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionDataManager::GetMotionData",
+          "line": 456,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionDataManager::UnloadAll",
+          "line": 462,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Data/MotionDataSaver.h",
+      "sha256": "c3f0522f0d9155f25590689717b6e302e9bec0b48f314cd0cb1f0470f37803e9",
+      "functions": []
+    },
+    {
+      "path": "Data/MotionDataSaver.cpp",
+      "sha256": "e632025891a63e81ff9a00fc746d7c639e45100c0a9522bb43b06a27965b69f9",
+      "functions": [
+        {
+          "name": "EscapeJsonString",
+          "line": 21,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteVector3",
+          "line": 58,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteQuaternion",
+          "line": 69,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionDataSaver::SaveMotionData",
+          "line": 80,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/MotionSkeletonDefinition.h",
+      "sha256": "7546c5d9c9abb5f78c220ab052888f571b882d7a13e7e221b2655f81992cec6d",
+      "functions": []
+    },
+    {
+      "path": "Data/MotionSkeletonDefinition.cpp",
+      "sha256": "6f19000199b33b1e20f5e6fd8e1b399156e2380748f80a8423356b3b7c568165",
+      "functions": [
+        {
+          "name": "SameEditorRotationSign",
+          "line": 14,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LeftSideEditorRotationSign",
+          "line": 23,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetPoseRotationLimit",
+          "line": 155,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetBodyPartDefinitions",
+          "line": 187,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetBodyPartDefinition",
+          "line": 197,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetBodyPartName",
+          "line": 208,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetEditorRotationSign",
+          "line": 218,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindBodyPartIndex",
+          "line": 228,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindModelBoneIndex",
+          "line": 256,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/SkeletonPose.h",
+      "sha256": "69ec4141855d0b9babdb70f105b301157803ae2d799e17b66258aaa5d3b7237c",
+      "functions": []
+    },
+    {
+      "path": "Data/PosePreset.h",
+      "sha256": "0957e1f6dbfcb35e1e4fd1cb2fbb99d592e7a5508e53d2168bf2f2945b52075c",
+      "functions": []
+    },
+    {
+      "path": "Data/PosePreset.cpp",
+      "sha256": "c7a1ce8585b7853a3cbde9075f3fa260a202fb205852b319d68df5185369843d",
+      "functions": [
+        {
+          "name": "WithJsonExtension",
+          "line": 26,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreatePresetPath",
+          "line": 42,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ResolvePresetPath",
+          "line": 53,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindPresetDirectory",
+          "line": 88,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadTextFile",
+          "line": 116,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "RemoveUtf8Bom",
+          "line": 134,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadJsonFile",
+          "line": 154,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetString",
+          "line": 181,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetFloat",
+          "line": 194,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetVector3",
+          "line": 206,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetQuaternion",
+          "line": 220,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "QuaternionToEulerDegrees",
+          "line": 236,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetEulerDegreesAsQuaternion",
+          "line": 250,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "EscapeJsonString",
+          "line": 266,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteQuaternion",
+          "line": 302,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::ListPresetIds",
+          "line": 308,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::LoadPreset",
+          "line": 339,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::SavePreset",
+          "line": 393,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::CreateUniquePresetId",
+          "line": 444,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::DisplayNameExists",
+          "line": 459,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::Exists",
+          "line": 478,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "PosePresetStore::IsValidPresetId",
+          "line": 484,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/JsonValue.h",
+      "sha256": "894716e52ff4f9bc130762ff27e21a388b5070a2a5261fde1d48205dddf1cc3e",
+      "functions": []
+    },
+    {
+      "path": "Data/JsonValue.cpp",
+      "sha256": "9e3b36e2f008c8a72a6fccf168e99f46f3c41a198b0d20531086fdcceac13b17",
+      "functions": [
+        {
+          "name": "Parser",
+          "line": 15,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Parse",
+          "line": 20,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "IsEnd",
+          "line": 42,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Peek",
+          "line": 47,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Advance",
+          "line": 52,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "SkipWhitespace",
+          "line": 57,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "MatchLiteral",
+          "line": 65,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ParseValue",
+          "line": 81,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ParseObject",
+          "line": 133,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ParseArray",
+          "line": 187,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ParseString",
+          "line": 227,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "ParseNumber",
+          "line": 277,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeNull",
+          "line": 327,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeBool",
+          "line": 332,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeNumber",
+          "line": 340,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeString",
+          "line": 348,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeArray",
+          "line": 356,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::MakeObject",
+          "line": 364,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::GetType",
+          "line": 372,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsNull",
+          "line": 377,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsBool",
+          "line": 382,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsNumber",
+          "line": 387,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsString",
+          "line": 392,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsArray",
+          "line": 397,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::IsObject",
+          "line": 402,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::AsBool",
+          "line": 407,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::AsNumber",
+          "line": 412,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::AsString",
+          "line": 417,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::AsArray",
+          "line": 422,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::AsObject",
+          "line": 427,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonValue::Find",
+          "line": 432,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "JsonParser::Parse",
+          "line": 443,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Data/BattleSetupData.h",
+      "sha256": "7496863c331f70897c5c2f93a45b305abe7dfb5c8e4646ddf3aba1e08a7c7dbf",
+      "functions": []
+    },
+    {
+      "path": "Data/BattleSetupData.cpp",
+      "sha256": "eff8b7b516d663da0cd4b21441e95c1178755bbe463f44678a715c9f5633d49a",
+      "functions": [
+        {
+          "name": "AddKeyboardMoveBinding",
+          "line": 18,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AddKeyboardButtonBinding",
+          "line": 43,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AddGamepadMoveBinding",
+          "line": 67,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AddGamepadButtonBinding",
+          "line": 97,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "RemoveGameplayBindings",
+          "line": 119,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SetCharacterSlot",
+          "line": 137,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildCharacterSlotId",
+          "line": 145,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildCharacterFolderPath",
+          "line": 154,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreateDefaultBattleSetupData",
+          "line": 159,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AreDevicesUnique",
+          "line": 173,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildInputBindings",
+          "line": 190,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "System/MotionPose.h",
+      "sha256": "86c5e82e4873bb2697806bba33c13d764440ee47fdff79df967623122b92c660",
+      "functions": []
+    },
+    {
+      "path": "System/MotionPose.cpp",
+      "sha256": "b501717fa550ca253290d7c3e0d6fb322fa32a501e9bc6c957875f1d04ea84c1",
+      "functions": [
+        {
+          "name": "MotionPose::GetBoneWorldMatrix",
+          "line": 16,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::WorldToLocalPose",
+          "line": 33,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::InitializeSkeletonPose",
+          "line": 62,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::SetBoneLocalEulerRotationDegrees",
+          "line": 97,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::UpdateSkinningMatrices",
+          "line": 123,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::ResetPoseToBindPose",
+          "line": 161,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::ApplyMotionData",
+          "line": 181,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::ApplyMotionData",
+          "line": 198,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::SampleBoneTrack",
+          "line": 239,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionPose::CreateLocalMatrix",
+          "line": 406,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "System/MotionIk.h",
+      "sha256": "b5aca333a3e32b20e48fa318c765dff351e2ccc696ed5b075b243fb065719cdd",
+      "functions": []
+    },
+    {
+      "path": "System/MotionIk.cpp",
+      "sha256": "3fcc3b599c208c2f77a76549eb35092be29190a937037d6bb822f1f0311eb17d",
+      "functions": [
+        {
+          "name": "Dot",
+          "line": 32,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "Finite",
+          "line": 39,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "IsAncestor",
+          "line": 48,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "IsRigidScaled",
+          "line": 62,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "DirectionRotation",
+          "line": 74,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "ReachFraction",
+          "line": 97,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "SetWorldRotation",
+          "line": 123,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionIk::FindChain",
+          "line": 146,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "SolveUnconstrained",
+          "line": 162,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionIk::MeasureLimitViolation",
+          "line": 290,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionIk::Solve",
+          "line": 297,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "System/MotionRotationLimits.h",
+      "sha256": "feedd8d046a57b4350c089cd2b820f4d8765f34fdae0bb44112f946708db837a",
+      "functions": []
+    },
+    {
+      "path": "System/MotionRotationLimits.cpp",
+      "sha256": "2dee4ab1e215a2cd496331e58edbf7da2c6f8993129d6995f72820c6b7252acd",
+      "functions": [
+        {
+          "name": "Coordinates",
+          "line": 12,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "Trace",
+          "line": 34,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionRotationLimits::Measure",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionRotationLimits::Permits",
+          "line": 78,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionRotationLimits::Constrain",
+          "line": 85,
+          "documented": true,
+          "individualExplanation": true
+        },
+        {
+          "name": "MotionRotationLimits::AxisRange",
+          "line": 93,
+          "documented": true,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Resource/ModelResource.h",
+      "sha256": "997219808706c80b19eb2841d075284d71cf5dfe68b676b2ea9940d5cad5a305",
+      "functions": []
+    },
+    {
+      "path": "Resource/ModelResource.cpp",
+      "sha256": "ca150ea3e79d5111acf281f7e0bcf6aed99d9ffa72ebad5c74246eb998d9b6da",
+      "functions": [
+        {
+          "name": "ReleaseBuffer",
+          "line": 24,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReleaseTexture",
+          "line": 37,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToWideString",
+          "line": 51,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertAssimpMatrix",
+          "line": 61,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertAssimpVector",
+          "line": 75,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertAssimpQuaternion",
+          "line": 85,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "AddBoneWeight",
+          "line": 96,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "NormalizeBoneWeights",
+          "line": 113,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CollectNodeHierarchy",
+          "line": 141,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreateBuffer",
+          "line": 177,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ResolveTexturePath",
+          "line": 201,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindDiffuseTextures",
+          "line": 217,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindFallbackDiffuseTexture",
+          "line": 254,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreateCompressedEmbeddedTextureView",
+          "line": 295,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreateRawEmbeddedTextureView",
+          "line": 315,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadEmbeddedDiffuseTexture",
+          "line": 372,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadDiffuseTexture",
+          "line": 426,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadMaterials",
+          "line": 478,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "FindOrCreateBoneIndex",
+          "line": 538,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ConvertAnimationClip",
+          "line": 565,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelMesh::~ModelMesh",
+          "line": 624,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelMesh::ModelMesh",
+          "line": 634,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelMaterial::~ModelMaterial",
+          "line": 675,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelMaterial::ModelMaterial",
+          "line": 684,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::LoadFromFile",
+          "line": 718,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::GetMeshes",
+          "line": 897,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::GetMaterials",
+          "line": 906,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::GetBones",
+          "line": 915,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::GetAnimationClips",
+          "line": 924,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResource::FindBoneIndex",
+          "line": 934,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResourceManager::LoadModel",
+          "line": 954,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResourceManager::GetModel",
+          "line": 984,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ModelResourceManager::UnloadAll",
+          "line": 998,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "System/Renderer.h",
+      "sha256": "f5298585379d51e641ca516e2f5cb5f2a1586858207a93e99b64fec5127a98fd",
+      "functions": []
+    },
+    {
+      "path": "System/Renderer.cpp",
+      "sha256": "6b989673671f59e17235ad5e614d527868145201289246cfc48975645dc2db7b",
+      "functions": [
+        {
+          "name": "AddLine",
+          "line": 160,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CeilToStep",
+          "line": 176,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::Init",
+          "line": 235,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawStart",
+          "line": 329,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawEnd",
+          "line": 345,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::GetDefaultClearColor",
+          "line": 354,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::GetDevice",
+          "line": 363,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::GetDeviceContext",
+          "line": 372,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ResizeWindow",
+          "line": 383,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateRenderTexture",
+          "line": 407,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ReleaseRenderTexture",
+          "line": 477,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::BeginRenderTexture",
+          "line": 492,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::RestoreBackBuffer",
+          "line": 513,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ScopedRenderRegion::ScopedRenderRegion",
+          "line": 524,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ScopedRenderRegion::~ScopedRenderRegion",
+          "line": 548,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateRenderAndDepthResources",
+          "line": 571,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::SetViewport",
+          "line": 610,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateDebugCubeResources",
+          "line": 628,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateDebugBoxResources",
+          "line": 741,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateModelRenderResources",
+          "line": 853,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CreateWhiteTextureResource",
+          "line": 985,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CompileShaderFromFile",
+          "line": 1021,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::CompileShader",
+          "line": 1053,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::SetViewProjection",
+          "line": 1084,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawDebugCube",
+          "line": 1094,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawDebugBox",
+          "line": 1125,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawTrainingRoomBackground",
+          "line": 1164,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawModel",
+          "line": 1301,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawModel",
+          "line": 1315,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::LoadTextureFromFile",
+          "line": 1415,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ReleaseTexture",
+          "line": 1440,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::GetTextureSize",
+          "line": 1452,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawScreenRect",
+          "line": 1491,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawScreenRectBatch",
+          "line": 1509,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawTextureRegion",
+          "line": 1537,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::DrawFullscreenTexture",
+          "line": 1557,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::SetDepthEnable",
+          "line": 1583,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ReleaseDebugCubeResources",
+          "line": 1598,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ReleaseDebugBoxResources",
+          "line": 1611,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::ReleaseModelRenderResources",
+          "line": 1624,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "Renderer::Uninit",
+          "line": 1637,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "System/Game.h",
+      "sha256": "fc001acd3dc21a64754f180cdc8eb059000e79bfadfc6b62ee317e76205f10da",
+      "functions": []
+    },
+    {
+      "path": "System/Game.cpp",
+      "sha256": "4f8208e1f536233ddbd99a455f6dc55c457ebd3c69fb011c7aec8352e8f33ef9",
+      "functions": [
+        {
+          "name": "Game::Init",
+          "line": 15,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Game::Update",
+          "line": 49,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Game::Draw",
+          "line": 60,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Game::OnResize",
+          "line": 75,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Game::Uninit",
+          "line": 92,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "System/Application.h",
+      "sha256": "12ef07c7c39f8af9654ced1a3c40a6c6c7c66aae9782afadc5507ac02a26322d",
+      "functions": [
+        {
+          "name": "GetWidth",
+          "line": 16,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetHeight",
+          "line": 21,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "GetWindow",
+          "line": 26,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "System/Application.cpp",
+      "sha256": "9bc076f0f1444e0986ee947d5c787430a6760d8d4211f551174773dcd06e9e12",
+      "functions": [
+        {
+          "name": "Application::Application",
+          "line": 24,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::~Application",
+          "line": 35,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::Run",
+          "line": 43,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::InitApp",
+          "line": 55,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::UninitApp",
+          "line": 134,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::MainLoop",
+          "line": 152,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::Destroy",
+          "line": 235,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::WndProc",
+          "line": 243,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "Application::ActiveFullScreen",
+          "line": 318,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    },
+    {
+      "path": "Scene/Scene.h",
+      "sha256": "e636f0018549961d4711d2e9ca23c5023b632ca59ecc43223c8150597e6fd7eb",
+      "functions": []
+    },
+    {
+      "path": "Scene/SceneManager.h",
+      "sha256": "dcd76a55a0950cf028fd42c309b595acf47dffbb3c23281bb8cc580255c93a29",
+      "functions": []
+    },
+    {
+      "path": "Scene/SceneManager.cpp",
+      "sha256": "710f9e3690478dced7fd6efea87e0e82d50197e7831765001e3dd6dd131c2076",
+      "functions": [
+        {
+          "name": "SceneManager::GetInstance",
+          "line": 7,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::RequestChangeScene",
+          "line": 17,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::ApplyPendingSceneChange",
+          "line": 25,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::GetCurrentScene",
+          "line": 46,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::GetCurrentScene",
+          "line": 55,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::HasScene",
+          "line": 64,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::RunSystems",
+          "line": 69,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "SceneManager::Draw",
+          "line": 81,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::OnResize",
+          "line": 94,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "SceneManager::Shutdown",
+          "line": 105,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "World/World.h",
+      "sha256": "c4bfe478fa7f4b75002e19c68b2a7f40f3e8cdc6a8232394dd518e06981eda0a",
+      "functions": [
+        {
+          "name": "World::AddComponent",
+          "line": 210,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::AddComponent",
+          "line": 234,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetComponent",
+          "line": 258,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetComponent",
+          "line": 283,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::HasComponent",
+          "line": 308,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "World/World.cpp",
+      "sha256": "83618fe013180aae9205ce61346a8cd270adc4086504235f82c5c673a7092dfe",
+      "functions": [
+        {
+          "name": "World::CreateGameObject",
+          "line": 9,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::CreateGameObject",
+          "line": 19,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::CreateTransform",
+          "line": 35,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::CreateTransform",
+          "line": 45,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::Clear",
+          "line": 55,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetGameObjects",
+          "line": 74,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetGameObjects",
+          "line": 83,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetGameObject",
+          "line": 93,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetGameObject",
+          "line": 111,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetTransform",
+          "line": 129,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetTransform",
+          "line": 139,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::SetActiveCamera",
+          "line": 149,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetActiveCameraId",
+          "line": 159,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetActiveCamera",
+          "line": 168,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetActiveCamera",
+          "line": 179,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::HasActiveCamera",
+          "line": 190,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::RequestSpawn",
+          "line": 206,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::RequestDestroy",
+          "line": 226,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::RequestEffectSpawn",
+          "line": 246,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetSpawnRequests",
+          "line": 271,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetDestroyRequests",
+          "line": 280,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetEffectSpawnRequests",
+          "line": 289,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearSpawnRequests",
+          "line": 297,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearDestroyRequests",
+          "line": 305,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearEffectSpawnRequests",
+          "line": 313,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::AddHitCollisionResult",
+          "line": 322,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetHitCollisionResults",
+          "line": 331,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearHitCollisionResults",
+          "line": 339,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::AddHitReactionRequest",
+          "line": 348,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetHitReactionRequests",
+          "line": 357,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearHitReactionRequests",
+          "line": 365,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::SetBattlePlayerId",
+          "line": 375,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetBattlePlayerId",
+          "line": 390,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetOpponentBattlePlayerId",
+          "line": 405,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::SetBattleResult",
+          "line": 429,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetBattleResult",
+          "line": 438,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::HasBattleResult",
+          "line": 447,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearBattleResult",
+          "line": 455,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::RequestHitStop",
+          "line": 465,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::AdvanceHitStopFrame",
+          "line": 483,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::IsHitStopActive",
+          "line": 502,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::GetHitStopState",
+          "line": 511,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ClearHitStop",
+          "line": 519,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::DestroyGameObjectImmediate",
+          "line": 528,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::CollectDestroyIdsRecursive",
+          "line": 601,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "World::ContainsObjectId",
+          "line": 634,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Core/GameObject.h",
+      "sha256": "d48ab06ca2ba4f9a0b0424ff185ae9e0d6d00647ddf524113fd2777abbaead94",
+      "functions": []
+    },
+    {
+      "path": "Component/Component.h",
+      "sha256": "3d53b2c8179a1c48bbc6738252aa838b8767de19f98471f606bc939549071a25",
+      "functions": []
+    },
+    {
+      "path": "Component/TransformComponent.h",
+      "sha256": "c6cd4783a66ff2310a2f0b23ea271be41a87ffe766cad4a1244e8d21feb36cc7",
+      "functions": []
+    },
+    {
+      "path": "Component/CameraComponent.h",
+      "sha256": "531ef6392b01a005121893e82a534ec02da14e2d6d40d302cf534e5d5711e984",
+      "functions": []
+    },
+    {
+      "path": "Component/SkeletonPoseComponent.h",
+      "sha256": "85705fe8beb3b13084dbba59ddb63612dfa7ac295e4927fd2a446620a52745ce",
+      "functions": []
+    },
+    {
+      "path": "Component/ModelComponent.h",
+      "sha256": "da089d5dd780c033d9d569135db46346a8da001ca79ec7229340a257ad6683a0",
+      "functions": []
+    },
+    {
+      "path": "Component/MotionPlayerComponent.h",
+      "sha256": "2de7fe0967a79ee5aaff75f7f2d2e489a477dc8e3219b04a483a5a0544d6c927",
+      "functions": []
+    },
+    {
+      "path": "System/TransformSystem.h",
+      "sha256": "b347299811c4fb127ef0f2d644a21de251c66b3cd5a30d8845f28ee8034ee1fe",
+      "functions": []
+    },
+    {
+      "path": "System/TransformSystem.cpp",
+      "sha256": "df9428e21e1a717b1facb3b64226d183cdad8496875465e5575e59af68de375f",
+      "functions": [
+        {
+          "name": "TransformSystem::GetLocalPosition",
+          "line": 12,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetLocalEulerRotationDegrees",
+          "line": 22,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetLocalScale",
+          "line": 39,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetWorldPosition",
+          "line": 49,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetWorldRotation",
+          "line": 59,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetWorldScale",
+          "line": 69,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::GetWorldMatrix",
+          "line": 79,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetLocalPosition",
+          "line": 89,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetLocalEulerRotationDegrees",
+          "line": 100,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetLocalRotationQuaternion",
+          "line": 118,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetLocalScale",
+          "line": 130,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetParent",
+          "line": 144,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::RemoveParent",
+          "line": 206,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::UpdateWorldTransforms",
+          "line": 253,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::UpdateWorldTransform",
+          "line": 270,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::MarkDirtyRecursive",
+          "line": 281,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::UpdateWorldTransformsBeforeHierarchyChange",
+          "line": 302,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::HasAncestor",
+          "line": 314,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::FindTransform",
+          "line": 344,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::FindTransform",
+          "line": 371,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::RemoveChildId",
+          "line": 397,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::AddChildId",
+          "line": 408,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::UpdateWorldTransformRecursive",
+          "line": 422,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::CreateLocalMatrix",
+          "line": 465,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::ApplyWorldMatrixCache",
+          "line": 478,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "TransformSystem::SetLocalFromWorldMatrix",
+          "line": 491,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "System/CameraSystem.h",
+      "sha256": "799549ae2d8c6cba3e55138f2d11fb8b460b270831431e6b9a8a5579be6626d3",
+      "functions": []
+    },
+    {
+      "path": "System/CameraSystem.cpp",
+      "sha256": "ce39ccd8ffbc6ecc76d89a6d804bf29cbd0bbe87c3138bd1f4784fc64af12e28",
+      "functions": [
+        {
+          "name": "ClampMin",
+          "line": 16,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CameraSystem::SetPerspective",
+          "line": 30,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CameraSystem::SetAspectRatio",
+          "line": 49,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CameraSystem::Update",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CameraSystem::CreateViewMatrix",
+          "line": 78,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CameraSystem::CreateProjectionMatrix",
+          "line": 98,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Input/InputTypes.h",
+      "sha256": "7437c2ae225dd0ab90ecc9522ed5438fa5ff82591efb95c75a7096e9e835988f",
+      "functions": []
+    },
+    {
+      "path": "Input/InputSystem.h",
+      "sha256": "c6ff3a6fc71d4a224854d3c24efbdf88afd5c56eb7ee321d3b3113478aa78201",
+      "functions": []
+    },
+    {
+      "path": "Input/InputSystem.cpp",
+      "sha256": "a76a50f29abed80b543fca8c14a89b708f7403e70cf6277f10042dc444d03a9d",
+      "functions": [
+        {
+          "name": "ToXInputButton",
+          "line": 28,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "NormalizeThumbValue",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ApplyRadialDeadZone",
+          "line": 76,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputValue::Button",
+          "line": 105,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputValue::Axis1D",
+          "line": 119,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputValue::Axis2D",
+          "line": 133,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputValue::IsActive",
+          "line": 147,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "CreateDefaultInputBindings",
+          "line": 164,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::Initialize",
+          "line": 287,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::Update",
+          "line": 305,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::Shutdown",
+          "line": 325,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::SetActionMap",
+          "line": 339,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetActionMap",
+          "line": 360,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetActionState",
+          "line": 371,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetPlayerInputState",
+          "line": 392,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetLastUsedDeviceType",
+          "line": 407,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::SetBindings",
+          "line": 421,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetBindings",
+          "line": 437,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::SetSettings",
+          "line": 446,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetSettings",
+          "line": 455,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetMaxGamepadCount",
+          "line": 464,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::IsGamepadConnected",
+          "line": 474,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::UpdatePreviousValues",
+          "line": 482,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::ClearCurrentValues",
+          "line": 500,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::ApplyBinding",
+          "line": 515,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::UpdateGamepadStates",
+          "line": 575,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::FinalizeActionStates",
+          "line": 589,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::IsValidPlayerIndex",
+          "line": 616,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::IsKeyboardKeyDown",
+          "line": 626,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::IsValidGamepadIndex",
+          "line": 641,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::IsGamepadButtonDown",
+          "line": 652,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::GetGamepadAxis2D",
+          "line": 684,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputSystem::MergeActionValue",
+          "line": 725,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Input/InputBindings.h",
+      "sha256": "5d91078768f8e9200c7d3b305227ee6959852f7a935c34314ec182dc078e6f06",
+      "functions": []
+    },
+    {
+      "path": "Input/InputConfigLoader.h",
+      "sha256": "38f4caebb669454045284ec0be4277c09e0e84a4a79b83bd57e3d85565324203",
+      "functions": []
+    },
+    {
+      "path": "Input/InputConfigLoader.cpp",
+      "sha256": "f2e0f315628203dd7c5f14a1d31a254867f1f1656e056e1f3b56d1496b4253e2",
+      "functions": [
+        {
+          "name": "EscapeJsonString",
+          "line": 23,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ReadTextFile",
+          "line": 60,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "WriteUtf8BomTextFile",
+          "line": 88,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetString",
+          "line": 110,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToDeviceTypeText",
+          "line": 126,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseDeviceKind",
+          "line": 137,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToKeyboardKeyText",
+          "line": 157,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseKeyboardKey",
+          "line": 206,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ToGamepadButtonText",
+          "line": 229,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "ParseGamepadButton",
+          "line": 261,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "GetDeviceConfigDirectory",
+          "line": 288,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadKeyboardConfig",
+          "line": 298,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadGamepadConfig",
+          "line": 315,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "LoadNamedInputConfigFromJson",
+          "line": 333,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "BuildNamedInputConfigJson",
+          "line": 376,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::LoadBindingsFromJson",
+          "line": 423,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::SaveBindingsToJson",
+          "line": 436,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::LoadNamedInputConfigs",
+          "line": 443,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::SaveNamedInputConfig",
+          "line": 476,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::GenerateNextConfigId",
+          "line": 502,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "InputConfigLoader::BuildConfigFilePath",
+          "line": 521,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "System/MotionSystem.h",
+      "sha256": "8db14fc2ff8149136575f85a671595446fb247e56a8c3263ca69b8268c0cdcc2",
+      "functions": []
+    },
+    {
+      "path": "System/MotionSystem.cpp",
+      "sha256": "d233ab54e7b74fbdb5b557c41b0f0bfcd1d423f287486882c75b820c0097efe2",
+      "functions": [
+        {
+          "name": "ShouldBlendIntoActionState",
+          "line": 33,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::Update",
+          "line": 71,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::SyncMotionPlayerFromState",
+          "line": 123,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::FindAssignedAttack",
+          "line": 238,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::GetCommonMotionDataId",
+          "line": 263,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::GetMotionBlendFrames",
+          "line": 315,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::StartMotionBlend",
+          "line": 334,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::IsAttackMotionDataId",
+          "line": 366,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::IsAttackActionState",
+          "line": 376,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::ApplyMotionPlayer",
+          "line": 392,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::SampleRootOffset",
+          "line": 468,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::BlendBonePoses",
+          "line": 566,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::AdvanceMotionFrame",
+          "line": 599,
+          "documented": true,
+          "individualExplanation": false
+        },
+        {
+          "name": "MotionSystem::ApplyDebugPose",
+          "line": 625,
+          "documented": true,
+          "individualExplanation": false
+        }
+      ]
+    },
+    {
+      "path": "Shader/ModelSkinned.hlsl",
+      "sha256": "6ce3df3f3a871b2cfd4795f36fbff21efb7fecef5a950cbb8758b0fc4ca43a78",
+      "functions": [
+        {
+          "name": "VSMain",
+          "line": 28,
+          "documented": false,
+          "individualExplanation": true
+        },
+        {
+          "name": "PSMain",
+          "line": 53,
+          "documented": false,
+          "individualExplanation": true
+        }
+      ]
+    }
+  ]
+}
