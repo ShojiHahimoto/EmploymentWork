@@ -1,0 +1,53 @@
+﻿{
+  "attackDataId": "Special/slot_05",
+  "displayName": "わちゃわちゃ",
+  "attackKind": "Special",
+  "commandId": "Yoga",
+  "usableState": "Ground",
+  "attackHeight": "High",
+  "motionDataId": "Attack/Special/slot_05",
+  "hitSoundId": "",
+  "damage": 1500,
+  "hitstunFrames": 32,
+  "guardstunFrames": 23,
+  "hitReactionType": "HardBurst",
+  "frame": {
+    "startup": 5,
+    "active": 13,
+    "recovery": 10
+  },
+  "canAttackCancel": true,
+  "cancelSetting": {
+    "startFrame": 17,
+    "endFrame": 26,
+    "cancelTypes": ["Special"]
+  },
+  "hitboxes": [
+    {
+      "offset": {
+        "x": 2.850,
+        "y": 6.000
+      },
+      "size": {
+        "x": 4.100,
+        "y": 5.000
+      }
+    }
+  ],
+  "movementKeys": [
+    {
+      "frame": 13,
+      "offset": {
+        "x": 7.137,
+        "y": 3.968
+      }
+    },
+    {
+      "frame": 26,
+      "offset": {
+        "x": 12.928,
+        "y": 0.000
+      }
+    }
+  ]
+}

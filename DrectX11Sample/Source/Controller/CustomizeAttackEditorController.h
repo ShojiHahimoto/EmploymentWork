@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include "Data/AttackData.h"
 #include "Controller/CustomizeTypes.h"
+#include "Data/AttackData.h"
 
 #include <array>
 #include <string>
@@ -22,8 +22,8 @@ enum class CustomizeAttackEditorAction
 /// </summary>
 struct CustomizeAttackEditorEditState
 {
-	AttackData attackData; // 表示側が編集する技パラメータのコピー。
-	int hitFrameAdvantage = 0; // 実行時スタン値ではなく編集UIの硬直差入力値。
+	AttackData attackData;		 // 表示側が編集する技パラメータのコピー。
+	int hitFrameAdvantage = 0;	 // 実行時スタン値ではなく編集UIの硬直差入力値。
 	int guardFrameAdvantage = 0; // 実行時スタン値ではなく編集UIの硬直差入力値。
 };
 
@@ -32,7 +32,7 @@ struct CustomizeAttackEditorEditState
 /// </summary>
 class CustomizeAttackEditorController
 {
-public:
+  public:
 	static constexpr int GroundAttackSlotCount = 20;
 	static constexpr int AirAttackSlotCount = 20;
 	static constexpr int SpecialAttackSlotCount = 20;
@@ -59,7 +59,7 @@ public:
 	CustomizeAttackEditorEditState GetEditState() const;
 	/// <summary>編集結果を検証・正規化して下書きへ反映する。</summary>
 	/// <param name="editState">表示側が編集した一時データ。</param>
-	void ApplyEditState(const CustomizeAttackEditorEditState& editState);
+	void ApplyEditState(const CustomizeAttackEditorEditState &editState);
 	/// <summary>モーション編集画面を開く要求を作り、モーション ID を整える。</summary>
 	/// <returns>モーション編集への遷移要求。</returns>
 	CustomizeAttackEditorAction RequestOpenMotionEditor();
@@ -116,25 +116,25 @@ public:
 	/// 汎用モーション編集時のプレビュー用 AttackData を用意する。
 	/// </summary>
 	/// <param name="motionDataId">表示する汎用 MotionData ID。</param>
-	void PrepareCommonMotionPreview(const std::string& motionDataId);
+	void PrepareCommonMotionPreview(const std::string &motionDataId);
 
 	/// <summary>
 	/// AttackData 下書きを取得する。
 	/// </summary>
 	/// <returns>編集可能な AttackData 参照。</returns>
-	AttackData& GetDraft();
+	AttackData &GetDraft();
 
 	/// <summary>
 	/// AttackData 下書きを取得する。
 	/// </summary>
 	/// <returns>読み取り専用の AttackData 参照。</returns>
-	const AttackData& GetDraft() const;
+	const AttackData &GetDraft() const;
 
 	/// <summary>
 	/// 編集中 AttackData ID を取得する。
 	/// </summary>
 	/// <returns>編集中 AttackData ID。</returns>
-	const std::string& GetEditingAttackDataId() const;
+	const std::string &GetEditingAttackDataId() const;
 
 	/// <summary>
 	/// 編集中カテゴリを取得する。
@@ -152,21 +152,21 @@ public:
 	/// 表示名入力用バッファを取得する。
 	/// </summary>
 	/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
-	std::array<char, AttackNameBufferSize>& GetDisplayNameBuffer();
+	std::array<char, AttackNameBufferSize> &GetDisplayNameBuffer();
 
 	/// <summary>
 	/// MotionData ID 入力用バッファを取得する。
 	/// </summary>
 	/// <returns>ImGui 表示に使う固定長バッファ。</returns>
-	std::array<char, MotionDataIdBufferSize>& GetMotionDataIdBuffer();
+	std::array<char, MotionDataIdBufferSize> &GetMotionDataIdBuffer();
 
 	/// <summary>
 	/// MotionData ID 入力用バッファを取得する。
 	/// </summary>
 	/// <returns>読み取り専用の固定長バッファ。</returns>
-	const std::array<char, MotionDataIdBufferSize>& GetMotionDataIdBuffer() const;
+	const std::array<char, MotionDataIdBufferSize> &GetMotionDataIdBuffer() const;
 
-private:
+  private:
 	/// <summary>
 	/// 未保存スロットを開いた時に使う初期 AttackData を作る。
 	/// </summary>
@@ -174,10 +174,8 @@ private:
 	/// <param name="slotIndex">カテゴリ内スロット番号。</param>
 	/// <param name="attackDataId">保存先 AttackData ID。</param>
 	/// <returns>編集開始用の初期 AttackData。</returns>
-	AttackData CreateDefaultAttackData(
-		CustomizeAttackCategory category,
-		int slotIndex,
-		const std::string& attackDataId) const;
+	AttackData CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex,
+									   const std::string &attackDataId) const;
 
 	/// <summary>
 	/// draft の表示名を ImGui 入力用固定バッファへコピーする。

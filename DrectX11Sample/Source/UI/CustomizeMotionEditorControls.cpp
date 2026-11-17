@@ -15,6 +15,7 @@ RECT CustomizeEditorUI::PreviewToolbar(int width, int height) const
 	}
 
 	const RECT region = PreviewRegion(width, height);
+
 	return {region.left + 4, region.top + 4, std::min(region.right, region.left + 392), region.top + 38};
 }
 
@@ -23,6 +24,7 @@ void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &mot
 											int split, int width)
 {
 	const int inlineHeight = presetPanelMode == 0 ? 0 : 116;
+
 	root.BeginScrollArea("motion/controls", {split + 8, top + 8, width - 8, bottom - 96},
 						 (common ? 590 : 550) + inlineHeight, motionPanelScroll);
 	const int left = 16, right = width - split - 32, gap = 16;
@@ -46,6 +48,7 @@ void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &mot
 
 	heading("part/heading", "選択部位", y);
 	y += 42;
+
 	const int third = (right - left - gap * 2) / 3;
 	root.AddIconButton("pose/copy", {left, y, left + third, y + 42}, "コピー", "copy", keyed);
 	root.AddIconButton("pose/paste", {left + third + gap, y, left + third * 2 + gap, y + 42}, "ペースト", "paste",
@@ -95,6 +98,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 											const GameUI::Rect &previewRegion)
 {
 	message = UserNotification(status);
+
 	const int frame = preview.GetActionFrame();
 	const int total = common ? motion.GetDraft().totalFrames : GetAttackTotalFrames(edit.attackData.frame);
 
@@ -116,6 +120,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		preview.CancelGizmoEditing();
 		motion.SelectBodyPart(preview, -1, frame);
 	}
+
 	std::snprintf(motion.GetDisplayNameBuffer().data(), motion.GetDisplayNameBuffer().size(), "%s", motionName.c_str());
 
 	if (root.WasActivated("pose/add"))
@@ -162,6 +167,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 			DirectX::SimpleMath::Vector2 value;
 			motion.AddAttackMovementKeyframe(edit.attackData, frame, value);
 		}
+
 		movementSelected = frame >= 0;
 	}
 
@@ -191,9 +197,11 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		presetIndex = 0;
 		presetIds = {"__IdlePose__"};
 		presetNames = {"アイドル姿勢"};
+
 		for (const auto &id : PosePresetStore::ListPresetIds())
 		{
 			PosePresetData data;
+
 			if (PosePresetStore::LoadPreset(id, data))
 			{
 				presetIds.push_back(id);
@@ -201,6 +209,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 			}
 		}
 	}
+
 	// 仮ボタンは通常の濃さで描き、未実装の機能を実行したようには見せない。
 	for (const char *id : {"pose/mirror", "motionPreset/save", "motionPreset/load"})
 	{
@@ -214,14 +223,17 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 	{
 		status = motion.SavePosePreset(frame, presetName);
 	}
+
 	if ((root.WasActivated("preset/applyAll") || root.WasActivated("preset/applySelected")) && presetIndex >= 0 &&
 		presetIndex < static_cast<int>(presetIds.size()))
 	{
 		auto mask = motion.GetSelectedBodyParts();
+
 		if (root.WasActivated("preset/applyAll"))
 		{
 			mask.fill(true);
 		}
+
 		status = motion.ApplyPosePreset(presetIds[presetIndex], frame, mask);
 	}
 
@@ -229,6 +241,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 	{
 		presetPanelMode = 0;
 	}
+
 	if (presetPanelMode != 0)
 	{
 		// プレビューの部位選択は適用先の指定なので継続する。他項目へのフォーカスで閉じる。
@@ -246,12 +259,14 @@ void CustomizeEditorUI::BuildInlinePosePreset(CustomizeMotionEditorController &m
 	{
 		return;
 	}
+
 	root.AddLabel("preset/inputLabel", {left, y, left + 116, y + 34},
 				  presetPanelMode == 1 ? "ポーズ名" : "ポーズを選択", true, 16);
 	if (presetPanelMode == 1)
 	{
 		root.AddTextInput("preset/name", {left + 120, y, right, y + 34}, presetName, 127);
 		y += 44;
+
 		const int half = (left + right) / 2;
 		root.AddButton("preset/confirmSave", {left, y, half - 8, y + 34}, "保存", keyed);
 		root.AddButton("preset/cancel", {half + 8, y, right, y + 34}, "キャンセル");
@@ -260,9 +275,14 @@ void CustomizeEditorUI::BuildInlinePosePreset(CustomizeMotionEditorController &m
 	{
 		root.AddDropdown("preset/list", {left + 120, y, right, y + 34}, presetNames, presetIndex);
 		y += 44;
+
 		const int column = (right - left - 16) / 3;
 		const auto selected = motion.GetSelectedBodyParts();
-		const bool anySelected = std::any_of(selected.begin(), selected.end(), [](bool value) { return value; });
+		const bool anySelected = std::any_of(selected.begin(), selected.end(),
+											 [](bool value)
+											 {
+												 return value;
+											 });
 		root.AddIconButton("preset/applyAll", {left, y, left + column, y + 34}, "全身に適用", "",
 						   keyed && !presetIds.empty(), false, false, 16);
 		root.AddIconButton("preset/applySelected", {left + column + 8, y, left + column * 2 + 8, y + 34},
@@ -270,6 +290,7 @@ void CustomizeEditorUI::BuildInlinePosePreset(CustomizeMotionEditorController &m
 		root.AddIconButton("preset/cancel", {left + (column + 8) * 2, y, right, y + 34}, "キャンセル", "", true, false,
 						   false, 16);
 	}
+
 	y += 42;
 	root.AddLabel("preset/result", {left, y, right, y + 24}, message, true, 14);
 	y += 30;

@@ -53,6 +53,7 @@ constexpr AttackCommandId Commands[] = {AttackCommandId::None,		  AttackCommandI
 template <class T, size_t N> int IndexOf(const T (&values)[N], const T &value)
 {
 	const auto found = std::find(std::begin(values), std::end(values), value);
+
 	return found == std::end(values) ? 0 : static_cast<int>(found - std::begin(values));
 }
 } // namespace
@@ -60,6 +61,7 @@ template <class T, size_t N> int IndexOf(const T (&values)[N], const T &value)
 GameUI::Root::EditInteraction CustomizeEditorUI::GetEditInteraction() const
 {
 	auto interaction = root.GetEditInteraction();
+
 	if (interaction.id.starts_with("text/preset/"))
 	{
 		return {};
@@ -102,35 +104,43 @@ std::string CustomizeEditorUI::UserNotification(const std::string &status)
 	{
 		return {};
 	}
+
 	if (status.starts_with("Saved pose preset:"))
 	{
 		return "ポーズプリセットを保存しました。";
 	}
+
 	if (status.starts_with("Applied pose preset:"))
 	{
 		return "ポーズプリセットを適用しました。";
 	}
+
 	if (status == "Preset name is empty.")
 	{
 		return "プリセット名を入力してください。";
 	}
+
 	if (status == "Preset display name already exists.")
 	{
 		return "同じ名前のプリセットが存在します。";
 	}
+
 	if (status.find("failed") != std::string::npos || status.find("Failed") != std::string::npos)
 	{
 		return "処理に失敗しました。内容を確認して再度お試しください。";
 	}
+
 	if (status.find("requires") != std::string::npos || status.starts_with("Add a "))
 	{
 		return "編集するフレームにキーフレームを追加してください。";
 	}
+
 	// 日本語で用意した利用者向け通知だけはそのまま表示する。読み込み進捗等の英語は隠す。
 	if (static_cast<unsigned char>(status.front()) >= 0x80)
 	{
 		return status;
 	}
+
 	return {};
 }
 
@@ -161,6 +171,7 @@ void CustomizeEditorUI::Section(const char *text)
 	{
 		root.AddRule({12, rowY + 2, panelWidth - 12, rowY + 3});
 	}
+
 	rowY += 6;
 	root.AddImage(std::string("section/") + text + "/accent", {12, rowY + 4, 19, rowY + 24},
 				  GameUI::Theme::SectionAccentImage);
@@ -174,6 +185,7 @@ GameUI::Rect CustomizeEditorUI::Row(const std::string &id, const char *label)
 	root.AddLabel(id + "/label", {12, rowY, split - 8, rowY + 32}, label, true, 16);
 	GameUI::Rect result{split, rowY, panelWidth - 20, rowY + 32};
 	rowY += 36;
+
 	return result;
 }
 
@@ -202,7 +214,9 @@ void CustomizeEditorUI::BuildParameters(CustomizeAttackCategory category)
 		const char *labels[] = {"発生", "持続", "硬直"};
 		const char *ids[] = {"startup", "active", "recovery"};
 		int *values[] = {&data.frame.startup, &data.frame.active, &data.frame.recovery};
+
 		const int minimums[] = {2, 0, 0};
+
 		for (int i = 0; i < 3; ++i)
 		{
 			root.AddLabel(std::string("frame/") + ids[i] + "/label", {columnX[i], rowY, columnX[i] + 48, rowY + 32},
@@ -210,8 +224,10 @@ void CustomizeEditorUI::BuildParameters(CustomizeAttackCategory category)
 			root.AddIntegerInput(ids[i], {columnX[i] + 48, rowY, columnX[i] + columnWidth, rowY + 32}, *values[i],
 								 minimums[i], 100000);
 		}
+
 		rowY += 36;
 	}
+
 	Section("硬直差");
 	{
 		const int gap = 12;
@@ -231,6 +247,7 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 {
 	auto &data = edit.attackData;
 	Section("攻撃の挙動");
+
 	if (category == CustomizeAttackCategory::Special)
 	{
 		root.AddDropdown("usable", Row("usable", "技の種類"), {"地上技", "空中技"}, usableIndex);
@@ -240,6 +257,7 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 		root.AddLabel("usable/fixed", Row("usable", "技の種類"),
 					  category == CustomizeAttackCategory::Air ? "空中技（固定）" : "地上技（固定）");
 	}
+
 	if (data.usableState == AttackUsableState::Air)
 	{
 		root.AddLabel("reaction/fixed", Row("reaction", "被弾の挙動"), "ノーマル（固定）", true, 16);
@@ -249,6 +267,7 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 		root.AddDropdown("reaction", Row("reaction", "被弾の挙動"),
 						 {"ノーマル", "ダウン", "バースト", "ハードバースト"}, reactionIndex);
 	}
+
 	if (category == CustomizeAttackCategory::Special)
 	{
 		root.AddDropdown("command", Row("command", "コマンド"), {"なし", "波動", "昇竜", "ヨガ", "逆ヨガ", "一回転"},
@@ -259,16 +278,19 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 void CustomizeEditorUI::BuildHitboxes()
 {
 	Section("攻撃判定");
+
 	for (size_t i = 0; i < edit.attackData.hitboxes.size(); ++i)
 	{
 		const std::string id = "box/" + std::to_string(i);
 		auto &box = edit.attackData.hitboxes[i];
+
 		if (edit.attackData.hitboxes.size() > 1)
 		{
 			root.AddLabel(id, {12, rowY, panelWidth - 120, rowY + 28}, "判定 " + std::to_string(i + 1));
 			root.AddButton(id + "/delete", {panelWidth - 96, rowY, panelWidth - 16, rowY + 28}, "削除");
 			rowY += 32;
 		}
+
 		for (int axisRow = 0; axisRow < 2; ++axisRow)
 		{
 			const bool position = axisRow == 0;
@@ -291,6 +313,7 @@ void CustomizeEditorUI::BuildHitboxes()
 			rowY += 34;
 		}
 	}
+
 	root.AddButton("addBox", {12, rowY, panelWidth - 20, rowY + 30}, "＋ 攻撃判定を追加");
 	rowY += 34;
 }
@@ -298,13 +321,17 @@ void CustomizeEditorUI::BuildHitboxes()
 void CustomizeEditorUI::BuildCancel()
 {
 	Section("キャンセル設定");
+
 	const int half = panelWidth / 2;
 	root.AddCheckbox("cancel", {12, rowY, half, rowY + 32}, "キャンセルを有効にする", edit.attackData.canAttackCancel);
+
 	if (!edit.attackData.canAttackCancel)
 	{
 		rowY += 36;
+
 		return;
 	}
+
 	const int total = std::max(1, GetAttackTotalFrames(edit.attackData.frame));
 	const int endX = panelWidth * 74 / 100;
 	root.AddLabel("cancelStart/label", {half - 4, rowY, half + 36, rowY + 32}, "開始", true, 16);
@@ -312,6 +339,7 @@ void CustomizeEditorUI::BuildCancel()
 	root.AddLabel("cancelEnd/label", {endX - 4, rowY, endX + 36, rowY + 32}, "終了", true, 16);
 	root.AddIntegerInput("cancelEnd", {endX + 36, rowY, panelWidth - 16, rowY + 32}, cancelEnd, 1, total);
 	rowY += 36;
+
 	const int column = (panelWidth - 24) / 3;
 	root.AddCheckbox("normalCancel", {12, rowY, 12 + column, rowY + 30}, "通常技", normalCancel);
 	root.AddCheckbox("specialCancel", {12 + column, rowY, 12 + column * 2, rowY + 30}, "必殺技", specialCancel);
@@ -334,6 +362,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	motionScreenActive = motionScreen;
 	previewToolbarRects.clear();
 	message = UserNotification(status);
+
 	const bool hadPresetPanel = presetPanelMode != 0;
 	multipleSelectionEnabled = motion.IsMultipleSelectionEnabled();
 	motionName = motion.GetDisplayNameBuffer().data();
@@ -344,6 +373,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	suppressInputOnce = false;
 
 	edit = controller.GetEditState();
+
 	auto &data = edit.attackData;
 	heightIndex = IndexOf(Heights, data.attackHeight);
 	reactionIndex = IndexOf(Reactions, data.hitReactionType);
@@ -356,6 +386,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	normalCancel = std::find(types.begin(), types.end(), AttackCancelType::Normal) != types.end();
 	specialCancel = std::find(types.begin(), types.end(), AttackCancelType::Special) != types.end();
 	jumpCancel = std::find(types.begin(), types.end(), AttackCancelType::Jump) != types.end();
+
 	const bool hadCancel = data.canAttackCancel;
 
 	const AttackEditorRegions regions = MakeRegions(width, height);
@@ -364,6 +395,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	panelWidth = width - split - 8;
 
 	root.BeginFrame({0, 0, width, height}, input);
+
 	const int headerHeight = std::max(44, height * 8 / 100);
 	root.AddPanel({0, 0, width, headerHeight}, GameUI::Theme::HeaderImage);
 	root.AddIconButton("back", {16, 8, 82, headerHeight - 10}, "", "back");
@@ -397,7 +429,9 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 
 	root.AddPanel({split, headerHeight + 4, width - 8, bottom - 8}, GameUI::Theme::PanelImage);
 	rowY = 0;
+
 	const int actionTop = bottom - 64;
+
 	if (motionScreen)
 	{
 		BuildMotionControls(motion, preview, commonMotion, headerHeight + 4, bottom - 8, split, width);
@@ -437,12 +471,14 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		BuildHitboxes();
 		BuildCancel();
 		contentHeight = rowY + 16;
+
 		root.EndScrollArea();
 		root.AddIconButton("motion", {split + panelWidth / 5, actionTop, width - panelWidth / 5, bottom - 22},
 						   "モーションを編集", "motion");
 	}
 
 	root.AddPanel({8, regions.previewBottom, split - 8, bottom - 8}, GameUI::Theme::PlaybackPanelImage);
+
 	const int total = commonMotion ? std::max(1, motion.GetDraft().totalFrames) : GetAttackTotalFrames(data.frame);
 	const int controlsY = regions.previewBottom + 10;
 	const int controlsBottom = bottom - 18;
@@ -450,6 +486,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const char *buttonIds[] = {"play", "stop", "previous", "next"};
 	const char *buttonImages[] = {"play", "pause", "previous", "next"};
 	const char *buttonLabels[] = {"再生", "停止", "先頭へ", "末尾へ"};
+
 	for (int i = 0; i < 4; ++i)
 	{
 		root.AddImageButton(
@@ -457,6 +494,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			{20 + i * (buttonWidth + 8), controlsY, 20 + i * (buttonWidth + 8) + buttonWidth, controlsBottom},
 			buttonImages[i], buttonLabels[i], true, false);
 	}
+
 	const int frameX = split * 50 / 100;
 	root.AddRule({frameX - 8, controlsY + 6, frameX - 7, controlsBottom - 6});
 	root.AddLabel("frame", {frameX, controlsY, split * 73 / 100, controlsBottom},
@@ -477,22 +515,26 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	{
 		timelineDragging = false;
 	}
+
 	if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition) &&
 		input.pointerPosition.x >= trackLeft)
 	{
 		timelineDragging = true;
 		preview.Stop();
 	}
+
 	if (timelineDragging)
 	{
 		const double fraction =
 			static_cast<double>(std::clamp<long>(input.pointerPosition.x - trackLeft, 0, trackWidth)) / trackWidth;
 		preview.SetCurrentFrame(static_cast<int>(fraction * total + 0.5));
+
 		if (input.pointerReleased || !input.pointerDown)
 		{
 			timelineDragging = false;
 		}
 	}
+
 	const int trackHeight = std::max(24, (height - bottom) * 23 / 100);
 	const int trackTop = height - trackHeight - 12;
 	const int startupFrames = std::max(0, data.frame.startup - 1);
@@ -504,6 +546,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const int activeWidth = static_cast<int>(static_cast<long long>(trackWidth) * activeFrames / phaseTotal);
 	const int recoveryWidth = trackWidth - startupWidth - activeWidth;
 	int phaseX = trackLeft;
+
 	if (startupWidth > 0)
 	{
 		root.AddNineSliceImage("timeline/startup", {phaseX, trackTop, phaseX + startupWidth, trackTop + trackHeight},
@@ -514,8 +557,10 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 						  {phaseX + 4, trackTop + 2, phaseX + startupWidth - 2, trackTop + trackHeight - 2},
 						  "前隙（" + std::to_string(startupFrames) + "F）", true, 19, true);
 		}
+
 		phaseX += startupWidth;
 	}
+
 	if (activeWidth > 0)
 	{
 		root.AddNineSliceImage("timeline/active", {phaseX, trackTop, phaseX + activeWidth, trackTop + trackHeight},
@@ -526,8 +571,10 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 						  {phaseX + 2, trackTop + 2, phaseX + activeWidth - 2, trackTop + trackHeight - 2},
 						  "持続（" + std::to_string(activeFrames) + "F）", true, 19, true);
 		}
+
 		phaseX += activeWidth;
 	}
+
 	if (recoveryWidth > 0)
 	{
 		root.AddNineSliceImage("timeline/recovery", {phaseX, trackTop, trackRight, trackTop + trackHeight},
@@ -539,11 +586,13 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 						  "後隙（" + std::to_string(recoveryFrames) + "F）", true, 19, true);
 		}
 	}
+
 	const int divisions = std::max(1, total);
 	const int labelStep = total >= TimelineSparseLabelThreshold ? 5 : 1;
 	const int rulerY = bottom + (height - bottom) * 25 / 100;
 	const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
 	root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
+
 	const int poseY = rulerY + 18;
 	const int moveY = poseY + 36;
 	const auto trackLabel = [&](const char *id, const char *label, const char *image, int y)
@@ -570,6 +619,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			{
 				continue;
 			}
+
 			const int y = lane == 0 ? poseY : moveY;
 			root.AddImage("key/" + std::to_string(lane) + "/" + std::to_string(frame), {x - 9, y - 9, x + 9, y + 9},
 						  lane == 0 ? "keyframe" : "keyframe_movement");
@@ -585,6 +635,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			}
 		}
 	}
+
 	for (int i = 0; i <= divisions; ++i)
 	{
 		const int x = trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * i / divisions);
@@ -593,12 +644,14 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		// 現在位置の数字は緑の目印内に一度だけ描く。近接する目盛り文字も重ねない。
 		const bool endpoint = frame == 0 || frame == total;
 		const bool nearLastLabel = frame != total && total - frame < labelStep;
+
 		if ((endpoint || (frame % labelStep == 0 && !nearLastLabel)) && std::abs(x - playheadX) >= 28)
 		{
 			root.AddLabel("timeline/tick/" + std::to_string(i), {x - 22, rulerY - 38, x + 22, rulerY - 14},
 						  std::to_string(frame), true, 15, true);
 		}
 	}
+
 	root.AddRule({playheadX, rulerY - 24, playheadX + 2, trackTop});
 	root.AddImage("timeline/playhead", {playheadX - 20, rulerY - 39, playheadX + 20, rulerY - 9}, "playhead");
 	root.AddLabel("timeline/playhead/value", {playheadX - 20, rulerY - 38, playheadX + 20, rulerY - 14},
@@ -607,6 +660,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	{
 		root.AddLabel("status", {split + 24, bottom - 92, width - 24, bottom - 66}, message, true, 13);
 	}
+
 	root.EndFrame();
 
 	// UIの選択番号は保存しない。既存Controllerと同じ列挙値・内部0始まりへ戻す。
@@ -614,24 +668,29 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	data.usableState = usableIndex == 1 ? AttackUsableState::Air : AttackUsableState::Ground;
 	data.hitReactionType = Reactions[reactionIndex];
 	data.commandId = Commands[commandIndex];
+
 	if (hadCancel)
 	{
 		data.cancelSetting.startFrame = cancelStart - 1;
 		data.cancelSetting.endFrame = std::max(cancelStart, cancelEnd) - 1;
 		data.cancelSetting.cancelTypes.clear();
+
 		if (normalCancel)
 		{
 			data.cancelSetting.cancelTypes.push_back(AttackCancelType::Normal);
 		}
+
 		if (specialCancel)
 		{
 			data.cancelSetting.cancelTypes.push_back(AttackCancelType::Special);
 		}
+
 		if (jumpCancel)
 		{
 			data.cancelSetting.cancelTypes.push_back(AttackCancelType::Jump);
 		}
 	}
+
 	if (!hadCancel && data.canAttackCancel && data.cancelSetting.startFrame == 0 && data.cancelSetting.endFrame == 0 &&
 		data.cancelSetting.cancelTypes.empty())
 	{
@@ -642,6 +701,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 
 	// 部品はDrawまでスナップショットを参照する。配列の追加削除は別コピーへ適用して参照切れを防ぐ。
 	auto result = edit;
+
 	for (size_t i = 0; i < data.hitboxes.size(); ++i)
 	{
 		if (root.WasActivated("box/" + std::to_string(i) + "/delete") && result.attackData.hitboxes.size() > 1)
@@ -650,6 +710,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			break;
 		}
 	}
+
 	if (root.WasActivated("addBox"))
 	{
 		AttackHitboxData box;
@@ -657,6 +718,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		box.size = {2.0f, 2.0f};
 		result.attackData.hitboxes.push_back(box);
 	}
+
 	if (motionScreen)
 	{
 		edit = result;
@@ -664,10 +726,12 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 							{regions.preview.left, regions.preview.top, regions.preview.right, regions.preview.bottom});
 		result = edit;
 	}
+
 	if (!commonMotion)
 	{
 		controller.ApplyEditState(result);
 	}
+
 	const int updatedTotal =
 		commonMotion ? std::max(1, motion.GetDraft().totalFrames) : GetAttackTotalFrames(controller.GetDraft().frame);
 	if (!commonMotion && motion.HasDraft())
@@ -675,6 +739,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		motion.GetDraft().totalFrames = updatedTotal;
 		motion.GetDraft().looping = false;
 	}
+
 	preview.ClampCurrentFrame(updatedTotal);
 
 	if (root.WasActivated("play"))
@@ -707,8 +772,10 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	if (root.WasActivated("save"))
 	{
 		requestedAction = CustomizeAttackEditorAction::Save;
+
 		return;
 	}
+
 	if (hadPresetPanel && !input.composing &&
 		(input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)]))
 	{
@@ -718,12 +785,14 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	if (root.WasActivated("undo"))
 	{
 		requestedAction = CustomizeAttackEditorAction::Undo;
+
 		return;
 	}
 
 	if (root.WasActivated("redo"))
 	{
 		requestedAction = CustomizeAttackEditorAction::Redo;
+
 		return;
 	}
 
@@ -738,8 +807,10 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	if (root.WasActivated("back"))
 	{
 		requestedAction = controller.RequestBack();
+
 		return;
 	}
+
 	if (!hadPresetPanel && presetPanelMode == 0 && !hadKeyboardCapture && !input.composing &&
 		(input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)]))
 	{

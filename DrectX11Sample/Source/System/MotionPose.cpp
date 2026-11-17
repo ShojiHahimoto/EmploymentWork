@@ -33,16 +33,21 @@ bool MotionPose::GetBoneWorldMatrix(const SkeletonPose& pose, int boneIndex,
 bool MotionPose::WorldToLocalPose(const SkeletonPose& pose, const ModelResource& model,
 	int boneIndex, const Matrix& objectWorld, const Matrix& worldMatrix, BonePose& localPose)
 {
+	//ボーンを取得
 	const auto& bones = model.GetBones();
+	//取得できばければfalse
 	if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= bones.size())
 		return false;
+	//親のワールド行列を取得
 	Matrix parentWorld = objectWorld;
 	const int parent = bones[boneIndex].parentIndex;
+	//取得したのボーンが親 or ボーンが取得できなければfalse
 	if (parent >= 0 && !GetBoneWorldMatrix(pose, parent, objectWorld, parentWorld))
 		return false;
 	const float determinant = parentWorld.Determinant();
 	if (!std::isfinite(determinant) || std::abs(determinant) < 1e-12f)
 		return false;
+	//親の逆行列をかけて、ローカル行列に変換
 	Matrix local = worldMatrix * parentWorld.Invert();
 	BonePose result;
 	if (!local.Decompose(result.localScale, result.localRotation, result.localPosition))
@@ -131,13 +136,14 @@ void MotionPose::UpdateSkinningMatrices(SkeletonPose& pose, const ModelResource&
 	pose.boneWorldMatrices.assign(bones.size(), Matrix::Identity);
 	pose.skinningMatrices.assign(bones.size(), Matrix::Identity);
 
-	// ModelResource は親を先に登録する。15部位の論理階層ではなく、補助ボーンを含む実階層で FK を行う。
-	// 計算結果はモデル空間。本体 Transform を含む実ワールド変換は GetBoneWorldMatrix で行う。
+	// ModelResource は親を先に登録する。15部位の編集用階層ではなく、全ボーンを含む実階層で FK を行う。
+	// 計算結果はローカル空間。本体 Transform を含む実ワールド変換は GetBoneWorldMatrix で行う。
 	for (size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex)
 	{
 		const Matrix localMatrix = CreateLocalMatrix(pose.bonePoses[boneIndex]);
 		const int parentIndex = bones[boneIndex].parentIndex;
 
+		//親がいる場合親の行列をかける。親から登録しているため、親の行列にはすでにさらに上の親からの変換結果が適応されている
 		if (parentIndex >= 0 && static_cast<size_t>(parentIndex) < pose.boneWorldMatrices.size())
 		{
 			pose.boneWorldMatrices[boneIndex] = localMatrix * pose.boneWorldMatrices[parentIndex];
@@ -275,6 +281,7 @@ BonePose MotionPose::SampleBoneTrack(
 		}
 	}
 
+	//ループの処理
 	if (looping)
 	{
 		if (!previousKey)
@@ -286,6 +293,7 @@ BonePose MotionPose::SampleBoneTrack(
 			nextKey = &track.keyframes.front();
 		}
 
+		//最後のキーより後ろのフレームは、次のループの最初のキーへ保管する
 		const bool crossesLoop = previousKey->frame > nextKey->frame;
 		const int frameSpan = crossesLoop
 			? std::max(1, (clampedTotalFrames - previousKey->frame) + nextKey->frame)
@@ -328,6 +336,7 @@ BonePose MotionPose::SampleBoneTrack(
 		return result;
 	}
 
+	//非ループの処理
 	if (!previousKey)
 	{
 		previousKey = &track.keyframes.front();
@@ -337,8 +346,8 @@ BonePose MotionPose::SampleBoneTrack(
 		nextKey = &track.keyframes.back();
 	}
 
-	// 最初のキーより前は、下地姿勢から最初のキーへ補間する。
-	// これにより、攻撃開始直後に最初のキー姿勢へ瞬間移動せず、自然に入り始める。
+	// 最初のキーより前は、待機姿勢から最初のキーへ補間する。
+	// これにより、1F目に明示的に待機姿勢を置く必要がなくなる。
 	if (frame < track.keyframes.front().frame)
 	{
 		const MotionBoneKeyframeData& firstKey = track.keyframes.front();
@@ -364,6 +373,7 @@ BonePose MotionPose::SampleBoneTrack(
 		return result;
 	}
 
+	//キーフレーム間は前のキーと後ろのキーで補完する
 	const int frameSpan = std::max(1, nextKey->frame - previousKey->frame);
 	const float t = std::clamp(static_cast<float>(frame - previousKey->frame) / static_cast<float>(frameSpan), 0.0f, 1.0f);
 

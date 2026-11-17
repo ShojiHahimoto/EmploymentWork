@@ -8,9 +8,7 @@
 struct MotionIkChain
 {
     std::array<MotionBodyPart, 3> parts;
-    // 真なら、祖先固定・骨長固定の条件下では有限の直線移動が不可能。
-    // 非操作軸を動かす球面投影や、未許可の祖先回転で回避しない。
-    bool translationLocked = false;
+    bool translationLocked = false;     //trueなら位置移動させない
 };
 
 struct MotionIkResult

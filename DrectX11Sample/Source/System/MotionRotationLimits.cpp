@@ -6,7 +6,7 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
-    /// <summary>長軸Yのtwistと、残りのswingの回転ベクトルを度数で返す。</summary>
+    /// <summary>開始角度からどれだけ回転しているかを度数で返す。</summary>
     /// <param name="rotation">ローカル回転。</param><param name="bind">基準姿勢。</param>
     /// <returns>X/Z=swing、Y=twist。Euler角ではない。</returns>
     Vector3 Coordinates(const Quaternion& rotation, const Quaternion& bind)
@@ -27,18 +27,22 @@ namespace
             DirectX::XMConvertToDegrees(swing.z * scale));
     }
 
-    /// <summary>連続回転経路で最初の境界を探す。制限外の開始姿勢は改善だけを許可。</summary>
+    /// <summary>連続回転経路で最初に制限を超えた境界位置を探す。制限外の開始姿勢は改善だけを許可。</summary>
     /// <param name="part">部位。</param><param name="start">開始回転。</param>
     /// <param name="bind">基準回転。</param><param name="sample">0～1から回転を得る関数。</param>
-    /// <returns>到達できる経路率。</returns>
+    /// <returns>到達できる経路率。可動域制限にかからず到達しきったら１を返す</returns>
     template<class Sample> float Trace(MotionBodyPart part, const Quaternion& start, const Quaternion& bind, Sample sample)
     {
+        //すでに違反していた部分を許容するために、もとの回転進行率を保存
         auto allowance = MotionRotationLimits::Measure(part, start, bind, start);
+
         float previous = 0;
+        //回転量を180分割して、はじめに違反した位置を探す
         for (int step = 1; step <= 180; ++step)
         {
             const float t = float(step) / 180;
             auto value = MotionRotationLimits::Measure(part, sample(t), bind, start);
+            //はじめに違反した位置について、さらに二分探索して正確な境界角度を探す
             if (!MotionRotationLimits::Permits(value, allowance))
             {
                 float low = previous, high = t;
@@ -60,17 +64,22 @@ namespace
 MotionRotationLimits::Violation MotionRotationLimits::Measure(MotionBodyPart part, const Quaternion& rotation,
     const Quaternion& bind, const Quaternion& reference)
 {
+    //関節の可動域を取得
     const auto limit = MotionSkeleton::GetPoseRotationLimit(part);
     if (!limit.enabled) return {};
+
     Vector3 c = Coordinates(rotation, bind);
     const float referenceTwist = Coordinates(reference, bind).y;
     c.y = referenceTwist + std::remainder(c.y - referenceTwist, 360.0f);
     Violation result{};
+    //３軸について可動域を超えていないかを検証
     for (int axis = 0; axis < 3; ++axis)
     {
         result[axis * 2] = std::max(0.0f, (&limit.minimum.x)[axis] - (&c.x)[axis]);
         result[axis * 2 + 1] = std::max(0.0f, (&c.x)[axis] - (&limit.maximum.x)[axis]);
     }
+    //曲げ全体を見て可動域を超えていないかを検証
+    //各軸が可動域内でも、斜めで見た際に超えている可能性があるため、全体を別で検証している
     result[6] = std::max(0.0f, std::hypot(c.x, c.z) - limit.maxSwingDegrees);
     return result;
 }

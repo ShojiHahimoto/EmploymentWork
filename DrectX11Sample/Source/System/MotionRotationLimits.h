@@ -7,7 +7,7 @@ namespace MotionRotationLimits
     // 各軸の下限/上限とswing円錐の逸脱。逆側への飛び移りを許さないため別々に保持。
     using Violation = std::array<float, 7>;
 
-    /// <summary>Quaternionのまま曲げと長軸ひねりを測り、可動域からの逸脱を返す。</summary>
+    /// <summary>Quaternionのまま曲げと長軸ひねりを測り、可動域からどれだけ違反しているかを返す。</summary>
     /// <param name="part">部位。</param><param name="rotation">ローカル回転。</param>
     /// <param name="bind">実FBXの基準回転。</param><param name="reference">ひねりの連続性基準。</param>
     /// <returns>度数の逸脱量。0なら範囲内。</returns>

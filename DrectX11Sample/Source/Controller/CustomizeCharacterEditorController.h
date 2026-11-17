@@ -12,7 +12,7 @@
 /// </summary>
 class CustomizeCharacterEditorController
 {
-public:
+  public:
 	static constexpr int CharacterSlotCount = 10;
 	static constexpr int AttackButtonSlotCount = 4;
 	static constexpr int CharacterNameBufferSize = 128;
@@ -22,21 +22,21 @@ public:
 	/// </summary>
 	/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
 	/// <returns>次に表示する CustomizeMode。</returns>
-	CustomizeMode DrawSlotSelect(std::string& statusMessage);
+	CustomizeMode DrawSlotSelect(std::string &statusMessage);
 
 	/// <summary>
 	/// キャラクター名と各攻撃ボタンの技割り当て編集画面を描画する。
 	/// </summary>
 	/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
 	/// <returns>次に表示する CustomizeMode。</returns>
-	CustomizeMode DrawEditor(std::string& statusMessage);
+	CustomizeMode DrawEditor(std::string &statusMessage);
 
 	/// <summary>
 	/// 現在選択中のキャラクター側スロットへ割り当てる AttackData 候補を描画する。
 	/// </summary>
 	/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
 	/// <returns>次に表示する CustomizeMode。</returns>
-	CustomizeMode DrawAttackPicker(std::string& statusMessage);
+	CustomizeMode DrawAttackPicker(std::string &statusMessage);
 
 	/// <summary>
 	/// キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。
@@ -83,16 +83,14 @@ public:
 	/// <param name="group">割り当て先のキャラクター側スロットグループ。</param>
 	/// <param name="attackData">確認する AttackData。</param>
 	/// <returns>通常/必殺、地上/空中の条件を満たす場合は true。</returns>
-	bool IsAttackCompatibleWithSlotGroup(
-		CustomizeCharacterAttackSlotGroup group,
-		const AttackData& attackData) const;
+	bool IsAttackCompatibleWithSlotGroup(CustomizeCharacterAttackSlotGroup group, const AttackData &attackData) const;
 
 	/// <summary>
 	/// 指定グループのキャラクター側スロット draft 配列を取得する。
 	/// </summary>
 	/// <param name="group">取得するスロットグループ。</param>
 	/// <returns>変更可能な draft 配列。</returns>
-	std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount>& GetAttackSlotDrafts(
+	std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &GetAttackSlotDrafts(
 		CustomizeCharacterAttackSlotGroup group);
 
 	/// <summary>
@@ -100,20 +98,20 @@ public:
 	/// </summary>
 	/// <param name="group">取得するスロットグループ。</param>
 	/// <returns>読み取り専用の draft 配列。</returns>
-	const std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount>& GetAttackSlotDrafts(
+	const std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &GetAttackSlotDrafts(
 		CustomizeCharacterAttackSlotGroup group) const;
 
 	/// <summary>
 	/// 編集中のキャラクターパラメータを取得する。
 	/// </summary>
 	/// <returns>読み取り専用の CharacterParameterData。</returns>
-	const CharacterParameterData& GetDraftParameter() const;
+	const CharacterParameterData &GetDraftParameter() const;
 
 	/// <summary>
 	/// キャラクター名入力用バッファを取得する。
 	/// </summary>
 	/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
-	std::array<char, CharacterNameBufferSize>& GetCharacterNameBuffer();
+	std::array<char, CharacterNameBufferSize> &GetCharacterNameBuffer();
 
 	/// <summary>
 	/// AttackPicker の割り当て先スロットグループを設定する。
@@ -139,16 +137,15 @@ public:
 	/// <returns>割り当て先スロット番号。</returns>
 	int GetPickingSlotIndex() const;
 
-private:
+  private:
 	/// <summary>
 	/// キャラクター側の固定ボタンスロットを初期化する。
 	/// </summary>
 	/// <param name="group">地上通常技、空中通常技、必殺技のどれか。</param>
 	/// <param name="slotIndex">ABXY の何番目か。</param>
 	/// <returns>未割り当て状態のスロット draft。</returns>
-	CustomizeCharacterAttackSlotDraft CreateAttackSlotDraft(
-		CustomizeCharacterAttackSlotGroup group,
-		int slotIndex) const;
+	CustomizeCharacterAttackSlotDraft CreateAttackSlotDraft(CustomizeCharacterAttackSlotGroup group,
+															int slotIndex) const;
 
 	/// <summary>
 	/// キャラクター draft から保存用 CharacterAttackSlotData 配列を作る。
@@ -161,7 +158,7 @@ private:
 	/// </summary>
 	/// <param name="outMissingSlotName">未設定スロットがある場合の表示名。</param>
 	/// <returns>必須スロットが全て埋まっている場合は true。</returns>
-	bool AreRequiredAttackSlotsFilled(std::string& outMissingSlotName) const;
+	bool AreRequiredAttackSlotsFilled(std::string &outMissingSlotName) const;
 
 	/// <summary>
 	/// draftParameter のキャラクター名を ImGui 入力用固定バッファへコピーする。
@@ -178,14 +175,14 @@ private:
 	/// </summary>
 	/// <param name="group">描画するスロットグループ。</param>
 	/// <param name="label">ImGui に表示するグループ名。</param>
-	bool DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char* label);
+	bool DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char *label);
 
 	/// <summary>
 	/// AttackPicker で選んだ技を、現在選択中のキャラクター側スロットへ割り当てる。
 	/// </summary>
 	/// <param name="attackDataId">割り当てる AttackData ID。</param>
 	/// <param name="attackData">表示名確認用に読み込み済みの AttackData。</param>
-	void AssignAttackToCurrentSlot(const std::string& attackDataId, const AttackData& attackData);
+	void AssignAttackToCurrentSlot(const std::string &attackDataId, const AttackData &attackData);
 
 	CharacterParameterData draftParameter;
 	std::array<char, CharacterNameBufferSize> characterNameBuffer = {};

@@ -1,9 +1,9 @@
 ﻿#include "Scene/CustomizeScene.h"
 
-CustomizeScene::CustomizeScene(int initialWidth, int initialHeight)
-	: flowController(world, initialWidth, initialHeight)
+CustomizeScene::CustomizeScene(int initialWidth, int initialHeight) : flowController(world, initialWidth, initialHeight)
 {
 }
+
 void CustomizeScene::Enter()
 {
 	flowController.Enter();
@@ -20,7 +20,7 @@ void CustomizeScene::RunSystems()
 	flowController.RunSystems();
 }
 
-void CustomizeScene::Draw(Renderer& renderer)
+void CustomizeScene::Draw(Renderer &renderer)
 {
 	flowController.DrawBackdrop(renderer);
 	flowController.DrawPreview(renderer);
@@ -32,12 +32,12 @@ void CustomizeScene::OnResize(int newWidth, int newHeight)
 	flowController.OnResize(newWidth, newHeight);
 }
 
-World& CustomizeScene::GetWorld()
+World &CustomizeScene::GetWorld()
 {
 	return world;
 }
 
-const World& CustomizeScene::GetWorld() const
+const World &CustomizeScene::GetWorld() const
 {
 	return world;
 }

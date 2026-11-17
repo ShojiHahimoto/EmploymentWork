@@ -6,8 +6,8 @@
 #include "Data/MotionData.h"
 #include "Data/MotionSkeletonDefinition.h"
 #include "Data/SkeletonPose.h"
-#include "System/Renderer.h"
 #include "System/MotionIk.h"
+#include "System/Renderer.h"
 
 #include <SimpleMath.h>
 
@@ -20,10 +20,13 @@
 /// </summary>
 class CustomizePreviewController
 {
-public:
+  public:
 	/// <summary>履歴を一つにまとめるため、回転・IK・全身移動ドラッグの継続状態を取得する。</summary>
 	/// <returns>いずれかの編集ドラッグ中ならtrue。</returns>
-	bool IsGizmoEditing() const { return rotationGizmoDragActive || translationGizmoActive || rootMovementActive; }
+	bool IsGizmoEditing() const
+	{
+		return rotationGizmoDragActive || translationGizmoActive || rootMovementActive;
+	}
 	/// <summary>Undo/Redo時にギズモの内部捕捉と未消費結果を破棄する。</summary>
 	void CancelGizmoEditing();
 	// 全身移動キー用。関節IKのターゲットやチェーンには流用しない。
@@ -41,7 +44,8 @@ public:
 	bool IsOverEditorToolbar(POINT point) const;
 	bool editorInputBlocked = false;
 	bool showJointMarkers = true; // 非表示中は関節のヒットテストも行わない。Gizmoは維持する。
-	std::array<bool, MotionBodyPartCount> selectedMarkerParts{}; // 複数選択の表示。Gizmoはアクティブ部位だけを操作する。
+	std::array<bool, MotionBodyPartCount>
+		selectedMarkerParts{}; // 複数選択の表示。Gizmoはアクティブ部位だけを操作する。
 	int previousGizmoFrame = -100000;
 	int previousGizmoMode = -1;
 	int previousGizmoPart = -1;
@@ -112,16 +116,9 @@ public:
 	/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
 	/// <param name="hasDraftMotion">motionData が有効な下書きなら true。</param>
 	/// <param name="editingMotionDataId">現在編集している MotionData ID。</param>
-	void Render(
-		Renderer& renderer,
-		const RECT* region,
-		const AttackData& attackData,
-		const MotionData& motionData,
-		bool editingCommonMotion,
-		bool hasDraftMotion,
-		const std::string& editingMotionDataId,
-		int selectedBodyPartIndex,
-		bool rotationGizmoEnabled);
+	void Render(Renderer &renderer, const RECT *region, const AttackData &attackData, const MotionData &motionData,
+				bool editingCommonMotion, bool hasDraftMotion, const std::string &editingMotionDataId,
+				int selectedBodyPartIndex, bool rotationGizmoEnabled);
 
 	/// <summary>
 	/// 回転ギズモで編集された部位、操作軸、内部ローカル回転を取り出す。
@@ -130,10 +127,8 @@ public:
 	/// <param name="outAxisIndex">操作された軸番号。X=0, Y=1, Z=2。</param>
 	/// <param name="outLocalRotation">保存するローカル Quaternion の書き込み先。</param>
 	/// <returns>今フレームにギズモ操作があった場合は true。</returns>
-	bool ConsumeGizmoRotationEdit(
-		int& outBodyPartIndex,
-		int& outAxisIndex,
-		DirectX::SimpleMath::Quaternion& outLocalRotation);
+	bool ConsumeGizmoRotationEdit(int &outBodyPartIndex, int &outAxisIndex,
+								  DirectX::SimpleMath::Quaternion &outLocalRotation);
 
 	/// <summary>
 	/// IK 数値ドラッグ開始時の姿勢を固定し、ドラッグ中の IK 計算基準にする。
@@ -144,7 +139,7 @@ public:
 
 	/// <summary>数値回転とIKが同じ基準で制限できるよう、実モデルの基準回転を取得する。</summary>
 	/// <param name="part">編集部位。</param><param name="rotation">取得先。</param><returns>取得成功時true。</returns>
-	bool GetBodyPartBindRotation(int part, DirectX::SimpleMath::Quaternion& rotation) const;
+	bool GetBodyPartBindRotation(int part, DirectX::SimpleMath::Quaternion &rotation) const;
 
 	/// <summary>
 	/// IK 数値ドラッグ用に固定していた基準姿勢を破棄する。
@@ -157,17 +152,15 @@ public:
 	/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
 	/// <param name="outWorldPosition">取得したワールド位置の書き込み先。</param>
 	/// <returns>現在のプレビュー姿勢とモデルから位置を取得できた場合は true。</returns>
-	bool GetBodyPartWorldPosition(
-		int bodyPartIndex,
-		DirectX::SimpleMath::Vector3& outWorldPosition) const;
+	bool GetBodyPartWorldPosition(int bodyPartIndex, DirectX::SimpleMath::Vector3 &outWorldPosition) const;
 
-    /// <summary>選択関節を開始姿勢からワールド直線上で移動し、検証済み回転を返す。</summary>
-    /// <param name="targetBodyPartIndex">手・肘・足・膝の編集部位。</param>
-    /// <param name="targetWorldPosition">入力したワールド位置。</param>
-    /// <param name="result">保存する回転と到達情報。</param>
-    /// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
-    bool SolveIkTarget(int targetBodyPartIndex,
-        const DirectX::SimpleMath::Vector3& targetWorldPosition, MotionIkResult& result);
+	/// <summary>選択関節を開始姿勢からワールド直線上で移動し、検証済み回転を返す。</summary>
+	/// <param name="targetBodyPartIndex">手・肘・足・膝の編集部位。</param>
+	/// <param name="targetWorldPosition">入力したワールド位置。</param>
+	/// <param name="result">保存する回転と到達情報。</param>
+	/// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
+	bool SolveIkTarget(int targetBodyPartIndex, const DirectX::SimpleMath::Vector3 &targetWorldPosition,
+					   MotionIkResult &result);
 
 	/// <summary>
 	/// プレビュー上の関節クリックで選択された部位を取り出す。
@@ -210,30 +203,30 @@ public:
 	/// プレビュー用 RenderTexture を取得する。
 	/// </summary>
 	/// <returns>RenderTexture 参照。</returns>
-	const Renderer::RenderTexture& GetRenderTexture() const;
+	const Renderer::RenderTexture &GetRenderTexture() const;
 
 	/// <summary>
 	/// プレビューカメラの yaw 角度を編集する参照を取得する。
 	/// </summary>
 	/// <returns>yaw 角度の参照。</returns>
-	float& GetCameraYawDegrees();
+	float &GetCameraYawDegrees();
 
 	/// <summary>
 	/// プレビューカメラの pitch 角度を編集する参照を取得する。
 	/// </summary>
 	/// <returns>pitch 角度の参照。</returns>
-	float& GetCameraPitchDegrees();
+	float &GetCameraPitchDegrees();
 
 	/// <summary>
 	/// プレビューカメラ距離を編集する参照を取得する。
 	/// </summary>
 	/// <returns>距離の参照。</returns>
-	float& GetCameraDistance();
+	float &GetCameraDistance();
 
-private:
+  private:
 	/// <summary>両編集画面共通の旋回・平行移動・ズームを処理する。</summary>
 	/// <param name="region">本体ウィンドウ内のプレビュー領域。</param>
-	void UpdateCameraInput(const RECT& region);
+	void UpdateCameraInput(const RECT &region);
 	/// <summary>
 	/// プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。
 	/// </summary>
@@ -245,7 +238,7 @@ private:
 	/// <param name="renderer">DebugBox 描画に使う Renderer。</param>
 	/// <param name="attackData">表示する技データ。</param>
 	/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
-	void DrawAttackBoxes(Renderer& renderer, const AttackData& attackData, bool editingCommonMotion);
+	void DrawAttackBoxes(Renderer &renderer, const AttackData &attackData, bool editingCommonMotion);
 
 	/// <summary>
 	/// 関節マーカーを画面へ重ね、クリックされた部位を記録する。
@@ -253,10 +246,7 @@ private:
 	/// <param name="region">プレビュー描画矩形。</param>
 	/// <param name="model">部位名から実ボーンを解決するモデル。</param>
 	/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
-	void DrawJointMarkers(
-		const RECT& region,
-		const ModelResource& model,
-		int selectedBodyPartIndex);
+	void DrawJointMarkers(const RECT &region, const ModelResource &model, int selectedBodyPartIndex);
 
 	/// <summary>
 	/// 選択中部位のワールド回転ギズモを表示し、操作結果を内部ローカル回転として記録する。
@@ -265,11 +255,7 @@ private:
 	/// <param name="model">部位名から実ボーンを解決するモデル。</param>
 	/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
 	/// <param name="enabled">現在フレームで姿勢編集できる場合は true。</param>
-	void DrawRotationGizmo(
-		const RECT& region,
-		const ModelResource& model,
-		int selectedBodyPartIndex,
-		bool enabled);
+	void DrawRotationGizmo(const RECT &region, const ModelResource &model, int selectedBodyPartIndex, bool enabled);
 
 	Renderer::RenderTexture renderTexture;
 	CameraComponent camera;

@@ -29,17 +29,17 @@ struct CharacterParameterData
 	// UI やデバッグ表示で使うキャラクター名。
 	std::string characterName = "デバッグプレイヤー";
 
-	float forwardWalkSpeed = 0.08f;
-	float backwardWalkSpeed = 0.06f;
-	float jumpInitialVelocity = 0.32f;
-	float frontJumpHorizontalVelocity = 0.10f;
-	float backJumpHorizontalVelocity = -0.05f;
-	float riseGravityPerFrame = -0.012f;
-	float fallGravityPerFrame = -0.020f;
-	int maxHp = 100;
+	float forwardWalkSpeed = 0.14f;
+	float backwardWalkSpeed = 0.12f;
+	float jumpInitialVelocity = 1.02f;
+	float frontJumpHorizontalVelocity = 0.15f;
+	float backJumpHorizontalVelocity = -0.13f;
+	float riseGravityPerFrame = -0.045f;
+	float fallGravityPerFrame = -0.040f;
+	int maxHp = 10000;
 	DirectX::SimpleMath::Vector3 modelScale = DirectX::SimpleMath::Vector3(0.05f, 0.05f, 0.05f);
-	CharacterBoxParameterData pushBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(2.0f, 2.5f) };
-	CharacterBoxParameterData hurtBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(1.5f, 2.0f) };
+	CharacterBoxParameterData pushBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(2.0f, 8.5f) };
+	CharacterBoxParameterData hurtBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(1.5f, 8.0f) };
 };
 
 /// <summary>
