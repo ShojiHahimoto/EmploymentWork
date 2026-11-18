@@ -17,7 +17,7 @@ public:
 
 	void Enter() override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer& renderer) override;
 	void OnResize(int width, int height) override;
 

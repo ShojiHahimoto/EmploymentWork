@@ -31,9 +31,9 @@ void ResultScene::Exit()
 /// <summary>
 /// 遷移Controllerへ表示側のボタン要求を渡して更新する。
 /// </summary>
-void ResultScene::RunSystems()
+void ResultScene::Update()
 {
-	navigationController.RunSystems(presentationController.ConsumeReturnRequest());
+	navigationController.Update(presentationController.ConsumeReturnRequest());
 }
 
 /// <summary>

@@ -12,7 +12,7 @@ class CustomizeScene : public Scene
 
 	void Enter() override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer &renderer) override;
 	void OnResize(int newWidth, int newHeight) override;
 

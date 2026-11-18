@@ -33,11 +33,11 @@ void TitleScene::Exit()
 /// <summary>
 /// 遷移Controllerを更新し、メニューからの要求を渡す。
 /// </summary>
-void TitleScene::RunSystems()
+void TitleScene::Update()
 {
 	menuController.Update();
 	presentationController.Update(world);
-	navigationController.RunSystems(menuController.ConsumeCommand());
+	navigationController.Update(menuController.ConsumeCommand());
 }
 
 /// <summary>

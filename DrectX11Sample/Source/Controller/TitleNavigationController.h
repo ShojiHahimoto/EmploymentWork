@@ -6,7 +6,7 @@ class TitleNavigationController
 {
 public:
 	void Enter();
-	void RunSystems(TitleMenuCommand menuCommand);
+	void Update(TitleMenuCommand menuCommand);
 
 private:
 	bool customizeKeyPressedLastFrame = false;

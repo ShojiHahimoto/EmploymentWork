@@ -21,7 +21,7 @@ class CustomizeFlowController
 
 	void Enter();
 	void Exit();
-	void RunSystems();
+	void Update();
 	void DrawBackdrop(Renderer &renderer);
 	void DrawPreview(Renderer &renderer);
 	void DrawInterface(Renderer &renderer);

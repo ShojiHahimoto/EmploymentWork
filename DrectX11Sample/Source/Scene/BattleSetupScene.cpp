@@ -30,9 +30,9 @@ void BattleSetupScene::Exit()
 /// <summary>
 /// セットアップ処理の更新をControllerへ委譲する。
 /// </summary>
-void BattleSetupScene::RunSystems()
+void BattleSetupScene::Update()
 {
-	flowController.RunSystems();
+	flowController.Update();
 }
 
 /// <summary>

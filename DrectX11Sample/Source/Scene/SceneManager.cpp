@@ -66,11 +66,11 @@ bool SceneManager::HasScene() const
 	return currentScene != nullptr;
 }
 
-void SceneManager::RunSystems()
+void SceneManager::Update()
 {
 	if (currentScene)
 	{
-		currentScene->RunSystems();
+		currentScene->Update();
 	}
 }
 

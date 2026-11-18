@@ -7,7 +7,7 @@ class ResultNavigationController
 public:
 	explicit ResultNavigationController(BattleResult result);
 	void Enter();
-	void RunSystems(bool returnRequestedByView);
+	void Update(bool returnRequestedByView);
 
 private:
 	BattleResult result;

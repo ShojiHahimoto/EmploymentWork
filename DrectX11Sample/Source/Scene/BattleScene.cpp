@@ -154,7 +154,7 @@ void BattleScene::Exit()
 	world.Clear();
 }
 
-void BattleScene::RunSystems()
+void BattleScene::Update()
 {
 #if defined(_DEBUG)
 	UpdateDebugSceneViewCamera();

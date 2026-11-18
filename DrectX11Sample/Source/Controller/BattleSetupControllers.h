@@ -142,7 +142,7 @@ public:
 
 	void Enter();
 	void Exit();
-	void RunSystems();
+	void Update();
 	void Draw(Renderer& renderer);
 	void OnResize(int newWidth, int newHeight);
 

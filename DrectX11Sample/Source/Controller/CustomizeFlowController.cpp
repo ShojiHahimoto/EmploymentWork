@@ -83,7 +83,7 @@ void CustomizeFlowController::Exit()
 /// キャンセル入力があれば、現在の編集階層から一つ戻る。
 /// 編集画面で文字入力中のキャンセル入力で画面遷移しないように、メニュー系統と編集系統で処理をわけている
 /// </summary>
-void CustomizeFlowController::RunSystems()
+void CustomizeFlowController::Update()
 {
 	UpdatePreviewPlayback();
 

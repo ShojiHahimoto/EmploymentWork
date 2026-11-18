@@ -31,7 +31,7 @@ void ResultNavigationController::Enter()
 /// Submit または画面ボタンの要求を受けてタイトルへの遷移を予約する。
 /// </summary>
 /// <param name="returnRequestedByView">表示側でボタンが押されたか。</param>
-void ResultNavigationController::RunSystems(bool returnRequestedByView)
+void ResultNavigationController::Update(bool returnRequestedByView)
 {
 	if (returnRequestedByView || WasSubmitTriggered())
 	{

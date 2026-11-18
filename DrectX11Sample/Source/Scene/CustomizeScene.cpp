@@ -15,9 +15,9 @@ void CustomizeScene::Exit()
 	world.Clear();
 }
 
-void CustomizeScene::RunSystems()
+void CustomizeScene::Update()
 {
-	flowController.RunSystems();
+	flowController.Update();
 }
 
 void CustomizeScene::Draw(Renderer &renderer)

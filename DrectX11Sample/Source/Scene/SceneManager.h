@@ -15,7 +15,7 @@ public:
 	const Scene* GetCurrentScene() const;
 	bool HasScene() const;
 
-	void RunSystems();
+	void Update();
 	void Draw(Renderer& renderer);
 	void OnResize(int width, int height);
 	void Shutdown();

@@ -254,7 +254,7 @@ void BattleSetupFlowController::Exit()
 /// <summary>
 /// キーコンフィグの入力待ちがあれば、次に押されたキーまたはボタンを取り込む。
 /// </summary>
-void BattleSetupFlowController::RunSystems()
+void BattleSetupFlowController::Update()
 {
 	inputConfigController.UpdateBindingCapture();
 }

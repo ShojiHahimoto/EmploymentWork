@@ -52,7 +52,7 @@ void Game::Update()
 	GameUI::UIInputSystem::Update(Application::GetWindow());
 
 	SceneManager& sceneManager = SceneManager::GetInstance();
-	sceneManager.RunSystems();
+	sceneManager.Update();
 	sceneManager.ApplyPendingSceneChange();
 	SoundManager::GetInstance().Update();
 }

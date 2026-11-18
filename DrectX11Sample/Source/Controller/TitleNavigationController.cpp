@@ -26,7 +26,7 @@ void TitleNavigationController::Enter()
 /// メニューで確定した選択と開発用ショートカットから遷移先を決める。
 /// </summary>
 /// <param name="menuCommand">メニュー更新側が確定した操作。</param>
-void TitleNavigationController::RunSystems(TitleMenuCommand menuCommand)
+void TitleNavigationController::Update(TitleMenuCommand menuCommand)
 {
 	if (WasCustomizeTriggered() || menuCommand == TitleMenuCommand::OpenCustomize)
 	{

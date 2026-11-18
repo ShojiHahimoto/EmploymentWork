@@ -12,7 +12,7 @@ public:
 	virtual void Exit() = 0;
 
 	// Scene 自体にゲームロジックを持たせず、System 群を固定順で実行する入口。
-	virtual void RunSystems() = 0;
+	virtual void Update() = 0;
 	virtual void Draw(Renderer& renderer) = 0;
 	virtual void OnResize(int width, int height) = 0;
 
