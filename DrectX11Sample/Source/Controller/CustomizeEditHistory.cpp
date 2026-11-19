@@ -26,7 +26,7 @@ template <class T, class F> bool EqualItems(const std::vector<T> &a, const std::
 	return true;
 }
 
-/// <summary>技データの保存対象と編集用硬直差を比較する。</summary>
+/// <summary>技データの保存対象を比較する。</summary>
 /// <param name="a">比較元。</param>
 /// <param name="b">比較先。</param>
 /// <returns>一致すればtrue。</returns>

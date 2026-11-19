@@ -203,7 +203,7 @@
     <ClCompile Include="Source\Controller\CustomizeEditHistory.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\CustomizeMotionEditorControls.cpp">
+    <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">

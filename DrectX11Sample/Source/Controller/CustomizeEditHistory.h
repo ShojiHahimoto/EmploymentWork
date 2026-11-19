@@ -15,7 +15,7 @@ struct CustomizeEditSnapshot
 	int previewFrame = 0; // 比較対象ではなく、その操作を確認するための表示位置。
 };
 
-/// <summary>画面や入力ライブラリに依存しない、技・モーション共通の編集履歴。</summary>
+/// <summary>Undo、Redo用の、技・モーション共通の編集履歴。</summary>
 class CustomizeEditHistory
 {
   public:
