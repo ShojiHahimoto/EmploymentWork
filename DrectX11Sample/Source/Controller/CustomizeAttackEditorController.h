@@ -190,12 +190,12 @@ class CustomizeAttackEditorController
 	/// <summary>
 	/// draft のスタンフレームから、編集 UI 用の硬直差入力値を更新する。
 	/// </summary>
-	void RefreshFrameAdvantageInputs();
+	void FromStunFramesToFrameAdvantage();
 
 	/// <summary>
 	/// 編集 UI の硬直差入力値を、実行時に使うスタンフレームへ反映する。
 	/// </summary>
-	void ApplyFrameAdvantageInputsToDraft();
+	void FromFrameAdvantageToStunFrames();
 	void NormalizeDraftForSelectedCategory();
 
 	AttackData draft;

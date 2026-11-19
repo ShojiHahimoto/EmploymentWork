@@ -7,8 +7,8 @@
 
 //Imgui
 
-const auto ClassName = TEXT("2025 framework ひな型");	//ウィンドウクラス名
-const auto WindowName = TEXT("2025 framework ひな型");	//ウィンドウ名
+const auto ClassName = TEXT("Build a Battle");	//ウィンドウクラス名
+const auto WindowName = TEXT("Build a Battle");	//ウィンドウ名
 
 HINSTANCE	Application::m_hInst;		//インスタンスハンドル
 HWND		Application::m_hWnd;		//ウィンドウハンドル

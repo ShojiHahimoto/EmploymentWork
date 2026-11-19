@@ -173,7 +173,7 @@ bool SetWorldRotation(SkeletonPose &pose, const ModelResource &model, const Matr
 								   Matrix::CreateFromQuaternion(localPose.localRotation) *
 								   Matrix::CreateTranslation(localPose.localPosition);
 		const int parent = model.GetBones()[index].parentIndex;
-		pose.boneWorldMatrices[index] = parent >= 0 ? localMatrix * pose.boneWorldMatrices[parent] : localMatrix;
+		pose.boneModelMatrices[index] = parent >= 0 ? localMatrix * pose.boneModelMatrices[parent] : localMatrix;
 	}
 
 	return true;

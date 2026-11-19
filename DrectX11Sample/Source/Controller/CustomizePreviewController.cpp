@@ -289,7 +289,7 @@ bool GetBodyPartWorldMatrix(const SkeletonPose &pose, const ModelResource &model
 
 	outModelBoneIndex = MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(bodyPartIndex));
 
-	if (outModelBoneIndex < 0 || outModelBoneIndex >= static_cast<int>(pose.boneWorldMatrices.size()))
+	if (outModelBoneIndex < 0 || outModelBoneIndex >= static_cast<int>(pose.boneModelMatrices.size()))
 	{
 		return false;
 	}
@@ -1084,7 +1084,7 @@ void CustomizePreviewController::DrawAttackBoxes(Renderer &renderer, const Attac
 void CustomizePreviewController::DrawJointMarkers(const RECT &region, const ModelResource &model,
 												  int selectedBodyPartIndex)
 {
-	if (!skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
+	if (!skeletonPose.initialized || skeletonPose.boneModelMatrices.empty())
 	{
 		return;
 	}
@@ -1110,12 +1110,12 @@ void CustomizePreviewController::DrawJointMarkers(const RECT &region, const Mode
 	{
 		const int modelBoneIndex =
 			MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(bodyPartIndex));
-		if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneWorldMatrices.size()))
+		if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneModelMatrices.size()))
 		{
 			continue;
 		}
 
-		const Vector3 modelPosition = Vector3::Transform(Vector3::Zero, skeletonPose.boneWorldMatrices[modelBoneIndex]);
+		const Vector3 modelPosition = Vector3::Transform(Vector3::Zero, skeletonPose.boneModelMatrices[modelBoneIndex]);
 		const Vector3 worldPosition = Vector3::Transform(modelPosition, playerWorld);
 		ImVec2 screenPosition;
 
@@ -1209,7 +1209,7 @@ void CustomizePreviewController::DrawJointMarkers(const RECT &region, const Mode
 void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const ModelResource &model,
 												   int selectedBodyPartIndex, bool enabled)
 {
-	if (!enabled || !skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
+	if (!enabled || !skeletonPose.initialized || skeletonPose.boneModelMatrices.empty())
 	{
 		rotationGizmoDragActive = false;
 
@@ -1239,7 +1239,7 @@ void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const Mod
 
 	const int modelBoneIndex =
 		MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(selectedBodyPartIndex));
-	if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneWorldMatrices.size()))
+	if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneModelMatrices.size()))
 	{
 		rotationGizmoDragActive = false;
 

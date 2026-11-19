@@ -178,7 +178,7 @@ std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory 
 	}
 
 	ClampAttackDataValues(draft);
-	RefreshFrameAdvantageInputs();
+	FromStunFramesToFrameAdvantage();
 
 	EnsureDraftMotionDataId();
 	CopyDisplayNameToBuffer();
@@ -212,7 +212,7 @@ void CustomizeAttackEditorController::ApplyEditState(const CustomizeAttackEditor
 	hitFrameAdvantage = editState.hitFrameAdvantage;
 	guardFrameAdvantage = editState.guardFrameAdvantage;
 	draft.attackDataId = editingAttackDataId;
-	ApplyFrameAdvantageInputsToDraft();
+	FromFrameAdvantageToStunFrames();
 	NormalizeDraftForSelectedCategory();
 	CopyDisplayNameToBuffer();
 	CopyMotionDataIdToBuffer();
@@ -242,7 +242,7 @@ void CustomizeAttackEditorController::SyncDraftFromEditor()
 
 void CustomizeAttackEditorController::NormalizeDraftForSelectedCategory()
 {
-	ApplyFrameAdvantageInputsToDraft();
+	FromFrameAdvantageToStunFrames();
 	draft.attackKind = selectedCategory == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
 
 	if (selectedCategory == CustomizeAttackCategory::Special)
@@ -266,13 +266,13 @@ void CustomizeAttackEditorController::NormalizeDraftForSelectedCategory()
 	ClampAttackDataValues(draft);
 }
 
-void CustomizeAttackEditorController::RefreshFrameAdvantageInputs()
+void CustomizeAttackEditorController::FromStunFramesToFrameAdvantage()
 {
 	hitFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.hitstunFrames);
 	guardFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.guardstunFrames);
 }
 
-void CustomizeAttackEditorController::ApplyFrameAdvantageInputsToDraft()
+void CustomizeAttackEditorController::FromFrameAdvantageToStunFrames()
 {
 	draft.hitstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, hitFrameAdvantage);
 	draft.guardstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, guardFrameAdvantage);
@@ -404,7 +404,7 @@ void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::stri
 	draft.frame.active = 1;
 	draft.frame.recovery = 27;
 	draft.motionDataId = motionDataId;
-	RefreshFrameAdvantageInputs();
+	FromStunFramesToFrameAdvantage();
 	editingAttackDataId.clear();
 	motionDataIdBuffer.fill('\0');
 	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", motionDataId.c_str());

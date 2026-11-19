@@ -196,7 +196,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		presetPanelMode = presetPanelMode == 2 ? 0 : 2;
 		presetIndex = 0;
 		presetIds = {"__IdlePose__"};
-		presetNames = {"アイドル姿勢"};
+		presetNames = {"待機姿勢"};
 
 		for (const auto &id : PosePresetStore::ListPresetIds())
 		{

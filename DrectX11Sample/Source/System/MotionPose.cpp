@@ -16,9 +16,9 @@ using namespace DirectX::SimpleMath;
 bool MotionPose::GetBoneWorldMatrix(const SkeletonPose& pose, int boneIndex,
 	const Matrix& objectWorld, Matrix& worldMatrix)
 {
-	if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.boneWorldMatrices.size())
+	if (boneIndex < 0 || static_cast<size_t>(boneIndex) >= pose.boneModelMatrices.size())
 		return false;
-	worldMatrix = pose.boneWorldMatrices[boneIndex] * objectWorld;
+	worldMatrix = pose.boneModelMatrices[boneIndex] * objectWorld;
 	return true;
 }
 
@@ -74,7 +74,7 @@ bool MotionPose::InitializeSkeletonPose(
 	{
 		pose.sourceModelKey.clear();
 		pose.bonePoses.clear();
-		pose.boneWorldMatrices.clear();
+		pose.boneModelMatrices.clear();
 		pose.skinningMatrices.clear();
 		pose.initialized = false;
 		return false;
@@ -82,7 +82,7 @@ bool MotionPose::InitializeSkeletonPose(
 
 	pose.sourceModelKey = modelKey;
 	pose.bonePoses.resize(bones.size());
-	pose.boneWorldMatrices.assign(bones.size(), Matrix::Identity);
+	pose.boneModelMatrices.assign(bones.size(), Matrix::Identity);
 	pose.skinningMatrices.assign(bones.size(), Matrix::Identity);
 	ResetPoseToBindPose(pose, model);
 	UpdateSkinningMatrices(pose, model);
@@ -133,7 +133,7 @@ void MotionPose::UpdateSkinningMatrices(SkeletonPose& pose, const ModelResource&
 		return;
 	}
 
-	pose.boneWorldMatrices.assign(bones.size(), Matrix::Identity);
+	pose.boneModelMatrices.assign(bones.size(), Matrix::Identity);
 	pose.skinningMatrices.assign(bones.size(), Matrix::Identity);
 
 	// ModelResource は親を先に登録する。15部位の編集用階層ではなく、全ボーンを含む実階層で FK を行う。
@@ -144,18 +144,18 @@ void MotionPose::UpdateSkinningMatrices(SkeletonPose& pose, const ModelResource&
 		const int parentIndex = bones[boneIndex].parentIndex;
 
 		//親がいる場合親の行列をかける。親から登録しているため、親の行列にはすでにさらに上の親からの変換結果が適応されている
-		if (parentIndex >= 0 && static_cast<size_t>(parentIndex) < pose.boneWorldMatrices.size())
+		if (parentIndex >= 0 && static_cast<size_t>(parentIndex) < pose.boneModelMatrices.size())
 		{
-			pose.boneWorldMatrices[boneIndex] = localMatrix * pose.boneWorldMatrices[parentIndex];
+			pose.boneModelMatrices[boneIndex] = localMatrix * pose.boneModelMatrices[parentIndex];
 		}
 		else
 		{
-			pose.boneWorldMatrices[boneIndex] = localMatrix;
+			pose.boneModelMatrices[boneIndex] = localMatrix;
 		}
 
 		// offsetMatrix は bind pose の逆変換、boneWorldMatrices は現在姿勢。
 		// 頂点は bind 空間 -> bone 空間 -> 現在姿勢の順に変換される。
-		pose.skinningMatrices[boneIndex] = bones[boneIndex].offsetMatrix * pose.boneWorldMatrices[boneIndex];
+		pose.skinningMatrices[boneIndex] = bones[boneIndex].offsetMatrix * pose.boneModelMatrices[boneIndex];
 	}
 }
 
