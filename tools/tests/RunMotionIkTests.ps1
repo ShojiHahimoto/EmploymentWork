@@ -9,11 +9,11 @@ try {
     New-Item -ItemType Directory -Force -Path $output | Out-Null
     $package = 'packages\directxtk_desktop_2019.2025.10.28.2'
     & cl /nologo /std:c++20 /EHsc /MDd /D_DEBUG /DNOMINMAX /utf-8 /I"DrectX11Sample\Source" /I"$package\include" /I"C:\assimp\5.2.5\include" `
-        'tools\tests\MotionIkTests.cpp' 'DrectX11Sample\Source\System\MotionPose.cpp' 'DrectX11Sample\Source\System\MotionIk.cpp' `
-        'DrectX11Sample\Source\System\MotionRotationLimits.cpp' `
+        'tools\tests\MotionIkTests.cpp' 'DrectX11Sample\Source\Customize\MotionPose.cpp' 'DrectX11Sample\Source\Customize\MotionIk.cpp' `
+        'DrectX11Sample\Source\Customize\MotionRotationLimits.cpp' `
         'DrectX11Sample\Source\Data\MotionSkeletonDefinition.cpp' 'DrectX11Sample\Source\Data\MotionDataLoader.cpp' `
         'DrectX11Sample\Source\Data\MotionDataSaver.cpp' 'DrectX11Sample\Source\Data\JsonValue.cpp' `
-        'DrectX11Sample\Source\System\Debugger.cpp' /Fo"$output\\" /Fe"$output\MotionIkTests.exe" `
+        'DrectX11Sample\Source\Core\Debugger.cpp' /Fo"$output\\" /Fe"$output\MotionIkTests.exe" `
         /link "$package\native\lib\x64\Debug\DirectXTK.lib" 'C:\assimp\5.2.5\lib\assimp-vc143-mtd.lib'
     if ($LASTEXITCODE -ne 0) { throw 'IK test build failed.' }
     $env:PATH = "C:\assimp\5.2.5\bin;" + $env:PATH

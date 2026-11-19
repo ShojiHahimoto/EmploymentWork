@@ -1,10 +1,10 @@
 ﻿#include "Controller/CustomizeMotionEditorController.h"
 
-#include "Controller/KeyframeEditing.h"
+#include "Customize/KeyframeEditing.h"
 #include "Data/MotionDataLoader.h"
 #include "Data/MotionDataSaver.h"
 #include "Data/PosePreset.h"
-#include "System/MotionRotationLimits.h"
+#include "Customize/MotionRotationLimits.h"
 
 #include <DirectXMath.h>
 

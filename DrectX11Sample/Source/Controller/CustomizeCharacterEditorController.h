@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Controller/CustomizeTypes.h"
+#include "Customize/CustomizeTypes.h"
 #include "Data/CharacterData.h"
 
 #include <array>

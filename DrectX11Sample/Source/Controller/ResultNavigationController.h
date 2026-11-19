@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "World/World.h"
+#include "Core/World.h"
 
 class ResultNavigationController
 {

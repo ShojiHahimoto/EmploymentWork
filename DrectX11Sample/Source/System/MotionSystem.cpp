@@ -6,7 +6,7 @@
 #include "Component/MotionPlayerComponent.h"
 #include "Component/StateComponent.h"
 #include "Data/MotionData.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <DirectXMath.h>
 

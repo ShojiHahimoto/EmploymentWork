@@ -1,7 +1,7 @@
 ﻿#include "Data/CharacterDataLoader.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -338,6 +338,11 @@ namespace
 		{
 			return AttackCommandId::ReverseYoga;
 		}
+		if (text == "Tatsumaki")
+		{
+			return AttackCommandId::Tatsumaki;
+		}
+
 		if (text == "FullRotate")
 		{
 			return AttackCommandId::FullRotate;

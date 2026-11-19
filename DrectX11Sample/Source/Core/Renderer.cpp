@@ -1,7 +1,7 @@
-﻿#include "System/Renderer.h"
-#include "System/Application.h"
+﻿#include "Core/Renderer.h"
+#include "Core/Application.h"
 #include "Resource/ModelResource.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <WICTextureLoader.h>
 

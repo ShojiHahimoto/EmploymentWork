@@ -4,9 +4,9 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 #include "Data/BattleSetupData.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "System/DebugCameraControlSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class BattleScene : public Scene
 {

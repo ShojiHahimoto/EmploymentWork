@@ -1,7 +1,7 @@
 ﻿#include "Input/InputSystem.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "Controller/TitleMenuController.h"
-#include "UI/UIInputSystem.h"
+#include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UIRoot.h"
 #include <cassert>

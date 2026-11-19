@@ -6,7 +6,7 @@
 #include "Component/VelocityComponent.h"
 #include "System/BattleCameraSystem.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cmath>

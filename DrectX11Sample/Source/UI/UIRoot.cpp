@@ -1,6 +1,6 @@
 ﻿#include "UI/UIRoot.h"
 
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "UI/UITheme.h"
 
 #include "UI/UIRenderer.h"

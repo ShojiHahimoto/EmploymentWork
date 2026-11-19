@@ -3,16 +3,16 @@
 #include "Data/MotionDataLoader.h"
 #include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
-#include "System/Debugger.h"
-#include "System/MotionPose.h"
+#include "Core/Debugger.h"
+#include "Customize/MotionPose.h"
 #include "System/TransformSystem.h"
-#include "System/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui.h"
 #include "ThirdParty/ImGuizmo/ImGuizmo.h"
 #include "UI/UIRoot.h"
 
 #include <DirectXMath.h>
 
-#include "System/MotionRotationLimits.h"
+#include "Customize/MotionRotationLimits.h"
 #include <algorithm>
 #include <array>
 #include <cmath>

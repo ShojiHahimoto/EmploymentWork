@@ -1,4 +1,4 @@
-﻿#include "System/Debugger.h"
+﻿#include "Core/Debugger.h"
 
 #include <Windows.h>
 

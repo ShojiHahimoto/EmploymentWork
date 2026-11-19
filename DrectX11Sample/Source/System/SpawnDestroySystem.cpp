@@ -16,7 +16,7 @@
 #include "Data/CharacterDataLoader.h"
 #include "Data/EffectDataLoader.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 using namespace DirectX::SimpleMath;
 

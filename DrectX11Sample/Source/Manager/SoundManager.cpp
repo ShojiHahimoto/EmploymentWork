@@ -1,7 +1,7 @@
-﻿#include "System/SoundManager.h"
+﻿#include "Manager/SoundManager.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <Audio.h>
 #include <Windows.h>

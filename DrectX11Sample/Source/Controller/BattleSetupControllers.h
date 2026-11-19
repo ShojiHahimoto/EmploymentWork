@@ -2,7 +2,7 @@
 
 #include "Data/BattleSetupData.h"
 #include "Input/InputConfigLoader.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 
 #include <array>
 #include <string>

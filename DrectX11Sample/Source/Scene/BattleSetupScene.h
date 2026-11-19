@@ -2,7 +2,7 @@
 
 #include "Controller/BattleSetupControllers.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class BattleSetupScene : public Scene
 {

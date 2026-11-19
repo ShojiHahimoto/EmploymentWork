@@ -1,6 +1,6 @@
-﻿#include "System/Application.h"
-#include "System/Game.h"
-#include "UI/UIInputSystem.h"
+﻿#include "Core/Application.h"
+#include "Core/Game.h"
+#include "Input/UIInputSystem.h"
 #include "System/DebugImGuiSystem.h"
 #include <chrono>
 #include <thread>

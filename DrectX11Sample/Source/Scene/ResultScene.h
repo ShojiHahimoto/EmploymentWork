@@ -3,7 +3,7 @@
 #include "Controller/ResultNavigationController.h"
 #include "Controller/ResultPresentationController.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class ResultScene : public Scene
 {

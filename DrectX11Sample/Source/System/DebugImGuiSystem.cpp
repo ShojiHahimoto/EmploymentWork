@@ -8,8 +8,8 @@
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
-#include "System/Debugger.h"
-#include "System/SoundManager.h"
+#include "Core/Debugger.h"
+#include "Manager/SoundManager.h"
 #include "System/TransformSystem.h"
 
 #include <cstdint>
@@ -17,9 +17,9 @@
 #include <filesystem>
 
 #if defined(_DEBUG)
-#include "System/imgui-docking/imgui.h"
-#include "System/imgui-docking/backends/imgui_impl_dx11.h"
-#include "System/imgui-docking/backends/imgui_impl_win32.h"
+#include "ThirdParty/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/backends/imgui_impl_dx11.h"
+#include "ThirdParty/imgui-docking/backends/imgui_impl_win32.h"
 #include "ThirdParty/ImGuizmo/ImGuizmo.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(

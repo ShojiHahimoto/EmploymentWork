@@ -3,8 +3,8 @@
 #include "Component/CameraComponent.h"
 #include "Component/EffectComponent.h"
 #include "Core/GameObject.h"
-#include "System/Renderer.h"
-#include "World/World.h"
+#include "Core/Renderer.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cmath>

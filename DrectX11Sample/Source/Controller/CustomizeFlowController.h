@@ -2,15 +2,15 @@
 
 #include "Controller/CustomizeAttackEditorController.h"
 #include "Controller/CustomizeCharacterEditorController.h"
-#include "Controller/CustomizeEditHistory.h"
+#include "Customize/CustomizeEditHistory.h"
 #include "Controller/CustomizeMotionEditorController.h"
 #include "Controller/CustomizePreviewController.h"
-#include "Controller/CustomizeTypes.h"
+#include "Customize/CustomizeTypes.h"
 #include "Data/AttackData.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "UI/CustomizeEditorUI.h"
 #include "UI/UIRoot.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <string>
 

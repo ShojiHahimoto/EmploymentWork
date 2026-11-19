@@ -6,7 +6,7 @@
 #include "Component/TransformComponent.h"
 #include "Data/AttackData.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 

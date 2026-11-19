@@ -29,6 +29,7 @@ enum class AttackCommandId
 	Yoga,
 	ReverseYoga,
 	FullRotate,
+	Tatsumaki,
 	Unknown
 };
 

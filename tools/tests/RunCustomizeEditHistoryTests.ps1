@@ -9,7 +9,7 @@ try {
     $package = 'packages\directxtk_desktop_2019.2025.10.28.2'
     $executable = Join-Path $output 'CustomizeEditHistoryTests.exe'
     & cl /nologo /std:c++20 /EHsc /MDd /D_DEBUG /DNOMINMAX /utf-8 /I"DrectX11Sample\Source" /I"$package\include" `
-        'tools\tests\CustomizeEditHistoryTests.cpp' 'DrectX11Sample\Source\Controller\CustomizeEditHistory.cpp' `
+        'tools\tests\CustomizeEditHistoryTests.cpp' 'DrectX11Sample\Source\Customize\CustomizeEditHistory.cpp' `
         /Fo"$output\\" /Fe"$executable" /link "$package\native\lib\x64\Debug\DirectXTK.lib"
     if ($LASTEXITCODE -ne 0) { throw 'History test build failed.' }
     & $executable

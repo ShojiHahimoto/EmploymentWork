@@ -1,7 +1,7 @@
 ﻿#include "Controller/TitleMenuController.h"
 #include "Input/InputSystem.h"
-#include "UI/UIInputSystem.h"
-#include "System/Renderer.h"
+#include "Input/UIInputSystem.h"
+#include "Core/Renderer.h"
 #include <algorithm>
 #include <cmath>
 

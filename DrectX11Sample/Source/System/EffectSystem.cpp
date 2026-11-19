@@ -4,7 +4,7 @@
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cstdint>

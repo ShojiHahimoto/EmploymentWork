@@ -4,7 +4,7 @@
 #include "Component/CommandBufferComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/VelocityComponent.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 

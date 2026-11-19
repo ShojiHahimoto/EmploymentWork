@@ -4,10 +4,10 @@
 #include "Data/AttackDataSaver.h"
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
-#include "Scene/SceneManager.h"
+#include "Manager/SceneManager.h"
 #include "Scene/TitleScene.h"
-#include "System/imgui-docking/imgui.h"
-#include "UI/UIInputSystem.h"
+#include "ThirdParty/imgui-docking/imgui.h"
+#include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include <cmath>
 

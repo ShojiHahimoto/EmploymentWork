@@ -121,6 +121,15 @@
     <Filter Include="リソース ファイル\Settings">
       <UniqueIdentifier>{7dd53b23-0119-4504-946a-5cfe6f7abbbb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\Customize" />
+    <Filter Include="ソース ファイル\Core" />
+    <Filter Include="ソース ファイル\Manager" />
+    <Filter Include="ソース ファイル\ThirdParty\imgui-docking\backends" />
+    <Filter Include="ソース ファイル\ThirdParty\imgui-docking" />
+    <Filter Include="ヘッダー ファイル\Customize" />
+    <Filter Include="ヘッダー ファイル\Manager" />
+    <Filter Include="ヘッダー ファイル\ThirdParty\imgui-docking\backends" />
+    <Filter Include="ヘッダー ファイル\ThirdParty\imgui-docking" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\System\BattleHUDSystem.cpp">
@@ -189,7 +198,9 @@
     <ClCompile Include="Source\UI\UIRoot.cpp">
       <Filter>ソース ファイル\UI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\UIInputSystem.cpp" />
+    <ClCompile Include="Source\Input\UIInputSystem.cpp">
+      <Filter>ソース ファイル\Input</Filter>
+    </ClCompile>
     <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
@@ -200,8 +211,8 @@
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Controller\CustomizeEditHistory.cpp">
-      <Filter>ソース ファイル\Controller</Filter>
+    <ClCompile Include="Source\Customize\CustomizeEditHistory.cpp">
+      <Filter>ソース ファイル\Customize</Filter>
     </ClCompile>
     <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp">
       <Filter>ソース ファイル</Filter>
@@ -230,11 +241,11 @@
     <ClCompile Include="Source\Scene\TitleScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\Application.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Core\Application.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\main.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Core\main.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\MovementSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
@@ -248,14 +259,14 @@
     <ClCompile Include="Source\System\PlayerControlSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\Renderer.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Core\Renderer.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\SoundManager.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Manager\SoundManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\Game.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Core\Game.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\InputHistorySystem.cpp">
       <Filter>ソース ファイル\System</Filter>
@@ -263,14 +274,14 @@
     <ClCompile Include="Source\System\MotionSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\MotionPose.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Customize\MotionPose.cpp">
+      <Filter>ソース ファイル\Customize</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\MotionIk.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Customize\MotionIk.cpp">
+      <Filter>ソース ファイル\Customize</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\MotionRotationLimits.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Customize\MotionRotationLimits.cpp">
+      <Filter>ソース ファイル\Customize</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\TransformSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
@@ -281,8 +292,8 @@
     <ClCompile Include="Source\System\DebugCameraControlSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\Debugger.cpp">
-      <Filter>ソース ファイル\System</Filter>
+    <ClCompile Include="Source\Core\Debugger.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
     <ClCompile Include="Source\System\DebugImGuiSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
@@ -314,32 +325,32 @@
     <ClCompile Include="Source\System\StateUpdateSystem.cpp">
       <Filter>ソース ファイル\System</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scene\SceneManager.cpp">
-      <Filter>ソース ファイル\Scene</Filter>
+    <ClCompile Include="Source\Manager\SceneManager.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
-    <ClCompile Include="Source\World\World.cpp">
-      <Filter>ソース ファイル\World</Filter>
+    <ClCompile Include="Source\Core\World.cpp">
+      <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_dx11.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\backends\imgui_impl_dx11.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking\backends</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\backends\imgui_impl_win32.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\backends\imgui_impl_win32.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking\backends</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\imgui.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\imgui.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\imgui_demo.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\imgui_demo.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\imgui_draw.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\imgui_draw.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\imgui_tables.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\imgui_tables.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking</Filter>
     </ClCompile>
-    <ClCompile Include="Source\System\imgui-docking\imgui_widgets.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="Source\ThirdParty\imgui-docking\imgui_widgets.cpp">
+      <Filter>ソース ファイル\ThirdParty\imgui-docking</Filter>
     </ClCompile>
     <ClCompile Include="Source\ThirdParty\ImGuizmo\ImGuizmo.cpp">
       <Filter>ソース ファイル\ThirdParty\ImGuizmo</Filter>
@@ -355,8 +366,8 @@
     <ClInclude Include="Source\Component\BattleCameraFollowComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\Application.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Core\Application.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\BattleCameraSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -370,8 +381,8 @@
     <ClInclude Include="Source\System\CommandInputSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\main.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Core\main.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\MovementSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -379,14 +390,14 @@
     <ClInclude Include="Source\System\MotionSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\MotionPose.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Customize\MotionPose.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\MotionIk.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Customize\MotionIk.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\MotionRotationLimits.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Customize\MotionRotationLimits.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
     <ClInclude Include="Source\Data\SkeletonPose.h">
       <Filter>ヘッダー ファイル\Data</Filter>
@@ -400,11 +411,11 @@
     <ClInclude Include="Source\System\PlayerControlSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\Renderer.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Core\Renderer.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\SoundManager.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Manager\SoundManager.h">
+      <Filter>ヘッダー ファイル\Manager</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\SpawnDestroySystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -412,8 +423,8 @@
     <ClInclude Include="Source\System\StateUpdateSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\Game.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Core\Game.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\InputHistorySystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -478,8 +489,8 @@
     <ClInclude Include="Source\System\DebugCameraControlSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\Debugger.h">
-      <Filter>ヘッダー ファイル\System</Filter>
+    <ClInclude Include="Source\Core\Debugger.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\System\DebugImGuiSystem.h">
       <Filter>ヘッダー ファイル\System</Filter>
@@ -523,7 +534,9 @@
     <ClInclude Include="Source\UI\UIRoot.h">
       <Filter>ヘッダー ファイル\UI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\UI\UIInputSystem.h" />
+    <ClInclude Include="Source\Input\UIInputSystem.h">
+      <Filter>ヘッダー ファイル\Input</Filter>
+    </ClInclude>
     <ClInclude Include="Source\UI\UIRenderer.h" />
     <ClInclude Include="Source\UI\UITheme.h">
       <Filter>ヘッダー ファイル\UI</Filter>
@@ -537,11 +550,11 @@
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Controller\KeyframeEditing.h">
-      <Filter>ヘッダー ファイル\Controller</Filter>
+    <ClInclude Include="Source\Customize\KeyframeEditing.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Controller\CustomizeEditHistory.h">
-      <Filter>ヘッダー ファイル\Controller</Filter>
+    <ClInclude Include="Source\Customize\CustomizeEditHistory.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizePreviewController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
@@ -570,41 +583,41 @@
     <ClInclude Include="Source\Scene\Scene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scene\SceneManager.h">
-      <Filter>ヘッダー ファイル\Scene</Filter>
+    <ClInclude Include="Source\Manager\SceneManager.h">
+      <Filter>ヘッダー ファイル\Manager</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\TitleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Controller\CustomizeTypes.h">
-      <Filter>ヘッダー ファイル\Controller</Filter>
+    <ClInclude Include="Source\Customize\CustomizeTypes.h">
+      <Filter>ヘッダー ファイル\Customize</Filter>
     </ClInclude>
-    <ClInclude Include="Source\World\World.h">
-      <Filter>ヘッダー ファイル\World</Filter>
+    <ClInclude Include="Source\Core\World.h">
+      <Filter>ヘッダー ファイル\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_dx11.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\backends\imgui_impl_dx11.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking\backends</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\backends\imgui_impl_win32.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\backends\imgui_impl_win32.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking\backends</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imconfig.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imconfig.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imgui.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imgui.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imgui_internal.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imgui_internal.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imstb_rectpack.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imstb_rectpack.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imstb_textedit.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imstb_textedit.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
-    <ClInclude Include="Source\System\imgui-docking\imstb_truetype.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="Source\ThirdParty\imgui-docking\imstb_truetype.h">
+      <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
     <ClInclude Include="Source\Resource\ModelResource.h">
       <Filter>ヘッダー ファイル\Resource</Filter>

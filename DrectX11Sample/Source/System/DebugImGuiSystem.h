@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Component/TransformComponent.h"
-#include "World/World.h"
+#include "Core/World.h"
 #include <Windows.h>
 #include <d3d11.h>
 

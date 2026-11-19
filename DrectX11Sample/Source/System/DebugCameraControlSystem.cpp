@@ -1,6 +1,6 @@
 ﻿#include "System/DebugCameraControlSystem.h"
 
-#include "System/Application.h"
+#include "Core/Application.h"
 #include "System/TransformSystem.h"
 
 #if defined(_DEBUG)

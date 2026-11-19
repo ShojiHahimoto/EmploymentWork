@@ -6,8 +6,8 @@
 #include "Data/MotionData.h"
 #include "Data/MotionSkeletonDefinition.h"
 #include "Data/SkeletonPose.h"
-#include "System/MotionIk.h"
-#include "System/Renderer.h"
+#include "Customize/MotionIk.h"
+#include "Core/Renderer.h"
 
 #include <SimpleMath.h>
 

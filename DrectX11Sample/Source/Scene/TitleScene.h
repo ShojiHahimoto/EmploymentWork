@@ -4,7 +4,7 @@
 #include "Controller/TitleNavigationController.h"
 #include "Controller/TitlePresentationController.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class TitleScene : public Scene
 {

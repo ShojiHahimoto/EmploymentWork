@@ -1,4 +1,4 @@
-﻿#include "Scene/SceneManager.h"
+﻿#include "Manager/SceneManager.h"
 
 /// <summary>
 /// SceneManager の唯一のインスタンスを取得する。

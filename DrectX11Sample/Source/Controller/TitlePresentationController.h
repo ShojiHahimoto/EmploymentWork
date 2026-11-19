@@ -1,13 +1,13 @@
 ﻿#pragma once
 
-#include "World/World.h"
+#include "Core/World.h"
 #include "Component/ModelComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Resource/ModelResource.h"
 #include "System/MotionSystem.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/TransformSystem.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include <DirectXMath.h>
 #include <cmath>
 

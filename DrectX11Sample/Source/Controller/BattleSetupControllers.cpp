@@ -3,9 +3,9 @@
 #include "Data/CharacterDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Scene/BattleScene.h"
-#include "Scene/SceneManager.h"
+#include "Manager/SceneManager.h"
 #include "Scene/TitleScene.h"
-#include "System/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui.h"
 
 #include <cstdio>
 #include <filesystem>

@@ -2,8 +2,8 @@
 #pragma execution_character_set("utf-8")
 #include "Controller/CustomizeMotionEditorController.h"
 #include "Controller/CustomizePreviewController.h"
-#include "System/Renderer.h"
-#include "UI/UIInputSystem.h"
+#include "Core/Renderer.h"
+#include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UITheme.h"
 
@@ -44,7 +44,8 @@ constexpr HitReactionType Reactions[] = {HitReactionType::Normal, HitReactionTyp
 										 HitReactionType::HardBurst};
 constexpr AttackCommandId Commands[] = {AttackCommandId::None,		  AttackCommandId::Hadouken,
 										AttackCommandId::Shoryuu,	  AttackCommandId::Yoga,
-										AttackCommandId::ReverseYoga, AttackCommandId::FullRotate};
+										AttackCommandId::ReverseYoga, AttackCommandId::FullRotate,
+										AttackCommandId::Tatsumaki};
 
 /// <summary>列挙値を表示用番号へ変換する。</summary>
 /// <param name="values">表示順の値。</param>
@@ -270,7 +271,8 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 
 	if (category == CustomizeAttackCategory::Special)
 	{
-		root.AddDropdown("command", Row("command", "コマンド"), {"なし", "波動", "昇竜", "ヨガ", "逆ヨガ", "一回転"},
+		root.AddDropdown("command", Row("command", "コマンド"),
+						 {"なし", "波動", "昇竜", "ヨガ", "逆ヨガ", "一回転", "竜巻（214）"},
 						 commandIndex);
 	}
 }

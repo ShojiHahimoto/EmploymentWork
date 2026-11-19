@@ -1,6 +1,6 @@
 ﻿#include "Data/AttackDataSaver.h"
 
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <filesystem>
 #include <fstream>
@@ -77,6 +77,8 @@ namespace
 		{
 		case AttackCommandId::Hadouken:
 			return "Hadouken";
+		case AttackCommandId::Tatsumaki:
+			return "Tatsumaki";
 		case AttackCommandId::Shoryuu:
 			return "Shoryuu";
 		case AttackCommandId::Yoga:

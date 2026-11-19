@@ -7,7 +7,7 @@
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 

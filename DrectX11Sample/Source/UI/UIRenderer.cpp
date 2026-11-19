@@ -1,8 +1,8 @@
 ﻿#include "UI/UIRenderer.h"
 
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <d2d1.h>
 #include <dwrite.h>

@@ -5,10 +5,10 @@
 #include "Component/InputHistoryComponent.h"
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 #include "System/HitStopSystem.h"
-#include "System/SoundManager.h"
-#include "World/World.h"
+#include "Manager/SoundManager.h"
+#include "Core/World.h"
 
 #include <vector>
 

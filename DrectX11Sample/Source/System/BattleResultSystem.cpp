@@ -3,7 +3,7 @@
 #include "Component/BattleTimerComponent.h"
 #include "Component/HealthComponent.h"
 #include "Core/GameObject.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 

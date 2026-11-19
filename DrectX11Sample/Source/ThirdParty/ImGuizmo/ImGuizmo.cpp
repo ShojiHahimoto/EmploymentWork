@@ -1,4 +1,4 @@
-﻿// https://github.com/CedricGuillemet/ImGuizmo
+// https://github.com/CedricGuillemet/ImGuizmo
 // v1.92.5 WIP
 //
 // The MIT License(MIT)
@@ -27,8 +27,8 @@
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
-#include "System/imgui-docking/imgui.h"
-#include "System/imgui-docking/imgui_internal.h"
+#include "ThirdParty/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui_internal.h"
 #include "ImGuizmo.h"
 
 #if defined(_MSC_VER) || defined(__MINGW32__)

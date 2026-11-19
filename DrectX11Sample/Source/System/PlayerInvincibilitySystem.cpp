@@ -2,7 +2,7 @@
 
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 void PlayerInvincibilitySystem::Update(World& world)
 {

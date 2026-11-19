@@ -10,9 +10,9 @@ try {
     $package = 'packages\directxtk_desktop_2019.2025.10.28.2'
     & cl /nologo /std:c++20 /EHsc /MDd /D_DEBUG /DNOMINMAX /utf-8 /I"DrectX11Sample\Source" /I"$package\include" `
         'tools\tests\UIFoundationTests.cpp' 'DrectX11Sample\Source\UI\UIRoot.cpp' `
-        'DrectX11Sample\Source\UI\UIRenderer.cpp' 'DrectX11Sample\Source\UI\UIInputSystem.cpp' `
+        'DrectX11Sample\Source\UI\UIRenderer.cpp' 'DrectX11Sample\Source\Input\UIInputSystem.cpp' `
         'DrectX11Sample\Source\Controller\TitleMenuController.cpp' `
-        'DrectX11Sample\Source\Data\JsonValue.cpp' 'DrectX11Sample\Source\System\Debugger.cpp' `
+        'DrectX11Sample\Source\Data\JsonValue.cpp' 'DrectX11Sample\Source\Core\Debugger.cpp' `
         /Fo"$output\\" /Fe"$testExecutable" `
         /link "$package\native\lib\x64\Debug\DirectXTK.lib" user32.lib ole32.lib
     if ($LASTEXITCODE -ne 0) { throw 'UI test build failed.' }

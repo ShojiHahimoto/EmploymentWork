@@ -1,7 +1,7 @@
 ﻿#include "Data/PosePreset.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <DirectXMath.h>
 

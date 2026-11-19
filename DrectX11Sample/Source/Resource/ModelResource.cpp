@@ -1,7 +1,7 @@
 ﻿#include "Resource/ModelResource.h"
 
 #include <assimp/Importer.hpp>
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <WICTextureLoader.h>

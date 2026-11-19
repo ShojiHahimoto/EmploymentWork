@@ -1,7 +1,7 @@
 ﻿#include "System/HitStopSystem.h"
 
 #include "Data/AttackData.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 namespace
 {

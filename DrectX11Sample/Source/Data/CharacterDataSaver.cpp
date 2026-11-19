@@ -1,6 +1,6 @@
 ﻿#include "Data/CharacterDataSaver.h"
 
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <filesystem>
 #include <fstream>

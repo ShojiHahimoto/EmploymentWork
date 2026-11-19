@@ -7,9 +7,9 @@
 #include "Component/StateComponent.h"
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <SimpleMath.h>
 

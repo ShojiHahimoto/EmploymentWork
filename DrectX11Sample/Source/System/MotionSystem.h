@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Component/SkeletonPoseComponent.h"
-#include "System/MotionPose.h"
+#include "Customize/MotionPose.h"
 #include "Component/MotionPlayerComponent.h"
 #include "Core/GameObject.h"
 #include "Data/AttackData.h"

@@ -2,10 +2,10 @@
 
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
-#include "Scene/SceneManager.h"
+#include "Manager/SceneManager.h"
 #include "Scene/TitleScene.h"
-#include "System/Application.h"
-#include "System/Debugger.h"
+#include "Core/Application.h"
+#include "Core/Debugger.h"
 
 #include <memory>
 

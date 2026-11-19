@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 
 //------------------------------------------
 // ゲーム本体クラス

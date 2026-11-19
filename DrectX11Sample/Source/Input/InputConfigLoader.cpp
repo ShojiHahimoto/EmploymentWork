@@ -1,7 +1,7 @@
 ﻿#include "Input/InputConfigLoader.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <algorithm>
 #include <filesystem>

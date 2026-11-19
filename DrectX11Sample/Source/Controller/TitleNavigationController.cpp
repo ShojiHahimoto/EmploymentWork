@@ -5,8 +5,8 @@
 #include "Scene/BattleScene.h"
 #include "Scene/BattleSetupScene.h"
 #include "Scene/CustomizeScene.h"
-#include "Scene/SceneManager.h"
-#include "System/Application.h"
+#include "Manager/SceneManager.h"
+#include "Core/Application.h"
 
 #include <Windows.h>
 

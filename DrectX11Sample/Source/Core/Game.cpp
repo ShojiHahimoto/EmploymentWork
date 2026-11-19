@@ -1,15 +1,15 @@
-﻿#include "System/Game.h"
-#include "Scene/SceneManager.h"
+﻿#include "Core/Game.h"
+#include "Manager/SceneManager.h"
 #include "Scene/TitleScene.h"
 #include "Scene/BattleScene.h"
 #include "Input/InputSystem.h"
-#include "System/Application.h"
+#include "Core/Application.h"
 #include "System/DebugImGuiSystem.h"
-#include "System/SoundManager.h"
-#include "System/Debugger.h"
+#include "Manager/SoundManager.h"
+#include "Core/Debugger.h"
 
 #include <memory>
-#include "UI/UIInputSystem.h"
+#include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 
 void Game::Init()

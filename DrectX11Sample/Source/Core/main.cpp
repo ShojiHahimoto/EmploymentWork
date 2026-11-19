@@ -1,5 +1,5 @@
-﻿#include "System/main.h"
-#include "System/Application.h"
+﻿#include "Core/main.h"
+#include "Core/Application.h"
 
 //=================================
 // エントリーポイント
