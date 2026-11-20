@@ -512,6 +512,12 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const int trackLeft = 138;
 	const int trackRight = width - 40;
 	const int trackWidth = std::max(1, trackRight - trackLeft);
+	const auto timelineFrameX = [&](int frame)
+	{
+		return trackLeft + static_cast<int>(static_cast<long long>(trackWidth)
+			* std::clamp(frame, 0, total) / std::max(1, total));
+	};
+
 	// 押下直後から反映し、ドラッグ中は画面外でも端へクランプする。
 	// 再生と手動シークが競合しないよう、操作開始時に再生を止める。
 	if (input.focusLost)
@@ -543,18 +549,23 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const int startupFrames = std::max(0, data.frame.startup - 1);
 	const int activeFrames = std::max(0, data.frame.active);
 	const int recoveryFrames = std::max(0, data.frame.recovery);
-	// 0Fの待機姿勢は内部仕様のまま。完成画像にない待機用の帯は作らない。
-	const int phaseTotal = std::max(1, startupFrames + activeFrames + recoveryFrames);
-	const int startupWidth = static_cast<int>(static_cast<long long>(trackWidth) * startupFrames / phaseTotal);
-	const int activeWidth = static_cast<int>(static_cast<long long>(trackWidth) * activeFrames / phaseTotal);
-	const int recoveryWidth = trackWidth - startupWidth - activeWidth;
-	int phaseX = trackLeft;
+
+	// 0Fは攻撃前のためラベルを置かない。項目ごとの境界は目盛りと同じフレーム座標で求める。
+	const int startupLeft = timelineFrameX(1);
+	const int activeLeft = timelineFrameX(startupFrames + 1);
+	// 持続は対象フレームの個数。8・9・10Fなら右端は10Fの目盛りに置く。
+	const int activeLastFrame = activeFrames > 0 ? startupFrames + activeFrames : startupFrames + 1;
+	const int recoveryLeft = timelineFrameX(activeLastFrame);
+	const int startupWidth = activeLeft - startupLeft;
+	const int activeWidth = activeFrames > 0 ? recoveryLeft - activeLeft : 0;
+	const int recoveryWidth = recoveryFrames > 0 ? trackRight - recoveryLeft : 0;
+	int phaseX = startupLeft;
 
 	if (startupWidth > 0)
 	{
 		root.AddNineSliceImage("timeline/startup", {phaseX, trackTop, phaseX + startupWidth, trackTop + trackHeight},
 							   "phase_startup");
-		if (startupWidth > 56)
+		if (startupWidth > 70)
 		{
 			root.AddLabel("timeline/startup/label",
 						  {phaseX + 4, trackTop + 2, phaseX + startupWidth - 2, trackTop + trackHeight - 2},
@@ -568,11 +579,11 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	{
 		root.AddNineSliceImage("timeline/active", {phaseX, trackTop, phaseX + activeWidth, trackTop + trackHeight},
 							   "phase_active");
-		if (activeWidth > 56)
+		if (activeWidth > 90)
 		{
 			root.AddLabel("timeline/active/label",
 						  {phaseX + 2, trackTop + 2, phaseX + activeWidth - 2, trackTop + trackHeight - 2},
-						  "持続（" + std::to_string(activeFrames) + "F）", true, 19, true);
+						  "攻撃中（" + std::to_string(activeFrames) + "F）", true, 19, true);
 		}
 
 		phaseX += activeWidth;
@@ -582,7 +593,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	{
 		root.AddNineSliceImage("timeline/recovery", {phaseX, trackTop, trackRight, trackTop + trackHeight},
 							   "phase_recovery");
-		if (recoveryWidth > 56)
+		if (recoveryWidth > 70)
 		{
 			root.AddLabel("timeline/recovery/label",
 						  {phaseX + 2, trackTop + 2, trackRight - 2, trackTop + trackHeight - 2},
@@ -593,7 +604,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const int divisions = std::max(1, total);
 	const int labelStep = total >= TimelineSparseLabelThreshold ? 5 : 1;
 	const int rulerY = bottom + (height - bottom) * 25 / 100;
-	const int playheadX = trackLeft + trackWidth * std::clamp(preview.GetCurrentFrame(), 0, total) / std::max(1, total);
+	const int playheadX = timelineFrameX(preview.GetCurrentFrame());
 	root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
 
 	const int poseY = rulerY + 18;
@@ -611,8 +622,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	// 表示フレームは内部キー+1。0は待機姿勢なのでキーを表示しない。
 	for (int frame = 0; frame < total; ++frame)
 	{
-		const int x =
-			trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * (frame + 1) / std::max(1, total));
+		const int x = timelineFrameX(frame + 1);
 		const bool pose = motion.HasMotionKeyframe(frame);
 		const bool move =
 			commonMotion ? motion.HasRootOffsetKeyframe(frame) : motion.HasAttackMovementKeyframe(data, frame);
@@ -641,8 +651,8 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 
 	for (int i = 0; i <= divisions; ++i)
 	{
-		const int x = trackLeft + static_cast<int>(static_cast<long long>(trackWidth) * i / divisions);
 		const int frame = total * i / divisions;
+		const int x = timelineFrameX(frame);
 		root.AddRule({x, rulerY - 10, x + 1, rulerY});
 		// 現在位置の数字は緑の目印内に一度だけ描く。近接する目盛り文字も重ねない。
 		const bool endpoint = frame == 0 || frame == total;
