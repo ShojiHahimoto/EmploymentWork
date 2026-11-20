@@ -3,7 +3,12 @@
   "displayName": "Idle",
   "totalFrames": 30,
   "looping": true,
-  "rootOffsetKeys": [],
+  "rootOffsetKeys": [
+    {
+      "frame": 0,
+      "offset": { "x": 0.000, "y": -0.004, "z": 0.000 }
+    }
+  ],
   "boneTracks": [
     {
       "boneName": "Head",

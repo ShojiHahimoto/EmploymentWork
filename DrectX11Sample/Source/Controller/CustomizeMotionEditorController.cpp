@@ -703,7 +703,7 @@ void CustomizeMotionEditorController::ResetForAttackMotion()
 
 std::string CustomizeMotionEditorController::LoadDraft(const std::string &motionDataId,
 													   const std::string &fallbackDisplayName, int totalFrames,
-													   bool looping)
+													   bool commonMotion)
 {
 	//モーションデータIDが無い場合失敗
 	if (motionDataId.empty())
@@ -720,16 +720,20 @@ std::string CustomizeMotionEditorController::LoadDraft(const std::string &motion
 		draft.motionDataId = motionDataId;
 		draft.displayName = fallbackDisplayName;
 		draft.totalFrames = std::max(1, totalFrames);
-		draft.looping = looping;
+		draft.looping = commonMotion;
 		hasDraft = true;
 		CopyEditorBuffers(-1);
 
 		return "New MotionData draft created.";
 	}
 
-	//ある場合読み込む
-	draft.totalFrames = std::max(1, totalFrames);
-	draft.looping = looping;
+	// 汎用モーションの保存値は維持する。攻撃だけ技データの尺・非ループへ同期する。
+	if (!commonMotion)
+	{
+		draft.totalFrames = std::max(1, totalFrames);
+		draft.looping = false;
+	}
+
 	hasDraft = true;
 	CopyEditorBuffers(-1);
 

@@ -68,7 +68,9 @@ namespace
 /// モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。
 /// </summary>
 /// <param name="world">ModelComponent と SkeletonPoseComponent を検索する World。</param>
-void MotionSystem::Update(World& world)
+/// <param name="syncState">対戦状態に再生対象を同期する場合true。タイトルの演出再生ではfalse。</param>
+/// <param name="presentationAttack">状態同期をしない演出の攻撃データ。待機中はnullptr。</param>
+void MotionSystem::Update(World& world, bool syncState, const AttackData* presentationAttack)
 {
 	for (GameObject& object : world.GetGameObjects())
 	{
@@ -91,7 +93,7 @@ void MotionSystem::Update(World& world)
 		}
 
 		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
-		if (motionPlayer)
+		if (motionPlayer && syncState)
 		{
 			SyncMotionPlayerFromState(world, object.id, *motionPlayer, *pose);
 		}
@@ -106,7 +108,10 @@ void MotionSystem::Update(World& world)
 				hitBox->currentAttack.slotId);
 		}
 
-		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model, assignedAttack ? &assignedAttack->attack : nullptr))
+		const AttackData* activeAttack = syncState
+			? (assignedAttack ? &assignedAttack->attack : nullptr) : presentationAttack;
+
+		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model, activeAttack))
 		{
 			MotionPose::UpdateSkinningMatrices(*pose, *model);
 			continue;
@@ -178,7 +183,10 @@ void MotionSystem::SyncMotionPlayerFromState(
 		player.boundActionState = state->currentActionState;
 		player.boundAttackSlotId.clear();
 		player.looping = false;
-		player.playing = true;
+		if (restarted)
+		{
+			player.playing = true;
+		}
 		player.currentFrame = restarted ? 0 : std::max(0, player.currentFrame);
 		return;
 	}
@@ -235,8 +243,18 @@ void MotionSystem::SyncMotionPlayerFromState(
 	player.boundActionState = state->currentActionState;
 	player.boundAttackSlotId = hitBox->currentAttack.slotId;
 	player.looping = false;
-	player.playing = true;
-	player.currentFrame = restarted ? 0 : std::max(0, state->actionFrame);
+	if (restarted)
+	{
+		player.playing = true;
+	}
+	if (restarted)
+	{
+		player.currentFrame = 0;
+	}
+	else if (player.playing)
+	{
+		player.currentFrame = std::max(0, state->actionFrame);
+	}
 }
 
 /// <summary>
@@ -405,7 +423,7 @@ bool MotionSystem::ApplyMotionPlayer(
 	MotionPlayerComponent& player,
 	const ModelResource& model, const AttackData* attack)
 {
-	if (!player.playing || player.motionDataId.empty())
+	if (player.motionDataId.empty())
 	{
 		return false;
 	}
@@ -441,7 +459,7 @@ bool MotionSystem::ApplyMotionPlayer(
 	}
 
 	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose, attack != nullptr);
-	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
+	const Vector3 targetRootOffset = attack || IsAttackMotionDataId(player.motionDataId)
 		? Vector3::Zero
 		: SampleRootOffset(*motion, player.currentFrame);
 	player.visualRootOffset = targetRootOffset;
@@ -464,7 +482,10 @@ bool MotionSystem::ApplyMotionPlayer(
 		}
 	}
 
-	AdvanceMotionFrame(player, *motion);
+	if (player.playing)
+	{
+		AdvanceMotionFrame(player, *motion);
+	}
 	return true;
 }
 

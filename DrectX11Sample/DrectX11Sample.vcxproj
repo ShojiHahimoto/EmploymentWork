@@ -153,6 +153,8 @@
     <ClInclude Include="Source\Controller\ResultPresentationController.h" />
     <ClInclude Include="Source\Controller\TitleMenuController.h" />
     <ClInclude Include="Source\Controller\TitlePresentationController.h" />
+    <ClCompile Include="Source\Controller\TitlePresentationController.cpp" />
+    <None Include="assets\TitlePresentation.json" />
     <ClInclude Include="Source\Controller\TitleNavigationController.h" />
     <ClInclude Include="Source\Scene\CustomizeScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />

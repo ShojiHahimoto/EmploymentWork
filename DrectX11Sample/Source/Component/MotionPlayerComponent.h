@@ -22,7 +22,7 @@ struct MotionPlayerComponent : public Component
 	// true の場合、MotionData::totalFrames 到達後に 0 へ戻す。
 	bool looping = true;
 
-	// false の場合、姿勢は bind pose のまま更新する。
+	// false の場合、現在フレームの姿勢で停止する。再開は明示的な開始時のみ。
 	bool playing = true;
 
 	// State / AttackData から自動設定されたモーションかどうか。

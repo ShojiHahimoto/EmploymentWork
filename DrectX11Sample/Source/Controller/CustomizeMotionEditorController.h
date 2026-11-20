@@ -96,11 +96,11 @@ class CustomizeMotionEditorController
 	/// </summary>
 	/// <param name="motionDataId">assets/MotionData 配下の拡張子なし ID。</param>
 	/// <param name="fallbackDisplayName">新規下書き時の表示名。</param>
-	/// <param name="totalFrames">編集時に使う総フレーム数。</param>
-	/// <param name="looping">ループモーションとして扱う場合は true。</param>
+	/// <param name="totalFrames">新規作成時の総フレーム数。攻撃では読み込み成功時も技の尺に同期する。</param>
+	/// <param name="commonMotion">汎用ならtrueで保存済みの尺とループ設定を維持する。新規汎用の初期ループ値はtrue。</param>
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 	std::string LoadDraft(const std::string &motionDataId, const std::string &fallbackDisplayName, int totalFrames,
-						  bool looping);
+						  bool commonMotion);
 
 	/// <summary>
 	/// 編集中の MotionData 下書きを保存する。

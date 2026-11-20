@@ -23,7 +23,11 @@ struct StateComponent;
 class MotionSystem
 {
 public:
-	static void Update(World& world);
+	/// <summary>姿勢と再生時計を更新する。タイトル用の演出では状態同期を無効にできる。</summary>
+	/// <param name="world">対象World。</param>
+	/// <param name="syncState">対戦状態から再生対象を同期する場合true。</param>
+	/// <param name="presentationAttack">演出再生中の攻撃データ。通常再生はnullptr。</param>
+	static void Update(World& world, bool syncState = true, const AttackData* presentationAttack = nullptr);
 
 private:
 	static void SyncMotionPlayerFromState(
