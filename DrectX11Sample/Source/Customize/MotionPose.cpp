@@ -200,13 +200,14 @@ void MotionPose::ApplyMotionData(
 /// <param name="motion">適用するモーションデータ。</param>
 /// <param name="frame">再生する 0 始まりフレーム。</param>
 /// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
+/// <param name="basePose">開始・終了と未指定ボーンに使う基準姿勢。nullptrならbind pose。</param>
+/// <param name="returnToBase">trueの場合末尾フレーム以降は基準姿勢に向けて保管する。最終フレームにキーがある場合キーを優先する。ループ再生では無視する。</param>
 void MotionPose::ApplyMotionData(
 	SkeletonPose& pose,
 	const MotionData& motion,
 	int frame,
 	const ModelResource& model,
-	const SkeletonPose* basePose)
+	const SkeletonPose* basePose, bool returnToBase)
 {
 	ResetPoseToBindPose(pose, model);
 	if (basePose && basePose->bonePoses.size() == pose.bonePoses.size())
@@ -229,7 +230,7 @@ void MotionPose::ApplyMotionData(
 			pose.bonePoses[boneIndex].localScale
 		};
 
-		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame, motion.totalFrames, motion.looping);
+		pose.bonePoses[boneIndex] = SampleBoneTrack(track, bindPose, frame, motion.totalFrames, motion.looping, returnToBase);
 	}
 }
 
@@ -237,17 +238,18 @@ void MotionPose::ApplyMotionData(
 /// 1 ボーントラックから指定フレームのローカル姿勢を補間して取得する。
 /// </summary>
 /// <param name="track">参照するボーンキーフレーム配列。</param>
-/// <param name="bindPose">未指定チャンネルに使う bind pose。</param>
+/// <param name="bindPose">未指定成分と前後の補間に使う基準姿勢。モデルのbind poseに限らない。</param>
 /// <param name="frame">取得する 0 始まりフレーム。</param>
-/// <param name="totalFrames">ループ境界補間に使う MotionData の総フレーム。</param>
+/// <param name="totalFrames">総フレーム数。非ループの終了基準はtotalFrames - 1。</param>
 /// <param name="looping">最後のキーから最初のキーへ補間する場合は true。</param>
+/// <param name="returnToBase">非ループの末尾キー以降を基準姿勢へ補間する場合true。falseなら末尾姿勢を維持する。</param>
 /// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。</returns>
 BonePose MotionPose::SampleBoneTrack(
 	const MotionBoneTrackData& track,
 	const BonePose& bindPose,
 	int frame,
 	int totalFrames,
-	bool looping)
+	bool looping, bool returnToBase)
 {
 	BonePose result = bindPose;
 	if (track.keyframes.empty())
@@ -373,6 +375,31 @@ BonePose MotionPose::SampleBoneTrack(
 		return result;
 	}
 
+	if (returnToBase && frame > track.keyframes.back().frame)
+	{
+		const auto& last = track.keyframes.back();
+		const int span = std::max(1, clampedTotalFrames - 1 - last.frame);
+		const float t = std::clamp(static_cast<float>(frame - last.frame) / span, 0.0f, 1.0f);
+
+		if (last.hasPosition)
+		{
+			result.localPosition = Vector3::Lerp(last.localPosition, bindPose.localPosition, t);
+		}
+
+		if (last.hasRotation)
+		{
+			result.localRotation = Quaternion::Slerp(last.localRotation, bindPose.localRotation, t);
+			result.localRotation.Normalize();
+		}
+
+		if (last.hasScale)
+		{
+			result.localScale = Vector3::Lerp(last.localScale, bindPose.localScale, t);
+		}
+
+		return result;
+	}
+
 	//キーフレーム間は前のキーと後ろのキーで補完する
 	const int frameSpan = std::max(1, nextKey->frame - previousKey->frame);
 	const float t = std::clamp(static_cast<float>(frame - previousKey->frame) / static_cast<float>(frameSpan), 0.0f, 1.0f);
@@ -408,11 +435,17 @@ BonePose MotionPose::SampleBoneTrack(
 	return result;
 }
 
-/// <summary>
-/// 1 ボーン分のローカル姿勢を行列へ変換する。
-/// </summary>
-/// <param name="pose">行列化するローカル姿勢。</param>
-/// <returns>Scale、Rotation、Translation を合成したローカル行列。</returns>
+/// <summary>技の発動条件から、固定の開始・終了姿勢を選ぶ。</summary>
+/// <param name="usableState">技データの地上・空中条件。</param>
+/// <returns>基準モーションのID。姿勢はその0Fを使用する。</returns>
+const char* MotionPose::GetAttackBaseMotionId(AttackUsableState usableState)
+{
+	return usableState == AttackUsableState::Air ? "Common/JumpLoop" : "Common/Idle";
+}
+
+/// <summary>ローカル姿勢の拡縮・回転・移動を行列へ合成する。</summary>
+/// <param name="pose">行列化する姿勢。</param>
+/// <returns>ローカル変換行列。</returns>
 Matrix MotionPose::CreateLocalMatrix(const BonePose& pose)
 {
 	return Matrix::CreateScale(pose.localScale)

@@ -16,6 +16,11 @@
 class CustomizeMotionEditorController
 {
   public:
+	/// <summary>編集と再生で同じ基準姿勢を使う。画面更新前に呼ぶ。</summary>
+	/// <param name="preview">モデルの各部位のbind回転を取得するプレビュー。</param>
+	/// <param name="attack">技編集ならtrue。汎用モーションではfalseで末尾復帰を無効にする。</param>
+	/// <param name="usableState">地上は待機、空中はジャンプループの0Fを基準とする発動条件。</param>
+	void ConfigurePoseSampling(const CustomizePreviewController& preview, bool attack, AttackUsableState usableState);
 	/// <summary>UIに依存せず攻撃移動キーを追加する。既存の補間位置を初期値にする。</summary>
 	/// <param name="attackData">編集対象。</param>
 	/// <param name="frame">内部フレーム。</param>
@@ -127,10 +132,10 @@ class CustomizeMotionEditorController
 	DirectX::SimpleMath::Vector2 GetAttackMovementOffsetAtFrame(const AttackData &attackData, int frame) const;
 
 	/// <summary>
-	/// 現在フレームへ全身姿勢キーフレームを追加する。
+	/// 追加前の補間済み回転を全身分取得してから、同じフレームへ全身キーを保存する。
 	/// </summary>
 	/// <param name="keyFrame">追加先の内部 actionFrame。</param>
-	/// <param name="totalFrames">MotionData の総フレーム数。</param>
+	/// <param name="totalFrames">末尾補間にも使用する技またはモーションの総フレーム数。</param>
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 	std::string AddWholeBodyKeyframe(int keyFrame, int totalFrames);
 
@@ -298,6 +303,15 @@ class CustomizeMotionEditorController
 	void NormalizeDraftForSave();
 
 	MotionData draft;
+	std::array<DirectX::SimpleMath::Quaternion, MotionEditorBoneCount> samplingBaseRotations{};
+	bool sampleAttackEndpoints = false;
+	/// <summary>描画と共通の補間計算から部位回転を取得する。</summary>
+	/// <param name="motion">取得元の下書き。</param>
+	/// <param name="boneName">編集対象の部位名。</param>
+	/// <param name="frame">内部0始まりの取得フレーム。</param>
+	/// <returns>設定済みの基準姿勢を使った補間済み回転。</returns>
+	DirectX::SimpleMath::Quaternion GetMotionRotationQuaternionAtFrame(
+		const MotionData& motion, const std::string& boneName, int frame) const;
 	bool hasDraft = false;
 	std::array<char, MotionNameBufferSize> displayNameBuffer = {};
 	int selectedBoneIndex = 0;

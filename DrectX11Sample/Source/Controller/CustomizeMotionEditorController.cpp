@@ -2,6 +2,7 @@
 
 #include "Customize/KeyframeEditing.h"
 #include "Data/MotionDataLoader.h"
+#include "Customize/MotionPose.h"
 #include "Data/MotionDataSaver.h"
 #include "Data/PosePreset.h"
 #include "Customize/MotionRotationLimits.h"
@@ -20,7 +21,6 @@ namespace
 constexpr const char *IdlePosePresetId = "__IdlePose__";
 
 Vector3 QuaternionToEulerDegrees(const Quaternion &rotation);
-Vector3 GetMotionRotationEulerAtFrame(const MotionData &motionData, const std::string &boneName, int frame);
 Quaternion GetMotionRotationQuaternionAtFrame(const MotionData &motionData, const std::string &boneName, int frame);
 
 /// <summary>
@@ -306,18 +306,6 @@ const AttackMovementKeyData *FindAttackMovementKeyframe(const AttackData &attack
 }
 
 /// <summary>
-/// MotionData から指定部位のローカル回転を取得する。
-/// </summary>
-/// <param name="motionData">参照する MotionData。</param>
-/// <param name="boneName">編集用部位名。</param>
-/// <param name="frame">参照する内部 actionFrame。</param>
-/// <returns>補間済みのオイラー角。</returns>
-Vector3 GetMotionRotationEulerAtFrame(const MotionData &motionData, const std::string &boneName, int frame)
-{
-	return QuaternionToEulerDegrees(GetMotionRotationQuaternionAtFrame(motionData, boneName, frame));
-}
-
-/// <summary>
 /// MotionData から指定部位のローカル Quaternion 回転を取得する。
 /// </summary>
 /// <param name="motionData">参照する MotionData。</param>
@@ -326,56 +314,11 @@ Vector3 GetMotionRotationEulerAtFrame(const MotionData &motionData, const std::s
 /// <returns>補間済みの Quaternion 回転。</returns>
 Quaternion GetMotionRotationQuaternionAtFrame(const MotionData &motionData, const std::string &boneName, int frame)
 {
-	const MotionBoneTrackData *track = FindMotionTrack(motionData, boneName);
+	const auto* track = FindMotionTrack(motionData, boneName);
+	const BonePose base;
 
-	if (!track || track->keyframes.empty())
-	{
-		return Quaternion::Identity;
-	}
-
-	const MotionBoneKeyframeData *previousKey = nullptr;
-	const MotionBoneKeyframeData *nextKey = nullptr;
-
-	//指定フレームの1つ前のキーフレームと1つ次のキーフレームを取得する
-	for (const MotionBoneKeyframeData &keyframe : track->keyframes)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
-
-	//先頭より前なら先頭の回転を返す
-	if (!previousKey && nextKey)
-	{
-		return nextKey->localRotation;
-	}
-
-	//最後尾より後ろなら最後尾の回転を返す
-	if (previousKey && !nextKey)
-	{
-		return previousKey->localRotation;
-	}
-
-	//キーフレーム上ならそのフレームの回転を返す、１つもキーがなければ単位回転
-	if (!previousKey || !nextKey || previousKey == nextKey)
-	{
-		return previousKey ? previousKey->localRotation : Quaternion::Identity;
-	}
-
-	//キー間なら補完して返す
-	const float range = static_cast<float>(std::max(1, nextKey->frame - previousKey->frame));
-	const float t = static_cast<float>(frame - previousKey->frame) / range;
-	Quaternion sampledRotation = Quaternion::Slerp(previousKey->localRotation, nextKey->localRotation, t);
-	sampledRotation.Normalize();
-
-	return sampledRotation;
+	return track ? MotionPose::SampleBoneTrack(*track, base, frame, motionData.totalFrames,
+		motionData.looping).localRotation : base.localRotation;
 }
 
 /// <summary>
@@ -880,7 +823,8 @@ void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 	selectedBoneIndex = ClampBodyPartIndex(selectedBoneIndex);
 
 	const std::string boneName = MotionSkeleton::GetBodyPartName(selectedBoneIndex);
-	const Vector3 internalRotationEulerDegrees = GetMotionRotationEulerAtFrame(draft, boneName, sampleFrame);
+	const Vector3 internalRotationEulerDegrees = QuaternionToEulerDegrees(
+		GetMotionRotationQuaternionAtFrame(draft, boneName, sampleFrame));
 	rotationEulerDegrees = ConvertInternalRotationToEditorRotation(selectedBoneIndex, internalRotationEulerDegrees);
 	rootOffsetKey = GetMotionRootOffsetAtFrame(draft, sampleFrame);
 }
@@ -890,6 +834,69 @@ Vector2 CustomizeMotionEditorController::GetAttackMovementOffsetAtFrame(const At
 	return ::GetAttackMovementOffsetAtFrame(attackData, frame);
 }
 
+/// <summary>モデルのbind回転と技の基準姿勢を、編集時の共通サンプリングに設定する。</summary>
+/// <param name="preview">部位ごとのモデルbind回転を提供するプレビュー。</param>
+/// <param name="attack">技編集ならtrue。汎用モーションではfalseで末尾復帰を無効にする。</param>
+/// <param name="usableState">地上は待機、空中はジャンプループの0Fを基準とする発動条件。</param>
+void CustomizeMotionEditorController::ConfigurePoseSampling(const CustomizePreviewController& preview,
+	bool attack, AttackUsableState usableState)
+{
+	sampleAttackEndpoints = attack;
+	const MotionData* baseMotion = nullptr;
+	const char* baseId = MotionPose::GetAttackBaseMotionId(usableState);
+	if (attack && MotionDataManager::LoadMotionData(baseId))
+	{
+		baseMotion = MotionDataManager::GetMotionData(baseId);
+	}
+
+	for (int index = 0; index < MotionEditorBoneCount; ++index)
+	{
+		Quaternion rotation = Quaternion::Identity;
+		preview.GetBodyPartBindRotation(index, rotation);
+		BonePose base;
+		base.localRotation = rotation;
+
+		if (baseMotion)
+		{
+			const auto* track = FindMotionTrack(*baseMotion, MotionSkeleton::GetBodyPartName(index));
+			if (track)
+			{
+				base = MotionPose::SampleBoneTrack(*track, base, 0, baseMotion->totalFrames, baseMotion->looping);
+			}
+		}
+
+		samplingBaseRotations[index] = base.localRotation;
+	}
+}
+
+/// <summary>描画と共通の補間計算で、指定フレームの部位回転を取得する。</summary>
+/// <param name="motion">取得元モーション。</param>
+/// <param name="boneName">編集対象の部位名。</param>
+/// <param name="frame">内部0始まりの取得フレーム。</param>
+/// <returns>設定済み基準姿勢から補間したローカル回転。</returns>
+Quaternion CustomizeMotionEditorController::GetMotionRotationQuaternionAtFrame(
+	const MotionData& motion, const std::string& boneName, int frame) const
+{
+	BonePose base;
+	for (int index = 0; index < MotionEditorBoneCount; ++index)
+	{
+		if (boneName == MotionSkeleton::GetBodyPartName(index))
+		{
+			base.localRotation = samplingBaseRotations[index];
+			break;
+		}
+	}
+
+	const auto* track = FindMotionTrack(motion, boneName);
+
+	return track ? MotionPose::SampleBoneTrack(*track, base, frame, motion.totalFrames,
+		motion.looping, sampleAttackEndpoints).localRotation : base.localRotation;
+}
+
+/// <summary>追加前の補間済み回転を全身分取得してから、同じフレームに全身キーを保存する。</summary>
+/// <param name="keyFrame">追加先の内部0始まりフレーム。負値は追加不可。</param>
+/// <param name="totalFrames">末尾補間にも使用する技またはモーションの総フレーム数。</param>
+/// <returns>追加結果のメッセージ。</returns>
 std::string CustomizeMotionEditorController::AddWholeBodyKeyframe(int keyFrame, int totalFrames)
 {
 	if (!hasDraft)
@@ -904,12 +911,18 @@ std::string CustomizeMotionEditorController::AddWholeBodyKeyframe(int keyFrame, 
 
 	draft.totalFrames = std::max(1, totalFrames);
 
+	std::array<Quaternion, MotionEditorBoneCount> rotations;
+	for (int index = 0; index < MotionEditorBoneCount; ++index)
+	{
+		rotations[index] = GetMotionRotationQuaternionAtFrame(draft, MotionSkeleton::GetBodyPartName(index), keyFrame);
+	}
+
 	//全身分ループしてキーフレームを追加
 	//現状全身単位の追加の導線しか残していないので、部位単体単位の追加を残す意味はないかも
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
 		const char *boneName = MotionSkeleton::GetBodyPartName(boneIndex);
-		const Quaternion rotation = GetMotionRotationQuaternionAtFrame(draft, boneName, keyFrame);
+		const Quaternion rotation = rotations[boneIndex];
 		SetMotionRotationQuaternionKey(draft, boneName, keyFrame, rotation);
 	}
 

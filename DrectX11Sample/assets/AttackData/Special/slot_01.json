@@ -20,7 +20,7 @@
   "cancelSetting": {
     "startFrame": 19,
     "endFrame": 38,
-    "cancelTypes": ["Jump", "Special"]
+    "cancelTypes": ["Special", "Jump"]
   },
   "hitboxes": [
     {

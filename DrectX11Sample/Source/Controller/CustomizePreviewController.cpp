@@ -508,9 +508,12 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 
 		const SkeletonPose *basePose = nullptr;
 
-		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
+		const char* baseMotionId = editingCommonMotion ? CommonIdleMotionDataId
+			: MotionPose::GetAttackBaseMotionId(attackData.usableState);
+
+		if (MotionDataManager::LoadMotionData(baseMotionId))
 		{
-			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+			idleMotion = MotionDataManager::GetMotionData(baseMotionId);
 		}
 
 		if (idleMotion)
@@ -544,13 +547,13 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 
 			if (motion)
 			{
-				if (idleMotion && editingMotionDataId.rfind("Attack/", 0) == 0)
+				if (idleMotion && !editingCommonMotion)
 				{
 					MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
 					basePose = &idleBasePose;
 				}
 
-				MotionPose::ApplyMotionData(skeletonPose, *motion, actionFrame, *previewModel, basePose);
+				MotionPose::ApplyMotionData(skeletonPose, *motion, actionFrame, *previewModel, basePose, !editingCommonMotion);
 				MotionPose::UpdateSkinningMatrices(skeletonPose, *previewModel);
 				previewSkinningMatrices = &skeletonPose.skinningMatrices;
 			}

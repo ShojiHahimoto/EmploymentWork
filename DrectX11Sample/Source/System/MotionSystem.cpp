@@ -96,7 +96,17 @@ void MotionSystem::Update(World& world)
 			SyncMotionPlayerFromState(world, object.id, *motionPlayer, *pose);
 		}
 
-		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
+		const StateComponent* state = world.GetComponent<StateComponent>(object.id);
+		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+		const CharacterAssignedAttackData* assignedAttack = nullptr;
+		if (state && hitBox && (state->currentActionState == PlayerActionState::GroundAttack
+			|| state->currentActionState == PlayerActionState::AirAttack))
+		{
+			assignedAttack = FindAssignedAttack(world.GetComponent<CharacterAttackDataComponent>(object.id),
+				hitBox->currentAttack.slotId);
+		}
+
+		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model, assignedAttack ? &assignedAttack->attack : nullptr))
 		{
 			MotionPose::UpdateSkinningMatrices(*pose, *model);
 			continue;
@@ -388,11 +398,12 @@ bool MotionSystem::IsAttackActionState(PlayerActionState actionState)
 /// <param name="pose">変更する姿勢 Component。</param>
 /// <param name="player">再生中モーション ID と現在フレームを持つ Component。</param>
 /// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
+/// <param name="attack">実行中の技。地上・空中別の基準姿勢と末尾補間を指定する。通常モーションではnullptr。</param>
 /// <returns>MotionData を姿勢へ反映できた場合は true。</returns>
 bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPoseComponent& pose,
 	MotionPlayerComponent& player,
-	const ModelResource& model)
+	const ModelResource& model, const AttackData* attack)
 {
 	if (!player.playing || player.motionDataId.empty())
 	{
@@ -413,9 +424,10 @@ bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPose idleBasePose;
 	SkeletonPose transitionBasePose;
 	const SkeletonPose* basePose = nullptr;
-	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
+	const char* baseId = MotionPose::GetAttackBaseMotionId(attack ? attack->usableState : AttackUsableState::Ground);
+	if (attack && MotionDataManager::LoadMotionData(baseId))
 	{
-		const MotionData* idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+		const MotionData* idleMotion = MotionDataManager::GetMotionData(baseId);
 		if (idleMotion)
 		{
 			MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, model);
@@ -428,7 +440,7 @@ bool MotionSystem::ApplyMotionPlayer(
 		basePose = &transitionBasePose;
 	}
 
-	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
+	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose, attack != nullptr);
 	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
 		? Vector3::Zero
 		: SampleRootOffset(*motion, player.currentFrame);

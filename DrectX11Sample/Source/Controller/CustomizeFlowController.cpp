@@ -580,6 +580,8 @@ void CustomizeFlowController::UpdateAttackEditorControls()
 	}
 
 	// 操作前の状態を保存
+	motionEditor.ConfigurePoseSampling(previewController, !editingCommonMotion, attackEditor.GetDraft().usableState);
+
 	const auto before = CaptureEditSnapshot();
 	const bool gizmoWasActive = previewController.IsGizmoEditing();
 

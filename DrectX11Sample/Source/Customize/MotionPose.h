@@ -2,6 +2,7 @@
 
 #include "Data/SkeletonPose.h"
 #include "Data/MotionData.h"
+#include "Data/AttackData.h"
 #include "Resource/ModelResource.h"
 
 /// <summary>
@@ -78,31 +79,46 @@ public:
 		const ModelResource& model);
 
 	/// <summary>
-	/// 指定 MotionData を、別姿勢を下地にして SkeletonPose へ反映する。
+	/// 指定MotionDataを下地姿勢から補間し、指定時は末尾から下地へ戻す。
 	/// </summary>
 	/// <param name="pose">変更する姿勢 Component。</param>
 	/// <param name="motion">適用するモーションデータ。</param>
 	/// <param name="frame">再生する 0 始まりフレーム。</param>
 	/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-	/// <param name="basePose">最初のキー以前や未指定ボーンに使う下地姿勢。nullptr の場合は bind pose。</param>
+	/// <param name="basePose">開始・終了と未指定ボーンに使う基準姿勢。nullptrならbind pose。</param>
+	/// <param name="returnToBase">非ループの末尾キー以降を最終フレームまでに基準姿勢へ戻す場合true。端点の実キーを優先し、ループ再生では無視する。</param>
 	static void ApplyMotionData(
 		SkeletonPose& pose,
 		const MotionData& motion,
 		int frame,
 		const ModelResource& model,
-		const SkeletonPose* basePose);
+		const SkeletonPose* basePose, bool returnToBase = false);
+
+	/// <summary>技の発動条件に対応する端点姿勢のモーションIDを返す。</summary>
+	/// <param name="usableState">技の地上・空中発動条件。</param>
+	/// <returns>空中はCommon/JumpLoop、それ以外はCommon/Idle。基準姿勢には0Fを使う。</returns>
+	static const char* GetAttackBaseMotionId(AttackUsableState usableState);
 
 	/// <summary>ローカル姿勢を bind pose へ戻す。行列は別途更新する。</summary>
 	/// <param name="pose">リセットする姿勢。</param>
 	/// <param name="model">初期姿勢を持つモデル。</param>
 	static void ResetPoseToBindPose(SkeletonPose& pose, const ModelResource& model);
 
-private:
+	/// <summary>共通サンプリング。returnToBaseは攻撃の末尾から基準姿勢へ戻す場合に指定する。</summary>
+	/// <param name="track">時系列順のボーンキー。</param>
+	/// <param name="bindPose">未指定成分と前後の補間に使う基準姿勢。モデルのbind poseに限らない。</param>
+	/// <param name="frame">内部0始まりの取得フレーム。非ループの開始基準は-1。</param>
+	/// <param name="totalFrames">総フレーム数。非ループの終了基準はtotalFrames - 1。</param>
+	/// <param name="looping">末尾と先頭をループ補間する場合true。</param>
+	/// <param name="returnToBase">非ループの末尾キー以降を基準姿勢へ補間する場合true。falseなら末尾姿勢を維持する。</param>
+	/// <returns>補間済みローカル姿勢。キーなしなら基準姿勢。</returns>
 	static BonePose SampleBoneTrack(
 		const MotionBoneTrackData& track,
 		const BonePose& bindPose,
 		int frame,
 		int totalFrames,
-		bool looping);
+		bool looping, bool returnToBase = false);
+
+private:
 	static DirectX::SimpleMath::Matrix CreateLocalMatrix(const BonePose& pose);
 };
