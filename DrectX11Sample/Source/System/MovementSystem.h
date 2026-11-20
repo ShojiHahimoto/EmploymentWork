@@ -32,6 +32,8 @@ private:
 	static void ApplyAttackMovement(World& world);
 	static void ApplyVelocityToTransform(World& world);
 	static bool ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state);
+	static bool IsAttackGravitySuppressed(const StateComponent& state,
+		const HitBoxComponent* hitBox, const CharacterAttackDataComponent* attackData);
 	static DirectX::SimpleMath::Vector2 SampleAttackMovementOffset(const AttackData& attack, int actionFrame);
 	static const CharacterAssignedAttackData* FindAssignedAttack(
 		const CharacterAttackDataComponent* attackData,
