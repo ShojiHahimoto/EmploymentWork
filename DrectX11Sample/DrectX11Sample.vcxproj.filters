@@ -201,7 +201,6 @@
     <ClCompile Include="Source\Input\UIInputSystem.cpp">
       <Filter>ソース ファイル\Input</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
@@ -213,9 +212,6 @@
     </ClCompile>
     <ClCompile Include="Source\Customize\CustomizeEditHistory.cpp">
       <Filter>ソース ファイル\Customize</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp">
-      <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Source\Controller\CustomizePreviewController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
@@ -357,6 +353,12 @@
     </ClCompile>
     <ClCompile Include="Source\Resource\ModelResource.cpp">
       <Filter>ソース ファイル\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp">
+      <Filter>ソース ファイル\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\UIRenderer.cpp">
+      <Filter>ソース ファイル\UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -537,7 +539,6 @@
     <ClInclude Include="Source\Input\UIInputSystem.h">
       <Filter>ヘッダー ファイル\Input</Filter>
     </ClInclude>
-    <ClInclude Include="Source\UI\UIRenderer.h" />
     <ClInclude Include="Source\UI\UITheme.h">
       <Filter>ヘッダー ファイル\UI</Filter>
     </ClInclude>
@@ -567,9 +568,6 @@
     </ClInclude>
     <ClInclude Include="Source\Controller\TitleMenuController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Controller\TitlePresentationController.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\TitleNavigationController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
@@ -679,6 +677,12 @@
     <ClInclude Include="Source\ThirdParty\ImGuizmo\ImGuizmo.h">
       <Filter>ヘッダー ファイル\ThirdParty\ImGuizmo</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\TitlePresentationController.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\UI\UIRenderer.h">
+      <Filter>ヘッダー ファイル\UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -738,36 +742,6 @@
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\Parameter.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_air_kick.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_air_punch.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_front_kick.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_hard_punch.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_hard_air_kick.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_hard_air_punch.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_punch.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_roundhouse_kick.json">
-      <Filter>リソース ファイル\AttackData\Normal</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_special_attack.json">
-      <Filter>リソース ファイル\AttackData\Special</Filter>
-    </None>
-    <None Include="assets\AttackData\debug_special_upper.json">
-      <Filter>リソース ファイル\AttackData\Special</Filter>
     </None>
     <None Include="assets\CharacterData\CharacterSlot00\AttackList.json">
       <Filter>リソース ファイル\CharacterData\CharacterSlot00</Filter>

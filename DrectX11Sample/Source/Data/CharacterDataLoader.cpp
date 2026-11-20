@@ -326,6 +326,10 @@ namespace
 		{
 			return AttackCommandId::Hadouken;
 		}
+		if (text == "Tatsumaki")
+		{
+			return AttackCommandId::Tatsumaki;
+		}
 		if (text == "Shoryuu" || text == "Shoryu")
 		{
 			return AttackCommandId::Shoryuu;
@@ -337,10 +341,6 @@ namespace
 		if (text == "ReverseYoga")
 		{
 			return AttackCommandId::ReverseYoga;
-		}
-		if (text == "Tatsumaki")
-		{
-			return AttackCommandId::Tatsumaki;
 		}
 
 		if (text == "FullRotate")

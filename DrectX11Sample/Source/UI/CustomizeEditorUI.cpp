@@ -42,10 +42,11 @@ AttackEditorRegions MakeRegions(int width, int height)
 constexpr AttackHeight Heights[] = {AttackHeight::High, AttackHeight::Mid, AttackHeight::Low};
 constexpr HitReactionType Reactions[] = {HitReactionType::Normal, HitReactionType::Down, HitReactionType::Burst,
 										 HitReactionType::HardBurst};
-constexpr AttackCommandId Commands[] = {AttackCommandId::None,		  AttackCommandId::Hadouken,
-										AttackCommandId::Shoryuu,	  AttackCommandId::Yoga,
-										AttackCommandId::ReverseYoga, AttackCommandId::FullRotate,
-										AttackCommandId::Tatsumaki};
+constexpr AttackCommandId Commands[] = {AttackCommandId::None,			AttackCommandId::Hadouken,
+										AttackCommandId::Tatsumaki,		AttackCommandId::Shoryuu,
+										AttackCommandId::Yoga,			AttackCommandId::ReverseYoga,
+										AttackCommandId::FullRotate,
+										};
 
 /// <summary>列挙値を表示用番号へ変換する。</summary>
 /// <param name="values">表示順の値。</param>
@@ -272,7 +273,7 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 	if (category == CustomizeAttackCategory::Special)
 	{
 		root.AddDropdown("command", Row("command", "コマンド"),
-						 {"なし", "波動", "昇竜", "ヨガ", "逆ヨガ", "一回転", "竜巻（214）"},
+						 {"なし", "波動", "竜巻", "昇竜", "ヨガ", "逆ヨガ", "一回転"},
 						 commandIndex);
 	}
 }
