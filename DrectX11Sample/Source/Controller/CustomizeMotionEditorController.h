@@ -210,11 +210,21 @@ class CustomizeMotionEditorController
 	std::string CopyWholeBodyPose(int keyFrame);
 
 	/// <summary>
-	/// コピー済み全身姿勢を現在フレームへ貼り付ける。
+	/// コピー済みの回転を指定された部位に貼り付ける。
 	/// </summary>
 	/// <param name="keyFrame">貼り付け先の内部 actionFrame。</param>
 	/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
-	std::string PasteWholeBodyPose(int keyFrame);
+	/// <param name="applyMask">適用する部位だけtrue。</param>
+	std::string PasteCopiedPose(int keyFrame, const std::array<bool, MotionEditorBoneCount>& applyMask);
+
+	/// <summary>現在キーの指定部位を反転し、反対側へコピーする。</summary>
+	/// <param name="preview">モデルの基準回転を取得するプレビュー。</param>
+	/// <param name="frame">適用先の内部フレーム。</param>
+	/// <param name="rightToLeft">右から左ならtrue。</param>
+	/// <param name="parts">肩・肘・手首・股関節・膝・足首の適用マスク。</param>
+	/// <returns>適用結果の表示メッセージ。</returns>
+	std::string MirrorPose(const CustomizePreviewController& preview, int frame,
+		bool rightToLeft, const std::array<bool, 6>& parts);
 
 	/// <summary>
 	/// 現在フレームへ指定プリセットの選択部位だけを適用する。

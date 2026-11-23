@@ -99,6 +99,13 @@ class CustomizeEditorUI
 	bool multipleSelectionEnabled = false;
 	bool showMarkers = true; // 画面を行き来しても表示設定を維持する。
 	bool motionScreenActive = false;
+	bool pastePanelOpen = false;
+	bool mirrorPanelOpen = false;
+	bool mirrorRightToLeft = true;
+	std::array<bool, 6> mirrorParts{};
+	std::array<bool, 2> mirrorGroups{};
+	GameUI::Rect mirrorPanelBounds{};
+	GameUI::Rect pastePanelBounds{};
 	int presetPanelMode = 0; // 0:閉、1:保存、2:読込。将来のモーションプリセットも同じ展開規則。
 	GameUI::Rect presetPanelBounds{}; // スクロール補正後の表示範囲。フォーカス移動の判定に使う。
 	int presetIndex = 0;

@@ -1,5 +1,7 @@
 ﻿#include "Controller/CustomizeMotionEditorController.h"
 
+#pragma execution_character_set("utf-8")
+
 #include "Customize/KeyframeEditing.h"
 #include "Data/MotionDataLoader.h"
 #include "Customize/MotionPose.h"
@@ -1161,7 +1163,12 @@ std::string CustomizeMotionEditorController::CopyWholeBodyPose(int keyFrame)
 	return "Copied whole body pose.";
 }
 
-std::string CustomizeMotionEditorController::PasteWholeBodyPose(int keyFrame)
+/// <summary>コピー済みの回転を指定された部位に貼り付ける。</summary>
+/// <param name="keyFrame">貼り付け先の内部フレーム。</param>
+/// <param name="applyMask">適用する部位だけtrue。</param>
+/// <returns>適用結果の表示メッセージ。</returns>
+std::string CustomizeMotionEditorController::PasteCopiedPose(int keyFrame,
+	const std::array<bool, MotionEditorBoneCount>& applyMask)
 {
 	if (!hasCopiedPose)
 	{
@@ -1173,16 +1180,86 @@ std::string CustomizeMotionEditorController::PasteWholeBodyPose(int keyFrame)
 		return "Paste requires a keyframe on the current frame.";
 	}
 
-	//全身分ペーストする
 	for (int boneIndex = 0; boneIndex < MotionEditorBoneCount; ++boneIndex)
 	{
+		if (!applyMask[boneIndex])
+		{
+			continue;
+		}
+
 		const std::string boneName = MotionSkeleton::GetBodyPartName(boneIndex);
 		SetMotionRotationQuaternionKey(draft, boneName, keyFrame, copiedPoseRotations[boneIndex]);
 	}
 
 	RefreshFrameEditValues(keyFrame);
 
-	return "Pasted whole body pose.";
+	return "ペーストしました。";
+}
+
+/// <summary>指定部位の回転をモデル座標で左右反転し、反対側のキーへ保存する。</summary>
+/// <param name="preview">実ボーンの基準回転を取得するプレビュー。</param>
+/// <param name="frame">適用先の内部フレーム。</param>
+/// <param name="rightToLeft">右側を元にする場合true。</param>
+/// <param name="parts">肩・肘・手首・股関節・膝・足首の適用マスク。</param>
+/// <returns>適用結果の表示メッセージ。</returns>
+std::string CustomizeMotionEditorController::MirrorPose(const CustomizePreviewController& preview, int frame,
+	bool rightToLeft, const std::array<bool, 6>& parts)
+{
+	if (!HasMotionKeyframe(frame))
+	{
+		return "編集するフレームにポーズキーを追加してください。";
+	}
+
+	using Part = MotionBodyPart;
+	constexpr Part pairs[][2] = {
+		{Part::RShoulder, Part::LShoulder}, {Part::RElbow, Part::LElbow}, {Part::RHand, Part::LHand},
+		{Part::RHipjoint, Part::LHipjoint}, {Part::RKnees, Part::LKnees}, {Part::RFeet, Part::LFeet}
+	};
+	const Matrix reflection = Matrix::CreateScale(-1.0f, 1.0f, 1.0f);
+	std::array<Quaternion, 6> rotations;
+	std::array<int, 6> targets{};
+
+	for (size_t index = 0; index < parts.size(); ++index)
+	{
+		if (!parts[index])
+		{
+			continue;
+		}
+
+		const int source = static_cast<int>(pairs[index][rightToLeft ? 0 : 1]);
+		const int target = static_cast<int>(pairs[index][rightToLeft ? 1 : 0]);
+		Quaternion sourceBind;
+		Quaternion targetBind;
+		Matrix sourceParent;
+		Matrix targetParent;
+		if (!preview.GetBodyPartBindRotation(source, sourceBind) || !preview.GetBodyPartBindRotation(target, targetBind)
+			|| !preview.GetBodyPartBindParentBasis(source, sourceParent)
+			|| !preview.GetBodyPartBindParentBasis(target, targetParent))
+		{
+			return "左右のボーンを取得できませんでした。";
+		}
+
+		// 親の基準軸を使うため、選択外の親の現在姿勢には依存しない。
+		const Quaternion current = GetMotionRotationQuaternionAtFrame(draft, MotionSkeleton::GetBodyPartName(source), frame);
+		const Matrix delta = Matrix::CreateFromQuaternion(sourceBind).Transpose() * Matrix::CreateFromQuaternion(current);
+		const Matrix modelDelta = sourceParent.Transpose() * delta * sourceParent;
+		const Matrix reflected = reflection * modelDelta * reflection;
+		const Matrix local = Matrix::CreateFromQuaternion(targetBind) * targetParent * reflected * targetParent.Transpose();
+		rotations[index] = Quaternion::CreateFromRotationMatrix(local);
+		rotations[index].Normalize();
+		targets[index] = target;
+	}
+
+	for (size_t index = 0; index < parts.size(); ++index)
+	{
+		if (parts[index])
+		{
+			SetMotionRotationQuaternionKey(draft, MotionSkeleton::GetBodyPartName(targets[index]), frame, rotations[index]);
+		}
+	}
+
+	RefreshFrameEditValues(frame);
+	return "反対側へポーズをコピーしました。";
 }
 
 std::string CustomizeMotionEditorController::CaptureCurrentIkTarget(CustomizePreviewController &previewController,

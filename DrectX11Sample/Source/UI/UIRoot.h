@@ -166,7 +166,9 @@ namespace GameUI
 		/// <param name="bounds">ボタン矩形。</param>
 		/// <param name="text">UTF-8のボタン表示文字列。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
-		void AddButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true);
+		/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+		void AddButton(std::string_view id, const Rect& bounds, std::string_view text,
+			bool enabled = true, float fontSize = 18.0f);
 		/// <summary>強調用の色付きボタンを登録する。</summary>
 		/// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
 		/// <param name="bounds">ボタン矩形。</param>
@@ -188,6 +190,7 @@ namespace GameUI
 		/// <param name="text">UTF-8の表示文字列。</param>
 		/// <param name="iconImageId">透過アイコン素材。</param>
 		/// <param name="enabled">操作可能ならtrue。</param>
+		/// <param name="showFocusOutline">フォーカス枠を表示する場合true。</param>
 		/// <param name="primary">選択中のモードなどを強調色で表示する場合true。</param>
 		/// <param name="fontSize">表示文字サイズ。省略時は他の標準ボタンと同じ。</param>
 		void AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
@@ -197,10 +200,9 @@ namespace GameUI
 		/// <param name="bounds">ボタン矩形。</param>
 		/// <param name="text">UTF-8表示文字列。</param>
 		/// <param name="enabled">操作可否。</param>
-		void AddButton(std::string_view id, const Rect& bounds, const char* text, bool enabled = true)
-		{
-			AddButton(id, bounds, std::string_view(text ? text : ""), enabled);
-		}
+		/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+		void AddButton(std::string_view id, const Rect& bounds, const char* text,
+			bool enabled = true, float fontSize = 18.0f);
 		/// <summary>IME文字入力、カーソル移動、削除に対応するテキスト欄を登録する。</summary>
 		/// <param name="id">編集状態を保持する一意な識別子。</param>
 		/// <param name="bounds">入力欄の画面矩形。</param>

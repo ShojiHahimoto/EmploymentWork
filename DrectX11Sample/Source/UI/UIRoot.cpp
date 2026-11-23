@@ -225,7 +225,24 @@ void Root::AddButton(std::string_view id, const Rect &b, bool enabled)
 {
 	AddButton(id, b, std::string_view{}, enabled);
 }
-void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, bool enabled)
+/// <summary>文字列リテラルを文字付きボタンの登録へ転送する。</summary>
+/// <param name="id">部品ID。</param>
+/// <param name="bounds">ボタン矩形。</param>
+/// <param name="text">UTF-8の表示文字列。</param>
+/// <param name="enabled">操作可否。</param>
+/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+void Root::AddButton(std::string_view id, const Rect& bounds, const char* text, bool enabled, float fontSize)
+{
+	AddButton(id, bounds, std::string_view(text ? text : ""), enabled, fontSize);
+}
+
+/// <summary>文字付きの標準ボタンを登録する。</summary>
+/// <param name="id">部品ID。</param>
+/// <param name="b">ボタン矩形。</param>
+/// <param name="text">UTF-8の表示文字列。</param>
+/// <param name="enabled">操作可否。</param>
+/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, bool enabled, float fontSize)
 {
 	Element e;
 	e.type = ElementType::Button;
@@ -234,6 +251,8 @@ void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, 
 	e.label = text;
 	e.imageId = Theme::ButtonImage;
 	e.enabled = enabled;
+	e.fontSize = fontSize;
+
 	RegisterElement(e);
 }
 void Root::AddPrimaryButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled)
@@ -259,13 +278,18 @@ void Root::AddImageButton(std::string_view id, const Rect& bounds, std::string_v
 void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_view text,
 	std::string_view iconImageId, bool enabled, bool showFocusOutline, bool primary, float fontSize)
 {
-	AddButton(id, bounds, text, enabled);
+	AddButton(id, bounds, text, enabled, fontSize);
+
 	if (Element* element = FindElement(std::string(id)))
 	{
 		element->iconImageId = iconImageId;
-		element->fontSize = fontSize;
 		element->showFocusOutline = showFocusOutline;
-		if (primary) { element->imageId = Theme::PrimaryButtonImage; element->bold = true; }
+
+		if (primary)
+		{
+			element->imageId = Theme::PrimaryButtonImage;
+			element->bold = true;
+		}
 	}
 }
 void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled,

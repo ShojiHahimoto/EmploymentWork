@@ -23,7 +23,10 @@ void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &mot
 											CustomizePreviewController &preview, bool common, int top, int bottom,
 											int split, int width)
 {
-	const int inlineHeight = presetPanelMode == 0 ? 0 : 116;
+	constexpr int PastePanelHeight = 44;
+	constexpr int MirrorPanelHeight = 152;
+	const int inlineHeight = (presetPanelMode == 0 ? 0 : 116) + (pastePanelOpen ? PastePanelHeight : 0)
+		+ (mirrorPanelOpen ? MirrorPanelHeight : 0);
 
 	root.BeginScrollArea("motion/controls", {split + 8, top + 8, width - 8, bottom - 96},
 						 (common ? 590 : 550) + inlineHeight, motionPanelScroll);
@@ -53,8 +56,74 @@ void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &mot
 	root.AddIconButton("pose/copy", {left, y, left + third, y + 42}, "コピー", "copy", keyed);
 	root.AddIconButton("pose/paste", {left + third + gap, y, left + third * 2 + gap, y + 42}, "ペースト", "paste",
 					   keyed && motion.HasCopiedPose());
-	root.AddIconButton("pose/mirror", {left + (third + gap) * 2, y, right, y + 42}, "ミラーリング", "mirror");
+	root.AddIconButton("pose/mirror", {left + (third + gap) * 2, y, right, y + 42},
+		"ミラーリング", "mirror", keyed, true, false, 16.0f);
+	const int pasteTop = y;
 	y += 62;
+
+	if (pastePanelOpen)
+	{
+		const auto selected = motion.GetSelectedBodyParts();
+		const bool hasSelection = std::find(selected.begin(), selected.end(), true) != selected.end();
+		const bool canPaste = keyed && motion.HasCopiedPose();
+		const int applyY = pasteTop + 48;
+		constexpr int applyGap = 8;
+		const int applyWidth = std::max(0, (right - left - 2 * applyGap) / 3);
+		const int selectedLeft = left + applyWidth + applyGap;
+		const int cancelLeft = selectedLeft + applyWidth + applyGap;
+
+		constexpr float applyFontSize = 16.0f;
+		root.AddButton("pose/paste/all", {left, applyY, left + applyWidth, applyY + 34},
+			"全身に適用", canPaste, applyFontSize);
+		root.AddButton("pose/paste/selected", {selectedLeft, applyY, selectedLeft + applyWidth, applyY + 34},
+			"選択部位のみ適用", canPaste && hasSelection, applyFontSize);
+		root.AddButton("pose/paste/cancel", {cancelLeft, applyY, cancelLeft + applyWidth, applyY + 34},
+			"キャンセル", true, applyFontSize);
+
+		y += PastePanelHeight;
+		pastePanelBounds = {split + 8 + left, top + 8 + pasteTop - motionPanelScroll,
+			split + 8 + right, top + 8 + y - motionPanelScroll};
+	}
+
+	if (mirrorPanelOpen)
+	{
+		const int panelTop = pasteTop + 48;
+		root.AddLabel("pose/mirror/directionLabel", {left, panelTop, half, panelTop + 30}, "適用方向", true, 16.0f);
+		root.AddLabel("pose/mirror/right", {half, panelTop, half + 30, panelTop + 30}, "右", true, 16.0f, true);
+		root.AddButton("pose/mirror/direction", {half + 30, panelTop, half + 78, panelTop + 30},
+			mirrorRightToLeft ? "→" : "←", true, 16.0f);
+		root.AddLabel("pose/mirror/left", {half + 78, panelTop, half + 108, panelTop + 30}, "左", true, 16.0f, true);
+
+		const char* labels[] = {"肩", "肘", "手首", "股関節", "膝", "足首"};
+		const int groupRight = left + (right - left) * 28 / 100;
+		const int jointWidth = (right - groupRight) / 3;
+		for (int group = 0; group < 2; ++group)
+		{
+			const int first = group * 3;
+			const int row = panelTop + 34 + group * 34;
+			mirrorGroups[group] = mirrorParts[first] && mirrorParts[first + 1] && mirrorParts[first + 2];
+			const std::string groupId = "pose/mirror/group/" + std::to_string(group);
+			root.AddCheckbox(groupId, {left, row, groupRight, row + 30},
+				group == 0 ? "腕全体" : "脚全体", mirrorGroups[group], true, 16.0f);
+
+			for (int joint = 0; joint < 3; ++joint)
+			{
+				const int index = first + joint;
+				const int x = groupRight + joint * jointWidth;
+				root.AddCheckbox("pose/mirror/joint/" + std::to_string(index), {x, row, x + jointWidth, row + 30},
+					labels[index], mirrorParts[index], true, 16.0f);
+			}
+		}
+
+		const int applyY = panelTop + 106;
+		const bool hasParts = std::find(mirrorParts.begin(), mirrorParts.end(), true) != mirrorParts.end();
+		root.AddButton("pose/mirror/apply", {left, applyY, half - 4, applyY + 34}, "適用", keyed && hasParts, 16.0f);
+		root.AddButton("pose/mirror/cancel", {half + 4, applyY, right, applyY + 34}, "キャンセル", true, 16.0f);
+
+		y += MirrorPanelHeight;
+		mirrorPanelBounds = {split + 8 + left, top + 8 + pasteTop - motionPanelScroll,
+			split + 8 + right, top + 8 + y - motionPanelScroll};
+	}
 
 	const int presetTop = y;
 	heading("preset/heading", "ポーズプリセット", y);
@@ -141,7 +210,73 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 
 	if (root.WasActivated("pose/paste"))
 	{
-		status = motion.PasteWholeBodyPose(frame);
+		pastePanelOpen = !pastePanelOpen;
+		mirrorPanelOpen = false;
+		presetPanelMode = 0;
+	}
+
+	const bool pasteAll = root.WasActivated("pose/paste/all");
+	const bool pasteSelected = root.WasActivated("pose/paste/selected");
+	if (pastePanelOpen && (pasteAll || pasteSelected))
+	{
+		auto mask = motion.GetSelectedBodyParts();
+		if (pasteAll)
+		{
+			mask.fill(true);
+		}
+
+		if (std::find(mask.begin(), mask.end(), true) != mask.end())
+		{
+			preview.Stop();
+			motion.EndIkEdit(preview);
+			status = motion.PasteCopiedPose(frame, mask);
+		}
+
+		pastePanelOpen = false;
+	}
+
+	if (pastePanelOpen && (root.WasActivated("pose/paste/cancel")
+		|| !motion.HasMotionKeyframe(frame)
+		|| root.ShouldCollapseInlineSection("pose/paste", pastePanelBounds, previewRegion)))
+	{
+		pastePanelOpen = false;
+	}
+
+	if (root.WasActivated("pose/mirror"))
+	{
+		mirrorPanelOpen = !mirrorPanelOpen;
+		pastePanelOpen = false;
+		presetPanelMode = 0;
+	}
+
+	if (mirrorPanelOpen)
+	{
+		if (root.WasActivated("pose/mirror/direction"))
+		{
+			mirrorRightToLeft = !mirrorRightToLeft;
+		}
+
+		for (int group = 0; group < 2; ++group)
+		{
+			if (root.WasActivated("pose/mirror/group/" + std::to_string(group)))
+			{
+				std::fill_n(mirrorParts.begin() + group * 3, 3, mirrorGroups[group]);
+			}
+		}
+
+		if (root.WasActivated("pose/mirror/apply"))
+		{
+			preview.Stop();
+			motion.EndIkEdit(preview);
+			status = motion.MirrorPose(preview, frame, mirrorRightToLeft, mirrorParts);
+			mirrorPanelOpen = false;
+		}
+
+		if (root.WasActivated("pose/mirror/cancel") || !motion.HasMotionKeyframe(frame)
+			|| root.ShouldCollapseInlineSection("pose/mirror", mirrorPanelBounds, previewRegion))
+		{
+			mirrorPanelOpen = false;
+		}
 	}
 
 	if (root.WasActivated("gizmo/rotate"))
@@ -187,13 +322,17 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 	if (root.WasActivated("preset/save"))
 	{
 		preview.Stop();
+		pastePanelOpen = false;
 		presetPanelMode = presetPanelMode == 1 ? 0 : 1;
+		mirrorPanelOpen = false;
 	}
 
 	if (root.WasActivated("preset/load"))
 	{
 		preview.Stop();
+		pastePanelOpen = false;
 		presetPanelMode = presetPanelMode == 2 ? 0 : 2;
+		mirrorPanelOpen = false;
 		presetIndex = 0;
 		presetIds = {"__IdlePose__"};
 		presetNames = {"待機姿勢"};
@@ -211,7 +350,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 	}
 
 	// 仮ボタンは通常の濃さで描き、未実装の機能を実行したようには見せない。
-	for (const char *id : {"pose/mirror", "motionPreset/save", "motionPreset/load"})
+	for (const char *id : {"motionPreset/save", "motionPreset/load"})
 	{
 		if (root.WasActivated(id))
 		{

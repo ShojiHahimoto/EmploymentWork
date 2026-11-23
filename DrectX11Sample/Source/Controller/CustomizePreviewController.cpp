@@ -756,6 +756,41 @@ bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 	return true;
 }
 
+/// <summary>補助ボーンを含む実親階層から、親の基準回転を合成する。</summary>
+/// <param name="part">編集部位番号。</param>
+/// <param name="basis">親座標からモデル座標への基準回転。</param>
+/// <returns>部位と親階層が有効ならtrue。</returns>
+bool CustomizePreviewController::GetBodyPartBindParentBasis(int part, Matrix& basis) const
+{
+	const auto* model = ModelResourceManager::GetModel(PreviewModelKey);
+	if (!model || part < 0 || part >= MotionBodyPartCount)
+	{
+		return false;
+	}
+
+	const int bone = MotionSkeleton::FindModelBoneIndex(*model, MotionSkeleton::GetBodyPartName(part));
+	if (bone < 0)
+	{
+		return false;
+	}
+
+	const auto& bones = model->GetBones();
+	basis = Matrix::Identity;
+	for (int child = bone; bones[child].parentIndex >= 0;)
+	{
+		const int parent = bones[child].parentIndex;
+		if (parent >= child)
+		{
+			return false;
+		}
+
+		basis *= Matrix::CreateFromQuaternion(bones[parent].bindLocalRotation);
+		child = parent;
+	}
+
+	return true;
+}
+
 bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion &rotation) const
 {
 	const auto *model = ModelResourceManager::GetModel(PreviewModelKey);

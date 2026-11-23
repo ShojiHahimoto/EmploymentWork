@@ -96,6 +96,10 @@ void CustomizeEditorUI::Reset()
 	presetPanelMode = 0;
 	presetName.clear();
 	presetPanelBounds = {};
+	pastePanelOpen = false;
+	mirrorPanelOpen = false;
+	mirrorRightToLeft = true;
+	mirrorParts.fill(false);
 	message.clear();
 	previewToolbarRects.clear();
 }
@@ -366,7 +370,13 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	previewToolbarRects.clear();
 	message = UserNotification(status);
 
-	const bool hadPresetPanel = presetPanelMode != 0;
+	if (!motionScreen)
+	{
+		pastePanelOpen = false;
+		mirrorPanelOpen = false;
+	}
+
+	const bool hadInlinePanel = presetPanelMode != 0 || pastePanelOpen || mirrorPanelOpen;
 	multipleSelectionEnabled = motion.IsMultipleSelectionEnabled();
 	motionName = motion.GetDisplayNameBuffer().data();
 
@@ -789,10 +799,12 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		return;
 	}
 
-	if (hadPresetPanel && !input.composing &&
+	if (hadInlinePanel && !input.composing &&
 		(input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)]))
 	{
 		presetPanelMode = 0;
+		pastePanelOpen = false;
+		mirrorPanelOpen = false;
 	}
 
 	if (root.WasActivated("undo"))
@@ -824,7 +836,8 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 		return;
 	}
 
-	if (!hadPresetPanel && presetPanelMode == 0 && !hadKeyboardCapture && !input.composing &&
+	if (!hadInlinePanel && !pastePanelOpen && !mirrorPanelOpen && presetPanelMode == 0
+		&& !hadKeyboardCapture && !input.composing &&
 		(input.cancelPressed || input.keysPressed[static_cast<size_t>(GameUI::Key::Escape)]))
 	{
 		requestedAction = controller.RequestBack();
@@ -840,6 +853,8 @@ void CustomizeEditorUI::ResetAfterHistory()
 {
 	root = GameUI::Root{};
 	presetPanelMode = 0;
+	pastePanelOpen = false;
+	mirrorPanelOpen = false;
 	timelineDragging = false;
 	suppressInputOnce = true;
 	// スクロール・マーカー表示・編集トラックは利用者の操作状態として維持する。

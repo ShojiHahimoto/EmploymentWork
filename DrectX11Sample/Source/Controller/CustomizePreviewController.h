@@ -141,6 +141,12 @@ class CustomizePreviewController
 	/// <param name="part">編集部位。</param><param name="rotation">取得先。</param><returns>取得成功時true。</returns>
 	bool GetBodyPartBindRotation(int part, DirectX::SimpleMath::Quaternion &rotation) const;
 
+	/// <summary>実ボーンの親からモデル座標への基準回転を取得する。</summary>
+	/// <param name="part">編集部位番号。</param>
+	/// <param name="basis">取得した回転行列。</param>
+	/// <returns>部位と親階層が有効ならtrue。</returns>
+	bool GetBodyPartBindParentBasis(int part, DirectX::SimpleMath::Matrix& basis) const;
+
 	/// <summary>
 	/// IK 数値ドラッグ用に固定していた基準姿勢を破棄する。
 	/// </summary>
