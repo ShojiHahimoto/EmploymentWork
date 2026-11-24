@@ -20,7 +20,7 @@ enum class CustomizeAttackEditorAction
 /// <summary>
 /// 編集画面が一時的に扱う技データと、硬直差入力値のスナップショット。
 /// </summary>
-struct CustomizeAttackEditorEditState
+struct AttackEditState
 {
 	AttackData attackData;		 // 表示側が編集する技パラメータのコピー。
 	int hitFrameAdvantage = 0;	 // 実行時スタン値ではなく編集UIの硬直差入力値。
@@ -44,8 +44,8 @@ class CustomizeAttackEditorController
 
 	std::string SaveDraft();
 
-	CustomizeAttackEditorEditState GetEditState() const;
-	void ApplyEditState(const CustomizeAttackEditorEditState &editState);
+	AttackEditState GetEditState() const;
+	void ApplyEditState(const AttackEditState &editState);
 	CustomizeAttackEditorAction RequestOpenMotionEditor();
 	CustomizeAttackEditorAction RequestBack() const;
 
@@ -94,11 +94,9 @@ class CustomizeAttackEditorController
 	void FromFrameAdvantageToStunFrames();
 	void NormalizeDraftForSelectedCategory();
 
-	AttackData draft;
+	AttackEditState state;
 	std::array<char, AttackNameBufferSize> displayNameBuffer = {};
 	std::array<char, MotionDataIdBufferSize> motionDataIdBuffer = {};
-	int hitFrameAdvantage = 0;
-	int guardFrameAdvantage = 0;
 	std::string editingAttackDataId;
 	CustomizeAttackCategory selectedCategory = CustomizeAttackCategory::Ground;
 	int selectedSlotIndex = 0;

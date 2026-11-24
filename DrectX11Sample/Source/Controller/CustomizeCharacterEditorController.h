@@ -4,12 +4,17 @@
 #include "Data/CharacterData.h"
 
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
 
-/// <summary>
-/// カスタマイズ画面の CharacterData 下書き、技スロット割り当て、保存/読込を管理する。
-/// </summary>
+struct CustomizeCharacterSlotSelection
+{
+	std::optional<int> slotIndex;
+	bool backRequested = false;
+};
+
+/// <summary>CharacterData の下書き、技の割り当て、保存と読み込みを管理する。</summary>
 class CustomizeCharacterEditorController
 {
   public:
@@ -17,7 +22,7 @@ class CustomizeCharacterEditorController
 	static constexpr int AttackButtonSlotCount = 4;
 	static constexpr int CharacterNameBufferSize = 128;
 
-	CustomizeMode DrawSlotSelect(std::string &statusMessage);
+	CustomizeCharacterSlotSelection DrawSlotSelect();
 
 	CustomizeMode DrawEditor(std::string &statusMessage);
 

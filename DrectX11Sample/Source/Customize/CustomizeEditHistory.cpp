@@ -30,9 +30,9 @@ template <class T, class F> bool EqualItems(const std::vector<T> &a, const std::
 /// <param name="a">比較元。</param>
 /// <param name="b">比較先。</param>
 /// <returns>一致すればtrue。</returns>
-bool EqualAttack(const CustomizeAttackEditorEditState &a, const CustomizeAttackEditorEditState &b)
+bool EqualAttack(const AttackEditState &a, const AttackEditState &b)
 {
-	const auto fields = [](const CustomizeAttackEditorEditState &s)
+	const auto fields = [](const AttackEditState &s)
 	{
 		const auto &d = s.attackData;
 

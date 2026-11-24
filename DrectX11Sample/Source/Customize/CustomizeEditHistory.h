@@ -9,7 +9,7 @@
 /// <summary>Undo対象の下書き。リソースやカメラを複製せず、表示フレームだけを復元用に添える。</summary>
 struct CustomizeEditSnapshot
 {
-	CustomizeAttackEditorEditState attack;
+	AttackEditState attack;
 	MotionData motion;
 	bool commonMotion = false;
 	int previewFrame = 0; // 比較対象ではなく、その操作を確認するための表示位置。

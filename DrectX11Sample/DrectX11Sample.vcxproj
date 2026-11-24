@@ -45,6 +45,7 @@
     <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeAttackFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
     <ClCompile Include="Source\Customize\CustomizeEditHistory.cpp" />
     <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp" />
@@ -53,7 +54,9 @@
     <ClCompile Include="Source\Controller\ResultPresentationController.cpp" />
     <ClCompile Include="Source\Controller\TitleMenuController.cpp" />
     <ClCompile Include="Source\Controller\TitleNavigationController.cpp" />
-    <ClCompile Include="Source\Scene\CustomizeScene.cpp" />
+    <ClCompile Include="Source\Scene\CustomizeSelectScene.cpp" />
+    <ClCompile Include="Source\Scene\CustomizeAttackScene.cpp" />
+    <ClCompile Include="Source\Scene\CustomizeCharacterScene.cpp" />
     <ClCompile Include="Source\Scene\ResultScene.cpp" />
     <ClCompile Include="Source\Manager\SceneManager.cpp" />
     <ClCompile Include="Source\Scene\TitleScene.cpp" />
@@ -145,6 +148,7 @@
     <ClInclude Include="Source\UI\UITheme.h" />
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
     <ClInclude Include="Source\Controller\CustomizeFlowController.h" />
+    <ClInclude Include="Source\Controller\CustomizeAttackFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />
     <ClInclude Include="Source\Customize\KeyframeEditing.h" />
     <ClInclude Include="Source\Customize\CustomizeEditHistory.h" />
@@ -156,7 +160,9 @@
     <ClCompile Include="Source\Controller\TitlePresentationController.cpp" />
     <None Include="assets\TitlePresentation.json" />
     <ClInclude Include="Source\Controller\TitleNavigationController.h" />
-    <ClInclude Include="Source\Scene\CustomizeScene.h" />
+    <ClInclude Include="Source\Scene\CustomizeSelectScene.h" />
+    <ClInclude Include="Source\Scene\CustomizeAttackScene.h" />
+    <ClInclude Include="Source\Scene\CustomizeCharacterScene.h" />
     <ClInclude Include="Source\Scene\ResultScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Manager\SceneManager.h" />

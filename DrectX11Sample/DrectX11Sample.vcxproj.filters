@@ -207,6 +207,9 @@
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeAttackFlowController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
@@ -228,7 +231,13 @@
     <ClCompile Include="Source\Controller\TitleNavigationController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scene\CustomizeScene.cpp">
+    <ClCompile Include="Source\Scene\CustomizeSelectScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\CustomizeAttackScene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\CustomizeCharacterScene.cpp">
       <Filter>ソース ファイル\Scene</Filter>
     </ClCompile>
     <ClCompile Include="Source\Scene\ResultScene.cpp">
@@ -548,6 +557,9 @@
     <ClInclude Include="Source\Controller\CustomizeFlowController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeAttackFlowController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
@@ -572,7 +584,13 @@
     <ClInclude Include="Source\Controller\TitleNavigationController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scene\CustomizeScene.h">
+    <ClInclude Include="Source\Scene\CustomizeSelectScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\CustomizeAttackScene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\CustomizeCharacterScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
     <ClInclude Include="Source\Scene\ResultScene.h">

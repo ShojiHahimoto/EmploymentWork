@@ -4,7 +4,7 @@
 #include "Input/InputTypes.h"
 #include "Scene/BattleScene.h"
 #include "Scene/BattleSetupScene.h"
-#include "Scene/CustomizeScene.h"
+#include "Scene/CustomizeSelectScene.h"
 #include "Manager/SceneManager.h"
 #include "Core/Application.h"
 
@@ -82,12 +82,12 @@ void TitleNavigationController::RequestBattleSetupScene()
 }
 
 /// <summary>
-/// タイトルから CustomizeScene への切り替えを予約する。
+/// タイトルからカスタマイズ選択シーンへの切り替えを予約する。
 /// </summary>
 void TitleNavigationController::RequestCustomizeScene()
 {
 	SceneManager::GetInstance().RequestChangeScene(
-		std::make_unique<CustomizeScene>(
+		std::make_unique<CustomizeSelectScene>(
 			static_cast<int>(Application::GetWidth()),
 			static_cast<int>(Application::GetHeight())));
 }

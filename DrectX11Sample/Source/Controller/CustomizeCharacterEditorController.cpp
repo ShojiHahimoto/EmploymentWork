@@ -79,11 +79,10 @@ std::string BuildAttackDataIdFromPath(const std::filesystem::path &attackPath)
 } // namespace
 
 /// <summary>キャラクタースロット選択画面を描画する。</summary>
-/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
-/// <returns>次に表示する CustomizeMode。</returns>
-CustomizeMode CustomizeCharacterEditorController::DrawSlotSelect(std::string &statusMessage)
+/// <returns>選択されたスロット番号、または戻る操作。</returns>
+CustomizeCharacterSlotSelection CustomizeCharacterEditorController::DrawSlotSelect()
 {
-	CustomizeMode nextMode = CustomizeMode::CharacterSlotSelect;
+	CustomizeCharacterSlotSelection selection;
 
 	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(560.0f, 420.0f), ImGuiCond_FirstUseEver);
@@ -105,8 +104,7 @@ CustomizeMode CustomizeCharacterEditorController::DrawSlotSelect(std::string &st
 
 			if (ImGui::Button(label.c_str(), ImVec2(170.0f, 58.0f)))
 			{
-				statusMessage = SelectSlot(slotIndex);
-				nextMode = CustomizeMode::CharacterEditor;
+				selection.slotIndex = slotIndex;
 			}
 
 			ImGui::PopID();
@@ -121,13 +119,13 @@ CustomizeMode CustomizeCharacterEditorController::DrawSlotSelect(std::string &st
 
 		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
 		{
-			nextMode = CustomizeMode::MainMenu;
+			selection.backRequested = true;
 		}
 	}
 
 	ImGui::End();
 
-	return nextMode;
+	return selection;
 }
 
 /// <summary>キャラクター名と各攻撃ボタンの技割り当て編集画面を描画する。</summary>

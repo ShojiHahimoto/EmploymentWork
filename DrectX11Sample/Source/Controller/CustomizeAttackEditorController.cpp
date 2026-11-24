@@ -145,43 +145,43 @@ std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory 
 	std::string statusMessage;
 	const bool hasSavedData = std::filesystem::exists(BuildAttackDataPath(editingAttackDataId));
 
-	if (!hasSavedData || !CharacterDataLoader::LoadAttackData(editingAttackDataId, draft))
+	if (!hasSavedData || !CharacterDataLoader::LoadAttackData(editingAttackDataId, state.attackData))
 	{
-		draft = CreateDefaultAttackData(category, slotIndex, editingAttackDataId);
+		state.attackData = CreateDefaultAttackData(category, slotIndex, editingAttackDataId);
 		statusMessage = "New draft created.";
 	}
 	else
 	{
-		draft.attackDataId = editingAttackDataId;
+		state.attackData.attackDataId = editingAttackDataId;
 		statusMessage = "Loaded existing attack data.";
 	}
 
-	if (draft.hitboxes.empty())
+	if (state.attackData.hitboxes.empty())
 	{
-		draft.hitboxes.push_back(AttackHitboxData{});
+		state.attackData.hitboxes.push_back(AttackHitboxData{});
 	}
 
-	draft.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
+	state.attackData.attackKind = category == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
 
 	if (category == CustomizeAttackCategory::Special)
 	{
-		if (draft.usableState != AttackUsableState::Air)
+		if (state.attackData.usableState != AttackUsableState::Air)
 		{
-			draft.usableState = AttackUsableState::Ground;
+			state.attackData.usableState = AttackUsableState::Ground;
 		}
 	}
 	else
 	{
-		draft.commandId = AttackCommandId::None;
-		draft.usableState = GetFixedNormalUsableState(category);
+		state.attackData.commandId = AttackCommandId::None;
+		state.attackData.usableState = GetFixedNormalUsableState(category);
 	}
 
-	if (draft.usableState == AttackUsableState::Air)
+	if (state.attackData.usableState == AttackUsableState::Air)
 	{
-		draft.hitReactionType = HitReactionType::Normal;
+		state.attackData.hitReactionType = HitReactionType::Normal;
 	}
 
-	ClampAttackDataValues(draft);
+	ClampAttackDataValues(state.attackData);
 	FromStunFramesToFrameAdvantage();
 
 	EnsureDraftMotionDataId();
@@ -197,7 +197,7 @@ std::string CustomizeAttackEditorController::SaveDraft()
 {
 	SyncDraftFromEditor();
 
-	if (AttackDataSaver::SaveAttackData(editingAttackDataId, draft))
+	if (AttackDataSaver::SaveAttackData(editingAttackDataId, state.attackData))
 	{
 		RefreshSlotSummaries(selectedCategory);
 
@@ -209,21 +209,19 @@ std::string CustomizeAttackEditorController::SaveDraft()
 
 /// <summary>UI 表示用に、編集中データのコピーを取得する。</summary>
 /// <returns>表示・編集に使う一時スナップショット。</returns>
-CustomizeAttackEditorEditState CustomizeAttackEditorController::GetEditState() const
+AttackEditState CustomizeAttackEditorController::GetEditState() const
 {
-	return CustomizeAttackEditorEditState{draft, hitFrameAdvantage, guardFrameAdvantage};
+	return state;
 }
 
 /// <summary>編集結果を検証・正規化して下書きへ反映する。</summary>
 /// <param name="editState">表示側が編集した一時データ。</param>
-void CustomizeAttackEditorController::ApplyEditState(const CustomizeAttackEditorEditState &editState)
+void CustomizeAttackEditorController::ApplyEditState(const AttackEditState &editState)
 {
-	draft = editState.attackData;
-	hitFrameAdvantage = editState.hitFrameAdvantage;
-	guardFrameAdvantage = editState.guardFrameAdvantage;
-	draft.attackDataId = editingAttackDataId;
-	FromFrameAdvantageToStunFrames();
+	state = editState;
+	state.attackData.attackDataId = editingAttackDataId;
 	NormalizeDraftForSelectedCategory();
+
 	CopyDisplayNameToBuffer();
 	CopyMotionDataIdToBuffer();
 }
@@ -248,9 +246,9 @@ CustomizeAttackEditorAction CustomizeAttackEditorController::RequestBack() const
 /// <remarks>編集入力バッファの内容を下書きへ確定する。</remarks>
 void CustomizeAttackEditorController::SyncDraftFromEditor()
 {
-	draft.attackDataId = editingAttackDataId;
-	draft.displayName = displayNameBuffer.data();
-	draft.motionDataId = motionDataIdBuffer.data();
+	state.attackData.attackDataId = editingAttackDataId;
+	state.attackData.displayName = displayNameBuffer.data();
+	state.attackData.motionDataId = motionDataIdBuffer.data();
 	EnsureDraftMotionDataId();
 	NormalizeDraftForSelectedCategory();
 }
@@ -258,52 +256,54 @@ void CustomizeAttackEditorController::SyncDraftFromEditor()
 void CustomizeAttackEditorController::NormalizeDraftForSelectedCategory()
 {
 	FromFrameAdvantageToStunFrames();
-	draft.attackKind = selectedCategory == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
+
+	state.attackData.attackKind =
+		selectedCategory == CustomizeAttackCategory::Special ? AttackKind::Special : AttackKind::Normal;
 
 	if (selectedCategory == CustomizeAttackCategory::Special)
 	{
-		if (draft.usableState != AttackUsableState::Air)
+		if (state.attackData.usableState != AttackUsableState::Air)
 		{
-			draft.usableState = AttackUsableState::Ground;
+			state.attackData.usableState = AttackUsableState::Ground;
 		}
 	}
 	else
 	{
-		draft.commandId = AttackCommandId::None;
-		draft.usableState = GetFixedNormalUsableState(selectedCategory);
+		state.attackData.commandId = AttackCommandId::None;
+		state.attackData.usableState = GetFixedNormalUsableState(selectedCategory);
 	}
 
-	if (draft.usableState == AttackUsableState::Air)
+	if (state.attackData.usableState == AttackUsableState::Air)
 	{
-		draft.hitReactionType = HitReactionType::Normal;
+		state.attackData.hitReactionType = HitReactionType::Normal;
 	}
 
-	ClampAttackDataValues(draft);
+	ClampAttackDataValues(state.attackData);
 }
 
 /// <summary>draft のスタンフレームから、編集 UI 用の硬直差入力値を更新する。</summary>
 void CustomizeAttackEditorController::FromStunFramesToFrameAdvantage()
 {
-	hitFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.hitstunFrames);
-	guardFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.guardstunFrames);
+	state.hitFrameAdvantage = ConvertStunFramesToFrameAdvantage(state.attackData.frame, state.attackData.hitstunFrames);
+	state.guardFrameAdvantage = ConvertStunFramesToFrameAdvantage(state.attackData.frame, state.attackData.guardstunFrames);
 }
 
 /// <summary>編集 UI の硬直差入力値を、実行時に使うスタンフレームへ反映する。</summary>
 void CustomizeAttackEditorController::FromFrameAdvantageToStunFrames()
 {
-	draft.hitstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, hitFrameAdvantage);
-	draft.guardstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, guardFrameAdvantage);
+	state.attackData.hitstunFrames = ConvertFrameAdvantageToStunFrames(state.attackData.frame, state.hitFrameAdvantage);
+	state.attackData.guardstunFrames = ConvertFrameAdvantageToStunFrames(state.attackData.frame, state.guardFrameAdvantage);
 }
 
 /// <summary>編集中の技に、スロット単位で一意になる MotionData ID を割り当てる。</summary>
 void CustomizeAttackEditorController::EnsureDraftMotionDataId()
 {
 	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
-	const std::string previousMotionDataId = draft.motionDataId;
+	const std::string previousMotionDataId = state.attackData.motionDataId;
 
-	if (draft.motionDataId.empty() || draft.motionDataId == "debug_right_arm_wave" ||
-		draft.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex) ||
-		!IsAttackMotionDataId(draft.motionDataId) || draft.motionDataId != expectedMotionDataId)
+	if (state.attackData.motionDataId.empty() || state.attackData.motionDataId == "debug_right_arm_wave" ||
+		state.attackData.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex) ||
+		!IsAttackMotionDataId(state.attackData.motionDataId) || state.attackData.motionDataId != expectedMotionDataId)
 	{
 		const std::filesystem::path expectedPath = BuildMotionDataPath(expectedMotionDataId);
 
@@ -320,7 +320,7 @@ void CustomizeAttackEditorController::EnsureDraftMotionDataId()
 			}
 		}
 
-		draft.motionDataId = expectedMotionDataId;
+		state.attackData.motionDataId = expectedMotionDataId;
 	}
 
 	CopyMotionDataIdToBuffer();
@@ -436,12 +436,14 @@ int CustomizeAttackEditorController::GetSlotCount(CustomizeAttackCategory catego
 /// <param name="motionDataId">表示する汎用 MotionData ID。</param>
 void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::string &motionDataId)
 {
-	draft = AttackData();
-	draft.frame.startup = 2;
-	draft.frame.active = 1;
-	draft.frame.recovery = 27;
-	draft.motionDataId = motionDataId;
+	state.attackData = AttackData();
+	state.attackData.frame.startup = 2;
+	state.attackData.frame.active = 1;
+	state.attackData.frame.recovery = 27;
+	state.attackData.motionDataId = motionDataId;
+
 	FromStunFramesToFrameAdvantage();
+
 	editingAttackDataId.clear();
 	motionDataIdBuffer.fill('\0');
 	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", motionDataId.c_str());
@@ -451,14 +453,14 @@ void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::stri
 /// <returns>編集可能な AttackData 参照。</returns>
 AttackData &CustomizeAttackEditorController::GetDraft()
 {
-	return draft;
+	return state.attackData;
 }
 
 /// <summary>AttackData 下書きを取得する。</summary>
 /// <returns>読み取り専用の AttackData 参照。</returns>
 const AttackData &CustomizeAttackEditorController::GetDraft() const
 {
-	return draft;
+	return state.attackData;
 }
 
 /// <summary>編集中 AttackData ID を取得する。</summary>
@@ -545,12 +547,12 @@ AttackData CustomizeAttackEditorController::CreateDefaultAttackData(CustomizeAtt
 void CustomizeAttackEditorController::CopyDisplayNameToBuffer()
 {
 	displayNameBuffer.fill('\0');
-	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", draft.displayName.c_str());
+	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", state.attackData.displayName.c_str());
 }
 
 /// <summary>draft の MotionData ID を ImGui 入力用固定バッファへコピーする。</summary>
 void CustomizeAttackEditorController::CopyMotionDataIdToBuffer()
 {
 	motionDataIdBuffer.fill('\0');
-	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", draft.motionDataId.c_str());
+	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", state.attackData.motionDataId.c_str());
 }

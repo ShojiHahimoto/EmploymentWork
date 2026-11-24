@@ -2,39 +2,27 @@
 
 #include "Controller/CustomizeAttackEditorController.h"
 #include "Controller/CustomizeCharacterEditorController.h"
-#include "Customize/CustomizeEditHistory.h"
-#include "Controller/CustomizeMotionEditorController.h"
-#include "Controller/CustomizePreviewController.h"
 #include "Customize/CustomizeTypes.h"
-#include "Data/AttackData.h"
 #include "Core/Renderer.h"
-#include "UI/CustomizeEditorUI.h"
 #include "UI/UIRoot.h"
-#include "Core/World.h"
 
 #include <string>
 
 class CustomizeFlowController
 {
   public:
-	CustomizeFlowController(World &world, int initialWidth, int initialHeight);
+	CustomizeFlowController(int initialWidth, int initialHeight, CustomizeMode initialMode,
+		CustomizeAttackCategory category);
 
 	void Enter();
-	void Exit();
 	void Update();
-	void DrawBackdrop(Renderer &renderer);
-	void DrawPreview(Renderer &renderer);
 	void DrawInterface(Renderer &renderer);
 	void OnResize(int newWidth, int newHeight);
 	void RequestCreationMenu(bool character);
 
-	World &GetWorld();
-	const World &GetWorld() const;
-
   private:
 	static constexpr int CommonMotionSlotCount = 13;
 
-	World &world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
 	int creationMenuSelection = 0; // 0:技作成、1:キャラクター作成。今後の専用UIも共有する。
 	GameUI::Root creationMenuInput;
@@ -54,16 +42,7 @@ class CustomizeFlowController
 	int height = 0;
 
 	CustomizeAttackEditorController attackEditor;
-	CustomizeEditorUI editorUI;
-	CustomizeMotionEditorController motionEditor;
-	CustomizeEditHistory editHistory; // 攻撃/モーション画面で共有し、スロットを抜けたら破棄する。
 	CustomizeCharacterEditorController characterEditor;
-	DirectX::SimpleMath::Vector2 attackMovementKeyOffset = DirectX::SimpleMath::Vector2::Zero;
-	bool editingCommonMotion = false;
-	int selectedCommonMotionIndex = 0;
-	std::string editingCommonMotionId;
-	std::string statusMessage;
-	CustomizePreviewController previewController;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -79,30 +58,11 @@ class CustomizeFlowController
 	bool categorySubmitReady = false;
 	void DrawAttackSlotSelect();
 	void DrawCommonMotionSelect();
-	void UpdateAttackEditorControls();
-	CustomizeEditSnapshot CaptureEditSnapshot();
-	void RestoreEditSnapshot(const CustomizeEditSnapshot &snapshot);
+	void DrawCharacterSlotSelect();
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SelectCommonMotionSlot(int slotIndex);
-	void EnsureDraftAttackMotionDataId();
-	void LoadDraftMotionFromEditorId();
-	void SaveDraftMotion();
-	void InitializePreview();
-	void ReleasePreview();
-	void UpdatePreviewPlayback();
-	void RenderAttackPreview(Renderer &renderer, const RECT *region = nullptr);
-	void ClampPreviewCurrentFrame();
-
-	int GetPreviewTotalFrames() const;
-	int GetPreviewActionFrame() const;
-	const char *GetPreviewPhaseText() const;
-	std::string GetEditingMotionDataId() const;
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
 	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildCommonMotionDataId(int slotIndex) const;
-	void CopyMotionEditorBuffers();
 };

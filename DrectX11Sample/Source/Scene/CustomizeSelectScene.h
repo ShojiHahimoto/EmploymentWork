@@ -4,11 +4,13 @@
 #include "Scene/Scene.h"
 #include "Core/World.h"
 
-class CustomizeScene : public Scene
+class CustomizeSelectScene : public Scene
 {
   public:
-	CustomizeScene(int initialWidth, int initialHeight);
-	~CustomizeScene() override = default;
+	CustomizeSelectScene(int initialWidth, int initialHeight,
+		CustomizeMode initialMode = CustomizeMode::MainMenu,
+		CustomizeAttackCategory category = CustomizeAttackCategory::Ground);
+	~CustomizeSelectScene() override = default;
 
 	void Enter() override;
 	void Exit() override;
