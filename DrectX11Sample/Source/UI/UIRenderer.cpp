@@ -23,6 +23,9 @@
 
 namespace GameUI
 {
+/// <summary>画像の横幅と高さの比率を返す。</summary>
+/// <param name="imageId">登録された画像名。</param>
+/// <returns>横幅/高さ。未登録の場合は1。</returns>
 float UIRenderer::GetImageAspectRatio(std::string_view imageId)
 {
 	const auto found = imageAssets.find(std::string(imageId));
@@ -370,6 +373,11 @@ IDWriteTextFormat *GetTextFormat(float requestedSize, bool bold = false)
 }
 } // namespace
 
+/// <summary>Direct2D、DirectWrite、WICと画面合成用テクスチャを初期化する。</summary>
+/// <param name="d3dDevice">描画テクスチャを作るDirect3D11デバイス。</param>
+/// <param name="width">クライアント領域の幅。</param>
+/// <param name="height">クライアント領域の高さ。</param>
+/// <returns>必要な描画リソースをすべて作成できた場合はtrue。</returns>
 bool UIRenderer::Initialize(ID3D11Device *d3dDevice, int width, int height)
 {
 	Shutdown();
@@ -417,6 +425,7 @@ bool UIRenderer::Initialize(ID3D11Device *d3dDevice, int width, int height)
 	return true;
 }
 
+/// <summary>ウィンドウ終了時にUI描画リソースを解放する。</summary>
 void UIRenderer::Shutdown()
 {
 	initialized = false;
@@ -434,6 +443,10 @@ void UIRenderer::Shutdown()
 	}
 }
 
+/// <summary>ウィンドウサイズに合わせて合成先を作り直す。</summary>
+/// <param name="width">新しいクライアント領域の幅。</param>
+/// <param name="height">新しいクライアント領域の高さ。</param>
+/// <returns>新しいサイズのリソースを作成できた場合はtrue。</returns>
 bool UIRenderer::Resize(int width, int height)
 {
 	if (!device || width <= 0 || height <= 0)
@@ -452,6 +465,9 @@ bool UIRenderer::Resize(int width, int height)
 	return initialized;
 }
 
+/// <summary>画像一覧JSONを読み、PNGのWICソースとDirect2D描画用ビットマップをキャッシュする。</summary>
+/// <param name="manifestPath">UI画像メタデータJSONへのパス。</param>
+/// <returns>一覧を読み込み、少なくとも1枚の画像を利用可能にできた場合はtrue。</returns>
 bool UIRenderer::LoadAssets(const std::string& manifestPath)
 {
 	if (!imagingFactory || !surfaceTarget) return false;
@@ -551,6 +567,7 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 	return true;
 }
 
+/// <summary>画像キャッシュだけを解放する。</summary>
 void UIRenderer::UnloadAssets()
 {
 	imageAssets.clear();
@@ -570,6 +587,9 @@ bool UIRenderer::CreateTargetBitmaps()
 	return true;
 }
 
+/// <summary>矩形・文字・画像の描画要求を登録順に合成し、透明なUIレイヤーとして画面へ描く。</summary>
+/// <param name="renderer">最終合成に使うDirect3D11レンダラー。</param>
+/// <param name="commands">矩形・文字・画像の描画要求。</param>
 void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &commands)
 {
 	if (!initialized || commands.empty())
@@ -707,17 +727,27 @@ void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &comman
 	renderer.DrawFullscreenTexture(compositeTextureView.Get(), surfaceWidth, surfaceHeight);
 }
 
+/// <summary>描画リソースが利用可能か返す。</summary>
+/// <returns>初期化済みならtrue。</returns>
 bool UIRenderer::IsInitialized()
 {
 	return initialized;
 }
 
+/// <summary>名前付きUI画像がロード済みか確認する。</summary>
+/// <param name="imageId">画像一覧JSONに登録された画像名。</param>
+/// <returns>描画可能なDirect2Dビットマップがあればtrue。</returns>
 bool UIRenderer::HasImage(std::string_view imageId)
 {
 	const auto image = imageAssets.find(std::string(imageId));
 	return image != imageAssets.end() && image->second.targetBitmap != nullptr;
 }
 
+/// <summary>描画に使うフォントサイズで文字列の横幅を測る。</summary>
+/// <param name="text">測定するUTF-16文字列。</param>
+/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+/// <param name="bold">太字フォントを測る場合はtrue。</param>
+/// <returns>文字列の横幅。描画前または失敗時は0。</returns>
 float UIRenderer::MeasureText(std::wstring_view text, float fontSize, bool bold)
 {
 	if (!initialized || text.empty())

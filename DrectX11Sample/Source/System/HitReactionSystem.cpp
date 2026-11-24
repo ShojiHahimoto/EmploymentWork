@@ -229,6 +229,8 @@ namespace
 	}
 }
 
+/// <summary>HitResolveSystem が確定した被弾反応を、座標補正や吹き飛び Velocity へ変換する。</summary>
+/// <param name="world">被弾反応リクエストと対象 Component を保持する World。</param>
 void HitReactionSystem::Update(World& world)
 {
 	const std::vector<HitReactionRequest> requests = world.GetHitReactionRequests();

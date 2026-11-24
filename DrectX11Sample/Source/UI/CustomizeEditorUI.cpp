@@ -60,6 +60,8 @@ template <class T, size_t N> int IndexOf(const T (&values)[N], const T &value)
 }
 } // namespace
 
+/// <summary>専用UIで継続中のデータ入力を履歴へ通知する。</summary>
+/// <returns>プリセット操作は単発、それ以外は入力欄の操作単位。</returns>
 GameUI::Root::EditInteraction CustomizeEditorUI::GetEditInteraction() const
 {
 	auto interaction = root.GetEditInteraction();
@@ -72,21 +74,28 @@ GameUI::Root::EditInteraction CustomizeEditorUI::GetEditInteraction() const
 	return interaction;
 }
 
+/// <summary>移動キー編集を選択中か取得する。関節IKとは別の編集対象。</summary>
+/// <returns>全身移動トラック選択時true。</returns>
 bool CustomizeEditorUI::IsMovementSelected() const
 {
 	return movementSelected;
 }
 
+/// <summary>関節マーカーと接続線を表示するか取得する。選択状態とは独立。</summary>
+/// <returns>マーカー表示が有効ならtrue。</returns>
 bool CustomizeEditorUI::AreMarkersVisible() const
 {
 	return showMarkers;
 }
 
+/// <summary>当フレームに実際に描画したツールバー部品の範囲を取得する。</summary>
+/// <returns>非表示の行や部品間の空白を含まない除外範囲。</returns>
 const std::vector<RECT> &CustomizeEditorUI::PreviewToolbarExclusions() const
 {
 	return previewToolbarRects;
 }
 
+/// <summary>別スロットへ入る際にフォーカスとスクロールを初期化する。</summary>
 void CustomizeEditorUI::Reset()
 {
 	root = GameUI::Root{};
@@ -104,6 +113,9 @@ void CustomizeEditorUI::Reset()
 	previewToolbarRects.clear();
 }
 
+/// <summary>内部の英語ステータスを直接UIへ出さず、必要な通知だけ日本語へ変換する。</summary>
+/// <param name="status">Controllerの処理結果。</param>
+/// <returns>表示用通知。通常の内部進捗は空文字列。</returns>
 std::string CustomizeEditorUI::UserNotification(const std::string &status)
 {
 	if (status.empty())
@@ -150,11 +162,19 @@ std::string CustomizeEditorUI::UserNotification(const std::string &status)
 	return {};
 }
 
+/// <summary>UIと重ならないプレビュー矩形を求める。</summary>
+/// <param name="width">画面幅。</param>
+/// <param name="height">画面高さ。</param>
+/// <returns>クライアント座標のプレビュー範囲。</returns>
 RECT CustomizeEditorUI::PreviewRegion(int width, int height)
 {
 	return MakeRegions(width, height).preview;
 }
 
+/// <summary>白系キャンバスとプレビュー枠を3Dモデルより先に描画する。</summary>
+/// <param name="renderer">専用UIの描画先。</param>
+/// <param name="width">画面幅。</param>
+/// <param name="height">画面高さ。</param>
 void CustomizeEditorUI::DrawBackdrop(Renderer &renderer, int width, int height) const
 {
 
@@ -171,6 +191,8 @@ void CustomizeEditorUI::DrawBackdrop(Renderer &renderer, int width, int height) 
 	backdrop.Draw(renderer);
 }
 
+/// <summary>見出しを追加し、次の行へ進む。</summary>
+/// <param name="text">見出し。</param>
 void CustomizeEditorUI::Section(const char *text)
 {
 	if (rowY > 0)
@@ -185,6 +207,10 @@ void CustomizeEditorUI::Section(const char *text)
 	rowY += 32;
 }
 
+/// <summary>ラベル付き行を確保する。</summary>
+/// <param name="id">部品識別子。</param>
+/// <param name="label">日本語ラベル。</param>
+/// <returns>右側の入力欄矩形。</returns>
 GameUI::Rect CustomizeEditorUI::Row(const std::string &id, const char *label)
 {
 	const int split = panelWidth * 25 / 100;
@@ -195,11 +221,19 @@ GameUI::Rect CustomizeEditorUI::Row(const std::string &id, const char *label)
 	return result;
 }
 
+/// <summary>整数入力行を追加する。</summary>
+/// <param name="id">部品識別子。</param>
+/// <param name="label">表示名。</param>
+/// <param name="value">編集値。</param>
+/// <param name="minimum">最小値。</param>
+/// <param name="maximum">最大値。</param>
 void CustomizeEditorUI::Integer(const char *id, const char *label, int &value, int minimum, int maximum)
 {
 	root.AddIntegerInput(id, Row(id, label), value, minimum, maximum);
 }
 
+/// <summary>基本情報、フレーム設定、硬直差の編集欄を登録する。</summary>
+/// <param name="category">通常地上・通常空中・必殺技の区別。</param>
 void CustomizeEditorUI::BuildParameters(CustomizeAttackCategory category)
 {
 	auto &data = edit.attackData;
@@ -249,6 +283,8 @@ void CustomizeEditorUI::BuildParameters(CustomizeAttackCategory category)
 	}
 }
 
+/// <summary>技の種類、被弾時の挙動、必殺技コマンドを独立した欄へ登録する。</summary>
+/// <param name="category">編集中の技分類。</param>
 void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 {
 	auto &data = edit.attackData;
@@ -282,6 +318,7 @@ void CustomizeEditorUI::BuildBehavior(CustomizeAttackCategory category)
 	}
 }
 
+/// <summary>各攻撃判定の位置とサイズ、追加削除操作を登録する。</summary>
 void CustomizeEditorUI::BuildHitboxes()
 {
 	Section("攻撃判定");
@@ -325,6 +362,7 @@ void CustomizeEditorUI::BuildHitboxes()
 	rowY += 34;
 }
 
+/// <summary>内部0始まりのキャンセル設定を表示上1始まりで登録する。</summary>
 void CustomizeEditorUI::BuildCancel()
 {
 	Section("キャンセル設定");
@@ -359,6 +397,13 @@ CustomizeAttackEditorAction CustomizeEditorUI::GetRequestedAction() const
 	return requestedAction;
 }
 
+/// <summary>部品を登録し、当フレームの入力を一度だけ編集Controllerへ反映する。</summary>
+/// <param name="controller">技の下書き・保存を管理するController。</param>
+/// <param name="preview">再生状態を管理するController。</param>
+/// <param name="width">画面幅。</param>
+/// <param name="height">画面高さ。</param>
+/// <param name="status">既存画面と共有する保存結果。</param>
+/// <remarks>画面遷移・保存要求はGetRequestedActionで取得する。</remarks>
 void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, CustomizePreviewController &preview,
 							   int width, int height, std::string &status, CustomizeMotionEditorController &motion,
 							   bool motionScreen, bool commonMotion, bool canUndo, bool canRedo)
@@ -844,11 +889,14 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	}
 }
 
+/// <summary>更新済みのUIだけを描画する。入力処理は行わない。</summary>
+/// <param name="renderer">専用UIの描画先。</param>
 void CustomizeEditorUI::Draw(Renderer &renderer) const
 {
 	root.Draw(renderer);
 }
 
+/// <summary>履歴復元後に古い入力バッファとドラッグ捕捉だけを捨てる。</summary>
 void CustomizeEditorUI::ResetAfterHistory()
 {
 	root = GameUI::Root{};

@@ -234,6 +234,8 @@ namespace
 	}
 }
 
+/// <summary>HitCollisionSystem が収集したヒット結果を、State や HitBox の結果へ確定する。</summary>
+/// <param name="world">ヒット結果と Component を保持する World。</param>
 void HitResolveSystem::Update(World& world)
 {
 	const std::vector<HitCollisionResult> results = world.GetHitCollisionResults();

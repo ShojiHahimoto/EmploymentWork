@@ -33,52 +33,17 @@ struct PosePresetData
 class PosePresetStore
 {
 public:
-	/// <summary>
-	/// 保存済みプリセット ID の一覧を assets/PosePreset から取得する。
-	/// </summary>
-	/// <returns>拡張子なしのプリセット ID 一覧。</returns>
 	static std::vector<std::string> ListPresetIds();
 
-	/// <summary>
-	/// 指定 ID の姿勢プリセットを読み込む。
-	/// </summary>
-	/// <param name="presetId">assets/PosePreset 配下の拡張子なし ID。</param>
-	/// <param name="outPreset">読み込んだプリセットの書き込み先。</param>
-	/// <returns>読み込みに成功した場合は true。</returns>
 	static bool LoadPreset(const std::string& presetId, PosePresetData& outPreset);
 
-	/// <summary>
-	/// 姿勢プリセットを assets/PosePreset 配下へ保存する。
-	/// </summary>
-	/// <param name="presetId">保存先の拡張子なし ID。</param>
-	/// <param name="preset">保存するプリセット。</param>
-	/// <returns>保存に成功した場合は true。</returns>
 	static bool SavePreset(const std::string& presetId, const PosePresetData& preset);
 
-	/// <summary>
-	/// 新規保存に使う ASCII の安全なプリセット ID を作成する。
-	/// </summary>
-	/// <returns>既存ファイルと衝突しない pose_XXXX 形式の ID。</returns>
 	static std::string CreateUniquePresetId();
 
-	/// <summary>
-	/// 表示名が既存プリセットと重複しているか確認する。
-	/// </summary>
-	/// <param name="displayName">確認する表示名。</param>
-	/// <returns>同じ表示名のプリセットが既に存在する場合は true。</returns>
 	static bool DisplayNameExists(const std::string& displayName);
 
-	/// <summary>
-	/// 指定 ID のプリセットファイルが既に存在するか確認する。
-	/// </summary>
-	/// <param name="presetId">確認する拡張子なし ID。</param>
-	/// <returns>同名プリセットが存在する場合は true。</returns>
 	static bool Exists(const std::string& presetId);
 
-	/// <summary>
-	/// ファイル名として危険な文字を含まないプリセット ID か確認する。
-	/// </summary>
-	/// <param name="presetId">確認するプリセット ID。</param>
-	/// <returns>保存 ID として使える場合は true。</returns>
 	static bool IsValidPresetId(const std::string& presetId);
 };

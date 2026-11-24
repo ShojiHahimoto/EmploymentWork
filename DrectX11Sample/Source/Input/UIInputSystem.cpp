@@ -63,6 +63,11 @@ bool ReadCompositionString(HWND windowHandle, std::wstring &destination)
 }
 } // namespace
 
+/// <summary>WndProcから呼び、マウス・IME・文字入力イベントを次のフレーム用に蓄積する。</summary>
+/// <param name="windowHandle">メッセージを受け取ったウィンドウ。</param>
+/// <param name="message">Win32メッセージ番号。</param>
+/// <param name="wParam">メッセージのWPARAM。</param>
+/// <param name="lParam">メッセージのLPARAM。</param>
 void UIInputSystem::HandleWindowMessage(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
@@ -197,6 +202,8 @@ void UIInputSystem::HandleWindowMessage(HWND windowHandle, UINT message, WPARAM 
 	}
 }
 
+/// <summary>蓄積イベントとUI ActionMapを統合し、現在フレーム入力を確定する。</summary>
+/// <param name="windowHandle">クライアント座標を取得するウィンドウ。</param>
 void UIInputSystem::Update(HWND windowHandle)
 {
 	currentFrame = {};
@@ -281,11 +288,14 @@ void UIInputSystem::Update(HWND windowHandle)
 	// WM_CHAR is the sole committed-text source. Never append GCS_RESULTSTR as well.
 }
 
+/// <summary>現在のフレームに確定したUI入力を返す。</summary>
+/// <returns>参照先は次のUpdateまで有効な入力状態。</returns>
 const InputFrame &UIInputSystem::GetFrame()
 {
 	return currentFrame;
 }
 
+/// <summary>入力イベントと押下状態を初期化する。</summary>
 void UIInputSystem::Reset()
 {
 	currentFrame = {};

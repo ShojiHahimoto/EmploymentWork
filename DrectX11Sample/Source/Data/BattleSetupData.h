@@ -70,37 +70,13 @@ namespace BattleSetup
 		std::array<PlayerSetup, Input::MaxPlayers> players = {};
 	};
 
-	/// <summary>
-	/// キャラクタースロット番号から保存フォルダ名に使う ID を作る。
-	/// </summary>
-	/// <param name="slotIndex">キャラクタースロット番号。</param>
-	/// <returns>CharacterSlot00 のような固定桁の ID。</returns>
 	std::string BuildCharacterSlotId(int slotIndex);
 
-	/// <summary>
-	/// キャラクタースロット番号から CharacterData 保存フォルダパスを作る。
-	/// </summary>
-	/// <param name="slotIndex">キャラクタースロット番号。</param>
-	/// <returns>assets/CharacterData 配下の対象フォルダパス。</returns>
 	std::string BuildCharacterFolderPath(int slotIndex);
 
-	/// <summary>
-	/// 開発用直行にも使う既定のバトル設定を作る。
-	/// </summary>
-	/// <returns>1P Keyboard、2P XInput Pad0、両者 CharacterSlot00 の設定。</returns>
 	BattleSetupData CreateDefaultBattleSetupData();
 
-	/// <summary>
-	/// 1P/2P に同じ物理デバイスが割り当てられていないか確認する。
-	/// </summary>
-	/// <param name="setupData">確認するバトル開始設定。</param>
-	/// <returns>同一デバイスが重複していなければ true。</returns>
 	bool AreDevicesUnique(const BattleSetupData& setupData);
 
-	/// <summary>
-	/// BattleSetupData から Gameplay 用 Binding を構築し、既定 UI Binding と合わせて返す。
-	/// </summary>
-	/// <param name="setupData">BattleScene に反映する入力設定。</param>
-	/// <returns>InputSystem に渡す Binding 配列。</returns>
 	std::vector<Input::InputBinding> BuildInputBindings(const BattleSetupData& setupData);
 }

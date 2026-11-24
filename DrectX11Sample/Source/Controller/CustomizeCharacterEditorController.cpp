@@ -78,6 +78,9 @@ std::string BuildAttackDataIdFromPath(const std::filesystem::path &attackPath)
 }
 } // namespace
 
+/// <summary>キャラクタースロット選択画面を描画する。</summary>
+/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
+/// <returns>次に表示する CustomizeMode。</returns>
 CustomizeMode CustomizeCharacterEditorController::DrawSlotSelect(std::string &statusMessage)
 {
 	CustomizeMode nextMode = CustomizeMode::CharacterSlotSelect;
@@ -127,6 +130,9 @@ CustomizeMode CustomizeCharacterEditorController::DrawSlotSelect(std::string &st
 	return nextMode;
 }
 
+/// <summary>キャラクター名と各攻撃ボタンの技割り当て編集画面を描画する。</summary>
+/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
+/// <returns>次に表示する CustomizeMode。</returns>
 CustomizeMode CustomizeCharacterEditorController::DrawEditor(std::string &statusMessage)
 {
 	CustomizeMode nextMode = CustomizeMode::CharacterEditor;
@@ -177,6 +183,9 @@ CustomizeMode CustomizeCharacterEditorController::DrawEditor(std::string &status
 	return nextMode;
 }
 
+/// <summary>現在選択中のキャラクター側スロットへ割り当てる AttackData 候補を描画する。</summary>
+/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
+/// <returns>次に表示する CustomizeMode。</returns>
 CustomizeMode CustomizeCharacterEditorController::DrawAttackPicker(std::string &statusMessage)
 {
 	CustomizeMode nextMode = CustomizeMode::AttackPicker;
@@ -265,16 +274,25 @@ CustomizeMode CustomizeCharacterEditorController::DrawAttackPicker(std::string &
 	return nextMode;
 }
 
+/// <summary>キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。</summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>CharacterSlot00 のような固定桁の ID。</returns>
 std::string CustomizeCharacterEditorController::BuildCharacterId(int slotIndex) const
 {
 	return BattleSetup::BuildCharacterSlotId(slotIndex);
 }
 
+/// <summary>キャラクタースロット番号から CharacterData 保存フォルダを作る。</summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>assets/CharacterData 配下の保存フォルダパス。</returns>
 std::string CustomizeCharacterEditorController::BuildCharacterFolderPath(int slotIndex) const
 {
 	return (std::filesystem::path(CharacterDataRootPath) / BuildCharacterId(slotIndex)).generic_string();
 }
 
+/// <summary>キャラクタースロット一覧に表示するボタンラベルを作る。</summary>
+/// <param name="slotIndex">キャラクタースロット番号。</param>
+/// <returns>スロット番号、保存済み名、ImGui ID を含むラベル。</returns>
 std::string CustomizeCharacterEditorController::BuildSlotButtonLabel(int slotIndex) const
 {
 	std::ostringstream label;
@@ -296,6 +314,9 @@ std::string CustomizeCharacterEditorController::BuildSlotButtonLabel(int slotInd
 	return label.str();
 }
 
+/// <summary>選択したキャラクタースロットを編集用 draft に読み込む。</summary>
+/// <param name="slotIndex">編集するキャラクタースロット番号。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeCharacterEditorController::SelectSlot(int slotIndex)
 {
 	selectedSlotIndex = std::clamp(slotIndex, 0, CharacterSlotCount - 1);
@@ -365,6 +386,8 @@ std::string CustomizeCharacterEditorController::SelectSlot(int slotIndex)
 							: "Loaded character draft with missing or invalid attack data.";
 }
 
+/// <summary>キャラクター編集バッファの内容を CharacterData JSON として保存する。</summary>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeCharacterEditorController::SaveDraft()
 {
 	draftParameter.characterId = BuildCharacterId(selectedSlotIndex);
@@ -394,6 +417,7 @@ std::string CustomizeCharacterEditorController::SaveDraft()
 	return "Character save failed.";
 }
 
+/// <summary>CharacterData フォルダを確認し、キャラクタースロット一覧表示用の名前を更新する。</summary>
 void CustomizeCharacterEditorController::RefreshSlotSummaries()
 {
 	for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
@@ -418,6 +442,7 @@ void CustomizeCharacterEditorController::RefreshSlotSummaries()
 	}
 }
 
+/// <summary>キャラクター draft 内の attackDataId から表示名を読み直す。</summary>
 void CustomizeCharacterEditorController::RefreshAttackSlotNames()
 {
 	for (CustomizeCharacterAttackSlotGroup group :
@@ -448,6 +473,9 @@ void CustomizeCharacterEditorController::RefreshAttackSlotNames()
 	}
 }
 
+/// <summary>AttackPicker で選んだ技を、現在選択中のキャラクター側スロットへ割り当てる。</summary>
+/// <param name="attackDataId">割り当てる AttackData ID。</param>
+/// <param name="attackData">表示名確認用に読み込み済みの AttackData。</param>
 void CustomizeCharacterEditorController::AssignAttackToCurrentSlot(const std::string &attackDataId,
 																   const AttackData &attackData)
 {
@@ -458,6 +486,10 @@ void CustomizeCharacterEditorController::AssignAttackToCurrentSlot(const std::st
 	draft.attackDisplayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
 }
 
+/// <summary>AttackData が選択中のキャラクター側スロットへ割り当て可能か確認する。</summary>
+/// <param name="group">割り当て先のキャラクター側スロットグループ。</param>
+/// <param name="attackData">確認する AttackData。</param>
+/// <returns>通常/必殺、地上/空中の条件を満たす場合は true。</returns>
 bool CustomizeCharacterEditorController::IsAttackCompatibleWithSlotGroup(CustomizeCharacterAttackSlotGroup group,
 																		 const AttackData &attackData) const
 {
@@ -475,6 +507,9 @@ bool CustomizeCharacterEditorController::IsAttackCompatibleWithSlotGroup(Customi
 }
 
 std::array<CustomizeCharacterAttackSlotDraft, CustomizeCharacterEditorController::AttackButtonSlotCount> &
+/// <summary>指定グループのキャラクター側スロット draft 配列を取得する。</summary>
+/// <param name="group">取得するスロットグループ。</param>
+/// <returns>変更可能な draft 配列。</returns>
 CustomizeCharacterEditorController::GetAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group)
 {
 	switch (group)
@@ -490,6 +525,9 @@ CustomizeCharacterEditorController::GetAttackSlotDrafts(CustomizeCharacterAttack
 }
 
 const std::array<CustomizeCharacterAttackSlotDraft, CustomizeCharacterEditorController::AttackButtonSlotCount> &
+/// <summary>指定グループのキャラクター側スロット draft 配列を読み取り専用で取得する。</summary>
+/// <param name="group">取得するスロットグループ。</param>
+/// <returns>読み取り専用の draft 配列。</returns>
 CustomizeCharacterEditorController::GetAttackSlotDrafts(CustomizeCharacterAttackSlotGroup group) const
 {
 	switch (group)
@@ -504,37 +542,53 @@ CustomizeCharacterEditorController::GetAttackSlotDrafts(CustomizeCharacterAttack
 	}
 }
 
+/// <summary>編集中のキャラクターパラメータを取得する。</summary>
+/// <returns>読み取り専用の CharacterParameterData。</returns>
 const CharacterParameterData &CustomizeCharacterEditorController::GetDraftParameter() const
 {
 	return draftParameter;
 }
 
+/// <summary>キャラクター名入力用バッファを取得する。</summary>
+/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
 std::array<char, CustomizeCharacterEditorController::CharacterNameBufferSize> &CustomizeCharacterEditorController::
 	GetCharacterNameBuffer()
 {
 	return characterNameBuffer;
 }
 
+/// <summary>AttackPicker の割り当て先スロットグループを設定する。</summary>
+/// <param name="group">割り当て先グループ。</param>
 void CustomizeCharacterEditorController::SetPickingSlotGroup(CustomizeCharacterAttackSlotGroup group)
 {
 	pickingSlotGroup = group;
 }
 
+/// <summary>AttackPicker の割り当て先スロット番号を設定する。</summary>
+/// <param name="slotIndex">割り当て先スロット番号。</param>
 void CustomizeCharacterEditorController::SetPickingSlotIndex(int slotIndex)
 {
 	pickingSlotIndex = std::clamp(slotIndex, 0, AttackButtonSlotCount - 1);
 }
 
+/// <summary>AttackPicker の割り当て先スロットグループを取得する。</summary>
+/// <returns>割り当て先グループ。</returns>
 CustomizeCharacterAttackSlotGroup CustomizeCharacterEditorController::GetPickingSlotGroup() const
 {
 	return pickingSlotGroup;
 }
 
+/// <summary>AttackPicker の割り当て先スロット番号を取得する。</summary>
+/// <returns>割り当て先スロット番号。</returns>
 int CustomizeCharacterEditorController::GetPickingSlotIndex() const
 {
 	return pickingSlotIndex;
 }
 
+/// <summary>キャラクター側の固定ボタンスロットを初期化する。</summary>
+/// <param name="group">地上通常技、空中通常技、必殺技のどれか。</param>
+/// <param name="slotIndex">ABXY の何番目か。</param>
+/// <returns>未割り当て状態のスロット draft。</returns>
 CustomizeCharacterAttackSlotDraft CustomizeCharacterEditorController::CreateAttackSlotDraft(
 	CustomizeCharacterAttackSlotGroup group, int slotIndex) const
 {
@@ -568,6 +622,8 @@ CustomizeCharacterAttackSlotDraft CustomizeCharacterEditorController::CreateAtta
 	return draft;
 }
 
+/// <summary>キャラクター draft から保存用 CharacterAttackSlotData 配列を作る。</summary>
+/// <returns>AttackList.json に保存する技スロット情報。</returns>
 std::vector<CharacterAttackSlotData> CustomizeCharacterEditorController::BuildAttackSlotsForSave() const
 {
 	std::vector<CharacterAttackSlotData> result;
@@ -598,6 +654,9 @@ std::vector<CharacterAttackSlotData> CustomizeCharacterEditorController::BuildAt
 	return result;
 }
 
+/// <summary>地上通常技と空中通常技の必須スロットが埋まっているか確認する。</summary>
+/// <param name="outMissingSlotName">未設定スロットがある場合の表示名。</param>
+/// <returns>必須スロットが全て埋まっている場合は true。</returns>
 bool CustomizeCharacterEditorController::AreRequiredAttackSlotsFilled(std::string &outMissingSlotName) const
 {
 	const auto checkSlots =
@@ -622,12 +681,16 @@ bool CustomizeCharacterEditorController::AreRequiredAttackSlotsFilled(std::strin
 	return checkSlots(groundAttackSlotDrafts, "Ground") && checkSlots(airAttackSlotDrafts, "Air");
 }
 
+/// <summary>draftParameter のキャラクター名を ImGui 入力用固定バッファへコピーする。</summary>
 void CustomizeCharacterEditorController::CopyCharacterNameToBuffer()
 {
 	characterNameBuffer.fill('\0');
 	std::snprintf(characterNameBuffer.data(), characterNameBuffer.size(), "%s", draftParameter.characterName.c_str());
 }
 
+/// <summary>指定したキャラクター側スロットグループの割り当て一覧を描画する。</summary>
+/// <param name="group">描画するスロットグループ。</param>
+/// <param name="label">ImGui に表示するグループ名。</param>
 bool CustomizeCharacterEditorController::DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char *label)
 {
 	bool requestedAttackPicker = false;

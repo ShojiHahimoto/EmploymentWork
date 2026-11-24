@@ -519,8 +519,10 @@ void Renderer::RestoreBackBuffer()
 }
 
 /// <summary>既存の描画領域と出力状態を退避して、専用 viewport / scissor を設定する。</summary>
-/// <param name="region">バックバッファ上のプレビュー矩形。</param>
-/// <param name="preserveBackground">先行する背景描画を保持するか。</param>
+/// <param name="region">バックバッファ上のプレビュー矩形。
+/// クライアント座標での描画領域。</param>
+/// <param name="preserveBackground">trueなら先に描いたUI背景を青色で塗り直さず保持する。</param>
+/// <remarks>指定矩形をプレビュー描画先にする。バックバッファ内の有効矩形を渡す。</remarks>
 Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region, bool preserveBackground)
 	: view(m_ViewMatrix), projection(m_ProjectionMatrix)
 {
@@ -545,6 +547,7 @@ Renderer::ScopedRenderRegion::ScopedRenderRegion(const RECT& region, bool preser
 }
 
 /// <summary>後続のゲーム描画や ImGui にプレビューの設定を持ち越さない。</summary>
+/// <remarks>変更した出力状態を復元し、取得した COM 参照を解放する。</remarks>
 Renderer::ScopedRenderRegion::~ScopedRenderRegion()
 {
 	auto* context = m_pDeviceContext;
@@ -1502,10 +1505,9 @@ void Renderer::DrawScreenRect(const RECT& destination, const Color& color)
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
 }
 
-/// <summary>
-/// UI などの単色矩形を 1 回の SpriteBatch でまとめて描画する。
-/// </summary>
+/// <summary>UI などの単色矩形を 1 回の SpriteBatch でまとめて描画する。</summary>
 /// <param name="draws">画面座標と色の描画要求。</param>
+/// <remarks>単色矩形の配列を 1 回の SpriteBatch で描画する。</remarks>
 void Renderer::DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws)
 {
 	if (!m_pWhiteTextureView || !m_pSpriteBatch || draws.empty())

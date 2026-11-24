@@ -7,6 +7,10 @@
 #include <algorithm>
 #include <cstdio>
 
+/// <summary>プレビュー内の専用UIを除外する矩形を取得する。</summary>
+/// <param name="width">画面幅。</param>
+/// <param name="height">画面高さ。</param>
+/// <returns>プレビュー上部ツールバー。</returns>
 RECT CustomizeEditorUI::PreviewToolbar(int width, int height) const
 {
 	if (!motionScreenActive)
@@ -19,6 +23,14 @@ RECT CustomizeEditorUI::PreviewToolbar(int width, int height) const
 	return {region.left + 4, region.top + 4, std::min(region.right, region.left + 392), region.top + 38};
 }
 
+/// <summary>モーション画面固有の操作とプリセットダイアログを登録する。</summary>
+/// <param name="motion">編集対象。</param>
+/// <param name="preview">プレビュー。</param>
+/// <param name="common">汎用モーションか。</param>
+/// <param name="top">右パネル上端。</param>
+/// <param name="bottom">右パネル下端。</param>
+/// <param name="split">左右境界。</param>
+/// <param name="width">画面幅。</param>
 void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &motion,
 											CustomizePreviewController &preview, bool common, int top, int bottom,
 											int split, int width)
@@ -162,6 +174,12 @@ void CustomizeEditorUI::BuildMotionControls(CustomizeMotionEditorController &mot
 				   common ? "モーション選択へ戻る" : "パラメータ編集");
 }
 
+/// <summary>専用UIのモーション操作結果だけをControllerへ渡す。</summary>
+/// <param name="motion">操作先。</param>
+/// <param name="preview">プレビュー。</param>
+/// <param name="common">汎用モーションか。</param>
+/// <param name="status">操作結果。</param>
+/// <param name="previewRegion">部位選択を継続できるプレビュー範囲。</param>
 void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &motion,
 											CustomizePreviewController &preview, bool common, std::string &status,
 											const GameUI::Rect &previewRegion)
@@ -391,6 +409,12 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 	}
 }
 
+/// <summary>プリセットボタン直下へ保存/読み込みの入力欄を登録する。</summary>
+/// <param name="motion">適用対象の選択状態。</param>
+/// <param name="keyed">現在フレームに姿勢キーがあるか。</param>
+/// <param name="left">内容領域左端。</param>
+/// <param name="right">内容領域右端。</param>
+/// <param name="y">追加先の行位置。登録した高さだけ進める。</param>
 void CustomizeEditorUI::BuildInlinePosePreset(CustomizeMotionEditorController &motion, bool keyed, int left, int right,
 											  int &y)
 {

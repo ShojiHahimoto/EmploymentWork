@@ -18,6 +18,7 @@
 using namespace DirectX::SimpleMath;
 
 /// <summary>待機秒数と攻撃データIDの順序を読み込む。不正設定時は待機のみ再生する。</summary>
+/// <remarks>秒単位の待機間隔と、順次再生する攻撃データIDをJSONから読む。</remarks>
 void TitlePresentationController::LoadSettings()
 {
 	waitFrames = 300;
@@ -58,6 +59,7 @@ void TitlePresentationController::LoadSettings()
 
 /// <summary>展示モデルと設定を初期化し、待機モーションの再生を開始する。</summary>
 /// <param name="world">展示用World。</param>
+/// <remarks>設定を読み込み、中央にモデルを生成して待機再生を開始する。</remarks>
 void TitlePresentationController::Enter(World &world)
 {
 	angle = 0.0f;
@@ -76,8 +78,11 @@ void TitlePresentationController::Enter(World &world)
 
 /// <summary>指定モーションを0Fから開始する。保存されたループ設定を使用する。</summary>
 /// <param name="world">展示用World。</param>
-/// <param name="motionId">開始するモーションID。</param>
-/// <returns>モーションを読み込み、再生対象へ設定できた場合true。</returns>
+/// <param name="motionId">開始するモーションID。
+/// 再生するモーションID。</param>
+/// <returns>モーションを読み込み、再生対象へ設定できた場合true。
+/// モーションを取得できた場合true。</returns>
+/// <remarks>モーションを0Fから開始する。攻撃は単発、待機は保存されたループ設定に従う。</remarks>
 bool TitlePresentationController::StartMotion(World &world, const std::string &motionId)
 {
 	if (!MotionDataManager::LoadMotionData(motionId))
@@ -111,6 +116,7 @@ bool TitlePresentationController::StartMotion(World &world, const std::string &m
 
 /// <summary>待機間隔と攻撃の順次再生を進める。攻撃の移動キーと物理は適用しない。</summary>
 /// <param name="world">展示用World。</param>
+/// <remarks>固定60fpsで演出を更新する。対戦入力・物理・攻撃移動は実行しない。</remarks>
 void TitlePresentationController::Update(World &world)
 {
 	angle = std::fmod(angle + OrbitRadiansPerFrame, DirectX::XM_2PI);
@@ -156,6 +162,7 @@ void TitlePresentationController::Update(World &world)
 /// <param name="renderer">描画先。</param>
 /// <param name="width">画面幅。</param>
 /// <param name="height">画面高さ。</param>
+/// <remarks>中央固定の本体行列に、汎用モーションの見た目オフセットだけを加えて描く。</remarks>
 void TitlePresentationController::Draw(World &world, Renderer &renderer, int width, int height) const
 {
 

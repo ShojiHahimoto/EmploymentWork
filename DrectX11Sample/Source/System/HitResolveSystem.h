@@ -15,10 +15,6 @@ enum class GuardType
 class HitResolveSystem
 {
 public:
-	/// <summary>
-	/// HitCollisionSystem が収集したヒット結果を、State や HitBox の結果へ確定する。
-	/// </summary>
-	/// <param name="world">ヒット結果と Component を保持する World。</param>
 	static void Update(World& world);
 
 private:

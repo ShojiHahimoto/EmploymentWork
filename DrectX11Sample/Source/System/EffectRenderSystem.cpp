@@ -401,6 +401,9 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 	}
 }
 
+/// <summary>World 内の EffectComponent を、指定カメラの 3D 空間へ描画する。</summary>
+/// <param name="world">EffectComponent を持つ GameObject を保持する World。</param>
+/// <param name="camera">描画に使うカメラ行列。</param>
 void EffectRenderSystem::Draw(World& world, const CameraComponent& camera)
 {
 	if (!EnsureResources())
@@ -478,6 +481,7 @@ void EffectRenderSystem::Draw(World& world, const CameraComponent& camera)
 	Renderer::SetDepthEnable(true);
 }
 
+/// <summary>EffectRenderSystem が保持する DirectX11 リソースを解放する。</summary>
 void EffectRenderSystem::ReleaseResources()
 {
 	for (auto& texture : g_resources.textureCache)

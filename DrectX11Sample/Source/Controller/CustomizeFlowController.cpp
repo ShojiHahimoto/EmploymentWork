@@ -327,6 +327,8 @@ void CustomizeFlowController::DrawDebugMenu()
 
 #endif
 
+/// <summary>表示方式によらず、メニュー選択を次の更新へ予約する。</summary>
+/// <param name="character">trueはキャラクター作成、falseは技作成。</param>
 void CustomizeFlowController::RequestCreationMenu(bool character)
 {
 	creationMenuSelection = character ? 1 : 0;
@@ -904,6 +906,8 @@ void CustomizeFlowController::RenderAttackPreview(Renderer &renderer, const RECT
 	}
 }
 
+/// <summary>保存対象だけを複製し、現在フレームを復元用に付ける。</summary>
+/// <returns>カメラやコピー用姿勢を含まない編集状態。</returns>
 CustomizeEditSnapshot CustomizeFlowController::CaptureEditSnapshot()
 {
 	CustomizeEditSnapshot snapshot;
@@ -916,6 +920,8 @@ CustomizeEditSnapshot CustomizeFlowController::CaptureEditSnapshot()
 	return snapshot;
 }
 
+/// <summary>履歴の下書きを復元し、古い入力・Gizmoの捕捉を終了する。</summary>
+/// <param name="snapshot">復元する状態。</param>
 void CustomizeFlowController::RestoreEditSnapshot(const CustomizeEditSnapshot &snapshot)
 {
 	previewController.Stop();

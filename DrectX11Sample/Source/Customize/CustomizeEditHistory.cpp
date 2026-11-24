@@ -57,6 +57,10 @@ bool EqualAttack(const CustomizeAttackEditorEditState &a, const CustomizeAttackE
 }
 } // namespace
 
+/// <summary>保存対象の値を比較する。表示フレームやEuler表示用キャッシュは比較しない。</summary>
+/// <param name="a">比較元。</param>
+/// <param name="b">比較先。</param>
+/// <returns>下書きの内容が同じならtrue。</returns>
 bool CustomizeEditHistory::Equal(const CustomizeEditSnapshot &a, const CustomizeEditSnapshot &b)
 {
 	if (a.commonMotion != b.commonMotion || (!a.commonMotion && !EqualAttack(a.attack, b.attack)))
@@ -98,6 +102,7 @@ bool CustomizeEditHistory::Equal(const CustomizeEditSnapshot &a, const Customize
 					  });
 }
 
+/// <summary>別スロットへの移動などで履歴を破棄する。</summary>
 void CustomizeEditHistory::Reset()
 {
 	entries.clear();
@@ -107,6 +112,13 @@ void CustomizeEditHistory::Reset()
 	pendingWheel = false;
 }
 
+/// <summary>編集前後を記録する。同じ入力が継続中なら開始状態だけを保ち、途中経過を置き換える。</summary>
+/// <param name="before">今回の変更直前。</param>
+/// <param name="after">今回の変更直後。</param>
+/// <param name="operation">同じドラッグ・入力欄を識別するID。</param>
+/// <param name="ongoing">ドラッグや文字入力が継続中ならtrue。</param>
+/// <param name="wheel">短時間の同一欄ホイール入力をまとめる場合true。</param>
+/// <param name="now">単調増加するUI時刻（秒）。</param>
 void CustomizeEditHistory::Observe(const CustomizeEditSnapshot &before, const CustomizeEditSnapshot &after,
 								   const std::string &operation, bool ongoing, bool wheel, double now)
 {
@@ -151,6 +163,7 @@ void CustomizeEditHistory::Observe(const CustomizeEditSnapshot &before, const Cu
 	}
 }
 
+/// <summary>未確定の操作を履歴へ確定する。開始前と同じなら記録しない。</summary>
 void CustomizeEditHistory::Commit()
 {
 	if (pending && !Equal(pending->before, pending->after))
@@ -172,6 +185,9 @@ void CustomizeEditHistory::Commit()
 	pendingWheel = false;
 }
 
+/// <summary>編集中の操作も確定してから一つ戻す。ファイルの保存状態は変更しない。</summary>
+/// <param name="result">復元する下書き。</param>
+/// <returns>復元対象があればtrue。</returns>
 bool CustomizeEditHistory::Undo(CustomizeEditSnapshot &result)
 {
 	Commit();
@@ -186,6 +202,9 @@ bool CustomizeEditHistory::Undo(CustomizeEditSnapshot &result)
 	return true;
 }
 
+/// <summary>取り消した操作を一つやり直す。</summary>
+/// <param name="result">復元する下書き。</param>
+/// <returns>復元対象があればtrue。</returns>
 bool CustomizeEditHistory::Redo(CustomizeEditSnapshot &result)
 {
 	Commit();
@@ -200,16 +219,23 @@ bool CustomizeEditHistory::Redo(CustomizeEditSnapshot &result)
 	return true;
 }
 
+/// <summary>未確定操作も含め、戻せる変更があるか返す。</summary>
+/// <returns>Undo可能ならtrue。</returns>
 bool CustomizeEditHistory::CanUndo() const
 {
 	return cursor > 0 || (pending && !Equal(pending->before, pending->after));
 }
 
+/// <summary>新しい編集が始まっていない場合だけRedo可能とする。</summary>
+/// <returns>Redo可能ならtrue。</returns>
 bool CustomizeEditHistory::CanRedo() const
 {
 	return cursor < entries.size() && (!pending || Equal(pending->before, pending->after));
 }
 
+/// <summary>指定操作が編集中か確認する。UI更新がGizmoの履歴を分断しないために使う。</summary>
+/// <param name="operation">操作ID。</param>
+/// <returns>同じ操作の開始状態を保持していればtrue。</returns>
 bool CustomizeEditHistory::IsPending(const std::string &operation) const
 {
 	return pending && pendingOperation == operation;

@@ -81,11 +81,7 @@ public:
 	class ScopedRenderRegion
 	{
 	public:
-		/// <summary>指定矩形をプレビュー描画先にする。バックバッファ内の有効矩形を渡す。</summary>
-		/// <param name="region">クライアント座標での描画領域。</param>
-		/// <param name="preserveBackground">trueなら先に描いたUI背景を青色で塗り直さない。</param>
 		ScopedRenderRegion(const RECT& region, bool preserveBackground = false);
-		/// <summary>変更した出力状態を復元し、取得した COM 参照を解放する。</summary>
 		~ScopedRenderRegion();
 		ScopedRenderRegion(const ScopedRenderRegion&) = delete;
 		ScopedRenderRegion& operator=(const ScopedRenderRegion&) = delete;
@@ -234,8 +230,6 @@ public:
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);
 	static void DrawScreenRect(const RECT& destination, const DirectX::SimpleMath::Color& color);
-	/// <summary>単色矩形の配列を 1 回の SpriteBatch で描画する。</summary>
-	/// <param name="draws">画面座標と色の描画要求。</param>
 	static void DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws);
 	static void DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const DirectX::SimpleMath::Color& color);
 	static void DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height);

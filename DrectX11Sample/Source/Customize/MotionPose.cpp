@@ -8,11 +8,16 @@ using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 /// <summary>計算済みボーン姿勢にモデル本体の変換を適用する。</summary>
-/// <param name="pose">階層計算済み姿勢。</param>
+/// <param name="pose">階層計算済み姿勢。
+/// 階層計算済みの姿勢。</param>
 /// <param name="boneIndex">実ボーン番号。</param>
-/// <param name="objectWorld">本体の変換。</param>
-/// <param name="worldMatrix">結果の出力先。</param>
-/// <returns>取得できれば true。</returns>
+/// <param name="objectWorld">本体の変換。
+/// モデル本体のワールド行列。</param>
+/// <param name="worldMatrix">結果の出力先。
+/// 取得結果。失敗時は変更しない。</param>
+/// <returns>取得できれば true。
+/// 有効なボーンなら true。</returns>
+/// <remarks>ボーンのモデル空間行列を実ワールド空間へ変換する。</remarks>
 bool MotionPose::GetBoneWorldMatrix(const SkeletonPose& pose, int boneIndex,
 	const Matrix& objectWorld, Matrix& worldMatrix)
 {
@@ -23,13 +28,21 @@ bool MotionPose::GetBoneWorldMatrix(const SkeletonPose& pose, int boneIndex,
 }
 
 /// <summary>親の実ワールド変換を取り除き、ローカル姿勢を求める。</summary>
-/// <param name="pose">階層計算済み姿勢。</param>
-/// <param name="model">実ボーン階層。</param>
-/// <param name="boneIndex">対象番号。</param>
-/// <param name="objectWorld">本体の変換。</param>
-/// <param name="worldMatrix">変換元。</param>
-/// <param name="localPose">成功時の出力先。</param>
-/// <returns>変換できれば true。</returns>
+/// <param name="pose">階層計算済み姿勢。
+/// 階層計算済みの姿勢。</param>
+/// <param name="model">実ボーン階層。
+/// 実際の親ボーン階層。</param>
+/// <param name="boneIndex">対象番号。
+/// 変換する実ボーン番号。</param>
+/// <param name="objectWorld">本体の変換。
+/// モデル本体のワールド行列。</param>
+/// <param name="worldMatrix">変換元。
+/// 変換する実ワールド行列。</param>
+/// <param name="localPose">成功時の出力先。
+/// 変換結果。失敗時は変更しない。</param>
+/// <returns>変換できれば true。
+/// 逆行列と姿勢分解が成立した場合は true。</returns>
+/// <remarks>実ワールド行列を親基準のローカル姿勢へ変換する。計算だけを行う。</remarks>
 bool MotionPose::WorldToLocalPose(const SkeletonPose& pose, const ModelResource& model,
 	int boneIndex, const Matrix& objectWorld, const Matrix& worldMatrix, BonePose& localPose)
 {
@@ -57,13 +70,14 @@ bool MotionPose::WorldToLocalPose(const SkeletonPose& pose, const ModelResource&
 	return true;
 }
 
-/// <summary>
-/// ModelResource の bind pose を GameObject ごとの現在姿勢へコピーする。
-/// </summary>
-/// <param name="pose">初期化する姿勢 Component。</param>
+/// <summary>ModelResource の bind pose を GameObject ごとの現在姿勢へコピーする。</summary>
+/// <param name="pose">初期化する姿勢 Component。
+/// 初期化する GameObject ごとの姿勢 Component。</param>
 /// <param name="model">初期ボーン姿勢を持つ ModelResource。</param>
-/// <param name="modelKey">初期化元として記録するモデルキー。</param>
+/// <param name="modelKey">初期化元として記録するモデルキー。
+/// 初期化元として記録する ModelResource キー。</param>
 /// <returns>ボーンが存在し、初期化できた場合は true。</returns>
+/// <remarks>SkeletonPose を ModelResource の bind pose で初期化する。</remarks>
 bool MotionPose::InitializeSkeletonPose(
 	SkeletonPose& pose,
 	const ModelResource& model,
@@ -91,14 +105,17 @@ bool MotionPose::InitializeSkeletonPose(
 	return true;
 }
 
-/// <summary>
-/// モーション編集やデバッグ確認用に、指定ボーンのローカル回転を直接設定する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
+/// <summary>モーション編集やデバッグ確認用に、指定ボーンのローカル回転を直接設定する。</summary>
+/// <param name="pose">変更する姿勢 Component。
+/// 変更する GameObject ごとの姿勢 Component。</param>
 /// <param name="model">ボーン名検索に使う ModelResource。</param>
-/// <param name="boneName">対象ボーン名。</param>
-/// <param name="eulerDegrees">degree 単位のローカル Euler 回転。</param>
-/// <returns>対象ボーンが見つかり、姿勢を変更できた場合は true。</returns>
+/// <param name="boneName">対象ボーン名。
+/// 変更するボーン名。</param>
+/// <param name="eulerDegrees">degree 単位のローカル Euler 回転。
+/// 設定するローカル Euler 回転。</param>
+/// <returns>対象ボーンが見つかり、姿勢を変更できた場合は true。
+/// 対象ボーンが見つかり設定できた場合は true。</returns>
+/// <remarks>指定ボーンのローカル回転を Euler 角 degree で設定する。</remarks>
 bool MotionPose::SetBoneLocalEulerRotationDegrees(
 	SkeletonPose& pose,
 	const ModelResource& model,
@@ -120,11 +137,11 @@ bool MotionPose::SetBoneLocalEulerRotationDegrees(
 	return true;
 }
 
-/// <summary>
-/// 現在ローカル姿勢から親子階層を反映した行列を作り、Renderer 用のスキニング行列を更新する。
-/// </summary>
+/// <summary>現在ローカル姿勢から親子階層を反映した行列を作り、Renderer 用のスキニング行列を更新する。</summary>
 /// <param name="pose">計算結果を書き込む姿勢 Component。</param>
-/// <param name="model">親子階層と offsetMatrix を持つ ModelResource。</param>
+/// <param name="model">親子階層と offsetMatrix を持つ ModelResource。
+/// ボーン階層と offsetMatrix を持つ ModelResource。</param>
+/// <remarks>現在のローカルボーン姿勢から、親子階層反映済みのスキニング行列を更新する。</remarks>
 void MotionPose::UpdateSkinningMatrices(SkeletonPose& pose, const ModelResource& model)
 {
 	const std::vector<ModelBone>& bones = model.GetBones();
@@ -159,11 +176,12 @@ void MotionPose::UpdateSkinningMatrices(SkeletonPose& pose, const ModelResource&
 	}
 }
 
-/// <summary>
-/// 現在姿勢をモデル読み込み時の bind pose へ戻す。
-/// </summary>
-/// <param name="pose">リセットする姿勢 Component。</param>
-/// <param name="model">bind pose を持つ ModelResource。</param>
+/// <summary>現在姿勢をモデル読み込み時の bind pose へ戻す。</summary>
+/// <param name="pose">リセットする姿勢 Component。
+/// リセットする姿勢。</param>
+/// <param name="model">bind pose を持つ ModelResource。
+/// 初期姿勢を持つモデル。</param>
+/// <remarks>ローカル姿勢を bind pose へ戻す。行列は別途更新する。</remarks>
 void MotionPose::ResetPoseToBindPose(SkeletonPose& pose, const ModelResource& model)
 {
 	const std::vector<ModelBone>& bones = model.GetBones();
@@ -177,9 +195,7 @@ void MotionPose::ResetPoseToBindPose(SkeletonPose& pose, const ModelResource& mo
 	}
 }
 
-/// <summary>
-/// 指定 MotionData の指定フレームを SkeletonPose に反映する。
-/// </summary>
+/// <summary>指定 MotionData の指定フレームを SkeletonPose に反映する。</summary>
 /// <param name="pose">変更する姿勢 Component。</param>
 /// <param name="motion">適用するモーションデータ。</param>
 /// <param name="frame">再生する 0 始まりフレーム。</param>
@@ -193,15 +209,15 @@ void MotionPose::ApplyMotionData(
 	ApplyMotionData(pose, motion, frame, model, nullptr);
 }
 
-/// <summary>
-/// 指定 MotionData を、別姿勢を下地にして SkeletonPose へ反映する。
-/// </summary>
+/// <summary>指定 MotionData を、別姿勢を下地にして SkeletonPose へ反映する。</summary>
 /// <param name="pose">変更する姿勢 Component。</param>
 /// <param name="motion">適用するモーションデータ。</param>
 /// <param name="frame">再生する 0 始まりフレーム。</param>
 /// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
 /// <param name="basePose">開始・終了と未指定ボーンに使う基準姿勢。nullptrならbind pose。</param>
-/// <param name="returnToBase">trueの場合末尾フレーム以降は基準姿勢に向けて保管する。最終フレームにキーがある場合キーを優先する。ループ再生では無視する。</param>
+/// <param name="returnToBase">trueの場合末尾フレーム以降は基準姿勢に向けて保管する。最終フレームにキーがある場合キーを優先する。ループ再生では無視する。
+/// 非ループの末尾キー以降を最終フレームまでに基準姿勢へ戻す場合true。端点の実キーを優先し、ループ再生では無視する。</param>
+/// <remarks>指定MotionDataを下地姿勢から補間し、指定時は末尾から下地へ戻す。</remarks>
 void MotionPose::ApplyMotionData(
 	SkeletonPose& pose,
 	const MotionData& motion,
@@ -234,16 +250,19 @@ void MotionPose::ApplyMotionData(
 	}
 }
 
-/// <summary>
-/// 1 ボーントラックから指定フレームのローカル姿勢を補間して取得する。
-/// </summary>
-/// <param name="track">参照するボーンキーフレーム配列。</param>
+/// <summary>1 ボーントラックから指定フレームのローカル姿勢を補間して取得する。</summary>
+/// <param name="track">参照するボーンキーフレーム配列。
+/// 時系列順のボーンキー。</param>
 /// <param name="bindPose">未指定成分と前後の補間に使う基準姿勢。モデルのbind poseに限らない。</param>
-/// <param name="frame">取得する 0 始まりフレーム。</param>
+/// <param name="frame">取得する 0 始まりフレーム。
+/// 内部0始まりの取得フレーム。非ループの開始基準は-1。</param>
 /// <param name="totalFrames">総フレーム数。非ループの終了基準はtotalFrames - 1。</param>
-/// <param name="looping">最後のキーから最初のキーへ補間する場合は true。</param>
+/// <param name="looping">最後のキーから最初のキーへ補間する場合は true。
+/// 末尾と先頭をループ補間する場合true。</param>
 /// <param name="returnToBase">非ループの末尾キー以降を基準姿勢へ補間する場合true。falseなら末尾姿勢を維持する。</param>
-/// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。</returns>
+/// <returns>指定フレームにおける 1 ボーン分のローカル姿勢。
+/// 補間済みローカル姿勢。キーなしなら基準姿勢。</returns>
+/// <remarks>共通サンプリング。returnToBaseは攻撃の末尾から基準姿勢へ戻す場合に指定する。</remarks>
 BonePose MotionPose::SampleBoneTrack(
 	const MotionBoneTrackData& track,
 	const BonePose& bindPose,
@@ -436,8 +455,11 @@ BonePose MotionPose::SampleBoneTrack(
 }
 
 /// <summary>技の発動条件から、固定の開始・終了姿勢を選ぶ。</summary>
-/// <param name="usableState">技データの地上・空中条件。</param>
-/// <returns>基準モーションのID。姿勢はその0Fを使用する。</returns>
+/// <param name="usableState">技データの地上・空中条件。
+/// 技の地上・空中発動条件。</param>
+/// <returns>基準モーションのID。姿勢はその0Fを使用する。
+/// 空中はCommon/JumpLoop、それ以外はCommon/Idle。基準姿勢には0Fを使う。</returns>
+/// <remarks>技の発動条件に対応する端点姿勢のモーションIDを返す。</remarks>
 const char* MotionPose::GetAttackBaseMotionId(AttackUsableState usableState)
 {
 	return usableState == AttackUsableState::Air ? "Common/JumpLoop" : "Common/Idle";

@@ -166,12 +166,13 @@ namespace
 	}
 }
 
-/// <summary>
-/// AttackData を Loader 互換の JSON として assets/AttackData 配下へ保存する。
-/// </summary>
-/// <param name="attackDataId">保存先 ID。例: Ground/slot_00。</param>
+/// <summary>AttackData を Loader 互換の JSON として assets/AttackData 配下へ保存する。</summary>
+/// <param name="attackDataId">保存先 ID。例: Ground/slot_00。
+/// assets/AttackData から見た拡張子なしの保存 ID。</param>
 /// <param name="attackData">保存する技データ。</param>
-/// <returns>保存に成功した場合は true。</returns>
+/// <returns>保存に成功した場合は true。
+/// 保存できた場合は true。</returns>
+/// <remarks>AttackData を assets/AttackData 配下の JSON として保存する。</remarks>
 bool AttackDataSaver::SaveAttackData(const std::string& attackDataId, const AttackData& attackData)
 {
 	if (attackDataId.empty())

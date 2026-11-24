@@ -64,12 +64,14 @@ namespace
 
 }
 
-/// <summary>
-/// モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。
-/// </summary>
-/// <param name="world">ModelComponent と SkeletonPoseComponent を検索する World。</param>
-/// <param name="syncState">対戦状態に再生対象を同期する場合true。タイトルの演出再生ではfalse。</param>
-/// <param name="presentationAttack">状態同期をしない演出の攻撃データ。待機中はnullptr。</param>
+/// <summary>モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。</summary>
+/// <param name="world">ModelComponent と SkeletonPoseComponent を検索する World。
+/// 対象World。</param>
+/// <param name="syncState">対戦状態に再生対象を同期する場合true。タイトルの演出再生ではfalse。
+/// 対戦状態から再生対象を同期する場合true。</param>
+/// <param name="presentationAttack">状態同期をしない演出の攻撃データ。待機中はnullptr。
+/// 演出再生中の攻撃データ。通常再生はnullptr。</param>
+/// <remarks>姿勢と再生時計を更新する。タイトル用の演出では状態同期を無効にできる。</remarks>
 void MotionSystem::Update(World& world, bool syncState, const AttackData* presentationAttack)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -410,14 +412,18 @@ bool MotionSystem::IsAttackActionState(PlayerActionState actionState)
 
 
 
-/// <summary>
-/// MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
-/// <param name="player">再生中モーション ID と現在フレームを持つ Component。</param>
-/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-/// <param name="attack">実行中の技。地上・空中別の基準姿勢と末尾補間を指定する。通常モーションではnullptr。</param>
-/// <returns>MotionData を姿勢へ反映できた場合は true。</returns>
+/// <summary>MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。</summary>
+/// <param name="pose">変更する姿勢 Component。
+/// 反映先の姿勢。</param>
+/// <param name="player">再生中モーション ID と現在フレームを持つ Component。
+/// 再生対象と現在フレーム。</param>
+/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。
+/// 対象モデル。</param>
+/// <param name="attack">実行中の技。地上・空中別の基準姿勢と末尾補間を指定する。通常モーションではnullptr。
+/// 実行中の技。通常モーションではnullptr。</param>
+/// <returns>MotionData を姿勢へ反映できた場合は true。
+/// モーションを取得して姿勢へ反映できた場合true。</returns>
+/// <remarks>現在フレームの姿勢を反映し、攻撃では地上・空中別の基準姿勢へ前後を補間する。</remarks>
 bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPoseComponent& pose,
 	MotionPlayerComponent& player,

@@ -29,6 +29,10 @@ void TitleMenuController::Update()
 	UpdateInput(GameUI::UIInputSystem::GetFrame(), move.value.axis.x, submit.press);
 }
 
+/// <summary>確定済み入力からメニューを更新する。描画では入力を処理しない。</summary>
+/// <param name="input">共通UI入力。</param>
+/// <param name="horizontal">UI左右軸。</param>
+/// <param name="submitDown">決定の押下状態。</param>
 void TitleMenuController::UpdateInput(const GameUI::InputFrame& input, float horizontal, bool submitDown)
 {
 	const int previousSelection = selectedIndex;

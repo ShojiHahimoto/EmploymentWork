@@ -26,8 +26,6 @@ class CustomizeFlowController
 	void DrawPreview(Renderer &renderer);
 	void DrawInterface(Renderer &renderer);
 	void OnResize(int newWidth, int newHeight);
-	/// <summary>表示方式によらず、メニュー選択を次の更新へ予約する。</summary>
-	/// <param name="character">trueはキャラクター作成、falseは技作成。</param>
 	void RequestCreationMenu(bool character);
 
 	World &GetWorld();
@@ -82,11 +80,7 @@ class CustomizeFlowController
 	void DrawAttackSlotSelect();
 	void DrawCommonMotionSelect();
 	void UpdateAttackEditorControls();
-	/// <summary>保存対象だけを複製し、現在フレームを復元用に付ける。</summary>
-	/// <returns>カメラやコピー用姿勢を含まない編集状態。</returns>
 	CustomizeEditSnapshot CaptureEditSnapshot();
-	/// <summary>履歴の下書きを復元し、古い入力・Gizmoの捕捉を終了する。</summary>
-	/// <param name="snapshot">復元する状態。</param>
 	void RestoreEditSnapshot(const CustomizeEditSnapshot &snapshot);
 	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SelectCommonMotionSlot(int slotIndex);

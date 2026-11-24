@@ -11,21 +11,8 @@ class World;
 class BattleHUDSystem
 {
 public:
-	/// <summary>
-	/// UIタグを持つ GameObject を走査し、HUD用 Component ごとの表示状態を更新する。
-	/// </summary>
-	/// <param name="world">HUD GameObject と Player の HealthComponent を保持する World。</param>
-	/// <param name="screenWidth">現在の描画幅。</param>
-	/// <param name="screenHeight">現在の描画高さ。</param>
 	static void Update(World& world, int screenWidth, int screenHeight);
 
-	/// <summary>
-	/// HPバー、ラウンドタイマー、入力履歴をゲームビューへ 2D 描画する。
-	/// </summary>
-	/// <param name="world">BattleTimerComponent と HealthGaugeComponent を保持する World。</param>
-	/// <param name="screenWidth">現在の描画幅。</param>
-	/// <param name="screenHeight">現在の描画高さ。</param>
-	/// <param name="numberTexture">数字スプライトシートの ShaderResourceView。</param>
 	static void Draw(const World& world, int screenWidth, int screenHeight, ID3D11ShaderResourceView* numberTexture);
 
 private:

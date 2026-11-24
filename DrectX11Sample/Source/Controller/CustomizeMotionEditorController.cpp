@@ -479,6 +479,10 @@ void SetAttackMovementKey(AttackData &attackData, int frame, const Vector2 &offs
 }
 } // namespace
 
+/// <summary>UIに依存せず攻撃移動キーを追加する。既存の補間位置を初期値にする。</summary>
+/// <param name="attackData">編集対象。</param>
+/// <param name="frame">内部フレーム。</param>
+/// <param name="offset">追加した位置の出力先。</param>
 void CustomizeMotionEditorController::AddAttackMovementKeyframe(AttackData &attackData, int frame, Vector2 &offset)
 {
 	if (!hasDraft || frame < 0)
@@ -490,6 +494,10 @@ void CustomizeMotionEditorController::AddAttackMovementKeyframe(AttackData &atta
 	SetAttackMovementKey(attackData, frame, offset);
 }
 
+/// <summary>指定フレームの攻撃移動キーを削除し、編集値を再取得する。</summary>
+/// <param name="attackData">編集対象。</param>
+/// <param name="frame">内部フレーム。</param>
+/// <param name="offset">削除後の補間位置。</param>
 void CustomizeMotionEditorController::DeleteAttackMovementKeyframe(AttackData &attackData, int frame, Vector2 &offset)
 {
 	if (!hasDraft || frame < 0)
@@ -505,6 +513,10 @@ void CustomizeMotionEditorController::DeleteAttackMovementKeyframe(AttackData &a
 	offset = GetAttackMovementOffsetAtFrame(attackData, frame);
 }
 
+/// <summary>既存の攻撃移動キーだけを更新する。姿勢キーとは独立して扱う。</summary>
+/// <param name="attackData">編集対象。</param>
+/// <param name="frame">内部フレーム。</param>
+/// <param name="offset">前後・上下の移動量。</param>
 void CustomizeMotionEditorController::UpdateAttackMovementKeyframe(AttackData &attackData, int frame,
 																   const Vector2 &offset)
 {
@@ -514,11 +526,19 @@ void CustomizeMotionEditorController::UpdateAttackMovementKeyframe(AttackData &a
 	}
 }
 
+/// <summary>指定フレームに攻撃移動キーがあるか取得する。</summary>
+/// <param name="attackData">参照対象。</param>
+/// <param name="frame">内部フレーム。</param>
+/// <returns>キーがあればtrue。</returns>
 bool CustomizeMotionEditorController::HasAttackMovementKeyframe(const AttackData &attackData, int frame) const
 {
 	return frame >= 0 && FindAttackMovementKeyframe(attackData, frame) != nullptr;
 }
 
+/// <summary>選択部位を更新し、以前のIK操作を終了して編集値を同期する。</summary>
+/// <param name="preview">プレビュー制御。</param>
+/// <param name="part">部位番号。-1は選択解除。</param>
+/// <param name="frame">内部フレーム。</param>
 void CustomizeMotionEditorController::SelectBodyPart(CustomizePreviewController &preview, int part, int frame)
 {
 	//それ以前のIK編集があるなら終了する
@@ -564,6 +584,8 @@ void CustomizeMotionEditorController::SelectBodyPart(CustomizePreviewController 
 	}
 }
 
+/// <summary>プリセット等の対象に使う選択部位を取得する。Gizmoのアクティブ部位とは分ける。</summary>
+/// <returns>選択された部位だけtrue。</returns>
 std::array<bool, MotionBodyPartCount> CustomizeMotionEditorController::GetSelectedBodyParts() const
 {
 	//複数選択モードなら選択している部位全てを返す
@@ -583,6 +605,8 @@ std::array<bool, MotionBodyPartCount> CustomizeMotionEditorController::GetSelect
 	return selected;
 }
 
+/// <summary>モード切替時はアクティブ部位を基準に選択を同期する。</summary>
+/// <param name="enabled">複数選択を使う場合true。</param>
 void CustomizeMotionEditorController::SetMultipleSelectionEnabled(bool enabled)
 {
 	if (multipleSelectionEnabled == enabled)
@@ -600,6 +624,7 @@ void CustomizeMotionEditorController::SetMultipleSelectionEnabled(bool enabled)
 	multipleSelectionEnabled = enabled;
 }
 
+/// <summary>全ての編集部位を選択する。一括のGizmo変形は行わない。</summary>
 void CustomizeMotionEditorController::SelectAllBodyParts()
 {
 	if (!multipleSelectionEnabled)
@@ -615,6 +640,10 @@ void CustomizeMotionEditorController::SelectAllBodyParts()
 	}
 }
 
+/// <summary>UI・ギズモ共通のIK編集開始。位置は一時目標であり保存しない。</summary>
+/// <param name="preview">姿勢・IK計算を提供するプレビュー。</param>
+/// <param name="frame">姿勢キーのある内部フレーム。</param>
+/// <returns>編集セッションを開始できた場合true。</returns>
 bool CustomizeMotionEditorController::BeginIkEdit(CustomizePreviewController &preview, int frame)
 {
 	//以前のIK操作を終了する
@@ -651,6 +680,11 @@ bool CustomizeMotionEditorController::BeginIkEdit(CustomizePreviewController &pr
 	return ikTargetEditing;
 }
 
+/// <summary>ワールド位置の要求をIKで解き、回転キーへ反映する。</summary>
+/// <param name="preview">IK計算を提供するプレビュー。</param>
+/// <param name="frame">開始時と同じ内部フレーム。</param>
+/// <param name="target">ワールド基準の目標位置。</param>
+/// <returns>操作結果。</returns>
 std::string CustomizeMotionEditorController::UpdateIkEdit(CustomizePreviewController &preview, int frame,
 														  const Vector3 &target)
 {
@@ -665,12 +699,17 @@ std::string CustomizeMotionEditorController::UpdateIkEdit(CustomizePreviewContro
 	return ApplySelectedIkTarget(preview, frame);
 }
 
+/// <summary>IKの開始姿勢を解放し、次の操作へ持ち越さない。</summary>
+/// <param name="preview">終了するプレビュー。</param>
 void CustomizeMotionEditorController::EndIkEdit(CustomizePreviewController &preview)
 {
 	preview.EndIkSolveSession();
 	ikTargetEditing = false;
 }
 
+/// <summary>旧ギズモの確定済みIK結果を回転キーへ取り込む。描画APIには依存しない。</summary>
+/// <param name="preview">操作結果を持つプレビュー。</param>
+/// <param name="frame">反映先の内部フレーム。</param>
 void CustomizeMotionEditorController::ConsumeTranslationEdit(CustomizePreviewController &preview, int frame)
 {
 	if (!preview.hasTranslationGizmoEdit)
@@ -696,6 +735,7 @@ void CustomizeMotionEditorController::ConsumeTranslationEdit(CustomizePreviewCon
 	RefreshFrameEditValues(frame);
 }
 
+/// <summary>攻撃モーション編集用に、MotionData 下書きと編集バッファを初期化する。</summary>
 void CustomizeMotionEditorController::ResetForAttackMotion()
 {
 	hasDraft = false;
@@ -703,6 +743,12 @@ void CustomizeMotionEditorController::ResetForAttackMotion()
 	CopyEditorBuffers(-1);
 }
 
+/// <summary>MotionData ID から編集用下書きを読み込み、存在しなければ新規下書きを作る。</summary>
+/// <param name="motionDataId">assets/MotionData 配下の拡張子なし ID。</param>
+/// <param name="fallbackDisplayName">新規下書き時の表示名。</param>
+/// <param name="totalFrames">新規作成時の総フレーム数。攻撃では読み込み成功時も技の尺に同期する。</param>
+/// <param name="commonMotion">汎用ならtrueで保存済みの尺とループ設定を維持する。新規汎用の初期ループ値はtrue。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::LoadDraft(const std::string &motionDataId,
 													   const std::string &fallbackDisplayName, int totalFrames,
 													   bool commonMotion)
@@ -742,6 +788,11 @@ std::string CustomizeMotionEditorController::LoadDraft(const std::string &motion
 	return "Loaded existing MotionData.";
 }
 
+/// <summary>編集中の MotionData 下書きを保存する。</summary>
+/// <param name="motionDataId">保存先 MotionData ID。</param>
+/// <param name="totalFrames">保存時に確定する総フレーム数。</param>
+/// <param name="looping">ループモーションとして保存する場合は true。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::SaveDraft(const std::string &motionDataId, int totalFrames, bool looping)
 {
 	if (!hasDraft)
@@ -773,6 +824,8 @@ std::string CustomizeMotionEditorController::SaveDraft(const std::string &motion
 	return "MotionData save failed.";
 }
 
+/// <summary>現在の下書き内容を UI 共通の入力用バッファへコピーする。</summary>
+/// <param name="actionFrame">現在の内部 actionFrame。0F Idle の場合は -1。</param>
 void CustomizeMotionEditorController::CopyEditorBuffers(int actionFrame)
 {
 	multipleSelectionEnabled = false;
@@ -798,6 +851,9 @@ void CustomizeMotionEditorController::CopyEditorBuffers(int actionFrame)
 	RefreshFrameEditValues(actionFrame);
 }
 
+/// <summary>履歴から下書きを復元し、表示用入力値を同期する。コピー済み姿勢や選択部位は維持する。</summary>
+/// <param name="restored">復元するモーション。</param>
+/// <param name="actionFrame">表示する内部フレーム。</param>
 void CustomizeMotionEditorController::RestoreDraft(const MotionData &restored, int actionFrame)
 {
 	draft = restored;
@@ -806,6 +862,8 @@ void CustomizeMotionEditorController::RestoreDraft(const MotionData &restored, i
 	RefreshFrameEditValues(actionFrame);
 }
 
+/// <summary>選択部位やフレームが変わった時、現在フレームの編集値をバッファへ反映する。</summary>
+/// <param name="actionFrame">現在の内部 actionFrame。0F Idle の場合は -1。</param>
 void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 {
 	if (!hasDraft)
@@ -835,15 +893,21 @@ void CustomizeMotionEditorController::RefreshFrameEditValues(int actionFrame)
 	rootOffsetKey = GetMotionRootOffsetAtFrame(draft, sampleFrame);
 }
 
+/// <summary>AttackData から指定フレームの攻撃移動量を補間取得する。</summary>
+/// <param name="attackData">参照する AttackData。</param>
+/// <param name="frame">参照する内部 actionFrame。</param>
+/// <returns>補間済みの前後/上下移動量。</returns>
 Vector2 CustomizeMotionEditorController::GetAttackMovementOffsetAtFrame(const AttackData &attackData, int frame) const
 {
 	return ::GetAttackMovementOffsetAtFrame(attackData, frame);
 }
 
 /// <summary>モデルのbind回転と技の基準姿勢を、編集時の共通サンプリングに設定する。</summary>
-/// <param name="preview">部位ごとのモデルbind回転を提供するプレビュー。</param>
+/// <param name="preview">部位ごとのモデルbind回転を提供するプレビュー。
+/// モデルの各部位のbind回転を取得するプレビュー。</param>
 /// <param name="attack">技編集ならtrue。汎用モーションではfalseで末尾復帰を無効にする。</param>
 /// <param name="usableState">地上は待機、空中はジャンプループの0Fを基準とする発動条件。</param>
+/// <remarks>編集と再生で同じ基準姿勢を使う。画面更新前に呼ぶ。</remarks>
 void CustomizeMotionEditorController::ConfigurePoseSampling(const CustomizePreviewController& preview,
 	bool attack, AttackUsableState usableState)
 {
@@ -876,10 +940,13 @@ void CustomizeMotionEditorController::ConfigurePoseSampling(const CustomizePrevi
 }
 
 /// <summary>描画と共通の補間計算で、指定フレームの部位回転を取得する。</summary>
-/// <param name="motion">取得元モーション。</param>
+/// <param name="motion">取得元モーション。
+/// 取得元の下書き。</param>
 /// <param name="boneName">編集対象の部位名。</param>
 /// <param name="frame">内部0始まりの取得フレーム。</param>
-/// <returns>設定済み基準姿勢から補間したローカル回転。</returns>
+/// <returns>設定済み基準姿勢から補間したローカル回転。
+/// 設定済みの基準姿勢を使った補間済み回転。</returns>
+/// <remarks>描画と共通の補間計算から部位回転を取得する。</remarks>
 Quaternion CustomizeMotionEditorController::GetMotionRotationQuaternionAtFrame(
 	const MotionData& motion, const std::string& boneName, int frame) const
 {
@@ -900,9 +967,12 @@ Quaternion CustomizeMotionEditorController::GetMotionRotationQuaternionAtFrame(
 }
 
 /// <summary>追加前の補間済み回転を全身分取得してから、同じフレームに全身キーを保存する。</summary>
-/// <param name="keyFrame">追加先の内部0始まりフレーム。負値は追加不可。</param>
+/// <param name="keyFrame">追加先の内部0始まりフレーム。負値は追加不可。
+/// 追加先の内部 actionFrame。</param>
 /// <param name="totalFrames">末尾補間にも使用する技またはモーションの総フレーム数。</param>
-/// <returns>追加結果のメッセージ。</returns>
+/// <returns>追加結果のメッセージ。
+/// ユーザー表示用の処理結果メッセージ。</returns>
+/// <remarks>追加前の補間済み回転を全身分取得してから、同じフレームへ全身キーを保存する。</remarks>
 std::string CustomizeMotionEditorController::AddWholeBodyKeyframe(int keyFrame, int totalFrames)
 {
 	if (!hasDraft)
@@ -937,6 +1007,9 @@ std::string CustomizeMotionEditorController::AddWholeBodyKeyframe(int keyFrame, 
 	return "Added whole body MotionData keyframe.";
 }
 
+/// <summary>現在フレームの全身姿勢キーフレームを削除する。</summary>
+/// <param name="keyFrame">削除対象の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::DeleteWholeBodyKeyframe(int keyFrame)
 {
 	if (!hasDraft)
@@ -970,6 +1043,11 @@ std::string CustomizeMotionEditorController::DeleteWholeBodyKeyframe(int keyFram
 	return "Deleted current MotionData keyframe.";
 }
 
+/// <summary>選択部位の回転キーを現在の編集値で更新する。</summary>
+/// <param name="previewController">実FBXの基準回転を取得するプレビュー。</param>
+/// <param name="keyFrame">更新対象の内部 actionFrame。</param>
+/// <param name="totalFrames">MotionData の総フレーム数。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::SetSelectedRotationKey(CustomizePreviewController &previewController,
 																	int keyFrame, int totalFrames)
 {
@@ -1017,6 +1095,13 @@ std::string CustomizeMotionEditorController::SetSelectedRotationKey(CustomizePre
 	return "Set MotionData keyframe.";
 }
 
+/// <summary>ギズモ操作で得た内部ローカル回転を、既存の数値入力と同じルールで現在フレームへ保存する。</summary>
+/// <param name="bodyPartIndex">編集された部位番号。</param>
+/// <param name="axisIndex">操作された軸番号。X=0, Y=1, Z=2。範囲外なら保存しない。</param>
+/// <param name="keyFrame">更新対象の内部 actionFrame。</param>
+/// <param name="totalFrames">MotionData の総フレーム数。</param>
+/// <param name="localRotation">保存するローカル Quaternion。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::ApplyGizmoRotationEdit(int bodyPartIndex, int axisIndex, int keyFrame,
 																	int totalFrames, const Quaternion &localRotation)
 {
@@ -1052,6 +1137,9 @@ std::string CustomizeMotionEditorController::ApplyGizmoRotationEdit(int bodyPart
 	return "Set MotionData keyframe.";
 }
 
+/// <summary>現在フレームに姿勢キーフレームがあるか確認する。</summary>
+/// <param name="keyFrame">確認対象の内部 actionFrame。</param>
+/// <returns>少なくとも 1 部位のキーがあれば true。</returns>
 bool CustomizeMotionEditorController::HasMotionKeyframe(int keyFrame) const
 {
 	if (!hasDraft || keyFrame < 0)
@@ -1070,6 +1158,9 @@ bool CustomizeMotionEditorController::HasMotionKeyframe(int keyFrame) const
 	return false;
 }
 
+/// <summary>現在フレームに汎用モーション用の見た目オフセットキーを追加する。</summary>
+/// <param name="keyFrame">追加先の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::AddRootOffsetKeyframe(int keyFrame)
 {
 	if (!hasDraft)
@@ -1088,6 +1179,9 @@ std::string CustomizeMotionEditorController::AddRootOffsetKeyframe(int keyFrame)
 	return "Added common motion visual offset keyframe.";
 }
 
+/// <summary>現在フレームの汎用モーション用見た目オフセットキーを削除する。</summary>
+/// <param name="keyFrame">削除対象の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::DeleteRootOffsetKeyframe(int keyFrame)
 {
 	if (!hasDraft)
@@ -1111,6 +1205,9 @@ std::string CustomizeMotionEditorController::DeleteRootOffsetKeyframe(int keyFra
 	return "Deleted common motion visual offset keyframe.";
 }
 
+/// <summary>現在フレームの汎用モーション用見た目オフセットキーを編集値で更新する。</summary>
+/// <param name="keyFrame">更新対象の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::SetRootOffsetKeyframe(int keyFrame)
 {
 	if (!hasDraft)
@@ -1133,6 +1230,9 @@ std::string CustomizeMotionEditorController::SetRootOffsetKeyframe(int keyFrame)
 	return "Set common motion visual offset keyframe.";
 }
 
+/// <summary>現在フレームに汎用モーション用見た目オフセットキーがあるか確認する。</summary>
+/// <param name="keyFrame">確認対象の内部 actionFrame。</param>
+/// <returns>rootOffsetKeys にキーがあれば true。</returns>
 bool CustomizeMotionEditorController::HasRootOffsetKeyframe(int keyFrame) const
 {
 	if (!hasDraft || keyFrame < 0)
@@ -1143,6 +1243,9 @@ bool CustomizeMotionEditorController::HasRootOffsetKeyframe(int keyFrame) const
 	return FindMotionRootOffsetKeyframe(draft, keyFrame) != nullptr;
 }
 
+/// <summary>現在フレームの全身姿勢をコピーする。</summary>
+/// <param name="keyFrame">コピー元の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::CopyWholeBodyPose(int keyFrame)
 {
 	if (!HasMotionKeyframe(keyFrame))
@@ -1164,9 +1267,11 @@ std::string CustomizeMotionEditorController::CopyWholeBodyPose(int keyFrame)
 }
 
 /// <summary>コピー済みの回転を指定された部位に貼り付ける。</summary>
-/// <param name="keyFrame">貼り付け先の内部フレーム。</param>
+/// <param name="keyFrame">貼り付け先の内部フレーム。
+/// 貼り付け先の内部 actionFrame。</param>
 /// <param name="applyMask">適用する部位だけtrue。</param>
-/// <returns>適用結果の表示メッセージ。</returns>
+/// <returns>適用結果の表示メッセージ。
+/// ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::PasteCopiedPose(int keyFrame,
 	const std::array<bool, MotionEditorBoneCount>& applyMask)
 {
@@ -1197,11 +1302,14 @@ std::string CustomizeMotionEditorController::PasteCopiedPose(int keyFrame,
 }
 
 /// <summary>指定部位の回転をモデル座標で左右反転し、反対側のキーへ保存する。</summary>
-/// <param name="preview">実ボーンの基準回転を取得するプレビュー。</param>
+/// <param name="preview">実ボーンの基準回転を取得するプレビュー。
+/// モデルの基準回転を取得するプレビュー。</param>
 /// <param name="frame">適用先の内部フレーム。</param>
-/// <param name="rightToLeft">右側を元にする場合true。</param>
+/// <param name="rightToLeft">右側を元にする場合true。
+/// 右から左ならtrue。</param>
 /// <param name="parts">肩・肘・手首・股関節・膝・足首の適用マスク。</param>
 /// <returns>適用結果の表示メッセージ。</returns>
+/// <remarks>現在キーの指定部位を反転し、反対側へコピーする。</remarks>
 std::string CustomizeMotionEditorController::MirrorPose(const CustomizePreviewController& preview, int frame,
 	bool rightToLeft, const std::array<bool, 6>& parts)
 {
@@ -1262,6 +1370,10 @@ std::string CustomizeMotionEditorController::MirrorPose(const CustomizePreviewCo
 	return "反対側へポーズをコピーしました。";
 }
 
+/// <summary>選択中 IK 対象関節のワールド位置を、現在のプレビュー姿勢から一時ターゲット入力へ読み込む。</summary>
+/// <param name="previewController">現在表示中のプレビュー姿勢を持つ Controller。</param>
+/// <param name="keyFrame">読み込んだターゲットが属する内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::CaptureCurrentIkTarget(CustomizePreviewController &previewController,
 																	int keyFrame)
 {
@@ -1277,6 +1389,10 @@ std::string CustomizeMotionEditorController::CaptureCurrentIkTarget(CustomizePre
 	return hasIkTargetWorldPosition ? "IK position synchronized." : "Waiting for preview pose.";
 }
 
+/// <summary>選択中 IK 対象を解き、必要な親側関節の回転だけを現在フレームの MotionData キーへ保存する。</summary>
+/// <param name="previewController">現在表示中のプレビュー姿勢と IK 計算に使う Controller。</param>
+/// <param name="keyFrame">保存先の内部 actionFrame。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::ApplySelectedIkTarget(CustomizePreviewController &previewController,
 																   int keyFrame)
 {
@@ -1318,6 +1434,10 @@ std::string CustomizeMotionEditorController::ApplySelectedIkTarget(CustomizePrev
 	return result.atReachLimit ? "IK: reached the limit on the selected axis." : "IK pose updated.";
 }
 
+/// <summary>現在姿勢を指定名のプリセットとして保存する。UIの入力バッファには依存しない。</summary>
+/// <param name="keyFrame">保存元の内部フレーム。</param>
+/// <param name="displayName">重複しないプリセット名。</param>
+/// <returns>保存結果。</returns>
 std::string CustomizeMotionEditorController::SavePosePreset(int keyFrame, const std::string &displayName)
 {
 	if (!HasMotionKeyframe(keyFrame))
@@ -1358,6 +1478,11 @@ std::string CustomizeMotionEditorController::SavePosePreset(int keyFrame, const 
 	return "Saved pose preset: " + displayName;
 }
 
+/// <summary>現在フレームへ指定プリセットの選択部位だけを適用する。</summary>
+/// <param name="presetId">読み込む姿勢プリセット ID。</param>
+/// <param name="keyFrame">適用先の内部 actionFrame。</param>
+/// <param name="applyMask">適用する部位だけ true の配列。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::ApplyPosePreset(const std::string &presetId, int keyFrame,
 															 const std::array<bool, MotionEditorBoneCount> &applyMask)
 {
@@ -1405,47 +1530,64 @@ std::string CustomizeMotionEditorController::ApplyPosePreset(const std::string &
 							: "Pose preset has no matching selected parts.";
 }
 
+/// <summary>MotionData 下書きを取得する。</summary>
+/// <returns>編集可能な MotionData 参照。</returns>
 MotionData &CustomizeMotionEditorController::GetDraft()
 {
 	return draft;
 }
 
+/// <summary>MotionData 下書きを取得する。</summary>
+/// <returns>読み取り専用の MotionData 参照。</returns>
 const MotionData &CustomizeMotionEditorController::GetDraft() const
 {
 	return draft;
 }
 
+/// <summary>MotionData 下書きが有効か取得する。</summary>
+/// <returns>読み込みまたは新規作成済みなら true。</returns>
 bool CustomizeMotionEditorController::HasDraft() const
 {
 	return hasDraft;
 }
 
+/// <summary>表示名入力用バッファを取得する。</summary>
+/// <returns>UI の文字入力に渡す UTF-8 固定長バッファ。</returns>
 std::array<char, CustomizeMotionEditorController::MotionNameBufferSize> &CustomizeMotionEditorController::
 	GetDisplayNameBuffer()
 {
 	return displayNameBuffer;
 }
 
+/// <summary>選択中の編集部位番号を取得する。</summary>
+/// <returns>編集可能な部位番号参照。</returns>
 int &CustomizeMotionEditorController::GetSelectedBoneIndex()
 {
 	return selectedBoneIndex;
 }
 
+/// <summary>選択部位の回転編集値を取得する。</summary>
+/// <returns>編集可能なオイラー角参照。</returns>
 Vector3 &CustomizeMotionEditorController::GetRotationEulerDegrees()
 {
 	return rotationEulerDegrees;
 }
 
+/// <summary>汎用モーション用の見た目オフセット編集値を取得する。</summary>
+/// <returns>編集可能なオフセット参照。</returns>
 Vector3 &CustomizeMotionEditorController::GetRootOffsetKey()
 {
 	return rootOffsetKey;
 }
 
+/// <summary>コピー済み姿勢が存在するか取得する。</summary>
+/// <returns>Copy Pose 済みなら true。</returns>
 bool CustomizeMotionEditorController::HasCopiedPose() const
 {
 	return hasCopiedPose;
 }
 
+/// <summary>保存前に MotionData のフレーム範囲とキー順を整える。</summary>
 void CustomizeMotionEditorController::NormalizeDraftForSave()
 {
 	const int lastFrame = std::max(0, draft.totalFrames - 1);

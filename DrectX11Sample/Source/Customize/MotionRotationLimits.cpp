@@ -61,6 +61,12 @@ namespace
     }
 }
 
+/// <summary>Quaternionのまま曲げと長軸ひねりを測り、可動域からどれだけ違反しているかを返す。</summary>
+/// <param name="part">部位。</param>
+/// <param name="rotation">ローカル回転。</param>
+/// <param name="bind">実FBXの基準回転。</param>
+/// <param name="reference">ひねりの連続性基準。</param>
+/// <returns>度数の逸脱量。0なら範囲内。</returns>
 MotionRotationLimits::Violation MotionRotationLimits::Measure(MotionBodyPart part, const Quaternion& rotation,
     const Quaternion& bind, const Quaternion& reference)
 {
@@ -84,6 +90,10 @@ MotionRotationLimits::Violation MotionRotationLimits::Measure(MotionBodyPart par
     return result;
 }
 
+/// <summary>既存の制限外姿勢も壊さず、逸脱が増えないか判定する。</summary>
+/// <param name="value">候補の逸脱。</param>
+/// <param name="allowance">開始時の許容逸脱。</param>
+/// <returns>誤差許容量内ならtrue。</returns>
 bool MotionRotationLimits::Permits(const Violation& value, const Violation& allowance)
 {
     for (size_t i = 0; i < value.size(); ++i)
@@ -91,6 +101,12 @@ bool MotionRotationLimits::Permits(const Violation& value, const Violation& allo
     return true;
 }
 
+/// <summary>数値入力による目標回転への最短経路上で、最初の可動域境界に止める。</summary>
+/// <param name="part">部位。</param>
+/// <param name="start">編集前。</param>
+/// <param name="target">入力から一度だけ変換したQuaternion。</param>
+/// <param name="bind">基準回転。</param>
+/// <returns>補正済み回転。Eulerへの再分解はしない。</returns>
 Quaternion MotionRotationLimits::Constrain(MotionBodyPart part, const Quaternion& start,
     const Quaternion& target, const Quaternion& bind)
 {
@@ -99,6 +115,12 @@ Quaternion MotionRotationLimits::Constrain(MotionBodyPart part, const Quaternion
     return result;
 }
 
+/// <summary>ローカル1軸ギズモが連続して回せる角度範囲をQuaternionで探索する。</summary>
+/// <param name="part">部位。</param>
+/// <param name="start">ドラッグ開始回転。</param>
+/// <param name="axis">操作ローカル軸。</param>
+/// <param name="bind">基準回転。</param>
+/// <returns>負方向限界と正方向限界のラジアン。</returns>
 Vector2 MotionRotationLimits::AxisRange(MotionBodyPart part, const Quaternion& start, const Vector3& axis, const Quaternion& bind)
 {
     Vector2 result;

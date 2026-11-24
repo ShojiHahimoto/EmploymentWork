@@ -23,10 +23,6 @@ struct StateComponent;
 class MotionSystem
 {
 public:
-	/// <summary>姿勢と再生時計を更新する。タイトル用の演出では状態同期を無効にできる。</summary>
-	/// <param name="world">対象World。</param>
-	/// <param name="syncState">対戦状態から再生対象を同期する場合true。</param>
-	/// <param name="presentationAttack">演出再生中の攻撃データ。通常再生はnullptr。</param>
 	static void Update(World& world, bool syncState = true, const AttackData* presentationAttack = nullptr);
 
 private:
@@ -47,12 +43,6 @@ private:
 		PlayerActionState nextActionState);
 	static bool IsAttackMotionDataId(const std::string& motionDataId);
 	static bool IsAttackActionState(PlayerActionState actionState);
-	/// <summary>現在フレームの姿勢を反映し、攻撃では地上・空中別の基準姿勢へ前後を補間する。</summary>
-	/// <param name="pose">反映先の姿勢。</param>
-	/// <param name="player">再生対象と現在フレーム。</param>
-	/// <param name="model">対象モデル。</param>
-	/// <param name="attack">実行中の技。通常モーションではnullptr。</param>
-	/// <returns>モーションを取得して姿勢へ反映できた場合true。</returns>
 	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player,
 		const ModelResource& model, const AttackData* attack);
 	static DirectX::SimpleMath::Vector3 SampleRootOffset(

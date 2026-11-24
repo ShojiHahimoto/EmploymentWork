@@ -54,6 +54,8 @@ namespace
 	}
 }
 
+/// <summary>HP とラウンドタイマーを確認し、勝敗が決まった場合は World に BattleResult を記録する。</summary>
+/// <param name="world">BattlePlayerId、HealthComponent、BattleTimerComponent を保持する World。</param>
 void BattleResultSystem::Update(World& world)
 {
 	if (world.HasBattleResult())

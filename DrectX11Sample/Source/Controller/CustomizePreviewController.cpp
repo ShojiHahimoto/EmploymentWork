@@ -299,6 +299,7 @@ bool GetBodyPartWorldMatrix(const SkeletonPose &pose, const ModelResource &model
 
 } // namespace
 
+/// <summary>プレビュー用モデル、カメラ、RenderTexture を初期化する。</summary>
 void CustomizePreviewController::Initialize()
 {
 	Release();
@@ -334,9 +335,8 @@ void CustomizePreviewController::Initialize()
 	}
 }
 
-/// <summary>
-/// 初期化処理
-/// </summary>
+/// <summary>初期化処理</summary>
+/// <remarks>プレビュー用 RenderTexture を解放する。</remarks>
 void CustomizePreviewController::Release()
 {
 	ResetCamera();
@@ -344,6 +344,7 @@ void CustomizePreviewController::Release()
 }
 
 /// <summary>カメラだけを既定の表示へ戻す。編集姿勢と再生フレームは変更しない。</summary>
+/// <remarks>カメラの角度・距離・注視点オフセットとマウス操作状態を初期化する。</remarks>
 void CustomizePreviewController::ResetCamera()
 {
 	cameraYawDegrees = 0.0f;
@@ -356,6 +357,7 @@ void CustomizePreviewController::ResetCamera()
 }
 
 /// <summary>再生操作欄に配置するカメラ初期化ボタンを描画する。</summary>
+/// <remarks>両編集画面で共用するカメラ初期化ボタンを描画する。</remarks>
 void CustomizePreviewController::DrawCameraResetButton()
 {
 	if (ImGui::Button("Reset Camera"))
@@ -364,6 +366,11 @@ void CustomizePreviewController::DrawCameraResetButton()
 	}
 }
 
+/// <summary>Play 中なら表示フレームを進める。</summary>
+/// <param name="enabled">現在の画面がプレビュー再生対象なら true。</param>
+/// <param name="looping">終端到達時に 1F へ戻して再生継続するなら true。</param>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
+/// <returns>フレームが進んだ場合は true。</returns>
 bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int totalFrames)
 {
 	// 再生中でないならfalse
@@ -390,6 +397,8 @@ bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int 
 	return true;
 }
 
+/// <summary>プレビュー再生を開始する。</summary>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::Play(int totalFrames)
 {
 	if (currentFrame >= totalFrames)
@@ -400,11 +409,15 @@ void CustomizePreviewController::Play(int totalFrames)
 	playing = true;
 }
 
+/// <summary>プレビュー再生を停止する。</summary>
 void CustomizePreviewController::Stop()
 {
 	playing = false;
 }
 
+/// <summary>再生を止めて、指定フレーム数だけ手動で移動する。</summary>
+/// <param name="frameDelta">進めるフレーム数。負数なら戻す。</param>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::StepFrame(int frameDelta, int totalFrames)
 {
 	playing = false;
@@ -412,11 +425,21 @@ void CustomizePreviewController::StepFrame(int frameDelta, int totalFrames)
 	ClampCurrentFrame(totalFrames);
 }
 
+/// <summary>現在フレームをプレビュー表示範囲へ収める。</summary>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::ClampCurrentFrame(int totalFrames)
 {
 	currentFrame = std::clamp(currentFrame, 0, totalFrames);
 }
 
+/// <summary>プレビュー用カメラでモデルを描画する。</summary>
+/// <param name="renderer">描画に使う Renderer。</param>
+/// <param name="region">本体ウィンドウの描画矩形。nullptr の場合は RenderTexture へ描画する。</param>
+/// <param name="attackData">技編集時のプレビューに使う AttackData。</param>
+/// <param name="motionData">モーション編集時のプレビューに使う MotionData。</param>
+/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
+/// <param name="hasDraftMotion">motionData が有効な下書きなら true。</param>
+/// <param name="editingMotionDataId">現在編集している MotionData ID。</param>
 void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, const AttackData &attackData,
 										const MotionData &motionData, bool editingCommonMotion, bool hasDraftMotion,
 										const std::string &editingMotionDataId, int selectedBodyPartIndex,
@@ -698,6 +721,9 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 	}
 }
 
+/// <summary>クライアント座標がプレビュー上の専用UIに重なるか確認する。</summary>
+/// <param name="point">ウィンドウ左上を原点とする位置。</param>
+/// <returns>表示中の部品と重なればtrue。</returns>
 bool CustomizePreviewController::IsOverEditorToolbar(POINT point) const
 {
 	return std::any_of(editorToolbarExclusions.begin(), editorToolbarExclusions.end(),
@@ -707,6 +733,7 @@ bool CustomizePreviewController::IsOverEditorToolbar(POINT point) const
 					   });
 }
 
+/// <summary>Undo/Redo時にギズモの内部捕捉と未消費結果を破棄する。</summary>
 void CustomizePreviewController::CancelGizmoEditing()
 {
 	ImGuizmo::Enable(false);
@@ -717,6 +744,11 @@ void CustomizePreviewController::CancelGizmoEditing()
 	EndIkSolveSession();
 }
 
+/// <summary>回転ギズモで編集された部位、操作軸、内部ローカル回転を取り出す。</summary>
+/// <param name="outBodyPartIndex">編集された部位番号の書き込み先。</param>
+/// <param name="outAxisIndex">操作された軸番号。X=0, Y=1, Z=2。</param>
+/// <param name="outLocalRotation">保存するローカル Quaternion の書き込み先。</param>
+/// <returns>今フレームにギズモ操作があった場合は true。</returns>
 bool CustomizePreviewController::ConsumeGizmoRotationEdit(int &outBodyPartIndex, int &outAxisIndex,
 														  Quaternion &outLocalRotation)
 {
@@ -736,6 +768,9 @@ bool CustomizePreviewController::ConsumeGizmoRotationEdit(int &outBodyPartIndex,
 	return true;
 }
 
+/// <summary>IK 数値ドラッグ開始時の姿勢を固定し、ドラッグ中の IK 計算基準にする。</summary>
+/// <param name="actionFrame">固定する姿勢の内部 actionFrame。</param>
+/// <returns>現在のプレビュー姿勢を固定できた場合は true。</returns>
 bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 {
 	if (!skeletonPose.initialized || !HasRenderedActionFrame(actionFrame))
@@ -758,8 +793,10 @@ bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 
 /// <summary>補助ボーンを含む実親階層から、親の基準回転を合成する。</summary>
 /// <param name="part">編集部位番号。</param>
-/// <param name="basis">親座標からモデル座標への基準回転。</param>
+/// <param name="basis">親座標からモデル座標への基準回転。
+/// 取得した回転行列。</param>
 /// <returns>部位と親階層が有効ならtrue。</returns>
+/// <remarks>実ボーンの親からモデル座標への基準回転を取得する。</remarks>
 bool CustomizePreviewController::GetBodyPartBindParentBasis(int part, Matrix& basis) const
 {
 	const auto* model = ModelResourceManager::GetModel(PreviewModelKey);
@@ -791,6 +828,10 @@ bool CustomizePreviewController::GetBodyPartBindParentBasis(int part, Matrix& ba
 	return true;
 }
 
+/// <summary>数値回転とIKが同じ基準で制限できるよう、実モデルの基準回転を取得する。</summary>
+/// <param name="part">編集部位。</param>
+/// <param name="rotation">取得先。</param>
+/// <returns>取得成功時true。</returns>
 bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion &rotation) const
 {
 	const auto *model = ModelResourceManager::GetModel(PreviewModelKey);
@@ -812,6 +853,7 @@ bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion &r
 	return true;
 }
 
+/// <summary>IK 数値ドラッグ用に固定していた基準姿勢を破棄する。</summary>
 void CustomizePreviewController::EndIkSolveSession()
 {
 	hasIkSolveBasePose = false;
@@ -819,6 +861,10 @@ void CustomizePreviewController::EndIkSolveSession()
 	ikSolveAcceptedPose = SkeletonPose{};
 }
 
+/// <summary>プレビュー上に表示されている現在姿勢から、指定部位のワールド位置を取得する。</summary>
+/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
+/// <param name="outWorldPosition">取得したワールド位置の書き込み先。</param>
+/// <returns>現在のプレビュー姿勢とモデルから位置を取得できた場合は true。</returns>
 bool CustomizePreviewController::GetBodyPartWorldPosition(int bodyPartIndex, Vector3 &outWorldPosition) const
 {
 	const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey);
@@ -843,6 +889,11 @@ bool CustomizePreviewController::GetBodyPartWorldPosition(int bodyPartIndex, Vec
 	return true;
 }
 
+/// <summary>選択関節を開始姿勢からワールド直線上で移動し、検証済み回転を返す。</summary>
+/// <param name="targetBodyPartIndex">手・肘・足・膝の編集部位。</param>
+/// <param name="targetWorldPosition">入力したワールド位置。</param>
+/// <param name="result">保存する回転と到達情報。</param>
+/// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
 bool CustomizePreviewController::SolveIkTarget(int targetBodyPartIndex, const Vector3 &targetWorldPosition,
 											   MotionIkResult &result)
 {
@@ -871,6 +922,8 @@ bool CustomizePreviewController::SolveIkTarget(int targetBodyPartIndex, const Ve
 	return true;
 }
 
+/// <summary>プレビュー上の関節クリックで選択された部位を取り出す。</summary>
+/// <returns>選択された部位番号。イベントなしは -1、空白クリックによる解除は -2。</returns>
 int CustomizePreviewController::ConsumePickedBodyPartIndex()
 {
 	const int result = pickedBodyPartIndex;
@@ -879,53 +932,74 @@ int CustomizePreviewController::ConsumePickedBodyPartIndex()
 	return result;
 }
 
+/// <summary>現在のプレビュー表示フレームを取得する。</summary>
+/// <returns>0F Idle を含むプレビュー表示フレーム。</returns>
 int CustomizePreviewController::GetCurrentFrame() const
 {
 	return currentFrame;
 }
 
+/// <summary>現在のプレビュー表示フレームを設定する。</summary>
+/// <param name="frame">0F Idle を含むプレビュー表示フレーム。</param>
 void CustomizePreviewController::SetCurrentFrame(int frame)
 {
 	currentFrame = frame;
 }
 
+/// <summary>現在の表示フレームを内部 actionFrame へ変換する。</summary>
+/// <returns>0F Idle は -1、1F 以降は 0 始まりの内部 actionFrame。</returns>
 int CustomizePreviewController::GetActionFrame() const
 {
 	return currentFrame - 1;
 }
 
+/// <summary>指定 actionFrame の姿勢が直近の Render でプレビュー姿勢へ反映済みか確認する。</summary>
+/// <param name="actionFrame">確認対象の内部 actionFrame。</param>
+/// <returns>現在の skeletonPose が指定フレームから作られている場合は true。</returns>
 bool CustomizePreviewController::HasRenderedActionFrame(int actionFrame) const
 {
 	return lastRenderedActionFrame == actionFrame;
 }
 
+/// <summary>プレビューが再生中か取得する。</summary>
+/// <returns>再生中なら true。</returns>
 bool CustomizePreviewController::IsPlaying() const
 {
 	return playing;
 }
 
+/// <summary>プレビュー用 RenderTexture を取得する。</summary>
+/// <returns>RenderTexture 参照。</returns>
 const Renderer::RenderTexture &CustomizePreviewController::GetRenderTexture() const
 {
 	return renderTexture;
 }
 
+/// <summary>プレビューカメラの yaw 角度を編集する参照を取得する。</summary>
+/// <returns>yaw 角度の参照。</returns>
 float &CustomizePreviewController::GetCameraYawDegrees()
 {
 	return cameraYawDegrees;
 }
 
+/// <summary>プレビューカメラの pitch 角度を編集する参照を取得する。</summary>
+/// <returns>pitch 角度の参照。</returns>
 float &CustomizePreviewController::GetCameraPitchDegrees()
 {
 	return cameraPitchDegrees;
 }
 
+/// <summary>プレビューカメラ距離を編集する参照を取得する。</summary>
+/// <returns>距離の参照。</returns>
 float &CustomizePreviewController::GetCameraDistance()
 {
 	return cameraDistance;
 }
 
 /// <summary>プレビュー内から始まったマウス操作だけを取り込み、カメラ状態を更新する。</summary>
-/// <param name="region">ウィンドウ内のプレビュー領域。</param>
+/// <param name="region">ウィンドウ内のプレビュー領域。
+/// 本体ウィンドウ内のプレビュー領域。</param>
+/// <remarks>両編集画面共通の旋回・平行移動・ズームを処理する。</remarks>
 void CustomizePreviewController::UpdateCameraInput(const RECT &region)
 {
 	const ImGuiIO &io = ImGui::GetIO();
@@ -1027,6 +1101,7 @@ void CustomizePreviewController::UpdateCameraInput(const RECT &region)
 }
 
 /// <summary>注視点オフセットと旋回角度からカメラTransformを更新する。</summary>
+/// <remarks>プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。</remarks>
 void CustomizePreviewController::UpdateCameraTransform()
 {
 	cameraPitchDegrees = std::clamp(cameraPitchDegrees, -45.0f, 65.0f);
@@ -1092,6 +1167,10 @@ void CustomizePreviewController::UpdateCameraTransform()
 	TransformSystem::SetLocalRotationQuaternion(cameraTransform, rotation);
 }
 
+/// <summary>現在フレームが active 範囲なら技の AttackBox を描画する。</summary>
+/// <param name="renderer">DebugBox 描画に使う Renderer。</param>
+/// <param name="attackData">表示する技データ。</param>
+/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
 void CustomizePreviewController::DrawAttackBoxes(Renderer &renderer, const AttackData &attackData,
 												 bool editingCommonMotion)
 {
@@ -1119,6 +1198,10 @@ void CustomizePreviewController::DrawAttackBoxes(Renderer &renderer, const Attac
 	}
 }
 
+/// <summary>関節マーカーを画面へ重ね、クリックされた部位を記録する。</summary>
+/// <param name="region">プレビュー描画矩形。</param>
+/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
 void CustomizePreviewController::DrawJointMarkers(const RECT &region, const ModelResource &model,
 												  int selectedBodyPartIndex)
 {
@@ -1244,6 +1327,11 @@ void CustomizePreviewController::DrawJointMarkers(const RECT &region, const Mode
 	}
 }
 
+/// <summary>選択中部位のワールド回転ギズモを表示し、操作結果を内部ローカル回転として記録する。</summary>
+/// <param name="region">プレビュー描画矩形。</param>
+/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
+/// <param name="enabled">現在フレームで姿勢編集できる場合は true。</param>
 void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const ModelResource &model,
 												   int selectedBodyPartIndex, bool enabled)
 {

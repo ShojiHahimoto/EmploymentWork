@@ -132,6 +132,10 @@ void ClampAttackDataValues(AttackData &attackData)
 }
 } // namespace
 
+/// <summary>指定カテゴリとスロット番号の技データを編集対象として読み込む。</summary>
+/// <param name="category">編集する技カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory category, int slotIndex)
 {
 	selectedCategory = category;
@@ -187,6 +191,8 @@ std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory 
 	return statusMessage;
 }
 
+/// <summary>編集中の draft を JSON として保存する。</summary>
+/// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeAttackEditorController::SaveDraft()
 {
 	SyncDraftFromEditor();
@@ -201,11 +207,15 @@ std::string CustomizeAttackEditorController::SaveDraft()
 	return "Save failed.";
 }
 
+/// <summary>UI 表示用に、編集中データのコピーを取得する。</summary>
+/// <returns>表示・編集に使う一時スナップショット。</returns>
 CustomizeAttackEditorEditState CustomizeAttackEditorController::GetEditState() const
 {
 	return CustomizeAttackEditorEditState{draft, hitFrameAdvantage, guardFrameAdvantage};
 }
 
+/// <summary>編集結果を検証・正規化して下書きへ反映する。</summary>
+/// <param name="editState">表示側が編集した一時データ。</param>
 void CustomizeAttackEditorController::ApplyEditState(const CustomizeAttackEditorEditState &editState)
 {
 	draft = editState.attackData;
@@ -218,6 +228,8 @@ void CustomizeAttackEditorController::ApplyEditState(const CustomizeAttackEditor
 	CopyMotionDataIdToBuffer();
 }
 
+/// <summary>モーション編集画面を開く要求を作り、モーション ID を整える。</summary>
+/// <returns>モーション編集への遷移要求。</returns>
 CustomizeAttackEditorAction CustomizeAttackEditorController::RequestOpenMotionEditor()
 {
 	EnsureDraftMotionDataId();
@@ -225,12 +237,15 @@ CustomizeAttackEditorAction CustomizeAttackEditorController::RequestOpenMotionEd
 	return CustomizeAttackEditorAction::OpenMotionEditor;
 }
 
+/// <summary>技編集画面から戻る要求を作る。</summary>
+/// <returns>戻る遷移要求。</returns>
 CustomizeAttackEditorAction CustomizeAttackEditorController::RequestBack() const
 {
 	return CustomizeAttackEditorAction::Back;
 }
 
 /// <summary>編集バッファを下書きへ確定し、カテゴリ条件を整える。</summary>
+/// <remarks>編集入力バッファの内容を下書きへ確定する。</remarks>
 void CustomizeAttackEditorController::SyncDraftFromEditor()
 {
 	draft.attackDataId = editingAttackDataId;
@@ -266,18 +281,21 @@ void CustomizeAttackEditorController::NormalizeDraftForSelectedCategory()
 	ClampAttackDataValues(draft);
 }
 
+/// <summary>draft のスタンフレームから、編集 UI 用の硬直差入力値を更新する。</summary>
 void CustomizeAttackEditorController::FromStunFramesToFrameAdvantage()
 {
 	hitFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.hitstunFrames);
 	guardFrameAdvantage = ConvertStunFramesToFrameAdvantage(draft.frame, draft.guardstunFrames);
 }
 
+/// <summary>編集 UI の硬直差入力値を、実行時に使うスタンフレームへ反映する。</summary>
 void CustomizeAttackEditorController::FromFrameAdvantageToStunFrames()
 {
 	draft.hitstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, hitFrameAdvantage);
 	draft.guardstunFrames = ConvertFrameAdvantageToStunFrames(draft.frame, guardFrameAdvantage);
 }
 
+/// <summary>編集中の技に、スロット単位で一意になる MotionData ID を割り当てる。</summary>
 void CustomizeAttackEditorController::EnsureDraftMotionDataId()
 {
 	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
@@ -308,6 +326,8 @@ void CustomizeAttackEditorController::EnsureDraftMotionDataId()
 	CopyMotionDataIdToBuffer();
 }
 
+/// <summary>選択カテゴリのスロット JSON を確認し、一覧表示用の保存済み名を更新する。</summary>
+/// <param name="category">更新する技カテゴリ。</param>
 void CustomizeAttackEditorController::RefreshSlotSummaries(CustomizeAttackCategory category)
 {
 	const int categoryIndex = ToCategoryIndex(category);
@@ -343,6 +363,10 @@ void CustomizeAttackEditorController::RefreshSlotSummaries(CustomizeAttackCatego
 	}
 }
 
+/// <summary>スロット番号と保存済み技名をまとめた、ImGui Button 用ラベルを作る。</summary>
+/// <param name="category">表示する技カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>表示名と ImGui ID を含むボタンラベル。</returns>
 std::string CustomizeAttackEditorController::BuildSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const
 {
 	std::ostringstream label;
@@ -365,6 +389,10 @@ std::string CustomizeAttackEditorController::BuildSlotButtonLabel(CustomizeAttac
 	return label.str();
 }
 
+/// <summary>カテゴリとスロット番号から、assets/AttackData 配下の保存 ID を作る。</summary>
+/// <param name="category">保存カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>拡張子なしの AttackData ID。</returns>
 std::string CustomizeAttackEditorController::BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const
 {
 	std::ostringstream stream;
@@ -374,6 +402,10 @@ std::string CustomizeAttackEditorController::BuildAttackDataId(CustomizeAttackCa
 	return stream.str();
 }
 
+/// <summary>カテゴリとスロット番号から、assets/MotionData 配下の保存 ID を作る。</summary>
+/// <param name="category">保存カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <returns>拡張子なしの MotionData ID。</returns>
 std::string CustomizeAttackEditorController::BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const
 {
 	std::ostringstream stream;
@@ -383,6 +415,9 @@ std::string CustomizeAttackEditorController::BuildMotionDataId(CustomizeAttackCa
 	return stream.str();
 }
 
+/// <summary>技カテゴリごとのスロット数を取得する。</summary>
+/// <param name="category">確認する技カテゴリ。</param>
+/// <returns>対象カテゴリのスロット数。</returns>
 int CustomizeAttackEditorController::GetSlotCount(CustomizeAttackCategory category) const
 {
 	switch (category)
@@ -397,6 +432,8 @@ int CustomizeAttackEditorController::GetSlotCount(CustomizeAttackCategory catego
 	}
 }
 
+/// <summary>汎用モーション編集時のプレビュー用 AttackData を用意する。</summary>
+/// <param name="motionDataId">表示する汎用 MotionData ID。</param>
 void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::string &motionDataId)
 {
 	draft = AttackData();
@@ -410,49 +447,70 @@ void CustomizeAttackEditorController::PrepareCommonMotionPreview(const std::stri
 	std::snprintf(motionDataIdBuffer.data(), motionDataIdBuffer.size(), "%s", motionDataId.c_str());
 }
 
+/// <summary>AttackData 下書きを取得する。</summary>
+/// <returns>編集可能な AttackData 参照。</returns>
 AttackData &CustomizeAttackEditorController::GetDraft()
 {
 	return draft;
 }
 
+/// <summary>AttackData 下書きを取得する。</summary>
+/// <returns>読み取り専用の AttackData 参照。</returns>
 const AttackData &CustomizeAttackEditorController::GetDraft() const
 {
 	return draft;
 }
 
+/// <summary>編集中 AttackData ID を取得する。</summary>
+/// <returns>編集中 AttackData ID。</returns>
 const std::string &CustomizeAttackEditorController::GetEditingAttackDataId() const
 {
 	return editingAttackDataId;
 }
 
+/// <summary>編集中カテゴリを取得する。</summary>
+/// <returns>編集中カテゴリ。</returns>
 CustomizeAttackCategory CustomizeAttackEditorController::GetSelectedCategory() const
 {
 	return selectedCategory;
 }
 
+/// <summary>編集中スロット番号を取得する。</summary>
+/// <returns>編集中スロット番号。</returns>
 int CustomizeAttackEditorController::GetSelectedSlotIndex() const
 {
 	return selectedSlotIndex;
 }
 
+/// <summary>表示名入力用バッファを取得する。</summary>
+/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
 std::array<char, CustomizeAttackEditorController::AttackNameBufferSize> &CustomizeAttackEditorController::
 	GetDisplayNameBuffer()
 {
 	return displayNameBuffer;
 }
 
+/// <summary>MotionData ID 入力用バッファを取得する。</summary>
+/// <returns>ImGui 表示に使う固定長バッファ。</returns>
 std::array<char, CustomizeAttackEditorController::MotionDataIdBufferSize> &CustomizeAttackEditorController::
 	GetMotionDataIdBuffer()
 {
 	return motionDataIdBuffer;
 }
 
+/// <summary>MotionData ID 入力用バッファを取得する。</summary>
+/// <returns>読み取り専用の固定長バッファ。</returns>
 const std::array<char, CustomizeAttackEditorController::MotionDataIdBufferSize> &CustomizeAttackEditorController::
 	GetMotionDataIdBuffer() const
 {
 	return motionDataIdBuffer;
 }
 
+/// <summary>未保存スロットを開いた時に使う初期 AttackData を作る。</summary>
+/// <param name="category">作成する技カテゴリ。</param>
+/// <param name="slotIndex">カテゴリ内スロット番号。</param>
+/// <param name="attackDataId">保存先 AttackData ID。</param>
+/// <returns>編集開始用の初期 AttackData。</returns>
 AttackData CustomizeAttackEditorController::CreateDefaultAttackData(CustomizeAttackCategory category, int slotIndex,
 																	const std::string &attackDataId) const
 {
@@ -483,12 +541,14 @@ AttackData CustomizeAttackEditorController::CreateDefaultAttackData(CustomizeAtt
 	return attackData;
 }
 
+/// <summary>draft の表示名を ImGui 入力用固定バッファへコピーする。</summary>
 void CustomizeAttackEditorController::CopyDisplayNameToBuffer()
 {
 	displayNameBuffer.fill('\0');
 	std::snprintf(displayNameBuffer.data(), displayNameBuffer.size(), "%s", draft.displayName.c_str());
 }
 
+/// <summary>draft の MotionData ID を ImGui 入力用固定バッファへコピーする。</summary>
 void CustomizeAttackEditorController::CopyMotionDataIdToBuffer()
 {
 	motionDataIdBuffer.fill('\0');

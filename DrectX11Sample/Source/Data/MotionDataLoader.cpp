@@ -383,6 +383,10 @@ namespace
 	}
 }
 
+/// <summary>指定 MotionData ID に対応する JSON を読み込む。</summary>
+/// <param name="motionDataId">assets/MotionData 配下のモーション ID。</param>
+/// <param name="outMotionData">読み込んだモーションデータの書き込み先。</param>
+/// <returns>読み込みに成功した場合は true。</returns>
 bool MotionDataLoader::LoadMotionData(const std::string& motionDataId, MotionData& outMotionData)
 {
 	std::filesystem::path motionPath;
@@ -431,6 +435,9 @@ bool MotionDataLoader::LoadMotionData(const std::string& motionDataId, MotionDat
 
 std::unordered_map<std::string, std::unique_ptr<MotionData>> MotionDataManager::resources;
 
+/// <summary>指定 ID の MotionData を読み込み、読み込み済みなら再利用する。</summary>
+/// <param name="motionDataId">assets/MotionData 配下のモーション ID。</param>
+/// <returns>読み込みまたは再利用に成功した場合は true。</returns>
 bool MotionDataManager::LoadMotionData(const std::string& motionDataId)
 {
 	if (motionDataId.empty())
@@ -453,12 +460,16 @@ bool MotionDataManager::LoadMotionData(const std::string& motionDataId)
 	return true;
 }
 
+/// <summary>読み込み済み MotionData を取得する。</summary>
+/// <param name="motionDataId">取得するモーション ID。</param>
+/// <returns>見つかった MotionData。存在しない場合は nullptr。</returns>
 const MotionData* MotionDataManager::GetMotionData(const std::string& motionDataId)
 {
 	const auto found = resources.find(motionDataId);
 	return found != resources.end() ? found->second.get() : nullptr;
 }
 
+/// <summary>読み込み済み MotionData を全て破棄する。</summary>
 void MotionDataManager::UnloadAll()
 {
 	resources.clear();
