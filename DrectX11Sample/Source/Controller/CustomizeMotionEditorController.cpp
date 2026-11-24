@@ -3,6 +3,7 @@
 #pragma execution_character_set("utf-8")
 
 #include "Customize/KeyframeEditing.h"
+#include "Data/KeyframeSearch.h"
 #include "Data/MotionDataLoader.h"
 #include "Customize/MotionPose.h"
 #include "Data/MotionDataSaver.h"
@@ -20,6 +21,26 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
+	template <class Key>
+	void MoveKeyAtFrame(std::vector<Key> &keys, int source, int destination)
+	{
+		const auto key = std::find_if(keys.begin(), keys.end(), [source](const Key &item)
+		{
+			return item.frame == source;
+		});
+
+		if (key == keys.end())
+		{
+			return;
+		}
+
+		key->frame = destination;
+		std::stable_sort(keys.begin(), keys.end(), [](const Key &left, const Key &right)
+		{
+			return left.frame < right.frame;
+		});
+	}
+
 constexpr const char *IdlePosePresetId = "__IdlePose__";
 
 Vector3 QuaternionToEulerDegrees(const Quaternion &rotation);
@@ -357,23 +378,7 @@ Vector3 GetMotionRootOffsetAtFrame(const MotionData &motionData, int frame)
 		return Vector3::Zero;
 	}
 
-	const MotionRootOffsetKeyData *previousKey = nullptr;
-	const MotionRootOffsetKeyData *nextKey = nullptr;
-
-	//1つ前と後ろのキーフレームを取得する
-	for (const MotionRootOffsetKeyData &keyframe : motionData.rootOffsetKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(motionData.rootOffsetKeys, frame);
 
 	//先頭より前なら０～先頭キー間で補完
 	if (!previousKey && nextKey)
@@ -413,23 +418,7 @@ Vector2 GetAttackMovementOffsetAtFrame(const AttackData &attackData, int frame)
 		return Vector2::Zero;
 	}
 
-	const AttackMovementKeyData *previousKey = nullptr;
-	const AttackMovementKeyData *nextKey = nullptr;
-
-	//前のキーと後ろのキーを取得
-	for (const AttackMovementKeyData &keyframe : attackData.movementKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(attackData.movementKeys, frame);
 
 	//先頭より前なら先頭に向けて補完
 	if (!previousKey && nextKey)
@@ -1632,4 +1621,60 @@ void CustomizeMotionEditorController::NormalizeDraftForSave()
 			  {
 				  return left.frame < right.frame;
 			  });
+}
+
+/// <summary>同じ段にキーがない場合だけ、指定フレームのキーを移す。</summary>
+/// <param name="attack">攻撃移動キーを保持する編集データ。</param>
+/// <param name="isCommonMotion">汎用モーションの編集なら true。</param>
+/// <param name="isMovementKey">移動キーの段なら true、ポーズの段なら false。</param>
+/// <param name="source">移動元の内部フレーム。</param>
+/// <param name="destination">移動先の内部フレーム。</param>
+/// <param name="totalFrames">編集可能なフレーム数。</param>
+/// <returns>移動を反映した場合は true。</returns>
+bool CustomizeMotionEditorController::MoveTimelineKey(AttackData &attack, bool isCommonMotion, bool isMovementKey,
+													  int source, int destination, int totalFrames)
+{
+	//移動先が移動できないフレームならfalse
+	if (source == destination || source < 0 || source >= totalFrames || destination < 0 ||
+		destination >= totalFrames)
+	{
+		return false;
+	}
+
+	//姿勢キー・移動キー・汎用モーション用のオフセットキーのどれを持つのかをラムダ式で取得
+	const auto hasKey = [&](int frame)
+	{
+		if (!isMovementKey)
+		{
+			return HasMotionKeyframe(frame);
+		}
+
+		return isCommonMotion ? HasRootOffsetKeyframe(frame) : HasAttackMovementKeyframe(attack, frame);
+	};
+
+	//移動先にすでにキーがあればfalse
+	if (!hasKey(source) || hasKey(destination))
+	{
+		return false;
+	}
+
+	//キーフレームの情報を移す
+	//姿勢キーの場合、全ボーン分姿勢を移す
+	if (!isMovementKey)
+	{
+		for (auto& track : draft.boneTracks)
+		{
+			MoveKeyAtFrame(track.keyframes, source, destination);
+		}
+	}
+	else if (isCommonMotion)
+	{
+		MoveKeyAtFrame(draft.rootOffsetKeys, source, destination);
+	}
+	else
+	{
+		MoveKeyAtFrame(attack.movementKeys, source, destination);
+	}
+
+	return true;
 }

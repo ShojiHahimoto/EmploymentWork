@@ -50,6 +50,8 @@ class CustomizeMotionEditorController
 	void CopyEditorBuffers(int actionFrame);
 
 	void RefreshFrameEditValues(int actionFrame);
+	bool MoveTimelineKey(AttackData &attack, bool commonMotion, bool movement, int source, int destination,
+						 int totalFrames);
 
 	DirectX::SimpleMath::Vector2 GetAttackMovementOffsetAtFrame(const AttackData &attackData, int frame) const;
 

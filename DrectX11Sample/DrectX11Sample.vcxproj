@@ -129,6 +129,7 @@
     <ClInclude Include="Source\Data\EffectDataLoader.h" />
     <ClInclude Include="Source\Data\JsonValue.h" />
     <ClInclude Include="Source\Data\MotionData.h" />
+    <ClInclude Include="Source\Data\KeyframeSearch.h" />
     <ClInclude Include="Source\Data\MotionDataLoader.h" />
     <ClInclude Include="Source\Data\PosePreset.h" />
     <ClInclude Include="Source\Data\MotionSkeletonDefinition.h" />

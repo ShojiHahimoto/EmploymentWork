@@ -1,6 +1,7 @@
 ﻿#include "Controller/CustomizePreviewController.h"
 
 #include "Data/MotionDataLoader.h"
+#include "Data/KeyframeSearch.h"
 #include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
 #include "Core/Debugger.h"
@@ -63,23 +64,7 @@ Vector2 GetAttackMovementOffsetAtFrameForPreview(const AttackData &attackData, i
 		return Vector2::Zero;
 	}
 
-	const AttackMovementKeyData *previousKey = nullptr;
-	const AttackMovementKeyData *nextKey = nullptr;
-
-	//前と後ろのキー取得
-	for (const AttackMovementKeyData &keyframe : attackData.movementKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(attackData.movementKeys, frame);
 
 	if (!previousKey && nextKey)
 	{
@@ -127,22 +112,7 @@ Vector3 GetMotionRootOffsetAtFrameForPreview(const MotionData &motionData, int f
 		return Vector3::Zero;
 	}
 
-	const MotionRootOffsetKeyData *previousKey = nullptr;
-	const MotionRootOffsetKeyData *nextKey = nullptr;
-
-	for (const MotionRootOffsetKeyData &keyframe : motionData.rootOffsetKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(motionData.rootOffsetKeys, frame);
 
 	if (!previousKey && nextKey)
 	{

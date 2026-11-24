@@ -1,6 +1,7 @@
 ﻿#include "System/MovementSystem.h"
 
 #include "Component/CharacterParameterComponent.h"
+#include "Data/KeyframeSearch.h"
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/StateComponent.h"
@@ -256,21 +257,7 @@ Vector2 MovementSystem::SampleAttackMovementOffset(const AttackData& attack, int
 		return Vector2::Zero;
 	}
 
-	const AttackMovementKeyData* previousKey = nullptr;
-	const AttackMovementKeyData* nextKey = nullptr;
-	for (const AttackMovementKeyData& key : attack.movementKeys)
-	{
-		if (key.frame <= actionFrame)
-		{
-			previousKey = &key;
-		}
-
-		if (key.frame >= actionFrame)
-		{
-			nextKey = &key;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(attack.movementKeys, actionFrame);
 
 	if (!previousKey && nextKey)
 	{

@@ -67,7 +67,12 @@ class CustomizeEditorUI
 	void BuildCancel();
 
 	GameUI::Root root;					 // 入力捕捉と描画部品。Drawまで参照先を維持する。
-	bool timelineDragging = false;		 // Timelineで押し始めたドラッグを領域外でも維持する。
+	bool timelineDragging = false;
+	int draggedKeyFrame = -1;
+	int draggedKeyLane = 0;
+	long keyPressX = 0;
+	bool keyDragStarted = false;
+	bool timelineKeyMoved = false;
 	AttackEditState edit; // UI部品が参照する当フレームの編集スナップショット。
 	int heightIndex = 0, usableIndex = 0, reactionIndex = 0, commandIndex = 0;
 	int cancelStart = 1, cancelEnd = 1;

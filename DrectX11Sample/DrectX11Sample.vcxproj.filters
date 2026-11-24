@@ -680,6 +680,9 @@
     <ClInclude Include="Source\Data\MotionData.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Data\KeyframeSearch.h">
+      <Filter>ヘッダー ファイル\Data</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Data\MotionDataLoader.h">
       <Filter>ヘッダー ファイル\Data</Filter>
     </ClInclude>

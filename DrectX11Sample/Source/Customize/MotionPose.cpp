@@ -1,5 +1,6 @@
 ﻿#include "Customize/MotionPose.h"
 #include "Data/MotionSkeletonDefinition.h"
+#include "Data/KeyframeSearch.h"
 #include <DirectXMath.h>
 #include <algorithm>
 #include <cmath>
@@ -286,21 +287,7 @@ BonePose MotionPose::SampleBoneTrack(
 		}
 	}
 
-	const MotionBoneKeyframeData* previousKey = nullptr;
-	const MotionBoneKeyframeData* nextKey = nullptr;
-	for (const MotionBoneKeyframeData& keyframe : track.keyframes)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(track.keyframes, frame);
 
 	//ループの処理
 	if (looping)

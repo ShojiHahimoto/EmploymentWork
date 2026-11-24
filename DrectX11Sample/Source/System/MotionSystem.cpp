@@ -1,6 +1,7 @@
 ﻿#include "System/MotionSystem.h"
 
 #include "Component/CharacterAttackDataComponent.h"
+#include "Data/KeyframeSearch.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/MotionPlayerComponent.h"
@@ -521,21 +522,7 @@ Vector3 MotionSystem::SampleRootOffset(const MotionData& motion, int frame)
 		}
 	}
 
-	const MotionRootOffsetKeyData* previousKey = nullptr;
-	const MotionRootOffsetKeyData* nextKey = nullptr;
-	for (const MotionRootOffsetKeyData& keyframe : motion.rootOffsetKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(motion.rootOffsetKeys, frame);
 
 	if (!previousKey && nextKey)
 	{

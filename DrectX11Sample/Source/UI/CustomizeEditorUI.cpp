@@ -66,7 +66,7 @@ GameUI::Root::EditInteraction CustomizeEditorUI::GetEditInteraction() const
 {
 	auto interaction = root.GetEditInteraction();
 
-	if (interaction.id.starts_with("text/preset/"))
+	if (timelineKeyMoved || interaction.id.starts_with("text/preset/"))
 	{
 		return {};
 	}
@@ -101,6 +101,9 @@ void CustomizeEditorUI::Reset()
 	root = GameUI::Root{};
 	scroll = 0;
 	timelineDragging = false;
+	draggedKeyFrame = -1;
+	keyDragStarted = false;
+	timelineKeyMoved = false;
 	movementSelected = false;
 	presetPanelMode = 0;
 	presetName.clear();
@@ -429,6 +432,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	const bool hadKeyboardCapture = root.WantsKeyboardCapture();
 	const GameUI::InputFrame input = suppressInputOnce ? GameUI::InputFrame{} : GameUI::UIInputSystem::GetFrame();
 	suppressInputOnce = false;
+	timelineKeyMoved = false;
 
 	edit = controller.GetEditState();
 
@@ -573,25 +577,97 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			* std::clamp(frame, 0, total) / std::max(1, total));
 	};
 
-	// 押下直後から反映し、ドラッグ中は画面外でも端へクランプする。
-	// 再生と手動シークが競合しないよう、操作開始時に再生を止める。
+	const int rulerY = bottom + (height - bottom) * 25 / 100;
+	const int poseY = rulerY + 18;
+	const int moveY = poseY + 36;
+	const double fraction =
+		static_cast<double>(std::clamp<long>(input.pointerPosition.x - trackLeft, 0, trackWidth)) / trackWidth;
+	const int pointerFrame = static_cast<int>(fraction * total + 0.5);
+	const int candidate = std::clamp(pointerFrame, 1, std::max(1, total)) - 1;
+
 	if (input.focusLost)
 	{
 		timelineDragging = false;
+		draggedKeyFrame = -1;
+		keyDragStarted = false;
 	}
 
-	if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition) &&
-		input.pointerPosition.x >= trackLeft)
+	if (!input.focusLost && input.pointerPressed && timeline.Contains(input.pointerPosition))
 	{
-		timelineDragging = true;
-		preview.Stop();
+		int closest = 11;
+
+		for (int lane = 0; lane < 2; ++lane)
+		{
+			const int y = lane == 0 ? poseY : moveY;
+
+			if (std::abs(input.pointerPosition.y - y) > 10)
+			{
+				continue;
+			}
+
+			for (int frame = 0; frame < total; ++frame)
+			{
+				const auto distance = std::abs(input.pointerPosition.x - timelineFrameX(frame + 1));
+
+				if (distance >= closest)
+				{
+					continue;
+				}
+
+				const bool hasKey = lane == 0 ? motion.HasMotionKeyframe(frame)
+					: commonMotion ? motion.HasRootOffsetKeyframe(frame) : motion.HasAttackMovementKeyframe(data, frame);
+
+				if (hasKey)
+				{
+					closest = static_cast<int>(distance);
+					draggedKeyFrame = frame;
+					draggedKeyLane = lane;
+				}
+			}
+		}
+
+		if (draggedKeyFrame >= 0)
+		{
+			keyPressX = input.pointerPosition.x;
+			keyDragStarted = false;
+			timelineDragging = false;
+			preview.Stop();
+		}
+		else if (input.pointerPosition.x >= trackLeft)
+		{
+			timelineDragging = true;
+			preview.Stop();
+		}
+	}
+
+	if (draggedKeyFrame >= 0)
+	{
+		keyDragStarted = keyDragStarted || std::abs(input.pointerPosition.x - keyPressX) >= 3;
+
+		if (input.pointerReleased)
+		{
+			const bool movement = draggedKeyLane == 1;
+			timelineKeyMoved = keyDragStarted &&
+				motion.MoveTimelineKey(data, commonMotion, movement, draggedKeyFrame, candidate, total);
+
+			const int selectedFrame = timelineKeyMoved ? candidate : draggedKeyFrame;
+			preview.SetCurrentFrame(selectedFrame + 1);
+			movementSelected = movement;
+			preview.CancelGizmoEditing();
+			motion.EndIkEdit(preview);
+			motion.RefreshFrameEditValues(selectedFrame);
+		}
+
+		if (input.pointerReleased || !input.pointerDown)
+		{
+			draggedKeyFrame = -1;
+			keyDragStarted = false;
+		}
 	}
 
 	if (timelineDragging)
 	{
-		const double fraction =
-			static_cast<double>(std::clamp<long>(input.pointerPosition.x - trackLeft, 0, trackWidth)) / trackWidth;
-		preview.SetCurrentFrame(static_cast<int>(fraction * total + 0.5));
+		preview.SetCurrentFrame(pointerFrame);
 
 		if (input.pointerReleased || !input.pointerDown)
 		{
@@ -658,12 +734,9 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 
 	const int divisions = std::max(1, total);
 	const int labelStep = total >= TimelineSparseLabelThreshold ? 5 : 1;
-	const int rulerY = bottom + (height - bottom) * 25 / 100;
 	const int playheadX = timelineFrameX(preview.GetCurrentFrame());
 	root.AddRule({trackLeft, rulerY, trackRight, rulerY + 1});
 
-	const int poseY = rulerY + 18;
-	const int moveY = poseY + 36;
 	const auto trackLabel = [&](const char *id, const char *label, const char *image, int y)
 	{
 		root.AddPanel({18, y - 15, 126, y + 15}, GameUI::Theme::ButtonImage);
@@ -677,7 +750,6 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	// 表示フレームは内部キー+1。0は待機姿勢なのでキーを表示しない。
 	for (int frame = 0; frame < total; ++frame)
 	{
-		const int x = timelineFrameX(frame + 1);
 		const bool pose = motion.HasMotionKeyframe(frame);
 		const bool move =
 			commonMotion ? motion.HasRootOffsetKeyframe(frame) : motion.HasAttackMovementKeyframe(data, frame);
@@ -689,18 +761,10 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 			}
 
 			const int y = lane == 0 ? poseY : moveY;
-			root.AddImage("key/" + std::to_string(lane) + "/" + std::to_string(frame), {x - 9, y - 9, x + 9, y + 9},
-						  lane == 0 ? "keyframe" : "keyframe_movement");
-			if (input.pointerPressed && std::abs(input.pointerPosition.x - x) <= 10 &&
-				std::abs(input.pointerPosition.y - y) <= 10)
-			{
-				preview.Stop();
-				preview.SetCurrentFrame(frame + 1);
-				movementSelected = lane == 1;
-				timelineDragging = false;
-				motion.EndIkEdit(preview);
-				motion.RefreshFrameEditValues(frame);
-			}
+			const bool moving = keyDragStarted && frame == draggedKeyFrame && lane == draggedKeyLane;
+			const int x = timelineFrameX((moving ? candidate : frame) + 1);
+			root.AddImage("key/" + std::to_string(lane) + "/" + std::to_string(frame),
+						  {x - 9, y - 9, x + 9, y + 9}, lane == 0 ? "keyframe" : "keyframe_movement");
 		}
 	}
 
@@ -904,6 +968,9 @@ void CustomizeEditorUI::ResetAfterHistory()
 	pastePanelOpen = false;
 	mirrorPanelOpen = false;
 	timelineDragging = false;
+	draggedKeyFrame = -1;
+	keyDragStarted = false;
+	timelineKeyMoved = false;
 	suppressInputOnce = true;
 	// スクロール・マーカー表示・編集トラックは利用者の操作状態として維持する。
 }
