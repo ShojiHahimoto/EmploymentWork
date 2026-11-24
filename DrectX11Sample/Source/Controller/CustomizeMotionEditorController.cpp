@@ -535,7 +535,7 @@ bool CustomizeMotionEditorController::HasAttackMovementKeyframe(const AttackData
 	return frame >= 0 && FindAttackMovementKeyframe(attackData, frame) != nullptr;
 }
 
-/// <summary>選択部位を更新し、以前のIK操作を終了して編集値を同期する。</summary>
+/// <summary>選択部位と編集値を更新し、新たに選んだ部位がIKで移動できない場合は回転モードに戻す。</summary>
 /// <param name="preview">プレビュー制御。</param>
 /// <param name="part">部位番号。-1は選択解除。</param>
 /// <param name="frame">内部フレーム。</param>
@@ -574,6 +574,15 @@ void CustomizeMotionEditorController::SelectBodyPart(CustomizePreviewController 
 	else
 	{
 		selectedBoneIndex = part;
+	}
+
+	if (preview.translationGizmoEnabled && part >= 0 && part == selectedBoneIndex)
+	{
+		const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(part));
+		if (!chain || chain->translationLocked)
+		{
+			preview.translationGizmoEnabled = false;
+		}
 	}
 
 	hasIkTargetWorldPosition = false;

@@ -447,6 +447,7 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 {
 
 	hasGizmoRotationEdit = false;
+	gizmoBlocksMarkerPicking = false;
 
 	if (!region && !renderTexture.renderTargetView)
 	{
@@ -617,7 +618,7 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 							  static_cast<float>(region->bottom - region->top));
 			ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
 			ImGuizmo::SetRotationAngleLimit(false, 0, 0);
-			ImGuizmo::SetTranslationAxesOnly(true);
+			ImGuizmo::SetScreenTranslationEnabled(false);
 
 			const auto axes = editingCommonMotion ? ImGuizmo::TRANSLATE : ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
 
@@ -639,7 +640,8 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 				TransformSystem::UpdateWorldTransform(playerTransform);
 			}
 
-			ImGuizmo::SetTranslationAxesOnly(false);
+			gizmoBlocksMarkerPicking = !blocked && ImGuizmo::IsOver();
+			ImGuizmo::SetScreenTranslationEnabled(true);
 			rootMovementActive = ImGuizmo::IsUsing();
 		}
 		else
@@ -1293,7 +1295,7 @@ void CustomizePreviewController::DrawJointMarkers(const RECT &region, const Mode
 	if (mouseInPreview && !ImGui::GetIO().WantCaptureMouse && cameraDragButton < 0 &&
 		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		if (!ImGuizmo::IsOver() && !ImGuizmo::IsUsing())
+		if (!gizmoBlocksMarkerPicking)
 		{
 			// -1はイベントなし、-2は空白クリックによる明示的な選択解除。
 			pickedBodyPartIndex = nearestBodyPartIndex >= 0 ? nearestBodyPartIndex : -2;
@@ -1423,17 +1425,20 @@ void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const Mod
 		}
 
 		ImGuizmo::SetRotationAngleLimit(false, 0, 0);
-		ImGuizmo::SetTranslationAxesOnly(true);
+		ImGuizmo::SetScreenTranslationEnabled(false);
 
 		const bool changed = ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11,
 												  ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &translationGizmoMatrix._11);
-		ImGuizmo::SetTranslationAxesOnly(false);
+		gizmoBlocksMarkerPicking = ImGuizmo::IsOver();
+		ImGuizmo::SetScreenTranslationEnabled(true);
 
 		const bool usingGizmo = ImGuizmo::IsUsing();
 		const int handle = ImGuizmo::GetActiveHandleType();
-		const bool axisHandle =
-			handle == ImGuizmo::MT_MOVE_X || handle == ImGuizmo::MT_MOVE_Y || handle == ImGuizmo::MT_MOVE_Z;
-		if (usingGizmo && !translationGizmoActive && axisHandle)
+		const bool translationHandle =
+			handle == ImGuizmo::MT_MOVE_X || handle == ImGuizmo::MT_MOVE_Y || handle == ImGuizmo::MT_MOVE_Z ||
+			handle == ImGuizmo::MT_MOVE_YZ || handle == ImGuizmo::MT_MOVE_ZX || handle == ImGuizmo::MT_MOVE_XY;
+
+		if (usingGizmo && !translationGizmoActive && translationHandle)
 		{
 			Stop();
 			translationGizmoActive = BeginIkSolveSession(GetActionFrame());
@@ -1441,7 +1446,7 @@ void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const Mod
 			translationGizmoFrame = GetActionFrame();
 		}
 
-		if (changed && translationGizmoActive && axisHandle &&
+		if (changed && translationGizmoActive && translationHandle &&
 			SolveIkTarget(selectedBodyPartIndex, translationGizmoMatrix.Translation(), translationGizmoResult))
 		{
 			hasTranslationGizmoEdit = true;
@@ -1486,6 +1491,7 @@ void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const Mod
 	const ImGuizmo::OPERATION rotationOperation = ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z;
 	const bool manipulated = ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11,
 												  rotationOperation, ImGuizmo::LOCAL, &editableWorld._11);
+	gizmoBlocksMarkerPicking = ImGuizmo::IsOver();
 
 	const bool usingGizmo = ImGuizmo::IsUsing();
 	int axisIndex = GetRotationAxisIndex(ImGuizmo::GetActiveHandleType());

@@ -139,6 +139,7 @@ class CustomizePreviewController
 	int gizmoEditedBodyPartIndex = -1;
 	int gizmoEditedAxisIndex = -1;
 	DirectX::SimpleMath::Quaternion gizmoLocalRotation = DirectX::SimpleMath::Quaternion::Identity;
+	bool gizmoBlocksMarkerPicking = false;
 	bool rotationGizmoDragActive = false;
 	int rotationGizmoDragBodyPartIndex = -1;
 	int rotationGizmoDragAxisIndex = -1;
