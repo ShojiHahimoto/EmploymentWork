@@ -14,12 +14,43 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <wrl/client.h>
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 namespace
 {
+	using Microsoft::WRL::ComPtr;
+
+	struct SurfaceConstants
+	{
+		Matrix viewProjection;
+		Vector4 origin;
+		Vector4 edgeU;
+		Vector4 edgeV;
+		Vector4 normal;
+		Color tint;
+	};
+
+	ComPtr<ID3D11VertexShader> roomSurfaceVS;
+	ComPtr<ID3D11PixelShader> roomSurfacePS;
+	ComPtr<ID3D11PixelShader> roomSpecularPS;
+	ComPtr<ID3D11PixelShader> satinMetalPS;
+	ComPtr<ID3D11BlendState> roomSpecularBlend;
+	ComPtr<ID3D11DepthStencilState> roomSpecularDepth;
+	ComPtr<ID3D11Buffer> roomLightingBuffer;
+
+	struct SurfaceLightingConstants
+	{
+		Vector4 localLight;
+		Vector4 cameraPosition;
+		Vector4 lightingStrength;
+	};
+	ComPtr<ID3D11Buffer> roomSurfaceBuffer;
+	ComPtr<ID3D11SamplerState> roomSurfaceSampler;
+	ComPtr<ID3D11ShaderResourceView> roomConcrete;
+
 	/// <summary>HLSLを読み、D3DCompilerが解釈できないUTF-8 BOMを除く。</summary>
 	/// <param name="path">シェーダーまたはインクルードのパス。</param>
 	/// <returns>コンパイルに渡すテキスト。読み込み不可の場合は空。</returns>
@@ -391,6 +422,12 @@ HRESULT Renderer::Init()
 	{
 		DebugLog("[Renderer] Model render resources creation failed. hr=", static_cast<long>(hr));
 		return hr;
+	}
+
+	if (FAILED(CreateTrainingRoomResources()))
+	{
+		ReleaseTrainingRoomResources();
+		DebugLog("[Renderer] Training room material unavailable; using flat surfaces.");
 	}
 
 	hr = CreateShadowResources();
@@ -981,6 +1018,18 @@ HRESULT Renderer::CreateModelRenderResources()
 		return hr;
 	}
 
+	for (const auto* root : {L"", L"DrectX11Sample/", L"../../DrectX11Sample/"})
+	{
+		ComPtr<ID3DBlob> metalCode;
+		if (SUCCEEDED(CompileShaderFromFile(std::wstring(root) + L"Source/Shader/PS_SatinMetal.hlsl",
+			"PSMain", "ps_5_0", metalCode.GetAddressOf())))
+		{
+			hr = m_pDevice->CreatePixelShader(metalCode->GetBufferPointer(), metalCode->GetBufferSize(),
+				nullptr, satinMetalPS.GetAddressOf());
+			break;
+		}
+	}
+
 	hr = m_pDevice->CreateVertexShader(
 		vertexShaderBlob->GetBufferPointer(),
 		vertexShaderBlob->GetBufferSize(),
@@ -1267,6 +1316,217 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// <param name="wallHeight">壁の高さ。</param>
 /// <param name="gridStep">グリッドの間隔。</param>
 /// <param name="receiveShadows">現在のシャドウマップを床に適用する場合はtrue。</param>
+/// <summary>共有の部屋素材と面描画用GPUリソースを起動時に作る。</summary>
+/// <returns>リソースの初期化結果。</returns>
+HRESULT Renderer::CreateTrainingRoomResources()
+{
+	const auto compile = [](const wchar_t* name, const char* entry, const char* profile, ID3DBlob** code)
+	{
+		HRESULT result = E_FAIL;
+		for (const auto* root : {L"", L"DrectX11Sample/", L"../../DrectX11Sample/"})
+		{
+			result = CompileShaderFromFile(std::wstring(root) + L"Source/Shader/" + name, entry, profile, code);
+			if (SUCCEEDED(result))
+			{
+				break;
+			}
+		}
+
+		return result;
+	};
+
+	ComPtr<ID3DBlob> vs;
+	ComPtr<ID3DBlob> ps;
+	ComPtr<ID3DBlob> specular;
+	HRESULT hr = compile(L"VS_StaticSurface.hlsl", "VSMain", "vs_5_0", vs.GetAddressOf());
+	if (SUCCEEDED(hr))
+	{
+		hr = compile(L"PS_Lambert.hlsl", "PSMain", "ps_5_0", ps.GetAddressOf());
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = m_pDevice->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &roomSurfaceVS);
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = m_pDevice->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr, &roomSurfacePS);
+	}
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	D3D11_BUFFER_DESC buffer{};
+	buffer.ByteWidth = sizeof(SurfaceConstants);
+	buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	hr = m_pDevice->CreateBuffer(&buffer, nullptr, &roomSurfaceBuffer);
+	if (SUCCEEDED(hr))
+	{
+		buffer.ByteWidth = sizeof(SurfaceLightingConstants);
+		hr = m_pDevice->CreateBuffer(&buffer, nullptr, &roomLightingBuffer);
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = compile(L"PS_Specular.hlsl", "PSMain", "ps_5_0", specular.GetAddressOf());
+	}
+	if (SUCCEEDED(hr))
+	{
+		hr = m_pDevice->CreatePixelShader(specular->GetBufferPointer(), specular->GetBufferSize(), nullptr,
+			&roomSpecularPS);
+	}
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	D3D11_BLEND_DESC blend{};
+	auto& target = blend.RenderTarget[0];
+	target.BlendEnable = TRUE;
+	target.SrcBlend = D3D11_BLEND_ONE;
+	target.DestBlend = D3D11_BLEND_ONE;
+	target.BlendOp = D3D11_BLEND_OP_ADD;
+	target.SrcBlendAlpha = D3D11_BLEND_ZERO;
+	target.DestBlendAlpha = D3D11_BLEND_ONE;
+	target.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	target.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	hr = m_pDevice->CreateBlendState(&blend, &roomSpecularBlend);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	D3D11_DEPTH_STENCIL_DESC depth{};
+	depth.DepthEnable = TRUE;
+	depth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depth.DepthFunc = D3D11_COMPARISON_EQUAL;
+	hr = m_pDevice->CreateDepthStencilState(&depth, &roomSpecularDepth);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	D3D11_SAMPLER_DESC sampler{};
+	sampler.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sampler.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	sampler.MaxAnisotropy = 1;
+	sampler.MaxLOD = D3D11_FLOAT32_MAX;
+	hr = m_pDevice->CreateSamplerState(&sampler, &roomSurfaceSampler);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	for (const auto* root : {"", "DrectX11Sample/", "../../DrectX11Sample/"})
+	{
+		const auto path = std::string(root) + "assets/texture/TrainingRoomConcrete.png";
+		if (std::filesystem::exists(path))
+		{
+			return LoadTextureFromFile(path, roomConcrete.GetAddressOf());
+		}
+	}
+
+	return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+}
+
+/// <summary>共有の部屋素材と面描画用GPUリソースを解放する。</summary>
+void Renderer::ReleaseTrainingRoomResources()
+{
+	roomConcrete.Reset();
+	roomSpecularDepth.Reset();
+	roomSpecularBlend.Reset();
+	roomSpecularPS.Reset();
+	roomLightingBuffer.Reset();
+	roomSurfaceSampler.Reset();
+	roomSurfaceBuffer.Reset();
+	roomSurfacePS.Reset();
+	roomSurfaceVS.Reset();
+}
+
+/// <summary>部屋の６面を拡散照明で描き、床だけに鏡面反射を加算する。</summary>
+/// <param name="minX">左端。</param>
+/// <param name="maxX">右端。</param>
+/// <param name="nearZ">手前端。</param>
+/// <param name="farZ">奥端。</param>
+/// <param name="height">天井の高さ。</param>
+/// <returns>６面を描画した場合はtrue。</returns>
+bool Renderer::DrawTrainingRoomSurfaces(float minX, float maxX, float nearZ, float farZ, float height)
+{
+	if (!roomConcrete)
+	{
+		return false;
+	}
+
+	auto* context = m_pDeviceContext;
+	context->IASetInputLayout(nullptr);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	context->VSSetShader(roomSurfaceVS.Get(), nullptr, 0);
+	context->VSSetConstantBuffers(0, 1, roomSurfaceBuffer.GetAddressOf());
+	context->PSSetShader(roomSurfacePS.Get(), nullptr, 0);
+	context->PSSetShaderResources(0, 1, roomConcrete.GetAddressOf());
+	context->PSSetSamplers(0, 1, roomSurfaceSampler.GetAddressOf());
+
+	const auto eye = m_ViewMatrix.Invert().Translation();
+	const float depth = farZ - nearZ;
+	const SurfaceLightingConstants lighting{
+		Vector4((minX + maxX) * 0.5f, height * 0.86f, farZ - depth * 0.27f, height * 0.85f),
+		Vector4(eye.x, eye.y, eye.z, 1.0f),
+		Vector4(0.90f, 0.42f, 0.17f, 12.0f)
+	};
+	context->UpdateSubresource(roomLightingBuffer.Get(), 0, nullptr, &lighting, 0, 0);
+	context->PSSetConstantBuffers(1, 1, roomLightingBuffer.GetAddressOf());
+
+	const auto viewProjection = (m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	const auto draw = [&](const Vector3& origin, const Vector3& u, const Vector3& v,
+		const Vector3& normal, float tileSize, const Color& tint)
+	{
+		const SurfaceConstants constants{
+			viewProjection, Vector4(origin.x, origin.y, origin.z, 1),
+			Vector4(u.x, u.y, u.z, u.Length() / tileSize),
+			Vector4(v.x, v.y, v.z, v.Length() / tileSize),
+			Vector4(normal.x, normal.y, normal.z, 0), tint
+		};
+
+		context->UpdateSubresource(roomSurfaceBuffer.Get(), 0, nullptr, &constants, 0, 0);
+		context->Draw(6, 0);
+	};
+
+	const Vector3 x(maxX - minX, 0, 0);
+	const Vector3 y(0, height, 0);
+	const Vector3 z(0, 0, farZ - nearZ);
+	const Color floor(0.94f, 0.95f, 0.97f, 1);
+	const Color wall(1.0f, 0.99f, 0.97f, 1);
+	const Color ceiling(0.96f, 0.97f, 0.99f, 1);
+
+	draw({minX, -0.01f, nearZ}, x, z, Vector3::Up, 8.0f, floor);
+	draw({minX, -0.01f, farZ}, x, y, {0, 0, -1}, 10.0f, wall);
+	draw({minX, -0.01f, nearZ}, x, y, {0, 0, 1}, 10.0f, wall);
+	draw({minX, -0.01f, nearZ}, z, y, {1, 0, 0}, 10.0f, wall);
+	draw({maxX, -0.01f, nearZ}, z, y, {-1, 0, 0}, 10.0f, wall);
+	draw({minX, height - 0.01f, nearZ}, x, z, Vector3::Down, 10.0f, ceiling);
+
+	ID3D11ShaderResourceView* emptyView = nullptr;
+	context->PSSetShaderResources(0, 1, &emptyView);
+
+	// 同じ床の深度にだけ加算し、後続の影パスに描画状態を持ち越さない。
+	ComPtr<ID3D11BlendState> previousBlend;
+	ComPtr<ID3D11DepthStencilState> previousDepth;
+	FLOAT blendFactor[4]{};
+	UINT sampleMask = 0;
+	UINT stencil = 0;
+	context->OMGetBlendState(previousBlend.GetAddressOf(), blendFactor, &sampleMask);
+	context->OMGetDepthStencilState(previousDepth.GetAddressOf(), &stencil);
+	context->OMSetBlendState(roomSpecularBlend.Get(), nullptr, 0xffffffff);
+	context->OMSetDepthStencilState(roomSpecularDepth.Get(), 0);
+	context->PSSetShader(roomSpecularPS.Get(), nullptr, 0);
+	draw({minX, -0.01f, nearZ}, x, z, Vector3::Up, 8.0f, floor);
+
+	context->OMSetDepthStencilState(previousDepth.Get(), stencil);
+	context->OMSetBlendState(previousBlend.Get(), blendFactor, sampleMask);
+
+	return true;
+}
+
 void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
 	float nearZ, float farZ, float wallHeight, float gridStep, bool receiveShadows)
 {
@@ -1287,35 +1547,33 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
 	const float wallCenterY = wallHeight * 0.5f;
 	const float lineLift = 0.025f;
 	const Color panelColor(0.94f, 0.94f, 0.91f, 1.0f);
-	const Color gridColor(0.12f, 0.12f, 0.12f, 1.0f);
+	const Color gridColor(0.43f, 0.43f, 0.43f, 1.0f);
 	const Color centerLineColor(0.02f, 0.02f, 0.02f, 1.0f);
 
-	// 白い床・奥壁・左右端壁を先に敷き、後から黒いグリッド線を重ねる。
-	if (!receiveShadows || !DrawShadowFloor(stageMinX, stageMaxX, nearZ, farZ, panelColor))
+	if (!DrawTrainingRoomSurfaces(stageMinX, stageMaxX, nearZ, farZ, wallHeight))
 	{
 		DrawDebugBox(
 			Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
 			* Matrix::CreateTranslation(stageCenterX, -0.04f, centerZ),
 			panelColor);
+		DrawDebugBox(Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
+			* Matrix::CreateTranslation(stageCenterX, wallCenterY, farZ), panelColor);
+		DrawDebugBox(Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
+			* Matrix::CreateTranslation(stageMinX, wallCenterY, centerZ), panelColor);
+		DrawDebugBox(Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
+			* Matrix::CreateTranslation(stageMaxX, wallCenterY, centerZ), panelColor);
+		DrawDebugBox(Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
+			* Matrix::CreateTranslation(stageCenterX, wallCenterY, nearZ), panelColor);
+		DrawDebugBox(Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
+			* Matrix::CreateTranslation(stageCenterX, wallHeight, centerZ), panelColor);
 	}
-	DrawDebugBox(
-		Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
-		* Matrix::CreateTranslation(stageCenterX, wallCenterY, farZ),
-		panelColor);
-	DrawDebugBox(
-		Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
-		* Matrix::CreateTranslation(stageMinX, wallCenterY, centerZ),
-		panelColor);
-	DrawDebugBox(
-		Matrix::CreateScale(0.03f, wallCenterY, halfDepth)
-		* Matrix::CreateTranslation(stageMaxX, wallCenterY, centerZ),
-		panelColor);
+
+	if (receiveShadows)
+	{
+		DrawShadowFloor(stageMinX, stageMaxX, nearZ, farZ);
+	}
 
 	// 中央線は通常グリッドより太めに見えるよう、細い箱として明示的に描く。
-	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
-		* Matrix::CreateTranslation(stageCenterX, wallCenterY, nearZ), panelColor);
-	DrawDebugBox(Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
-		* Matrix::CreateTranslation(stageCenterX, wallHeight, centerZ), panelColor);
 	DrawDebugBox(
 		Matrix::CreateScale(0.045f, 0.012f, halfDepth)
 		* Matrix::CreateTranslation(0.0f, 0.01f, centerZ),
@@ -1468,7 +1726,8 @@ bool Renderer::DrawModel(
 		return false;
 	}
 
-	const auto constantBuffer = BuildModelConstants(world * m_ViewMatrix * m_ProjectionMatrix, color, skinningMatrices);
+	auto constantBuffer = BuildModelConstants(world * m_ViewMatrix * m_ProjectionMatrix, color, skinningMatrices);
+	constantBuffer.worldView = (world * m_ViewMatrix).Transpose();
 	m_pDeviceContext->UpdateSubresource(m_pModelConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
 
 	m_pDeviceContext->IASetInputLayout(m_pModelInputLayout);
@@ -1511,6 +1770,8 @@ bool Renderer::DrawModel(
 			textureView = materials[mesh.materialIndex].diffuseTextureView;
 		}
 		m_pDeviceContext->PSSetShaderResources(0, 1, &textureView);
+		const bool satin = mesh.materialIndex < materials.size() && materials[mesh.materialIndex].satinMetal;
+		m_pDeviceContext->PSSetShader(satin && satinMetalPS ? satinMetalPS.Get() : m_pModelPixelShader, nullptr, 0);
 
 		m_pDeviceContext->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
 		drewMesh = true;
@@ -1756,6 +2017,7 @@ void Renderer::ReleaseModelRenderResources()
 	SAFE_RELEASE(m_pModelConstantBuffer);
 	SAFE_RELEASE(m_pModelInputLayout);
 	SAFE_RELEASE(m_pModelPixelShader);
+	satinMetalPS.Reset();
 	SAFE_RELEASE(m_pModelVertexShader);
 }
 
@@ -1767,6 +2029,7 @@ void Renderer::Uninit()
 	ModelResourceManager::UnloadAll();
 	m_pSpriteBatch.reset();
 	ReleaseShadowResources();
+	ReleaseTrainingRoomResources();
 	ReleaseModelRenderResources();
 	ReleaseDebugBoxResources();
 	ReleaseDebugCubeResources();

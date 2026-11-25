@@ -232,6 +232,11 @@
     <None Include="Source\Shader\ShadowReceiver.hlsli" />
     <None Include="Source\Shader\VS_ShadowReceiver.hlsl" />
     <None Include="Source\Shader\PS_ShadowReceiver.hlsl" />
+    <None Include="Source\Shader\VS_StaticSurface.hlsl" />
+    <None Include="Source\Shader\PS_Lambert.hlsl" />
+    <None Include="Source\Shader\PS_SatinMetal.hlsl" />
+    <None Include="Source\Shader\PS_Specular.hlsl" />
+    <None Include="Source\Shader\SurfaceLighting.hlsli" />
     <None Include="assets\EffectData\GuardSpark.json" />
     <None Include="assets\EffectData\HitSpark.json" />
     <None Include="assets\Sound\BGM\BGM_Battle01_maou_.wav" />

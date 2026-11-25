@@ -5,6 +5,8 @@ struct PS_INPUT
 	float4 position : SV_POSITION;
 	float3 normal : NORMAL;
 	float2 uv : TEXCOORD;
+	float3 viewPosition : TEXCOORD1;
+	float3 viewNormal : TEXCOORD2;
 };
 
 PS_INPUT VSMain(VS_INPUT input)
@@ -24,5 +26,7 @@ PS_INPUT VSMain(VS_INPUT input)
 	output.position = mul(localPosition, worldViewProjection);
 	output.normal = normalize(localNormal);
 	output.uv = input.uv;
+	output.viewPosition = mul(localPosition, worldView).xyz;
+	output.viewNormal = mul(float4(localNormal, 0), worldView).xyz;
 	return output;
 }

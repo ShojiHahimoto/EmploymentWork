@@ -19,7 +19,6 @@ namespace
 		Matrix cameraViewProjection;
 		Matrix lightViewProjection;
 		Vector4 bounds;
-		Color color;
 		Vector4 settings;
 	};
 
@@ -31,6 +30,8 @@ namespace
 	ComPtr<ID3D11VertexShader> floorVertexShader;
 	ComPtr<ID3D11PixelShader> floorPixelShader;
 	ComPtr<ID3D11Buffer> floorBuffer;
+	ComPtr<ID3D11DepthStencilState> floorDepthState;
+	ComPtr<ID3D11BlendState> floorBlendState;
 	Matrix lightViewProjection;
 	bool shadowReady = false;
 }
@@ -146,6 +147,32 @@ HRESULT Renderer::CreateShadowResources()
 	}
 
 	D3D11_BUFFER_DESC buffer{};
+	D3D11_DEPTH_STENCIL_DESC floorDepth{};
+	floorDepth.DepthEnable = TRUE;
+	floorDepth.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	floorDepth.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	hr = m_pDevice->CreateDepthStencilState(&floorDepth, &floorDepthState);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
+	D3D11_BLEND_DESC floorBlend{};
+	auto& target = floorBlend.RenderTarget[0];
+	target.BlendEnable = TRUE;
+	target.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	target.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	target.BlendOp = D3D11_BLEND_OP_ADD;
+	target.SrcBlendAlpha = D3D11_BLEND_ZERO;
+	target.DestBlendAlpha = D3D11_BLEND_ONE;
+	target.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	target.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	hr = m_pDevice->CreateBlendState(&floorBlend, &floorBlendState);
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+
 	buffer.ByteWidth = sizeof(FloorConstants);
 	buffer.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
@@ -156,6 +183,8 @@ HRESULT Renderer::CreateShadowResources()
 void Renderer::ReleaseShadowResources()
 {
 	shadowReady = false;
+	floorDepthState.Reset();
+	floorBlendState.Reset();
 	floorBuffer.Reset();
 	floorPixelShader.Reset();
 	floorVertexShader.Reset();
@@ -244,23 +273,21 @@ void Renderer::DrawShadowMap(std::span<const ShadowCaster> casters, const Vector
 	context->RSSetViewports(viewportCount, oldViewports);
 }
 
-/// <summary>床にだけシャドウマップを適用する。マップがない場合は従来の床へ任せる。</summary>
+/// <summary>描画済みの床にシャドウマップの影だけを合成する。</summary>
 /// <param name="minX">床の左端。</param>
 /// <param name="maxX">床の右端。</param>
 /// <param name="nearZ">床の手前端。</param>
 /// <param name="farZ">床の奥端。</param>
-/// <param name="color">影がない部分の床色。</param>
-/// <returns>影付きの床を描画した場合はtrue。</returns>
-bool Renderer::DrawShadowFloor(float minX, float maxX, float nearZ, float farZ, const Color &color)
+void Renderer::DrawShadowFloor(float minX, float maxX, float nearZ, float farZ)
 {
 	if (!shadowReady || !floorBuffer)
 	{
-		return false;
+		return;
 	}
 
 	const FloorConstants constants{
 		(m_ViewMatrix * m_ProjectionMatrix).Transpose(), lightViewProjection.Transpose(),
-		Vector4(minX, nearZ, maxX, farZ), color, Vector4(ShadowDepthBias, ShadowFloorBrightness, 0, 0)
+		Vector4(minX, nearZ, maxX, farZ), Vector4(ShadowDepthBias, ShadowFloorBrightness, 0, 0)
 	};
 
 	auto *context = m_pDeviceContext;
@@ -273,12 +300,19 @@ bool Renderer::DrawShadowFloor(float minX, float maxX, float nearZ, float farZ, 
 	context->PSSetConstantBuffers(0, 1, floorBuffer.GetAddressOf());
 	context->PSSetShaderResources(0, 1, shadowView.GetAddressOf());
 	context->PSSetSamplers(0, 1, shadowSampler.GetAddressOf());
-	context->OMSetDepthStencilState(m_pDepthStateDisable, 0);
+	ComPtr<ID3D11BlendState> previousBlend;
+	ComPtr<ID3D11DepthStencilState> previousDepth;
+	FLOAT blendFactor[4]{};
+	UINT sampleMask = 0;
+	UINT stencil = 0;
+	context->OMGetBlendState(previousBlend.GetAddressOf(), blendFactor, &sampleMask);
+	context->OMGetDepthStencilState(previousDepth.GetAddressOf(), &stencil);
+	context->OMSetBlendState(floorBlendState.Get(), nullptr, 0xffffffff);
+	context->OMSetDepthStencilState(floorDepthState.Get(), 0);
 	context->Draw(6, 0);
 
 	ID3D11ShaderResourceView *emptyView = nullptr;
 	context->PSSetShaderResources(0, 1, &emptyView);
-	context->OMSetDepthStencilState(m_pDepthStateEnable, 0);
-
-	return true;
+	context->OMSetDepthStencilState(previousDepth.Get(), stencil);
+	context->OMSetBlendState(previousBlend.Get(), blendFactor, sampleMask);
 }

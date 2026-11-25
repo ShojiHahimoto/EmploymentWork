@@ -306,6 +306,12 @@ namespace
 			}
 
 			auto &material = materials[index];
+			aiString materialName;
+			if (source->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS)
+			{
+				material.satinMetal = std::string(materialName.C_Str()).starts_with("SatinMetal_");
+			}
+
 			const auto load = [&](const std::string &key, const aiTexture *embedded)
 			{
 				if (key.empty())
@@ -537,7 +543,8 @@ ModelMaterial::~ModelMaterial()
 /// </summary>
 /// <param name="other">ムーブ元の ModelMaterial。</param>
 ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
-	: diffuseTexturePath(std::move(other.diffuseTexturePath))
+	: satinMetal(other.satinMetal)
+	, diffuseTexturePath(std::move(other.diffuseTexturePath))
 	, diffuseTextureView(other.diffuseTextureView)
 {
 	other.diffuseTextureView = nullptr;
@@ -558,6 +565,7 @@ ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 	ReleaseTexture(diffuseTextureView);
 
 	diffuseTexturePath = std::move(other.diffuseTexturePath);
+	satinMetal = other.satinMetal;
 	diffuseTextureView = other.diffuseTextureView;
 	other.diffuseTextureView = nullptr;
 
@@ -764,6 +772,7 @@ bool ModelResource::Upload(ID3D11Device *device, PreparedModelData &&prepared)
 	{
 		auto &material = uploadedMaterials.emplace_back();
 		material.diffuseTexturePath = source.path;
+		material.satinMetal = source.satinMetal;
 		if (!source.image)
 		{
 			continue;

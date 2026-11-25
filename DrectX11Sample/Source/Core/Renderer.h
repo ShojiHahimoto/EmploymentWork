@@ -121,6 +121,7 @@ private:
 		DirectX::SimpleMath::Matrix boneMatrices[MaxModelSkinningBoneCount];
 		DirectX::XMINT4 skinningFlags;
 		DirectX::SimpleMath::Color modelColor;
+		DirectX::SimpleMath::Matrix worldView;
 	};
 
 	static D3D_FEATURE_LEVEL m_FeatureLevel;
@@ -184,13 +185,15 @@ private:
 	static HRESULT CreateModelRenderResources();
 	static HRESULT CreateShadowResources();
 	static void ReleaseShadowResources();
-	static bool DrawShadowFloor(float minX, float maxX, float nearZ, float farZ,
-		const DirectX::SimpleMath::Color &color);
+	static void DrawShadowFloor(float minX, float maxX, float nearZ, float farZ);
 	static ModelConstantBuffer BuildModelConstants(const DirectX::SimpleMath::Matrix &worldViewProjection,
 		const DirectX::SimpleMath::Color &color, const std::vector<DirectX::SimpleMath::Matrix> *skinningMatrices);
 	static HRESULT CreateWhiteTextureResource();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static HRESULT CompileShaderFromFile(const std::wstring& path, const char* entryPoint, const char* target, ID3DBlob** blob);
+	static HRESULT CreateTrainingRoomResources();
+	static void ReleaseTrainingRoomResources();
+	static bool DrawTrainingRoomSurfaces(float minX, float maxX, float nearZ, float farZ, float height);
 	static void ReleaseDebugCubeResources();
 	static void ReleaseDebugBoxResources();
 	static void ReleaseModelRenderResources();

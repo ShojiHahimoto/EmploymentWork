@@ -39,6 +39,7 @@ struct ModelMesh
 
 struct ModelMaterial
 {
+	bool satinMetal = false;
 	std::string diffuseTexturePath;
 	ID3D11ShaderResourceView* diffuseTextureView = nullptr;
 
@@ -94,6 +95,7 @@ struct ModelAnimationClip
 
 struct PreparedModelMaterial
 {
+	bool satinMetal = false;
 	std::string path;
 	std::shared_ptr<const TexturePreparation::Image> image;
 };

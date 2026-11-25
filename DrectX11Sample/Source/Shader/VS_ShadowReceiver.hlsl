@@ -6,8 +6,8 @@ ReceiverVertex VSMain(uint id : SV_VertexID)
 		float2(0, 0), float2(0, 1), float2(1, 0),
 		float2(1, 0), float2(0, 1), float2(1, 1)
 	};
-	const float2 xz = lerp(floorBounds.xy, floorBounds.zw, corners[id]);
-	const float4 worldPosition = float4(xz.x, -0.01f, xz.y, 1.0f);
+	const float2 xz = floorBounds.xy + corners[id] * (floorBounds.zw - floorBounds.xy);
+	const float4 worldPosition = float4(xz.x, -0.009f, xz.y, 1.0f);
 
 	ReceiverVertex output;
 	output.position = mul(worldPosition, cameraViewProjection);

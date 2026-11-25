@@ -4,6 +4,7 @@
 	matrix boneMatrices[256];
 	int4 skinningFlags;
 	float4 modelColor;
+	matrix worldView;
 };
 
 struct VS_INPUT

@@ -755,6 +755,21 @@
     <None Include="Source\Shader\VS_ShadowReceiver.hlsl">
       <Filter>リソース ファイル\Shader</Filter>
     </None>
+    <None Include="Source\Shader\VS_StaticSurface.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\PS_Lambert.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\PS_SatinMetal.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\PS_Specular.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\SurfaceLighting.hlsli">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
     <None Include="Source\Shader\PS_ShadowReceiver.hlsl">
       <Filter>リソース ファイル\Shader</Filter>
     </None>

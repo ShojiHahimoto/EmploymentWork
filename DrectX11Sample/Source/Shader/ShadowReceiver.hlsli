@@ -3,7 +3,6 @@
 	matrix cameraViewProjection;
 	matrix lightViewProjection;
 	float4 floorBounds;
-	float4 floorColor;
 	float4 shadowSettings;
 };
 

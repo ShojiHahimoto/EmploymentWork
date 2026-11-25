@@ -14,5 +14,5 @@ float4 PSMain(ReceiverVertex input) : SV_TARGET
 		visibility = shadowMap.SampleCmpLevelZero(shadowSampler, uv, projected.z - shadowSettings.x);
 	}
 
-	return float4(floorColor.rgb * lerp(shadowSettings.y, 1.0f, visibility), floorColor.a);
+	return float4(0.0f, 0.0f, 0.0f, (1.0f - shadowSettings.y) * (1.0f - visibility));
 }
