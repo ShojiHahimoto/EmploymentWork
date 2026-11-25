@@ -4,6 +4,8 @@
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Manager/SceneManager.h"
+#include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
 #include "Scene/CustomizeSelectScene.h"
 
 #include <algorithm>
@@ -32,29 +34,64 @@ CustomizeAttackFlowController::CustomizeAttackFlowController(int initialWidth, i
 {
 }
 
-/// <summary>プレビューと編集対象の下書きを初期化する。</summary>
-void CustomizeAttackFlowController::Enter()
+/// <summary>準備済みの下書きを使い、プレビューを初期化する。</summary>
+/// <param name="worker">画面内の追加読み込みに使う共通ワーカー。</param>
+/// <param name="writer">下書きの保存に使う専用ワーカー。</param>
+void CustomizeAttackFlowController::Enter(LoadWorker *worker, SaveWorker *writer)
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
+	editorUI.SetWorkers(worker, writer);
+	saveWorker = writer;
 	previewController.Initialize();
+}
+
+/// <summary>技とモーションの下書きをGPUや共有キャッシュに触れずに準備する。</summary>
+/// <param name="target">選択した技または汎用モーション。</param>
+/// <returns>初期化済みの編集データ。</returns>
+PreparedAttackDraft CustomizeAttackFlowController::PrepareDraft(const CustomizeAttackTarget &target)
+{
+	PreparedAttackDraft prepared;
 
 	if (const auto *slot = std::get_if<CustomizeAttackSlot>(&target))
 	{
-		statusMessage = attackEditor.SelectSlot(slot->category, slot->index);
-		motionEditor.ResetForAttackMotion();
+		prepared.attack.SelectSlot(slot->category, slot->index);
+		const std::string oldId = prepared.attack.GetDraft().motionDataId;
+		prepared.attack.EnsureDraftMotionDataId();
+
+		const auto &attack = prepared.attack.GetDraft();
+		const std::string legacy = oldId.starts_with("Attack/") ? oldId : std::string{};
+		prepared.status = prepared.motion.LoadDraft(attack.motionDataId, attack.motionDataId,
+													GetAttackTotalFrames(attack.frame), false, legacy);
 	}
 	else
 	{
 		const auto &common = std::get<CustomizeCommonMotionSlot>(target);
-		editingCommonMotion = true;
-		editingCommonMotionId = "Common/" + common.name;
-
-		attackEditor.PrepareCommonMotionPreview(editingCommonMotionId);
-		mode = CustomizeMode::MotionEditor;
+		prepared.commonMotionId = "Common/" + common.name;
+		prepared.attack.PrepareCommonMotionPreview(prepared.commonMotionId);
+		prepared.status = prepared.motion.LoadDraft(prepared.commonMotionId, common.name, 30, true);
 	}
 
-	EnsureDraftAttackMotionDataId();
-	LoadDraftMotionFromEditorId();
+	return prepared;
+}
+
+/// <summary>ワーカーで準備した下書きを遷移先へ移す。</summary>
+/// <param name="prepared">編集開始時に使用する下書き。</param>
+void CustomizeAttackFlowController::ApplyPreparedDraft(PreparedAttackDraft &&prepared)
+{
+	attackEditor = std::move(prepared.attack);
+	motionEditor = std::move(prepared.motion);
+	statusMessage = std::move(prepared.status);
+	editingCommonMotionId = std::move(prepared.commonMotionId);
+
+	editingCommonMotion = !editingCommonMotionId.empty();
+	mode = editingCommonMotion ? CustomizeMode::MotionEditor : CustomizeMode::AttackEditor;
+}
+
+/// <summary>シーン遷移前に読み込む編集対象を取得する。</summary>
+/// <returns>このコントローラーが保持する技スロットまたは汎用モーション。</returns>
+const CustomizeAttackTarget &CustomizeAttackFlowController::GetTarget() const
+{
+	return target;
 }
 
 /// <summary>編集シーン固有のプレビューを解放する。モデルは共有キャッシュに残す。</summary>
@@ -65,6 +102,7 @@ void CustomizeAttackFlowController::Exit()
 
 void CustomizeAttackFlowController::Update()
 {
+	ApplySaveResult();
 	UpdatePreviewPlayback();
 	UpdateAttackEditorControls();
 }
@@ -81,11 +119,6 @@ void CustomizeAttackFlowController::DrawBackdrop(Renderer &renderer)
 void CustomizeAttackFlowController::DrawPreview(Renderer &renderer)
 {
 	EnsureDraftAttackMotionDataId();
-
-	if (!motionEditor.HasDraft())
-	{
-		LoadDraftMotionFromEditorId();
-	}
 
 	ClampPreviewCurrentFrame();
 
@@ -119,6 +152,11 @@ void CustomizeAttackFlowController::OnResize(int newWidth, int newHeight)
 /// <summary>編集対象に対応するスロット一覧への遷移を予約する。</summary>
 void CustomizeAttackFlowController::NavigateBack()
 {
+	if (pendingSave.valid() || editorUI.IsPresetSavePending())
+	{
+		return;
+	}
+
 	if (const auto *slot = std::get_if<CustomizeAttackSlot>(&target))
 	{
 		SceneManager::GetInstance().RequestChangeScene(
@@ -134,11 +172,6 @@ void CustomizeAttackFlowController::NavigateBack()
 /// <summary>共通編集UIの操作結果を受け、保存と画面遷移を振り分ける。</summary>
 void CustomizeAttackFlowController::UpdateAttackEditorControls()
 {
-	if (!motionEditor.HasDraft())
-	{
-		LoadDraftMotionFromEditorId();
-	}
-
 	// 操作前の状態を保存
 	motionEditor.ConfigurePoseSampling(previewController, !editingCommonMotion, attackEditor.GetDraft().usableState);
 
@@ -214,11 +247,6 @@ void CustomizeAttackFlowController::UpdateAttackEditorControls()
 
 	if (action == CustomizeAttackEditorAction::OpenMotionEditor)
 	{
-		if (!motionEditor.HasDraft())
-		{
-			LoadDraftMotionFromEditorId();
-		}
-
 		mode = CustomizeMode::MotionEditor;
 		ClampPreviewCurrentFrame();
 
@@ -249,54 +277,55 @@ void CustomizeAttackFlowController::EnsureDraftAttackMotionDataId()
 }
 
 /// <summary>
-/// MotionData ID 入力欄の値から編集用 MotionData を読み込み、存在しなければ新規下書きを作る。
-/// </summary>
-void CustomizeAttackFlowController::LoadDraftMotionFromEditorId()
-{
-	const std::string motionDataId = GetEditingMotionDataId();
-	const std::string fallbackDisplayName =
-		editingCommonMotion ? std::get<CustomizeCommonMotionSlot>(target).name : motionDataId;
-	const int totalFrames = editingCommonMotion ? 30 : GetPreviewTotalFrames();
-	statusMessage = motionEditor.LoadDraft(motionDataId, fallbackDisplayName, totalFrames, editingCommonMotion);
-	motionEditor.CopyEditorBuffers(GetPreviewActionFrame());
-}
-
-/// <summary>
 /// 編集中の MotionData 下書きを JSON として保存する。
 /// </summary>
 void CustomizeAttackFlowController::SaveDraftMotion()
 {
-	if (!motionEditor.HasDraft())
+	if (!saveWorker || pendingSave.valid() || !motionEditor.HasDraft())
 	{
-		LoadDraftMotionFromEditorId();
+		return;
 	}
 
 	EnsureDraftAttackMotionDataId();
 
 	const std::string motionId = GetEditingMotionDataId();
 	const int total = GetPreviewTotalFrames();
-	const std::string motionResult =
-		motionEditor.SaveDraft(motionId, total, editingCommonMotion && motionEditor.GetDraft().looping);
-	if (!motionResult.starts_with("Saved MotionData:"))
+	const bool common = editingCommonMotion;
+	const bool looping = common && motionEditor.GetDraft().looping;
+	statusMessage = "保存中";
+	pendingSave = saveWorker->Enqueue([motion = motionEditor, attack = attackEditor, motionId, total, common, looping]() mutable
 	{
-		statusMessage = motionResult;
+		const auto motionResult = motion.SaveDraft(motionId, total, looping);
+		if (!motionResult.starts_with("Saved MotionData:"))
+		{
+			return motionResult;
+		}
 
+		if (!common && !attack.SaveDraft().starts_with("Saved:"))
+		{
+			return std::string("MotionData saved, but AttackData save failed. Retry saving both files.");
+		}
+
+		return common ? std::string("モーションを保存しました。") : std::string("技とモーションを保存しました。");
+	});
+}
+
+/// <summary>完了した保存結果を画面に反映する。</summary>
+void CustomizeAttackFlowController::ApplySaveResult()
+{
+	if (!pendingSave.valid() || pendingSave.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+	{
 		return;
 	}
 
-	if (!editingCommonMotion)
+	try
 	{
-		const std::string attackResult = attackEditor.SaveDraft();
-
-		if (!attackResult.starts_with("Saved:"))
-		{
-			statusMessage = "MotionData saved, but AttackData save failed. Retry saving both files.";
-
-			return;
-		}
+		statusMessage = pendingSave.get();
 	}
-
-	statusMessage = editingCommonMotion ? "モーションを保存しました。" : "技とモーションを保存しました。";
+	catch (const std::exception &)
+	{
+		statusMessage = "保存に失敗しました。";
+	}
 }
 
 /// <summary>

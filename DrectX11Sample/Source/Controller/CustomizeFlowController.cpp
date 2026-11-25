@@ -6,6 +6,9 @@
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
 #include "Manager/SceneManager.h"
+#include "Manager/LoadWorker.h"
+#include "Core/Debugger.h"
+#include <chrono>
 #include "Scene/TitleScene.h"
 #include "ThirdParty/imgui-docking/imgui.h"
 #include "Input/UIInputSystem.h"
@@ -45,8 +48,10 @@ CustomizeFlowController::CustomizeFlowController(int initialWidth, int initialHe
 }
 
 /// <summary>選択画面の入力とスロット一覧を準備する。</summary>
-void CustomizeFlowController::Enter()
+/// <param name="worker">一覧取得に使う共通ロードワーカー。</param>
+void CustomizeFlowController::Enter(LoadWorker *worker)
 {
+	loadWorker = worker;
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 
 	if (mode == CustomizeMode::AttackSlotSelect)
@@ -57,12 +62,14 @@ void CustomizeFlowController::Enter()
 	else if (mode == CustomizeMode::CharacterSlotSelect)
 	{
 		creationMenuSelection = 1;
-		characterEditor.RefreshSlotSummaries();
+		RefreshCharacterSlotSummaries();
 	}
 }
 
 void CustomizeFlowController::Update()
 {
+	ApplyPreparedSummaries();
+
 	if (mode == CustomizeMode::MainMenu)
 	{
 		if (WasCancelTriggered())
@@ -302,7 +309,7 @@ void CustomizeFlowController::UpdateCreationMenu()
 
 	if (request == 1)
 	{
-		characterEditor.RefreshSlotSummaries();
+		RefreshCharacterSlotSummaries();
 		mode = CustomizeMode::CharacterSlotSelect;
 	}
 	else
@@ -475,6 +482,11 @@ void CustomizeFlowController::DrawCharacterSlotSelect()
 		return;
 	}
 
+	if (selection.refreshRequested)
+	{
+		RefreshCharacterSlotSummaries();
+	}
+
 	if (selection.slotIndex)
 	{
 		SceneManager::GetInstance().RequestChangeScene(
@@ -515,7 +527,65 @@ int CustomizeFlowController::GetAttackSlotCount(CustomizeAttackCategory category
 /// <param name="category">更新する技カテゴリ。</param>
 void CustomizeFlowController::RefreshAttackSlotSummaries(CustomizeAttackCategory category)
 {
-	attackEditor.RefreshSlotSummaries(category);
+	if (loadWorker)
+	{
+		pendingAttackSummaries = loadWorker->Enqueue([category]
+		{
+			CustomizeAttackEditorController data;
+			data.RefreshSlotSummaries(category);
+
+			return data;
+		});
+	}
+}
+
+/// <summary>キャラクター一覧の読み込みを共通ワーカーへ依頼する。</summary>
+void CustomizeFlowController::RefreshCharacterSlotSummaries()
+{
+	if (loadWorker)
+	{
+		pendingCharacterSummaries = loadWorker->Enqueue([]
+		{
+			CustomizeCharacterEditorController data;
+			data.RefreshSlotSummaries();
+
+			return data;
+		});
+	}
+}
+
+/// <summary>一覧が表示中の場合だけ完了結果を反映する。</summary>
+void CustomizeFlowController::ApplyPreparedSummaries()
+{
+	const auto ready = [](const auto &future)
+	{
+		return future.valid() && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+	};
+
+	try
+	{
+		if (mode != CustomizeMode::AttackSlotSelect)
+		{
+			pendingAttackSummaries = {};
+		}
+		else if (ready(pendingAttackSummaries))
+		{
+			attackEditor = pendingAttackSummaries.get();
+		}
+
+		if (mode != CustomizeMode::CharacterSlotSelect)
+		{
+			pendingCharacterSummaries = {};
+		}
+		else if (ready(pendingCharacterSummaries))
+		{
+			characterEditor = pendingCharacterSummaries.get();
+		}
+	}
+	catch (const std::exception &error)
+	{
+		DebugLog("[Customize] Slot list load failed: ", error.what());
+	}
 }
 
 /// <summary>

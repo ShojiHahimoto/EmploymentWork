@@ -1,6 +1,10 @@
 ﻿#pragma once
 
 #include <memory>
+#include <cstdint>
+#include <cstddef>
+#include <future>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -10,6 +14,9 @@ namespace DirectX
 	class SoundEffect;
 	class SoundEffectInstance;
 }
+
+class LoadWorker;
+class SaveWorker;
 
 namespace SoundIds
 {
@@ -21,17 +28,23 @@ namespace SoundIds
 class SoundManager
 {
 public:
+	struct PreparedSound
+	{
+		std::unique_ptr<std::uint8_t[]> data;
+		std::size_t audioOffset = 0;
+		std::size_t audioBytes = 0;
+	};
+
 	static SoundManager& GetInstance();
 
-	bool Initialize();
+	bool Initialize(LoadWorker &loader, SaveWorker &writer);
 
 	void Update();
 
 	void Shutdown();
 
-	bool LoadSE(const std::string& soundId, const std::string& path);
-
-	bool LoadBGM(const std::string& soundId, const std::string& path, bool loop);
+	static PreparedSound PrepareSound(const std::string &path);
+	bool RegisterSound(const std::string &soundId, PreparedSound sound, bool loop, bool bgm);
 
 	void PlaySE(const std::string& soundId);
 
@@ -57,9 +70,9 @@ public:
 
 	float GetSEVolume() const;
 
-	bool LoadAudioSettings();
+	void LoadAudioSettings();
 
-	bool SaveAudioSettings() const;
+	void SaveAudioSettings();
 
 private:
 	struct SoundResource
@@ -76,15 +89,25 @@ private:
 	float masterVolume = 1.0f;
 	float bgmVolume = 0.5f;
 	float seVolume = 1.0f;
-	bool audioSettingsLoaded = false;
+	struct AudioSettings
+	{
+		float master;
+		float bgm;
+		float se;
+	};
+
+	LoadWorker *loadWorker = nullptr;
+	SaveWorker *saveWorker = nullptr;
+	std::future<std::optional<AudioSettings>> pendingSettingsLoad;
+	std::future<bool> pendingSettingsSave;
+
+	static std::optional<AudioSettings> ReadAudioSettings(AudioSettings settings);
+	static bool WriteAudioSettings(const AudioSettings &settings);
+	void ApplySettingsResults();
 
 	SoundManager() = default;
 	SoundManager(const SoundManager&) = delete;
 	SoundManager& operator=(const SoundManager&) = delete;
-
-	bool LoadSound(const std::string& soundId, const std::string& path, bool loop, bool bgm);
-
-	bool LoadSoundFromId(const std::string& soundId, bool loop, bool bgm);
 
 	void ApplyBGMVolume();
 

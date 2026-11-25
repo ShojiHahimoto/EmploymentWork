@@ -2,11 +2,15 @@
 
 #include "Data/JsonValue.h"
 #include "Core/Debugger.h"
+#include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
 
 #include <Audio.h>
 #include <Windows.h>
 
 #include <exception>
+#include <cstring>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -16,41 +20,6 @@
 namespace
 {
 	constexpr const char* AudioSettingsPath = "assets/Settings/AudioSettings.json";
-
-	/// <summary>
-	/// UTF-8 文字列を Windows API / DirectXTK が受け取れるワイド文字列へ変換する。
-	/// </summary>
-	/// <param name="text">変換する UTF-8 文字列。</param>
-	/// <returns>変換後のワイド文字列。</returns>
-	std::wstring ToWideString(const std::string& text)
-	{
-		if (text.empty())
-		{
-			return std::wstring();
-		}
-
-		const int requiredLength = MultiByteToWideChar(
-			CP_UTF8,
-			0,
-			text.c_str(),
-			static_cast<int>(text.size()),
-			nullptr,
-			0);
-		if (requiredLength <= 0)
-		{
-			return std::wstring(text.begin(), text.end());
-		}
-
-		std::wstring wideText(static_cast<size_t>(requiredLength), L'\0');
-		MultiByteToWideChar(
-			CP_UTF8,
-			0,
-			text.c_str(),
-			static_cast<int>(text.size()),
-			wideText.data(),
-			requiredLength);
-		return wideText;
-	}
 
 	/// <summary>
 	/// 拡張子が省略された音源パスに .wav を付ける。
@@ -129,8 +98,10 @@ SoundManager& SoundManager::GetInstance()
 }
 
 /// <summary>DirectXTK AudioEngine を初期化する。既に初期化済みなら何もしない。</summary>
+/// <param name="loader">音量設定の読み込みを担当するワーカー。</param>
+/// <param name="writer">音量設定の保存を担当するワーカー。</param>
 /// <returns>初期化済み、または初期化に成功した場合は true。</returns>
-bool SoundManager::Initialize()
+bool SoundManager::Initialize(LoadWorker &loader, SaveWorker &writer)
 {
 	if (audioEngine)
 	{
@@ -140,10 +111,9 @@ bool SoundManager::Initialize()
 	try
 	{
 		audioEngine = std::make_unique<DirectX::AudioEngine>();
-		if (!audioSettingsLoaded)
-		{
-			LoadAudioSettings();
-		}
+		loadWorker = &loader;
+		saveWorker = &writer;
+		LoadAudioSettings();
 		return true;
 	}
 	catch (const std::exception& exception)
@@ -163,6 +133,8 @@ bool SoundManager::Initialize()
 /// <summary>AudioEngine と再生中 SE のフレーム更新を行う。</summary>
 void SoundManager::Update()
 {
+	ApplySettingsResults();
+
 	if (!audioEngine)
 	{
 		return;
@@ -189,6 +161,11 @@ void SoundManager::Update()
 /// <summary>アプリ終了時に音声リソースを解放する。シーン遷移時には呼ばない。</summary>
 void SoundManager::Shutdown()
 {
+	loadWorker = nullptr;
+	saveWorker = nullptr;
+	pendingSettingsLoad = {};
+	pendingSettingsSave = {};
+
 	try
 	{
 		StopBGM();
@@ -208,26 +185,7 @@ void SoundManager::Shutdown()
 	}
 }
 
-/// <summary>非ループ SE として wav を読み込む。</summary>
-/// <param name="soundId">再生時に指定する音源 ID。</param>
-/// <param name="path">wav ファイルパス。相対パスは assets/Sound 基準も試す。</param>
-/// <returns>読み込みに成功した場合は true。</returns>
-bool SoundManager::LoadSE(const std::string& soundId, const std::string& path)
-{
-	return LoadSound(soundId, path, false, false);
-}
-
-/// <summary>BGM として wav を読み込む。</summary>
-/// <param name="soundId">再生時に指定する音源 ID。</param>
-/// <param name="path">wav ファイルパス。相対パスは assets/Sound 基準も試す。</param>
-/// <param name="loop">BGM をループ再生する場合は true。</param>
-/// <returns>読み込みに成功した場合は true。</returns>
-bool SoundManager::LoadBGM(const std::string& soundId, const std::string& path, bool loop)
-{
-	return LoadSound(soundId, path, loop, true);
-}
-
-/// <summary>指定 ID の SE を再生する。未読み込みなら assets/Sound 配下から読み込みを試す。</summary>
+/// <summary>準備済みの指定IDのSEを再生する。</summary>
 /// <param name="soundId">再生する SE の音源 ID。</param>
 void SoundManager::PlaySE(const std::string& soundId)
 {
@@ -239,16 +197,7 @@ void SoundManager::PlaySE(const std::string& soundId)
 	auto found = soundResources.find(soundId);
 	if (found == soundResources.end())
 	{
-		if (!LoadSoundFromId(soundId, false, false))
-		{
-			return;
-		}
-
-		found = soundResources.find(soundId);
-		if (found == soundResources.end())
-		{
-			return;
-		}
+		return;
 	}
 
 	try
@@ -279,16 +228,7 @@ void SoundManager::PlayBGM(const std::string& soundId)
 	auto found = soundResources.find(soundId);
 	if (found == soundResources.end())
 	{
-		if (!LoadSoundFromId(soundId, true, true))
-		{
-			return;
-		}
-
-		found = soundResources.find(soundId);
-		if (found == soundResources.end())
-		{
-			return;
-		}
+		return;
 	}
 
 	try
@@ -413,15 +353,39 @@ float SoundManager::GetSEVolume() const
 	return seVolume;
 }
 
+/// <summary>音量設定の読み込みを依頼する。</summary>
+void SoundManager::LoadAudioSettings()
+{
+	if (loadWorker && !pendingSettingsLoad.valid() && !pendingSettingsSave.valid())
+	{
+		pendingSettingsLoad = loadWorker->Enqueue([settings = AudioSettings{masterVolume, bgmVolume, seVolume}]
+		{
+			return ReadAudioSettings(settings);
+		});
+	}
+}
+
+/// <summary>音量設定の保存を依頼する。</summary>
+void SoundManager::SaveAudioSettings()
+{
+	if (saveWorker && !pendingSettingsLoad.valid() && !pendingSettingsSave.valid())
+	{
+		pendingSettingsSave = saveWorker->Enqueue([settings = AudioSettings{masterVolume, bgmVolume, seVolume}]
+		{
+			return WriteAudioSettings(settings);
+		});
+	}
+}
+
 /// <summary>音量設定を JSON から読み込む。</summary>
-/// <returns>読み込みに成功した場合は true。</returns>
-bool SoundManager::LoadAudioSettings()
+/// <param name="settings">ファイルに記載がない項目の既定値。</param>
+/// <returns>読み込み結果。失敗時は空。</returns>
+std::optional<SoundManager::AudioSettings> SoundManager::ReadAudioSettings(AudioSettings settings)
 {
 	std::ifstream file(AudioSettingsPath, std::ios::binary);
 	if (!file)
 	{
-		audioSettingsLoaded = true;
-		return SaveAudioSettings();
+		return settings;
 	}
 
 	std::string text(
@@ -440,21 +404,20 @@ bool SoundManager::LoadAudioSettings()
 	if (!JsonParser::Parse(text, root, error) || !root.IsObject())
 	{
 		DebugLog("[Sound] AudioSettings load failed. ", error);
-		audioSettingsLoaded = true;
-		return false;
+		return std::nullopt;
 	}
 
-	masterVolume = ClampVolume(GetFloat(root, "masterVolume", masterVolume));
-	bgmVolume = ClampVolume(GetFloat(root, "bgmVolume", bgmVolume));
-	seVolume = ClampVolume(GetFloat(root, "seVolume", seVolume));
-	audioSettingsLoaded = true;
-	ApplyBGMVolume();
-	return true;
+	settings.master = ClampVolume(GetFloat(root, "masterVolume", settings.master));
+	settings.bgm = ClampVolume(GetFloat(root, "bgmVolume", settings.bgm));
+	settings.se = ClampVolume(GetFloat(root, "seVolume", settings.se));
+
+	return settings;
 }
 
-/// <summary>現在の音量設定を JSON へ保存する。</summary>
+/// <summary>音量設定を JSON へ保存する。</summary>
+/// <param name="settings">保存ボタンを押した時の設定。</param>
 /// <returns>保存に成功した場合は true。</returns>
-bool SoundManager::SaveAudioSettings() const
+bool SoundManager::WriteAudioSettings(const AudioSettings &settings)
 {
 	const std::filesystem::path savePath(AudioSettingsPath);
 	std::error_code errorCode;
@@ -468,9 +431,9 @@ bool SoundManager::SaveAudioSettings() const
 	std::ostringstream json;
 	json << std::fixed << std::setprecision(3);
 	json << "{\n";
-	json << "  \"masterVolume\": " << masterVolume << ",\n";
-	json << "  \"bgmVolume\": " << bgmVolume << ",\n";
-	json << "  \"seVolume\": " << seVolume << "\n";
+	json << "  \"masterVolume\": " << settings.master << ",\n";
+	json << "  \"bgmVolume\": " << settings.bgm << ",\n";
+	json << "  \"seVolume\": " << settings.se << "\n";
 	json << "}\n";
 
 	std::ofstream file(savePath, std::ios::binary);
@@ -484,76 +447,152 @@ bool SoundManager::SaveAudioSettings() const
 	file.write(reinterpret_cast<const char*>(utf8Bom), sizeof(utf8Bom));
 	const std::string text = json.str();
 	file.write(text.data(), static_cast<std::streamsize>(text.size()));
-	return true;
+	file.close();
+
+	return !file.fail();
 }
 
-/// <summary>指定パスの wav を音源 ID に紐づけて読み込む。</summary>
-/// <param name="soundId">再生時に指定する音源 ID。</param>
-/// <param name="path">wav ファイルパス。</param>
-/// <param name="loop">ループ再生する音源なら true。</param>
-/// <param name="bgm">BGM として扱う音源なら true。</param>
-/// <returns>読み込みに成功した場合は true。</returns>
-bool SoundManager::LoadSound(const std::string& soundId, const std::string& path, bool loop, bool bgm)
+/// <summary>ワーカーの結果をメインスレッドで受け取る。</summary>
+void SoundManager::ApplySettingsResults()
 {
-	if (soundId.empty())
+	const auto ready = [](const auto &future)
 	{
-		return false;
+		return future.valid() && future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+	};
+
+	try
+	{
+		if (ready(pendingSettingsLoad))
+		{
+			if (const auto settings = pendingSettingsLoad.get())
+			{
+				masterVolume = settings->master;
+				bgmVolume = settings->bgm;
+				seVolume = settings->se;
+				ApplyBGMVolume();
+			}
+		}
+
+		if (ready(pendingSettingsSave) && !pendingSettingsSave.get())
+		{
+			DebugLog("[Sound] Audio settings save failed.");
+		}
+	}
+	catch (const std::exception &error)
+	{
+		DebugLog("[Sound] Audio settings job failed: ", error.what());
+	}
+}
+
+/// <summary>RIFF/WAVEのPCMデータをCPUメモリへ読み込む。</summary>
+/// <param name="path">音源へのパス。既存のassets/Sound基準のパス解決も行う。</param>
+/// <returns>読み込み済み音源。欠落または未対応形式の場合は空。</returns>
+SoundManager::PreparedSound SoundManager::PrepareSound(const std::string &path)
+{
+	std::filesystem::path resolved;
+	if (!ResolveSoundPath(path, resolved))
+	{
+		DebugLog("[Sound] WAV not found: ", path);
+
+		return {};
 	}
 
-	if (!Initialize())
+	std::ifstream input(resolved, std::ios::binary);
+	std::vector<std::uint8_t> bytes((std::istreambuf_iterator<char>(input)), {});
+	if (bytes.size() < 12 || std::memcmp(bytes.data(), "RIFF", 4) != 0 ||
+		std::memcmp(bytes.data() + 8, "WAVE", 4) != 0)
 	{
-		return false;
+		return {};
 	}
 
-	auto found = soundResources.find(soundId);
-	if (found != soundResources.end())
+	WAVEFORMATEX format{};
+	std::size_t sampleOffset = 0;
+	std::size_t sampleSize = 0;
+	bool hasFormat = false;
+
+	for (std::size_t offset = 12; bytes.size() - offset >= 8;)
 	{
-		found->second.loop = loop;
-		found->second.bgm = bgm;
+		std::uint32_t size = 0;
+		std::memcpy(&size, bytes.data() + offset + 4, sizeof(size));
+		const std::size_t start = offset + 8;
+		if (size > bytes.size() - start)
+		{
+			return {};
+		}
+
+		if (std::memcmp(bytes.data() + offset, "fmt ", 4) == 0 && size >= 16)
+		{
+			std::memcpy(&format, bytes.data() + start, 16);
+			hasFormat = true;
+		}
+		else if (std::memcmp(bytes.data() + offset, "data", 4) == 0)
+		{
+			sampleOffset = start;
+			sampleSize = size;
+		}
+
+		offset = start + size;
+		if ((size & 1) && offset < bytes.size())
+		{
+			++offset;
+		}
+	}
+
+	if (!hasFormat || format.wFormatTag != WAVE_FORMAT_PCM || !format.nBlockAlign ||
+		!sampleSize || sampleSize % format.nBlockAlign != 0)
+	{
+		DebugLog("[Sound] Invalid or unsupported PCM WAV: ", path);
+
+		return {};
+	}
+
+	PreparedSound sound;
+	sound.audioOffset = sizeof(format);
+	sound.audioBytes = sampleSize;
+	sound.data = std::make_unique<std::uint8_t[]>(sound.audioOffset + sampleSize);
+	std::memcpy(sound.data.get(), &format, sizeof(format));
+	std::memcpy(sound.data.get() + sound.audioOffset, bytes.data() + sampleOffset, sampleSize);
+
+	return sound;
+}
+
+/// <summary>メインスレッドでデコード済み音源を再生エンジンへ登録する。</summary>
+/// <param name="soundId">再生時に参照するID。</param>
+/// <param name="sound">準備済みPCMデータ。登録時に所有権を移す。</param>
+/// <param name="loop">ループ再生する場合はtrue。</param>
+/// <param name="bgm">BGMとして登録する場合はtrue。</param>
+/// <returns>登録済みまたは登録に成功した場合はtrue。</returns>
+bool SoundManager::RegisterSound(const std::string &soundId, PreparedSound sound, bool loop, bool bgm)
+{
+	if (soundResources.contains(soundId))
+	{
 		return true;
 	}
 
-	std::filesystem::path resolvedPath;
-	if (!ResolveSoundPath(std::filesystem::path(path), resolvedPath))
+	if (!audioEngine || !sound.data)
 	{
-		DebugLog("[Sound] File not found. Id=", soundId, " Path=", path);
 		return false;
 	}
 
 	try
 	{
+		const auto *format = reinterpret_cast<const WAVEFORMATEX *>(sound.data.get());
+		const auto *samples = sound.data.get() + sound.audioOffset;
 		SoundResource resource;
-		resource.effect = std::make_unique<DirectX::SoundEffect>(audioEngine.get(), ToWideString(resolvedPath.string()).c_str());
+		resource.effect = std::make_unique<DirectX::SoundEffect>(audioEngine.get(), sound.data, format, samples,
+															 sound.audioBytes);
 		resource.loop = loop;
 		resource.bgm = bgm;
 		soundResources.emplace(soundId, std::move(resource));
+
 		return true;
 	}
-	catch (const std::exception& exception)
+	catch (const std::exception &error)
 	{
-		DebugLog("[Sound] Load failed. Id=", soundId, " Path=", resolvedPath.string(), " Error=", exception.what());
-		return false;
-	}
-	catch (...)
-	{
-		DebugLog("[Sound] Load failed. Id=", soundId, " Path=", resolvedPath.string(), " Unknown exception.");
-		return false;
-	}
-}
+		DebugLog("[Sound] Registration failed: ", soundId, " ", error.what());
 
-/// <summary>音源 ID から assets/Sound 配下の wav パスを組み立てて読み込みを試す。</summary>
-/// <param name="soundId">読み込みたい音源 ID。</param>
-/// <param name="loop">読み込み後のループ設定。</param>
-/// <param name="bgm">BGM として扱う音源なら true。</param>
-/// <returns>読み込みに成功した場合は true。</returns>
-bool SoundManager::LoadSoundFromId(const std::string& soundId, bool loop, bool bgm)
-{
-	if (soundId.empty())
-	{
 		return false;
 	}
-
-	return LoadSound(soundId, soundId, loop, bgm);
 }
 
 /// <summary>BGM インスタンスに現在のマスター音量と BGM 音量を反映する。</summary>

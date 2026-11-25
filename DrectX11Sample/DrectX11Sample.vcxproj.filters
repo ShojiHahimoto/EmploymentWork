@@ -333,6 +333,15 @@
     <ClCompile Include="Source\Manager\SceneManager.cpp">
       <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Manager\LoadWorker.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Manager\SaveWorker.cpp">
+      <Filter>ソース ファイル\Manager</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Scene\Scene.cpp">
+      <Filter>ソース ファイル\Scene</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Core\World.cpp">
       <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
@@ -361,6 +370,9 @@
       <Filter>ソース ファイル\ThirdParty\ImGuizmo</Filter>
     </ClCompile>
     <ClCompile Include="Source\Resource\ModelResource.cpp">
+      <Filter>ソース ファイル\Resource</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Resource\TexturePreparation.cpp">
       <Filter>ソース ファイル\Resource</Filter>
     </ClCompile>
     <ClCompile Include="Source\UI\CustomizeMotionEditorUI.cpp">
@@ -602,6 +614,18 @@
     <ClInclude Include="Source\Manager\SceneManager.h">
       <Filter>ヘッダー ファイル\Manager</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Manager\LoadWorker.h">
+      <Filter>ヘッダー ファイル\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Manager\SaveWorker.h">
+      <Filter>ヘッダー ファイル\Manager</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Scene\Scene.h">
+      <Filter>ヘッダー ファイル\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Manager\SceneLoadRequest.h">
+      <Filter>ヘッダー ファイル\Manager</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Scene\TitleScene.h">
       <Filter>ヘッダー ファイル\Scene</Filter>
     </ClInclude>
@@ -636,6 +660,9 @@
       <Filter>ヘッダー ファイル\ThirdParty\imgui-docking</Filter>
     </ClInclude>
     <ClInclude Include="Source\Resource\ModelResource.h">
+      <Filter>ヘッダー ファイル\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Resource\TexturePreparation.h">
       <Filter>ヘッダー ファイル\Resource</Filter>
     </ClInclude>
     <ClInclude Include="Source\Input\InputBindings.h">

@@ -5,8 +5,12 @@
 #include "Core/Renderer.h"
 
 #include <array>
+#include <future>
+#include <optional>
 #include <string>
 #include <vector>
+
+class SaveWorker;
 
 enum class BattleSetupCaptureDevice
 {
@@ -94,6 +98,9 @@ public:
 	explicit BattleSetupInputConfigController(BattleSetupSession& session);
 
 	void RefreshInputConfigSummaries();
+	void SetSaveWorker(SaveWorker *writer);
+	void ApplyInputConfigSave();
+	bool IsSaving() const;
 	void UpdateBindingCapture();
 	void DrawKeyConfig(int playerIndex);
 	bool IsCreatingInputConfigFor(int playerIndex) const;
@@ -113,6 +120,9 @@ private:
 	BattleSetupCaptureTarget& capturingTarget;
 	BattleSetup::KeyboardKeyConfig& draftKeyboardConfig;
 	BattleSetup::GamepadKeyConfig& draftGamepadConfig;
+	SaveWorker *saveWorker = nullptr;
+	std::future<std::optional<Input::NamedInputConfig>> pendingSave;
+	int savingPlayerIndex = -1;
 
 	void DrawInputConfigSelector(int playerIndex);
 	void DrawNewInputConfigEditor(int playerIndex);
@@ -140,7 +150,7 @@ class BattleSetupFlowController : protected BattleSetupControllerContext
 public:
 	BattleSetupFlowController(BattleSetupSession& session, int initialWidth, int initialHeight);
 
-	void Enter();
+	void Enter(SaveWorker *writer);
 	void Exit();
 	void Update();
 	void Draw(Renderer& renderer);

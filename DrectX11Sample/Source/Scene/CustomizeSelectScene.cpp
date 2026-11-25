@@ -1,14 +1,25 @@
 ﻿#include "Scene/CustomizeSelectScene.h"
 
+#include "Manager/SceneLoadRequest.h"
+
 CustomizeSelectScene::CustomizeSelectScene(int initialWidth, int initialHeight, CustomizeMode initialMode,
 	CustomizeAttackCategory category)
 	: flowController(initialWidth, initialHeight, initialMode, category)
 {
 }
 
+/// <summary>選択メニューが使用する画像を要求する。</summary>
+/// <param name="request">シーン入場前のロード要求。</param>
+void CustomizeSelectScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.uiImageIds = {"customize_menu_normal", "customize_menu_selected", "header", "header_accent",
+						  "button", "back", "panel"};
+}
+
+/// <summary>共通ロードワーカーを選択画面へ渡し、入場時の一覧読み込みに使えるようにする。</summary>
 void CustomizeSelectScene::Enter()
 {
-	flowController.Enter();
+	flowController.Enter(loadWorker);
 }
 
 void CustomizeSelectScene::Exit()

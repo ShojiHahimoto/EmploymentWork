@@ -8,6 +8,7 @@
 #include "UI/UITheme.h"
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 
 namespace
@@ -429,6 +430,18 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	motionName = motion.GetDisplayNameBuffer().data();
 
 	// 数値・日本語入力中の取消は編集欄へ渡す。次の取消、または戻るボタンで画面を戻す。
+	if (pendingPresetSave.valid() && pendingPresetSave.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+	{
+		try
+		{
+			status = pendingPresetSave.get();
+		}
+		catch (const std::exception &)
+		{
+			status = "ポーズプリセットの保存に失敗しました。";
+		}
+	}
+
 	const bool hadKeyboardCapture = root.WantsKeyboardCapture();
 	const GameUI::InputFrame input = suppressInputOnce ? GameUI::InputFrame{} : GameUI::UIInputSystem::GetFrame();
 	suppressInputOnce = false;

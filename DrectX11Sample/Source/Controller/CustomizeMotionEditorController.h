@@ -4,6 +4,7 @@
 #include "Data/AttackData.h"
 #include "Data/MotionData.h"
 #include "Data/MotionSkeletonDefinition.h"
+#include "Data/PosePreset.h"
 
 #include <SimpleMath.h>
 
@@ -43,7 +44,7 @@ class CustomizeMotionEditorController
 	void RestoreDraft(const MotionData &restored, int actionFrame);
 
 	std::string LoadDraft(const std::string &motionDataId, const std::string &fallbackDisplayName, int totalFrames,
-						  bool commonMotion);
+						  bool commonMotion, const std::string &legacyMotionId = {});
 
 	std::string SaveDraft(const std::string &motionDataId, int totalFrames, bool looping);
 
@@ -81,7 +82,8 @@ class CustomizeMotionEditorController
 	std::string MirrorPose(const CustomizePreviewController& preview, int frame,
 		bool rightToLeft, const std::array<bool, 6>& parts);
 
-	std::string ApplyPosePreset(const std::string &presetId, int keyFrame,
+	static std::vector<PosePresetData> PreparePosePresets();
+	std::string ApplyPosePreset(const PosePresetData &preset, int keyFrame,
 								const std::array<bool, MotionEditorBoneCount> &applyMask);
 
 	MotionData &GetDraft();

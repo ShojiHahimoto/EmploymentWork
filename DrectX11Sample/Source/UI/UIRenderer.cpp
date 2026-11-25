@@ -465,18 +465,25 @@ bool UIRenderer::Resize(int width, int height)
 	return initialized;
 }
 
-/// <summary>画像一覧JSONを読み、PNGのWICソースとDirect2D描画用ビットマップをキャッシュする。</summary>
-/// <param name="manifestPath">UI画像メタデータJSONへのパス。</param>
-/// <returns>一覧を読み込み、少なくとも1枚の画像を利用可能にできた場合はtrue。</returns>
-bool UIRenderer::LoadAssets(const std::string& manifestPath)
+/// <summary>指定IDの画像をワーカー上でデコードする。</summary>
+/// <param name="manifestPath">画像マニフェストのパス。</param>
+/// <param name="imageIds">このシーンで使う画像ID。</param>
+/// <returns>CPU側の画像セット。失敗時は空。</returns>
+UIRenderer::PreparedImages UIRenderer::PrepareAssets(const std::string &manifestPath,
+													 const std::vector<std::string> &imageIds)
 {
-	if (!imagingFactory || !surfaceTarget) return false;
+	ComPtr<IWICImagingFactory> factory;
+	if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory))))
+	{
+		return {};
+	}
+
 	const std::filesystem::path resolvedManifest = ResolveManifestPath(manifestPath);
 	std::ifstream stream(resolvedManifest, std::ios::binary);
 	if (!stream)
 	{
 		DebugLog("[UI] Could not open UI asset manifest: " + manifestPath);
-		return false;
+		return {};
 	}
 	std::string jsonText((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 	if (jsonText.size() >= 3 && static_cast<unsigned char>(jsonText[0]) == 0xEF
@@ -487,10 +494,10 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 	if (!JsonParser::Parse(jsonText, root, parseError) || !root.Find("assets") || !root.Find("assets")->IsArray())
 	{
 		DebugLog("[UI] Invalid UI asset manifest: " + parseError);
-		return false;
+		return {};
 	}
 	const std::filesystem::path basePath = resolvedManifest.parent_path();
-	std::unordered_map<std::string, ImageAsset> loadedAssets;
+	PreparedImages loadedAssets;
 	for (const JsonValue& value : root.Find("assets")->AsArray())
 	{
 		const JsonValue* name = value.Find("name");
@@ -503,6 +510,11 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 			continue;
 		}
 		const std::string id = name->AsString();
+		if (std::find(imageIds.begin(), imageIds.end(), id) == imageIds.end())
+		{
+			continue;
+		}
+
 		if (id.empty() || loadedAssets.contains(id))
 		{
 			DebugLog("[UI] Skipping empty or duplicate UI asset ID: " + id);
@@ -510,24 +522,32 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 		}
 		const std::filesystem::path imagePath = basePath / file->AsString();
 		ComPtr<IWICBitmapDecoder> decoder;
-		HRESULT hr = imagingFactory->CreateDecoderFromFilename(imagePath.c_str(), nullptr, GENERIC_READ,
+		HRESULT hr = factory->CreateDecoderFromFilename(imagePath.c_str(), nullptr, GENERIC_READ,
 			WICDecodeMetadataCacheOnLoad, decoder.GetAddressOf());
 		ComPtr<IWICBitmapFrameDecode> frame;
 		if (SUCCEEDED(hr)) hr = decoder->GetFrame(0, frame.GetAddressOf());
 		ComPtr<IWICFormatConverter> converter;
-		if (SUCCEEDED(hr)) hr = imagingFactory->CreateFormatConverter(converter.GetAddressOf());
+		if (SUCCEEDED(hr)) hr = factory->CreateFormatConverter(converter.GetAddressOf());
 		if (SUCCEEDED(hr)) hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppPBGRA,
 			WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
-		ImageAsset asset;
-		if (SUCCEEDED(hr)) hr = imagingFactory->CreateBitmapFromSource(converter.Get(), WICBitmapCacheOnLoad,
-			asset.source.GetAddressOf());
-		UINT imageWidth = 0, imageHeight = 0;
-		if (SUCCEEDED(hr)) hr = asset.source->GetSize(&imageWidth, &imageHeight);
-		if (FAILED(hr) || imageWidth == 0 || imageHeight == 0)
+		PreparedImage asset;
+		UINT imageWidth = 0;
+		UINT imageHeight = 0;
+		if (FAILED(hr) || FAILED(converter->GetSize(&imageWidth, &imageHeight)) ||
+			!imageWidth || !imageHeight || imageWidth > 16384 || imageHeight > 16384)
 		{
-			DebugLog("[UI] Could not load UI image; skipping ID: ", id, " hr=", hr);
+			DebugLog("[UI] Could not decode image: ", id);
 			continue;
 		}
+
+		const UINT pitch = imageWidth * 4;
+		const UINT size = pitch * imageHeight;
+		asset.pixels.resize(size);
+		if (FAILED(converter->CopyPixels(nullptr, pitch, size, asset.pixels.data())))
+		{
+			continue;
+		}
+
 		asset.width = static_cast<int>(imageWidth);
 		asset.height = static_cast<int>(imageHeight);
 		const auto& slices = slice->AsArray();
@@ -549,21 +569,46 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 		}
 		loadedAssets.emplace(id, std::move(asset));
 	}
-	if (loadedAssets.empty())
+	return loadedAssets;
+}
+
+/// <summary>新しい画像セットを作成できた場合だけ表示中のセットと入れ替える。</summary>
+/// <param name="images">ワーカーでデコードした画像。</param>
+/// <returns>登録に成功した場合はtrue。</returns>
+bool UIRenderer::UploadAssets(const PreparedImages &images)
+{
+	std::unordered_map<std::string, ImageAsset> next;
+	for (const auto &[id, image] : images)
 	{
-		DebugLog("[UI] No usable UI images were found in the manifest.");
-		return false;
+		if (!imagingFactory || !surfaceTarget)
+		{
+			return false;
+		}
+
+		ImageAsset asset;
+		const UINT pitch = image.width * 4;
+		const HRESULT hr = imagingFactory->CreateBitmapFromMemory(image.width, image.height,
+			GUID_WICPixelFormat32bppPBGRA, pitch, static_cast<UINT>(image.pixels.size()),
+			const_cast<BYTE *>(image.pixels.data()), asset.source.GetAddressOf());
+		if (FAILED(hr) || FAILED(surfaceTarget->CreateBitmapFromWicBitmap(asset.source.Get(), nullptr,
+																		 asset.targetBitmap.GetAddressOf())))
+		{
+			return false;
+		}
+
+		asset.width = image.width;
+		asset.height = image.height;
+		asset.sliceLeft = image.sliceLeft;
+		asset.sliceTop = image.sliceTop;
+		asset.sliceRight = image.sliceRight;
+		asset.sliceBottom = image.sliceBottom;
+		next.emplace(id, std::move(asset));
 	}
-	imageAssets = std::move(loadedAssets);
+
+	imageAssets = std::move(next);
 	cachedCommands.clear();
 	previousCachedCommands.clear();
-	if (!CreateTargetBitmaps())
-	{
-		imageAssets.clear();
-		DebugLog("[UI] Could not create Direct2D UI image bitmaps.");
-		return false;
-	}
-	DebugLog("[UI] Loaded UI image assets: ", imageAssets.size());
+
 	return true;
 }
 

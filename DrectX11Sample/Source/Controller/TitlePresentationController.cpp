@@ -17,13 +17,17 @@
 
 using namespace DirectX::SimpleMath;
 
-/// <summary>待機秒数と攻撃データIDの順序を読み込む。不正設定時は待機のみ再生する。</summary>
-/// <remarks>秒単位の待機間隔と、順次再生する攻撃データIDをJSONから読む。</remarks>
-void TitlePresentationController::LoadSettings()
+/// <summary>待機秒数と攻撃データを、GPUや現在のシーンに触れずに読み込む。</summary>
+/// <returns>タイトル演出の設定。不正な設定や技は読み飛ばす。</returns>
+PreparedTitlePresentation TitlePresentationController::Prepare()
 {
-	waitFrames = 300;
-	attackDataIds.clear();
+	PreparedTitlePresentation result;
 	std::ifstream stream("assets/TitlePresentation.json", std::ios::binary);
+	if (!stream)
+	{
+		stream.open("DrectX11Sample/assets/TitlePresentation.json", std::ios::binary);
+	}
+
 	std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 	if (text.starts_with("\xEF\xBB\xBF"))
 	{
@@ -35,13 +39,14 @@ void TitlePresentationController::LoadSettings()
 	if (!JsonParser::Parse(text, settings, error) || !settings.IsObject())
 	{
 		DebugLog("[Title] Invalid presentation settings: ", error);
-		return;
+
+		return result;
 	}
 
 	const auto *interval = settings.Find("waitSeconds");
 	if (interval && interval->IsNumber() && std::isfinite(interval->AsNumber()))
 	{
-		waitFrames = static_cast<int>(std::round(std::clamp(interval->AsNumber(), 0.0, 3600.0) * 60));
+		result.waitFrames = static_cast<int>(std::round(std::clamp(interval->AsNumber(), 0.0, 3600.0) * 60));
 	}
 
 	const auto *attacks = settings.Find("attackDataIds");
@@ -51,25 +56,34 @@ void TitlePresentationController::LoadSettings()
 		{
 			if (id.IsString() && !id.AsString().empty())
 			{
-				attackDataIds.push_back(id.AsString());
+				AttackData attack;
+				if (CharacterDataLoader::LoadAttackData(id.AsString(), attack))
+				{
+					result.attacks.push_back(std::move(attack));
+				}
 			}
 		}
 	}
+
+	return result;
 }
 
 /// <summary>展示モデルと設定を初期化し、待機モーションの再生を開始する。</summary>
 /// <param name="world">展示用World。</param>
-/// <remarks>設定を読み込み、中央にモデルを生成して待機再生を開始する。</remarks>
-void TitlePresentationController::Enter(World &world)
+/// <param name="prepared">ワーカーが準備した演出設定。</param>
+/// <param name="character">展示キャラクターの準備済みデータ。</param>
+void TitlePresentationController::Enter(World &world, const PreparedTitlePresentation &prepared,
+										std::shared_ptr<const CharacterData> character)
 {
 	angle = 0.0f;
 	elapsedWaitFrames = 0;
 	nextAttackIndex = 0;
 	attackPlaying = false;
-	LoadSettings();
+	waitFrames = prepared.waitFrames;
+	attacks = prepared.attacks;
 
-	ModelResourceManager::LoadModel("DebugPlayer", "assets/model/DebugPlayer/man.fbx", Renderer::GetDevice());
-	world.RequestSpawn(SpawnType::DebugPlayer, "TitleCharacter", Vector3(0, 0, 8), Vector3::Zero);
+	world.RequestSpawn(SpawnType::DebugPlayer, "TitleCharacter", Vector3(0, 0, 8), Vector3::Zero, "",
+					   std::move(character));
 	SpawnDestroySystem::Update(world);
 	StartMotion(world, "Common/Idle");
 	MotionSystem::Update(world, false);
@@ -85,7 +99,8 @@ void TitlePresentationController::Enter(World &world)
 /// <remarks>モーションを0Fから開始する。攻撃は単発、待機は保存されたループ設定に従う。</remarks>
 bool TitlePresentationController::StartMotion(World &world, const std::string &motionId)
 {
-	if (!MotionDataManager::LoadMotionData(motionId))
+	const auto *motion = MotionDataManager::GetMotionData(motionId);
+	if (!motion)
 	{
 		DebugLog("[Title] Motion load failed: ", motionId);
 		return false;
@@ -107,7 +122,7 @@ bool TitlePresentationController::StartMotion(World &world, const std::string &m
 		player->blending = false;
 		player->blendFromBonePoses.clear();
 		player->visualRootOffset = Vector3::Zero;
-		attackFramesRemaining = std::max(1, MotionDataManager::GetMotionData(motionId)->totalFrames);
+		attackFramesRemaining = std::max(1, motion->totalFrames);
 		return true;
 	}
 
@@ -129,22 +144,22 @@ void TitlePresentationController::Update(World &world)
 			StartMotion(world, "Common/Idle");
 		}
 	}
-	else if (!attackDataIds.empty() && ++elapsedWaitFrames >= waitFrames)
+	else if (!attacks.empty() && ++elapsedWaitFrames >= waitFrames)
 	{
 		elapsedWaitFrames = 0;
-		// 壊れた設定で停止しないよう、一巡以内で読み込める技を探す。
-		for (size_t attempt = 0; attempt < attackDataIds.size(); ++attempt)
+		// 壊れた設定で停止しないよう、一巡以内で再生可能な技を探す。
+		for (size_t attempt = 0; attempt < attacks.size(); ++attempt)
 		{
-			const std::string id = attackDataIds[nextAttackIndex];
-			nextAttackIndex = (nextAttackIndex + 1) % attackDataIds.size();
-			if (CharacterDataLoader::LoadAttackData(id, currentAttack) &&
-				StartMotion(world, currentAttack.motionDataId))
+			const auto &attack = attacks[nextAttackIndex];
+			nextAttackIndex = (nextAttackIndex + 1) % attacks.size();
+			if (StartMotion(world, attack.motionDataId))
 			{
+				currentAttack = attack;
 				attackPlaying = true;
 				break;
 			}
 
-			DebugLog("[Title] Attack unavailable: ", id);
+			DebugLog("[Title] Attack unavailable: ", attack.attackDataId);
 		}
 	}
 

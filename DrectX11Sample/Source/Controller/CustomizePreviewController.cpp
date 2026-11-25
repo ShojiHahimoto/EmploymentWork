@@ -35,8 +35,7 @@ constexpr float PreviewCameraWallMargin = 1.0f;
 constexpr float PreviewPanReferenceDistance = 14.0f;
 constexpr float PreviewZoomUnitsPerNotch = 1.4f; // ホイール1目盛りの移動量。実距離に比例させない。
 constexpr const char *CommonIdleMotionDataId = "Common/Idle";
-constexpr const char *PreviewModelKey = "CustomizePreviewPlayer";
-constexpr const char *PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
+constexpr const char *PreviewModelKey = "DebugPlayer";
 constexpr float PreviewBoxDepth = 0.08f;
 constexpr float JointMarkerRadius = 7.0f;
 constexpr float JointPickRadius = 14.0f;
@@ -275,7 +274,6 @@ void CustomizePreviewController::Initialize()
 	Release();
 
 	//プレビューモデルロード
-	ModelResourceManager::LoadModel(PreviewModelKey, PreviewModelPath, Renderer::GetDevice());
 
 	//ロードできたら基準姿勢で初期化
 	if (const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey))
@@ -497,7 +495,6 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 
 	if (previewModel && skeletonPose.initialized)
 	{
-		const MotionData *idleMotion = nullptr;
 		SkeletonPose idleBasePose;
 
 		const SkeletonPose *basePose = nullptr;
@@ -505,10 +502,7 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 		const char* baseMotionId = editingCommonMotion ? CommonIdleMotionDataId
 			: MotionPose::GetAttackBaseMotionId(attackData.usableState);
 
-		if (MotionDataManager::LoadMotionData(baseMotionId))
-		{
-			idleMotion = MotionDataManager::GetMotionData(baseMotionId);
-		}
+		const auto *idleMotion = MotionDataManager::GetMotionData(baseMotionId);
 
 		if (idleMotion)
 		{
@@ -534,7 +528,7 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 			{
 				motion = &motionData;
 			}
-			else if (MotionDataManager::LoadMotionData(editingMotionDataId))
+			else
 			{
 				motion = MotionDataManager::GetMotionData(editingMotionDataId);
 			}

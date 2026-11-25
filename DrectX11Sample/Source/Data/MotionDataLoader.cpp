@@ -2,6 +2,7 @@
 
 #include "Data/JsonValue.h"
 #include "Core/Debugger.h"
+#include "Manager/SceneManager.h"
 
 #include <DirectXMath.h>
 
@@ -433,44 +434,17 @@ bool MotionDataLoader::LoadMotionData(const std::string& motionDataId, MotionDat
 	return true;
 }
 
-std::unordered_map<std::string, std::unique_ptr<MotionData>> MotionDataManager::resources;
-
-/// <summary>指定 ID の MotionData を読み込み、読み込み済みなら再利用する。</summary>
-/// <param name="motionDataId">assets/MotionData 配下のモーション ID。</param>
-/// <returns>読み込みまたは再利用に成功した場合は true。</returns>
-bool MotionDataManager::LoadMotionData(const std::string& motionDataId)
+/// <summary>現在のシーンの準備済みモーションを取得する。</summary>
+/// <param name="motionDataId">参照するモーションID。</param>
+/// <returns>未準備または欠落している場合はnullptr。</returns>
+const MotionData *MotionDataManager::GetMotionData(const std::string &motionDataId)
 {
-	if (motionDataId.empty())
+	const auto *scene = SceneManager::GetInstance().GetCurrentScene();
+	if (!scene)
 	{
-		return false;
+		return nullptr;
 	}
 
-	if (resources.find(motionDataId) != resources.end())
-	{
-		return true;
-	}
-
-	std::unique_ptr<MotionData> motionData = std::make_unique<MotionData>();
-	if (!MotionDataLoader::LoadMotionData(motionDataId, *motionData))
-	{
-		return false;
-	}
-
-	resources[motionDataId] = std::move(motionData);
-	return true;
-}
-
-/// <summary>読み込み済み MotionData を取得する。</summary>
-/// <param name="motionDataId">取得するモーション ID。</param>
-/// <returns>見つかった MotionData。存在しない場合は nullptr。</returns>
-const MotionData* MotionDataManager::GetMotionData(const std::string& motionDataId)
-{
-	const auto found = resources.find(motionDataId);
-	return found != resources.end() ? found->second.get() : nullptr;
-}
-
-/// <summary>読み込み済み MotionData を全て破棄する。</summary>
-void MotionDataManager::UnloadAll()
-{
-	resources.clear();
+	const auto prepared = scene->sceneMotions.find(motionDataId);
+	return prepared == scene->sceneMotions.end() ? nullptr : prepared->second.get();
 }

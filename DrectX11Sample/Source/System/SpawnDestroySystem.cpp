@@ -46,8 +46,13 @@ namespace
 			? BattleSetup::BuildCharacterFolderPath(0)
 			: request.characterFolderPath;
 
-		CharacterData characterData;
-		CharacterDataLoader::LoadCharacterData(characterFolderPath, characterData);
+		CharacterData fallbackCharacter;
+		if (!request.preparedCharacter)
+		{
+			CharacterDataLoader::LoadCharacterData(characterFolderPath, fallbackCharacter);
+		}
+
+		const CharacterData &characterData = request.preparedCharacter ? *request.preparedCharacter : fallbackCharacter;
 
 		TransformComponent* transform = world.GetTransform(objectId);
 		if (transform)
@@ -192,11 +197,6 @@ void SpawnDestroySystem::ApplyEffectSpawnRequests(World& world)
 
 	for (const EffectSpawnRequest& request : effectSpawnRequests)
 	{
-		if (!EffectDataManager::LoadEffectData(request.effectDataId))
-		{
-			continue;
-		}
-
 		const EffectData* effectData = EffectDataManager::GetEffectData(request.effectDataId);
 		if (!effectData)
 		{

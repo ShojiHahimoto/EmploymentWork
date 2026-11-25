@@ -2,9 +2,13 @@
 
 #include "Input/InputSystem.h"
 #include "Manager/SceneManager.h"
+#include "Manager/SceneLoadRequest.h"
+#include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
 #include "Scene/CustomizeSelectScene.h"
 
 #include <memory>
+#include <chrono>
 
 /// <summary>編集対象と選択画面へ戻る際の画面サイズを保持する。</summary>
 /// <param name="initialWidth">初期画面幅。</param>
@@ -19,7 +23,28 @@ CustomizeCharacterScene::CustomizeCharacterScene(int initialWidth, int initialHe
 void CustomizeCharacterScene::Enter()
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
-	statusMessage = editor.SelectSlot(slotIndex);
+}
+
+/// <summary>キャラクター編集の下書きを遷移前に準備する。</summary>
+/// <param name="request">ワーカーへ渡すロード要求。</param>
+void CustomizeCharacterScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.prepareScene = [index = slotIndex]
+	{
+		CustomizeCharacterEditorController draft;
+		auto status = draft.SelectSlot(index);
+		draft.PrepareAttackPicker();
+
+		PreparedSceneLoad result;
+		result.apply = [draft = std::move(draft), status = std::move(status)](Scene &scene) mutable
+		{
+			auto &editorScene = static_cast<CustomizeCharacterScene &>(scene);
+			editorScene.editor = std::move(draft);
+			editorScene.statusMessage = std::move(status);
+		};
+
+		return result;
+	};
 }
 
 void CustomizeCharacterScene::Exit()
@@ -30,6 +55,18 @@ void CustomizeCharacterScene::Exit()
 /// <summary>キャンセル入力で技選択を閉じるか、キャラクター一覧へ戻る。</summary>
 void CustomizeCharacterScene::Update()
 {
+	if (pendingSave.valid() && pendingSave.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+	{
+		try
+		{
+			statusMessage = pendingSave.get();
+		}
+		catch (const std::exception &)
+		{
+			statusMessage = "Character save failed.";
+		}
+	}
+
 	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
 	{
 		const auto &cancel = Input::InputSystem::GetActionState(playerIndex, Input::InputActionId::Cancel);
@@ -64,6 +101,14 @@ void CustomizeCharacterScene::Draw([[maybe_unused]] Renderer &renderer)
 	}
 
 	const auto nextMode = editor.DrawEditor(statusMessage);
+	if (editor.ConsumeSaveRequest() && saveWorker && !pendingSave.valid())
+	{
+		statusMessage = "Saving character...";
+		pendingSave = saveWorker->Enqueue([draft = editor]() mutable
+		{
+			return draft.SaveDraft();
+		});
+	}
 
 	if (nextMode == CustomizeMode::CharacterSlotSelect)
 	{
@@ -99,6 +144,11 @@ const World &CustomizeCharacterScene::GetWorld() const
 /// <summary>キャラクタースロット一覧への遷移を予約する。</summary>
 void CustomizeCharacterScene::RequestSlotSelection()
 {
+	if (pendingSave.valid())
+	{
+		return;
+	}
+
 	SceneManager::GetInstance().RequestChangeScene(
 		std::make_unique<CustomizeSelectScene>(width, height, CustomizeMode::CharacterSlotSelect));
 }

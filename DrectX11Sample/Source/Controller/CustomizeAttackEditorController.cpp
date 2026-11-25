@@ -3,7 +3,6 @@
 #include "Data/AttackDataSaver.h"
 #include "Data/CharacterDataLoader.h"
 #include "Data/MotionDataLoader.h"
-#include "Data/MotionDataSaver.h"
 #include <SimpleMath.h>
 
 #include <algorithm>
@@ -38,16 +37,6 @@ int ToCategoryIndex(CustomizeAttackCategory category)
 std::filesystem::path BuildAttackDataPath(const std::string &attackDataId)
 {
 	return std::filesystem::path(AttackDataRootPath) / (attackDataId + ".json");
-}
-
-/// <summary>
-/// MotionData ID から JSON ファイルの保存先パスを作る。
-/// </summary>
-/// <param name="motionDataId">assets/MotionData から見た拡張子なしのモーション ID。</param>
-/// <returns>読み書き対象の MotionData JSON ファイルパス。</returns>
-std::filesystem::path BuildMotionDataPath(const std::string &motionDataId)
-{
-	return std::filesystem::path("assets/MotionData") / (motionDataId + ".json");
 }
 
 /// <summary>
@@ -184,7 +173,6 @@ std::string CustomizeAttackEditorController::SelectSlot(CustomizeAttackCategory 
 	ClampAttackDataValues(state.attackData);
 	FromStunFramesToFrameAdvantage();
 
-	EnsureDraftMotionDataId();
 	CopyDisplayNameToBuffer();
 	CopyMotionDataIdToBuffer();
 
@@ -199,7 +187,6 @@ std::string CustomizeAttackEditorController::SaveDraft()
 
 	if (AttackDataSaver::SaveAttackData(editingAttackDataId, state.attackData))
 	{
-		RefreshSlotSummaries(selectedCategory);
 
 		return "Saved: assets/AttackData/" + editingAttackDataId + ".json";
 	}
@@ -299,27 +286,11 @@ void CustomizeAttackEditorController::FromFrameAdvantageToStunFrames()
 void CustomizeAttackEditorController::EnsureDraftMotionDataId()
 {
 	const std::string expectedMotionDataId = BuildMotionDataId(selectedCategory, selectedSlotIndex);
-	const std::string previousMotionDataId = state.attackData.motionDataId;
 
 	if (state.attackData.motionDataId.empty() || state.attackData.motionDataId == "debug_right_arm_wave" ||
 		state.attackData.motionDataId == BuildAttackDataId(selectedCategory, selectedSlotIndex) ||
 		!IsAttackMotionDataId(state.attackData.motionDataId) || state.attackData.motionDataId != expectedMotionDataId)
 	{
-		const std::filesystem::path expectedPath = BuildMotionDataPath(expectedMotionDataId);
-
-		if (!previousMotionDataId.empty() && previousMotionDataId != expectedMotionDataId &&
-			IsAttackMotionDataId(previousMotionDataId) && !std::filesystem::exists(expectedPath))
-		{
-			MotionData copiedMotion;
-
-			if (MotionDataLoader::LoadMotionData(previousMotionDataId, copiedMotion))
-			{
-				copiedMotion.motionDataId = expectedMotionDataId;
-				MotionDataSaver::SaveMotionData(expectedMotionDataId, copiedMotion);
-				MotionDataManager::UnloadAll();
-			}
-		}
-
 		state.attackData.motionDataId = expectedMotionDataId;
 	}
 

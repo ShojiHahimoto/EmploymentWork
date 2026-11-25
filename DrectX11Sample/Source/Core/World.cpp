@@ -203,12 +203,14 @@ bool World::HasActiveCamera() const
 /// <param name="position">生成時のローカル座標。</param>
 /// <param name="rotationDegrees">生成時のローカル回転角度。</param>
 /// <param name="characterFolderPath">Player 生成時に読み込む CharacterData フォルダパス。</param>
+/// <param name="preparedCharacter">ロード済みのキャラクターデータ。未指定の場合は既存の読込経路を使う。</param>
 void World::RequestSpawn(
 	SpawnType type,
 	const std::string& name,
 	const DirectX::SimpleMath::Vector3& position,
 	const DirectX::SimpleMath::Vector3& rotationDegrees,
-	const std::string& characterFolderPath)
+	const std::string& characterFolderPath,
+	std::shared_ptr<const CharacterData> preparedCharacter)
 {
 	SpawnRequest request;
 	request.type = type;
@@ -216,7 +218,8 @@ void World::RequestSpawn(
 	request.position = position;
 	request.rotationDegrees = rotationDegrees;
 	request.characterFolderPath = characterFolderPath;
-	spawnRequests.push_back(request);
+	request.preparedCharacter = std::move(preparedCharacter);
+	spawnRequests.push_back(std::move(request));
 }
 
 /// <summary>

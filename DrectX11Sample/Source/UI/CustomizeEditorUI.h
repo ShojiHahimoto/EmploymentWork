@@ -3,6 +3,12 @@
 #include "Controller/CustomizeAttackEditorController.h"
 #include "Data/MotionSkeletonDefinition.h"
 #include "UI/UIRoot.h"
+#include "Data/PosePreset.h"
+
+#include <future>
+
+class LoadWorker;
+class SaveWorker;
 
 class CustomizePreviewController;
 class CustomizeMotionEditorController;
@@ -14,6 +20,8 @@ class CustomizeEditorUI
   public:
 	CustomizeAttackEditorAction GetRequestedAction() const;
 	void Reset();
+	void SetWorkers(LoadWorker *worker, SaveWorker *writer);
+	bool IsPresetSavePending() const;
 	void Update(CustomizeAttackEditorController &controller, CustomizePreviewController &preview, int width, int height,
 				std::string &status, CustomizeMotionEditorController &motion, bool motionScreen = false,
 				bool commonMotion = false, bool canUndo = false, bool canRedo = false);
@@ -58,6 +66,11 @@ class CustomizeEditorUI
 	int motionPanelScroll = 0;
 	std::string motionName, presetName;
 	std::vector<std::string> presetIds, presetNames;
+	std::vector<PosePresetData> loadedPresets;
+	std::future<std::vector<PosePresetData>> pendingPresets;
+	std::future<std::string> pendingPresetSave;
+	SaveWorker *saveWorker = nullptr;
+	LoadWorker *loadWorker = nullptr;
 	void Section(const char *text);
 	GameUI::Rect Row(const std::string &id, const char *label);
 	void Integer(const char *id, const char *label, int &value, int minimum, int maximum);

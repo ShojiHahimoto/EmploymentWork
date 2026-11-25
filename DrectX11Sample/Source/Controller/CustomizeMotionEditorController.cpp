@@ -746,10 +746,11 @@ void CustomizeMotionEditorController::ResetForAttackMotion()
 /// <param name="fallbackDisplayName">新規下書き時の表示名。</param>
 /// <param name="totalFrames">新規作成時の総フレーム数。攻撃では読み込み成功時も技の尺に同期する。</param>
 /// <param name="commonMotion">汎用ならtrueで保存済みの尺とループ設定を維持する。新規汎用の初期ループ値はtrue。</param>
+/// <param name="legacyMotionId">新しいIDにデータがない場合に下書きへ引き継ぐ旧モーションID。</param>
 /// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeMotionEditorController::LoadDraft(const std::string &motionDataId,
 													   const std::string &fallbackDisplayName, int totalFrames,
-													   bool commonMotion)
+													   bool commonMotion, const std::string &legacyMotionId)
 {
 	//モーションデータIDが無い場合失敗
 	if (motionDataId.empty())
@@ -760,7 +761,11 @@ std::string CustomizeMotionEditorController::LoadDraft(const std::string &motion
 	}
 
 	//モーションデータの下書きが無い場合新規作成
-	if (!MotionDataLoader::LoadMotionData(motionDataId, draft))
+	const bool loaded = MotionDataLoader::LoadMotionData(motionDataId, draft) ||
+		(!legacyMotionId.empty() && legacyMotionId != motionDataId &&
+		 MotionDataLoader::LoadMotionData(legacyMotionId, draft));
+
+	if (!loaded)
 	{
 		draft = MotionData();
 		draft.motionDataId = motionDataId;
@@ -776,6 +781,7 @@ std::string CustomizeMotionEditorController::LoadDraft(const std::string &motion
 	// 汎用モーションの保存値は維持する。攻撃だけ技データの尺・非ループへ同期する。
 	if (!commonMotion)
 	{
+		draft.motionDataId = motionDataId;
 		draft.totalFrames = std::max(1, totalFrames);
 		draft.looping = false;
 	}
@@ -812,9 +818,6 @@ std::string CustomizeMotionEditorController::SaveDraft(const std::string &motion
 	//assets/MotionData配下のjsonとして保存する
 	if (MotionDataSaver::SaveMotionData(draft.motionDataId, draft))
 	{
-		//元データを破棄
-		MotionDataManager::UnloadAll();
-
 		return "Saved MotionData: assets/MotionData/" + draft.motionDataId + ".json";
 	}
 
@@ -910,12 +913,8 @@ void CustomizeMotionEditorController::ConfigurePoseSampling(const CustomizePrevi
 	bool attack, AttackUsableState usableState)
 {
 	sampleAttackEndpoints = attack;
-	const MotionData* baseMotion = nullptr;
 	const char* baseId = MotionPose::GetAttackBaseMotionId(usableState);
-	if (attack && MotionDataManager::LoadMotionData(baseId))
-	{
-		baseMotion = MotionDataManager::GetMotionData(baseId);
-	}
+	const auto *baseMotion = attack ? MotionDataManager::GetMotionData(baseId) : nullptr;
 
 	for (int index = 0; index < MotionEditorBoneCount; ++index)
 	{
@@ -1476,31 +1475,41 @@ std::string CustomizeMotionEditorController::SavePosePreset(int keyFrame, const 
 	return "Saved pose preset: " + displayName;
 }
 
+/// <summary>待機姿勢と保存済みポーズをワーカーで準備する。</summary>
+/// <returns>一覧への表示と適用で共用するプリセット。</returns>
+std::vector<PosePresetData> CustomizeMotionEditorController::PreparePosePresets()
+{
+	std::vector<PosePresetData> presets;
+	PosePresetData idle;
+	if (BuildIdlePosePreset(idle))
+	{
+		idle.displayName = "\xE5\xBE\x85\xE6\xA9\x9F\xE5\xA7\xBF\xE5\x8B\xA2";
+		presets.push_back(std::move(idle));
+	}
+
+	for (const auto &id : PosePresetStore::ListPresetIds())
+	{
+		PosePresetData preset;
+		if (PosePresetStore::LoadPreset(id, preset))
+		{
+			presets.push_back(std::move(preset));
+		}
+	}
+
+	return presets;
+}
+
 /// <summary>現在フレームへ指定プリセットの選択部位だけを適用する。</summary>
-/// <param name="presetId">読み込む姿勢プリセット ID。</param>
+/// <param name="preset">読み込み済みの姿勢プリセット。</param>
 /// <param name="keyFrame">適用先の内部 actionFrame。</param>
 /// <param name="applyMask">適用する部位だけ true の配列。</param>
 /// <returns>ユーザー表示用の処理結果メッセージ。</returns>
-std::string CustomizeMotionEditorController::ApplyPosePreset(const std::string &presetId, int keyFrame,
+std::string CustomizeMotionEditorController::ApplyPosePreset(const PosePresetData &preset, int keyFrame,
 															 const std::array<bool, MotionEditorBoneCount> &applyMask)
 {
 	if (!HasMotionKeyframe(keyFrame))
 	{
 		return "Pose preset load requires a keyframe on the current frame.";
-	}
-
-	PosePresetData preset;
-
-	if (presetId == IdlePosePresetId)
-	{
-		if (!BuildIdlePosePreset(preset))
-		{
-			return "Failed to load Idle pose from Common/Idle.";
-		}
-	}
-	else if (!PosePresetStore::LoadPreset(presetId, preset))
-	{
-		return "Failed to load pose preset: " + presetId;
 	}
 
 	int appliedCount = 0;

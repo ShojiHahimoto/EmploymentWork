@@ -5,8 +5,11 @@
 #include "Customize/CustomizeTypes.h"
 #include "Core/Renderer.h"
 #include "UI/UIRoot.h"
+#include <future>
 
 #include <string>
+
+class LoadWorker;
 
 class CustomizeFlowController
 {
@@ -14,7 +17,7 @@ class CustomizeFlowController
 	CustomizeFlowController(int initialWidth, int initialHeight, CustomizeMode initialMode,
 		CustomizeAttackCategory category);
 
-	void Enter();
+	void Enter(LoadWorker *worker);
 	void Update();
 	void DrawInterface(Renderer &renderer);
 	void OnResize(int newWidth, int newHeight);
@@ -43,6 +46,9 @@ class CustomizeFlowController
 
 	CustomizeAttackEditorController attackEditor;
 	CustomizeCharacterEditorController characterEditor;
+	LoadWorker *loadWorker = nullptr;
+	std::future<CustomizeAttackEditorController> pendingAttackSummaries;
+	std::future<CustomizeCharacterEditorController> pendingCharacterSummaries;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -64,5 +70,7 @@ class CustomizeFlowController
 
 	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
+	void RefreshCharacterSlotSummaries();
+	void ApplyPreparedSummaries();
 	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 };

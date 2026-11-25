@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "Core/Renderer.h"
+#include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
 
 //------------------------------------------
 // ゲーム本体クラス
@@ -9,6 +11,8 @@ class Game
 {
 private:
 	Renderer renderer;
+	LoadWorker loadWorker;
+	SaveWorker saveWorker;
 	bool rendererInitialized = false;
 
 public:

@@ -13,6 +13,7 @@ public:
 	~TitleScene() override = default;
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
 	void Update() override;
 	void Draw(Renderer& renderer) override;
@@ -24,6 +25,7 @@ public:
 private:
 	World world;
 	TitlePresentationController presentationController;
+	PreparedTitlePresentation preparedPresentation;
 	int width = 1;
 	int height = 1;
 	TitleMenuController menuController;

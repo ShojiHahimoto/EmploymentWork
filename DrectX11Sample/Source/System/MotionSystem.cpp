@@ -435,11 +435,6 @@ bool MotionSystem::ApplyMotionPlayer(
 		return false;
 	}
 
-	if (!MotionDataManager::LoadMotionData(player.motionDataId))
-	{
-		return false;
-	}
-
 	const MotionData* motion = MotionDataManager::GetMotionData(player.motionDataId);
 	if (!motion)
 	{
@@ -450,7 +445,7 @@ bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPose transitionBasePose;
 	const SkeletonPose* basePose = nullptr;
 	const char* baseId = MotionPose::GetAttackBaseMotionId(attack ? attack->usableState : AttackUsableState::Ground);
-	if (attack && MotionDataManager::LoadMotionData(baseId))
+	if (attack)
 	{
 		const MotionData* idleMotion = MotionDataManager::GetMotionData(baseId);
 		if (idleMotion)

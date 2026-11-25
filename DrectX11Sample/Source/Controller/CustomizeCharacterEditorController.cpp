@@ -22,12 +22,6 @@ constexpr AttackButtonId AttackButtonValues[] = {AttackButtonId::AttackA, Attack
 												 AttackButtonId::AttackX, AttackButtonId::AttackY};
 constexpr const char *AttackButtonLabels[] = {"A", "B", "X", "Y"};
 
-struct AttackPickerItem
-{
-	std::string attackDataId;
-	std::string displayName;
-	AttackData attackData;
-};
 
 /// <summary>
 /// CustomizeCharacterAttackSlotGroup を配列アクセス用の番号へ変換する。
@@ -91,7 +85,7 @@ CustomizeCharacterSlotSelection CustomizeCharacterEditorController::DrawSlotSele
 	{
 		if (ImGui::Button("Refresh Character Slots", ImVec2(180.0f, 28.0f)))
 		{
-			RefreshSlotSummaries();
+			selection.refreshRequested = true;
 		}
 
 		ImGui::Separator();
@@ -160,7 +154,7 @@ CustomizeMode CustomizeCharacterEditorController::DrawEditor(std::string &status
 
 		if (ImGui::Button("Save Character", ImVec2(150.0f, 30.0f)))
 		{
-			statusMessage = SaveDraft();
+			saveRequested = true;
 		}
 
 		ImGui::SameLine();
@@ -188,7 +182,61 @@ CustomizeMode CustomizeCharacterEditorController::DrawAttackPicker(std::string &
 {
 	CustomizeMode nextMode = CustomizeMode::AttackPicker;
 
-	std::vector<AttackPickerItem> pickerItems;
+
+	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(620.0f, 520.0f), ImGuiCond_FirstUseEver);
+
+	if (ImGui::Begin("Select Attack Data"))
+	{
+		const std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &drafts =
+			GetAttackSlotDrafts(pickingSlotGroup);
+		const CustomizeCharacterAttackSlotDraft &targetSlot = drafts[pickingSlotIndex];
+		ImGui::Text("Assign To: %s %s", CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(pickingSlotGroup)],
+					ToAttackButtonShortLabel(targetSlot.button));
+		ImGui::Separator();
+
+		bool hasCompatibleAttack = false;
+		for (const auto &item : attackPickerItems)
+		{
+			if (!IsAttackCompatibleWithSlotGroup(pickingSlotGroup, item))
+			{
+				continue;
+			}
+
+			hasCompatibleAttack = true;
+			std::ostringstream label;
+			label << (item.displayName.empty() ? item.attackDataId : item.displayName)
+				  << "  [" << item.attackDataId << "]";
+
+			if (ImGui::Selectable(label.str().c_str()))
+			{
+				AssignAttackToCurrentSlot(item.attackDataId, item);
+				nextMode = CustomizeMode::CharacterEditor;
+			}
+		}
+
+		if (!hasCompatibleAttack)
+		{
+			ImGui::TextDisabled("No compatible AttackData found.");
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
+		{
+			nextMode = CustomizeMode::CharacterEditor;
+		}
+	}
+
+	ImGui::End();
+
+	return nextMode;
+}
+
+/// <summary>技候補をファイルから準備する。描画では準備済み候補だけを参照する。</summary>
+void CustomizeCharacterEditorController::PrepareAttackPicker()
+{
+	attackPickerItems.clear();
 	const std::filesystem::path rootPath(AttackDataRootPath);
 	std::error_code errorCode;
 
@@ -210,66 +258,20 @@ CustomizeMode CustomizeCharacterEditorController::DrawAttackPicker(std::string &
 			const std::string attackDataId = BuildAttackDataIdFromPath(entry.path());
 			AttackData attackData;
 
-			if (!CharacterDataLoader::LoadAttackData(attackDataId, attackData) ||
-				!IsAttackCompatibleWithSlotGroup(pickingSlotGroup, attackData))
+			if (!CharacterDataLoader::LoadAttackData(attackDataId, attackData))
 			{
 				continue;
 			}
 
-			AttackPickerItem item;
-			item.attackDataId = attackDataId;
-			item.displayName = attackData.displayName.empty() ? attackDataId : attackData.displayName;
-			item.attackData = attackData;
-			pickerItems.push_back(item);
+			attackPickerItems.push_back(std::move(attackData));
 		}
 	}
 
-	std::sort(pickerItems.begin(), pickerItems.end(),
-			  [](const AttackPickerItem &lhs, const AttackPickerItem &rhs)
+	std::sort(attackPickerItems.begin(), attackPickerItems.end(),
+			  [](const AttackData &lhs, const AttackData &rhs)
 			  {
 				  return lhs.attackDataId < rhs.attackDataId;
 			  });
-
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(620.0f, 520.0f), ImGuiCond_FirstUseEver);
-
-	if (ImGui::Begin("Select Attack Data"))
-	{
-		const std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &drafts =
-			GetAttackSlotDrafts(pickingSlotGroup);
-		const CustomizeCharacterAttackSlotDraft &targetSlot = drafts[pickingSlotIndex];
-		ImGui::Text("Assign To: %s %s", CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(pickingSlotGroup)],
-					ToAttackButtonShortLabel(targetSlot.button));
-		ImGui::Separator();
-
-		for (const AttackPickerItem &item : pickerItems)
-		{
-			std::ostringstream label;
-			label << item.displayName << "  [" << item.attackDataId << "]";
-
-			if (ImGui::Selectable(label.str().c_str()))
-			{
-				AssignAttackToCurrentSlot(item.attackDataId, item.attackData);
-				nextMode = CustomizeMode::CharacterEditor;
-			}
-		}
-
-		if (pickerItems.empty())
-		{
-			ImGui::TextDisabled("No compatible AttackData found.");
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			nextMode = CustomizeMode::CharacterEditor;
-		}
-	}
-
-	ImGui::End();
-
-	return nextMode;
 }
 
 /// <summary>キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。</summary>
@@ -384,6 +386,16 @@ std::string CustomizeCharacterEditorController::SelectSlot(int slotIndex)
 							: "Loaded character draft with missing or invalid attack data.";
 }
 
+/// <summary>編集画面の保存要求を一度だけ受け取る。</summary>
+/// <returns>保存ボタンが押されていた場合はtrue。</returns>
+bool CustomizeCharacterEditorController::ConsumeSaveRequest()
+{
+	const bool requested = saveRequested;
+	saveRequested = false;
+
+	return requested;
+}
+
 /// <summary>キャラクター編集バッファの内容を CharacterData JSON として保存する。</summary>
 /// <returns>ユーザー表示用の処理結果メッセージ。</returns>
 std::string CustomizeCharacterEditorController::SaveDraft()
@@ -407,8 +419,6 @@ std::string CustomizeCharacterEditorController::SaveDraft()
 
 	if (CharacterDataSaver::SaveCharacterData(editingFolderPath, draftParameter, attackSlots))
 	{
-		RefreshSlotSummaries();
-
 		return "Saved: " + editingFolderPath;
 	}
 

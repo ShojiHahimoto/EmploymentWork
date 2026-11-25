@@ -7,7 +7,11 @@
 #include "UI/CustomizeEditorUI.h"
 
 #include <string>
+#include <future>
 #include <variant>
+
+class LoadWorker;
+class SaveWorker;
 
 struct CustomizeAttackSlot
 {
@@ -22,12 +26,23 @@ struct CustomizeCommonMotionSlot
 
 using CustomizeAttackTarget = std::variant<CustomizeAttackSlot, CustomizeCommonMotionSlot>;
 
+struct PreparedAttackDraft
+{
+	CustomizeAttackEditorController attack;
+	CustomizeMotionEditorController motion;
+	std::string status;
+	std::string commonMotionId;
+};
+
 class CustomizeAttackFlowController
 {
   public:
 	CustomizeAttackFlowController(int initialWidth, int initialHeight, CustomizeAttackTarget target);
 
-	void Enter();
+	void Enter(LoadWorker *worker, SaveWorker *writer);
+	static PreparedAttackDraft PrepareDraft(const CustomizeAttackTarget &target);
+	void ApplyPreparedDraft(PreparedAttackDraft &&prepared);
+	const CustomizeAttackTarget &GetTarget() const;
 	void Exit();
 	void Update();
 	void DrawBackdrop(Renderer &renderer);
@@ -51,14 +66,16 @@ class CustomizeAttackFlowController
 	bool editingCommonMotion = false;
 	std::string editingCommonMotionId;
 	std::string statusMessage;
+	SaveWorker *saveWorker = nullptr;
+	std::future<std::string> pendingSave;
 
 	void NavigateBack();
 	void UpdateAttackEditorControls();
 	CustomizeEditSnapshot CaptureEditSnapshot();
 	void RestoreEditSnapshot(const CustomizeEditSnapshot &snapshot);
 	void EnsureDraftAttackMotionDataId();
-	void LoadDraftMotionFromEditorId();
 	void SaveDraftMotion();
+	void ApplySaveResult();
 	void UpdatePreviewPlayback();
 	void RenderAttackPreview(Renderer &renderer, const RECT *region);
 	void ClampPreviewCurrentFrame();

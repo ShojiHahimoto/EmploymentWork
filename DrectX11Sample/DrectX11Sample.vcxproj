@@ -59,6 +59,9 @@
     <ClCompile Include="Source\Scene\CustomizeCharacterScene.cpp" />
     <ClCompile Include="Source\Scene\ResultScene.cpp" />
     <ClCompile Include="Source\Manager\SceneManager.cpp" />
+    <ClCompile Include="Source\Manager\LoadWorker.cpp" />
+    <ClCompile Include="Source\Manager\SaveWorker.cpp" />
+    <ClCompile Include="Source\Scene\Scene.cpp" />
     <ClCompile Include="Source\Scene\TitleScene.cpp" />
     <ClCompile Include="Source\Core\Application.cpp" />
     <ClCompile Include="Source\System\CameraSystem.cpp" />
@@ -97,6 +100,7 @@
     <ClCompile Include="Source\ThirdParty\ImGuizmo\ImGuizmo.cpp" />
     <ClCompile Include="Source\System\TransformSystem.cpp" />
     <ClCompile Include="Source\Resource\ModelResource.cpp" />
+    <ClCompile Include="Source\Resource\TexturePreparation.cpp" />
     <ClCompile Include="Source\Core\World.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -167,6 +171,10 @@
     <ClInclude Include="Source\Scene\ResultScene.h" />
     <ClInclude Include="Source\Scene\Scene.h" />
     <ClInclude Include="Source\Manager\SceneManager.h" />
+    <ClInclude Include="Source\Manager\LoadWorker.h" />
+    <ClInclude Include="Source\Manager\SaveWorker.h" />
+    <ClInclude Include="Source\Scene\Scene.h" />
+    <ClInclude Include="Source\Manager\SceneLoadRequest.h" />
     <ClInclude Include="Source\Scene\TitleScene.h" />
     <ClInclude Include="Source\Customize\CustomizeTypes.h" />
     <ClInclude Include="Source\Core\Application.h" />
@@ -212,6 +220,7 @@
     <ClInclude Include="Source\ThirdParty\ImGuizmo\ImGuizmo.h" />
     <ClInclude Include="Source\System\TransformSystem.h" />
     <ClInclude Include="Source\Resource\ModelResource.h" />
+    <ClInclude Include="Source\Resource\TexturePreparation.h" />
     <ClInclude Include="Source\Core\World.h" />
   </ItemGroup>
   <ItemGroup>

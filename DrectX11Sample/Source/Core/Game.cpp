@@ -27,23 +27,22 @@ void Game::Init()
 
 	Input::InputSystem::Initialize();
 	GameUI::UIInputSystem::Reset();
-	if (GameUI::UIRenderer::Initialize(Renderer::GetDevice(), static_cast<int>(Application::GetWidth()), static_cast<int>(Application::GetHeight())))
-	{
-		GameUI::UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json");
-	}
-	else
+	if (!GameUI::UIRenderer::Initialize(Renderer::GetDevice(), static_cast<int>(Application::GetWidth()),
+									   static_cast<int>(Application::GetHeight())))
 	{
 		DebugLog("[UI] Dedicated UI renderer initialization failed.");
 	}
-	SoundManager::GetInstance().Initialize();
-
 	SceneManager& sceneManager = SceneManager::GetInstance();
+	loadWorker.Start();
+	saveWorker.Start();
+	SoundManager::GetInstance().Initialize(loadWorker, saveWorker);
+	sceneManager.Initialize(loadWorker, saveWorker, static_cast<int>(Application::GetWidth()),
+							static_cast<int>(Application::GetHeight()));
 	// エントリーシーン設定箇所
 	sceneManager.RequestChangeScene(
 		std::make_unique<TitleScene>(
 			static_cast<int>(Application::GetWidth()),
 			static_cast<int>(Application::GetHeight())));
-	sceneManager.ApplyPendingSceneChange();
 }
 
 void Game::Update()
@@ -67,7 +66,10 @@ void Game::Draw()
 	renderer.DrawStart();
 	DebugImGuiSystem::BeginFrame();
 	SceneManager::GetInstance().Draw(renderer);
-	DebugImGuiSystem::DrawSoundDebugWindow();
+	if (!SceneManager::GetInstance().IsLoading())
+	{
+		DebugImGuiSystem::DrawSoundDebugWindow();
+	}
 	DebugImGuiSystem::Render();
 	renderer.DrawEnd();
 }
@@ -91,6 +93,8 @@ void Game::OnResize(int width, int height)
 
 void Game::Uninit()
 {
+	loadWorker.Stop();
+	saveWorker.Stop();
 	SceneManager::GetInstance().Shutdown();
 	Input::InputSystem::Shutdown();
 	SoundManager::GetInstance().Shutdown();

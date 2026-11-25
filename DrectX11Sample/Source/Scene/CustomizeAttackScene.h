@@ -11,6 +11,7 @@ class CustomizeAttackScene : public Scene
 	~CustomizeAttackScene() override = default;
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
 	void Update() override;
 	void Draw(Renderer &renderer) override;

@@ -67,12 +67,5 @@ struct MotionData
 class MotionDataManager
 {
 public:
-	static bool LoadMotionData(const std::string& motionDataId);
-
 	static const MotionData* GetMotionData(const std::string& motionDataId);
-
-	static void UnloadAll();
-
-private:
-	static std::unordered_map<std::string, std::unique_ptr<MotionData>> resources;
 };

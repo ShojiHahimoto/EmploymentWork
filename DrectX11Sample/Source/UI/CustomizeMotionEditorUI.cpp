@@ -3,9 +3,28 @@
 #include "Controller/CustomizeMotionEditorController.h"
 #include "Data/PosePreset.h"
 #include "Input/UIInputSystem.h"
+#include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
 #include "UI/UITheme.h"
 #include <algorithm>
 #include <cstdio>
+#include <chrono>
+
+/// <summary>画面内のプリセット読み込みに使う共通ワーカーを借りる。</summary>
+/// <param name="worker">Gameが所有するロードワーカー。</param>
+/// <param name="writer">Gameが所有する保存ワーカー。</param>
+void CustomizeEditorUI::SetWorkers(LoadWorker *worker, SaveWorker *writer)
+{
+	loadWorker = worker;
+	saveWorker = writer;
+}
+
+/// <summary>ポーズプリセットの保存結果を受け取っていないか確認する。</summary>
+/// <returns>未受け取りならtrue。</returns>
+bool CustomizeEditorUI::IsPresetSavePending() const
+{
+	return pendingPresetSave.valid();
+}
 
 /// <summary>プレビュー内の専用UIを除外する矩形を取得する。</summary>
 /// <param name="width">画面幅。</param>
@@ -345,25 +364,27 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		mirrorPanelOpen = false;
 	}
 
-	if (root.WasActivated("preset/load"))
+	if (root.WasActivated("preset/load") && !pendingPresetSave.valid())
 	{
 		preview.Stop();
 		pastePanelOpen = false;
 		presetPanelMode = presetPanelMode == 2 ? 0 : 2;
 		mirrorPanelOpen = false;
 		presetIndex = 0;
-		presetIds = {"__IdlePose__"};
-		presetNames = {"待機姿勢"};
+		presetIds.clear();
+		presetNames.clear();
+		loadedPresets.clear();
+		pendingPresets = {};
 
-		for (const auto &id : PosePresetStore::ListPresetIds())
+		if (presetPanelMode == 2 && loadWorker)
 		{
-			PosePresetData data;
-
-			if (PosePresetStore::LoadPreset(id, data))
+			auto task = std::make_shared<std::packaged_task<std::vector<PosePresetData>()>>(
+				&CustomizeMotionEditorController::PreparePosePresets);
+			pendingPresets = task->get_future();
+			loadWorker->Submit(std::packaged_task<void()>([task]
 			{
-				presetIds.push_back(id);
-				presetNames.push_back(data.displayName);
-			}
+				(*task)();
+			}));
 		}
 	}
 
@@ -376,9 +397,14 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		}
 	}
 
-	if (root.WasActivated("preset/confirmSave"))
+	if (root.WasActivated("preset/confirmSave") && saveWorker && !pendingPresetSave.valid() &&
+		!pendingPresets.valid())
 	{
-		status = motion.SavePosePreset(frame, presetName);
+		status = "保存中";
+		pendingPresetSave = saveWorker->Enqueue([draft = motion, frame, name = presetName]() mutable
+		{
+			return draft.SavePosePreset(frame, name);
+		});
 	}
 
 	if ((root.WasActivated("preset/applyAll") || root.WasActivated("preset/applySelected")) && presetIndex >= 0 &&
@@ -391,7 +417,7 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 			mask.fill(true);
 		}
 
-		status = motion.ApplyPosePreset(presetIds[presetIndex], frame, mask);
+		status = motion.ApplyPosePreset(loadedPresets[presetIndex], frame, mask);
 	}
 
 	if (root.WasActivated("preset/cancel"))
@@ -405,6 +431,28 @@ void CustomizeEditorUI::ApplyMotionControls(CustomizeMotionEditorController &mot
 		if (root.ShouldCollapseInlineSection("preset/", presetPanelBounds, previewRegion))
 		{
 			presetPanelMode = 0;
+		}
+	}
+
+	if (presetPanelMode != 2)
+	{
+		pendingPresets = {};
+	}
+	else if (pendingPresets.valid() &&
+			 pendingPresets.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+	{
+		try
+		{
+			loadedPresets = pendingPresets.get();
+			for (const auto &preset : loadedPresets)
+			{
+				presetIds.push_back(preset.presetId);
+				presetNames.push_back(preset.displayName);
+			}
+		}
+		catch (const std::exception &)
+		{
+			status = "ポーズプリセットを読み込めませんでした。";
 		}
 	}
 }

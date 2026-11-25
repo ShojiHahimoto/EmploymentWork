@@ -5,6 +5,7 @@
 #include "Scene/Scene.h"
 
 #include <string>
+#include <future>
 
 class CustomizeCharacterScene : public Scene
 {
@@ -12,6 +13,7 @@ class CustomizeCharacterScene : public Scene
 	CustomizeCharacterScene(int initialWidth, int initialHeight, int slotIndex);
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
 	void Update() override;
 	void Draw(Renderer &renderer) override;
@@ -25,6 +27,7 @@ class CustomizeCharacterScene : public Scene
 	CustomizeCharacterEditorController editor;
 	CustomizeMode mode = CustomizeMode::CharacterEditor;
 	std::string statusMessage;
+	std::future<std::string> pendingSave;
 	int width;
 	int height;
 	int slotIndex;

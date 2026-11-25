@@ -12,6 +12,7 @@ struct CustomizeCharacterSlotSelection
 {
 	std::optional<int> slotIndex;
 	bool backRequested = false;
+	bool refreshRequested = false;
 };
 
 /// <summary>CharacterData の下書き、技の割り当て、保存と読み込みを管理する。</summary>
@@ -35,8 +36,10 @@ class CustomizeCharacterEditorController
 	std::string BuildSlotButtonLabel(int slotIndex) const;
 
 	std::string SelectSlot(int slotIndex);
+	void PrepareAttackPicker();
 
 	std::string SaveDraft();
+	bool ConsumeSaveRequest();
 
 	void RefreshSlotSummaries();
 
@@ -86,4 +89,6 @@ class CustomizeCharacterEditorController
 	int selectedSlotIndex = 0;
 	int pickingSlotIndex = 0;
 	std::string editingFolderPath;
+	bool saveRequested = false;
+	std::vector<AttackData> attackPickerItems;
 };

@@ -72,9 +72,47 @@ BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup:
 {
 }
 
-/// <summary>
-/// バトル用 World、カメラ、初期モデル、デバッグ用オブジェクトを生成する。
-/// </summary>
+/// <summary>対戦開始前に必要なモデル、画像、音源、対戦データを要求する。</summary>
+/// <param name="request">ワーカーへ渡すロード要求。</param>
+void BattleScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
+	request.models.push_back({"DebugPlayer", "assets/model/DebugPlayer/man.fbx", true});
+	request.models.push_back({"DebugPlayer2", "assets/model/DebugPlayer2/woman.fbx", true});
+	request.textures.emplace_back("assets/texture/number.png");
+	request.effectIds = {"HitSpark", "GuardSpark"};
+	request.prepareScene = []
+	{
+		auto battleMusic = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::BattleBgm01));
+		auto normalHit = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::HitNormal));
+		auto hardHit = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::HitHard));
+
+		PreparedSceneLoad result;
+		result.apply = [battleMusic, normalHit, hardHit](Scene &)
+		{
+			auto &sound = SoundManager::GetInstance();
+			sound.RegisterSound(SoundIds::BattleBgm01, std::move(*battleMusic), true, true);
+			sound.RegisterSound(SoundIds::HitNormal, std::move(*normalHit), false, false);
+			sound.RegisterSound(SoundIds::HitHard, std::move(*hardHit), false, false);
+		};
+
+		return result;
+	};
+	request.motionIds = {"Common/Idle", "Common/WalkForward", "Common/WalkBack", "Common/Crouch",
+						 "Common/Guard", "Common/CrouchGuard", "Common/JumpStart", "Common/JumpLoop",
+						 "Common/Hitstun", "Common/AirHitstun", "Common/AirToDown", "Common/Down", "Common/Wakeup"};
+
+	for (const auto &player : setupData.players)
+	{
+		request.characterFolders.push_back(player.characterFolderPath.empty()
+			? BattleSetup::BuildCharacterFolderPath(0) : player.characterFolderPath);
+	}
+}
+
+/// <summary>準備済み素材を使って対戦用のWorldとカメラを初期化する。</summary>
 void BattleScene::Enter()
 {
 	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
@@ -89,34 +127,26 @@ void BattleScene::Enter()
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
-	ModelResourceManager::LoadModel(
-		"Debugman",
-		"assets/model/Debugman/Akai.fbx",
-		Renderer::GetDevice());
-
-	ModelResourceManager::LoadModel(
-		"DebugPlayer",
-		"assets/model/DebugPlayer/man.fbx",
-		Renderer::GetDevice());
-
-	ModelResourceManager::LoadModel(
-		"DebugPlayer2",
-		"assets/model/DebugPlayer2/woman.fbx",
-		Renderer::GetDevice());
+	const auto preparedCharacter = [this](const std::string &folder)
+	{
+		return FindSceneCharacter(folder.empty() ? BattleSetup::BuildCharacterFolderPath(0) : folder);
+	};
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
 		Vector3(-4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f),
-		setupData.players[0].characterFolderPath);
+		setupData.players[0].characterFolderPath,
+		preparedCharacter(setupData.players[0].characterFolderPath));
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer2,
 		"DebugPlayer2",
 		Vector3(4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f),
-		setupData.players[1].characterFolderPath);
+		setupData.players[1].characterFolderPath,
+		preparedCharacter(setupData.players[1].characterFolderPath));
 
 	//world.RequestSpawn(
 	//	SpawnType::DebugCube,
@@ -147,9 +177,8 @@ void BattleScene::Exit()
 #if defined(_DEBUG)
 	Renderer::ReleaseRenderTexture(sceneViewRenderTexture);
 #endif
-	Renderer::ReleaseTexture(hudNumberTexture);
+	hudNumberTexture = nullptr;
 	EffectRenderSystem::ReleaseResources();
-	EffectDataManager::UnloadAll();
 	SoundManager::GetInstance().StopBGM();
 	world.Clear();
 }
@@ -324,22 +353,15 @@ void BattleScene::InitializeBattleHUD()
 	player2Gauge.targetPlayerIndex = 1;
 	world.AddComponent<HealthGaugeComponent>(player2GaugeId, player2Gauge);
 
-	const HRESULT hr = Renderer::LoadTextureFromFile("assets/texture/number.png", &hudNumberTexture);
-	if (FAILED(hr))
-	{
-		DebugLog("[BattleHUD] Number texture load failed. hr=", static_cast<long>(hr));
-	}
+	hudNumberTexture = FindSceneTexture("assets/texture/number.png");
 }
 
 /// <summary>
-/// BattleScene で使う BGM と既定ヒット SE を読み込み、バトル BGM をループ再生する。
+/// 準備済みのバトルBGMをループ再生する。
 /// </summary>
 void BattleScene::InitializeBattleSounds()
 {
 	SoundManager& soundManager = SoundManager::GetInstance();
-	soundManager.LoadBGM(SoundIds::BattleBgm01, "assets/Sound/BGM/BGM_Battle01_maou_.wav", true);
-	soundManager.LoadSE(SoundIds::HitNormal, "assets/Sound/SE/Battle/SE_Hit_Normal_maou.wav");
-	soundManager.LoadSE(SoundIds::HitHard, "assets/Sound/SE/Battle/SE_Hit_Hard_maou.wav");
 	soundManager.PlayBGM(SoundIds::BattleBgm01);
 }
 

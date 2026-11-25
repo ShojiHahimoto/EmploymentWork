@@ -1,5 +1,7 @@
 ﻿#include "Scene/BattleSetupScene.h"
 
+#include "Manager/SceneLoadRequest.h"
+
 /// <summary>
 /// セットアップ用データと画面フロー担当コントローラーを初期化する。
 /// </summary>
@@ -15,7 +17,30 @@ BattleSetupScene::BattleSetupScene(int initialWidth, int initialHeight)
 /// </summary>
 void BattleSetupScene::Enter()
 {
-	flowController.Enter();
+	flowController.Enter(saveWorker);
+}
+
+/// <summary>対戦設定のキャラクターと入力設定一覧を遷移前に準備する。</summary>
+/// <param name="request">ワーカーへ渡すロード要求。</param>
+void BattleSetupScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.prepareScene = []
+	{
+		BattleSetupSession prepared;
+		BattleSetupCharacterSelectionController(prepared).RefreshCharacterSlotSummaries();
+		BattleSetupInputConfigController(prepared).RefreshInputConfigSummaries();
+
+		PreparedSceneLoad result;
+		result.apply = [prepared = std::move(prepared)](Scene &scene) mutable
+		{
+			auto &session = static_cast<BattleSetupScene &>(scene).session;
+			session.characterSlotSummaries = std::move(prepared.characterSlotSummaries);
+			session.keyboardInputConfigs = std::move(prepared.keyboardInputConfigs);
+			session.gamepadInputConfigs = std::move(prepared.gamepadInputConfigs);
+		};
+
+		return result;
+	};
 }
 
 /// <summary>

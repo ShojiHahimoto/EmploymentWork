@@ -4,10 +4,12 @@
 #include "Input/InputSystem.h"
 #include "Scene/BattleScene.h"
 #include "Manager/SceneManager.h"
+#include "Manager/SaveWorker.h"
 #include "Scene/TitleScene.h"
 #include "ThirdParty/imgui-docking/imgui.h"
 
 #include <cstdio>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 
@@ -234,13 +236,13 @@ BattleSetupFlowController::BattleSetupFlowController(
 }
 
 /// <summary>
-/// UI 入力マップへ切り替え、キャラクタースロット一覧を読み込む。
+/// UI 入力マップへ切り替え、準備済み一覧を使う。
 /// </summary>
-void BattleSetupFlowController::Enter()
+/// <param name="writer">入力設定の保存先ワーカー。</param>
+void BattleSetupFlowController::Enter(SaveWorker *writer)
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
-	characterSelectionController.RefreshCharacterSlotSummaries();
-	inputConfigController.RefreshInputConfigSummaries();
+	inputConfigController.SetSaveWorker(writer);
 	statusMessage = "Battle setup ready.";
 }
 
@@ -256,6 +258,7 @@ void BattleSetupFlowController::Exit()
 /// </summary>
 void BattleSetupFlowController::Update()
 {
+	inputConfigController.ApplyInputConfigSave();
 	inputConfigController.UpdateBindingCapture();
 }
 
@@ -694,7 +697,7 @@ void BattleSetupInputConfigController::CancelNewInputConfig()
 /// </summary>
 void BattleSetupInputConfigController::SaveDraftInputConfig()
 {
-	if (!creatingInputConfig || editingInputConfigPlayerIndex < 0)
+	if (!saveWorker || IsSaving() || !creatingInputConfig || editingInputConfigPlayerIndex < 0)
 	{
 		return;
 	}
@@ -708,25 +711,74 @@ void BattleSetupInputConfigController::SaveDraftInputConfig()
 
 	Input::NamedInputConfig config;
 	config.deviceKind = editingInputConfigDeviceKind;
-	config.configId = Input::InputConfigLoader::GenerateNextConfigId(config.deviceKind);
 	config.configName = configName;
-	config.filePath = Input::InputConfigLoader::BuildConfigFilePath(config.deviceKind, config.configId);
 	config.keyboardConfig = draftKeyboardConfig;
 	config.gamepadConfig = draftGamepadConfig;
 
-	if (!Input::InputConfigLoader::SaveNamedInputConfig(config))
+	savingPlayerIndex = editingInputConfigPlayerIndex;
+	statusMessage = "Saving key config...";
+	pendingSave = saveWorker->Enqueue([config = std::move(config)]() mutable -> std::optional<Input::NamedInputConfig>
 	{
-		statusMessage = "Key config save failed.";
+		config.configId = Input::InputConfigLoader::GenerateNextConfigId(config.deviceKind);
+		config.filePath = Input::InputConfigLoader::BuildConfigFilePath(config.deviceKind, config.configId);
+		if (!Input::InputConfigLoader::SaveNamedInputConfig(config))
+		{
+			return std::nullopt;
+		}
+
+		return config;
+	});
+}
+
+/// <summary>キーコンフィグの保存に使うワーカーを借りる。</summary>
+/// <param name="writer">ゲームが所有する保存ワーカー。</param>
+void BattleSetupInputConfigController::SetSaveWorker(SaveWorker *writer)
+{
+	saveWorker = writer;
+}
+
+/// <summary>キーコンフィグの保存結果を受け取っていないか確認する。</summary>
+/// <returns>未受け取りならtrue。</returns>
+bool BattleSetupInputConfigController::IsSaving() const
+{
+	return pendingSave.valid();
+}
+
+/// <summary>保存済み設定を、ファイルを読み直さず一覧と対象プレイヤーに反映する。</summary>
+void BattleSetupInputConfigController::ApplyInputConfigSave()
+{
+	if (!pendingSave.valid() || pendingSave.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+	{
 		return;
 	}
 
-	RefreshInputConfigSummaries();
-	ApplyNamedInputConfig(editingInputConfigPlayerIndex, config);
+	std::optional<Input::NamedInputConfig> config;
+	try
+	{
+		config = pendingSave.get();
+	}
+	catch (const std::exception &)
+	{
+		statusMessage = "Key config save failed.";
+
+		return;
+	}
+
+	if (!config)
+	{
+		statusMessage = "Key config save failed.";
+
+		return;
+	}
+
+	auto &configs = config->deviceKind == BattleSetup::InputDeviceKind::Keyboard ? keyboardInputConfigs : gamepadInputConfigs;
+	configs.push_back(*config);
+	ApplyNamedInputConfig(savingPlayerIndex, *config);
 	creatingInputConfig = false;
 	editingInputConfigPlayerIndex = -1;
 	capturingTarget = BattleSetupCaptureTarget::None;
 	capturingPlayerIndex = -1;
-	statusMessage = "Saved key config: " + config.configName;
+	statusMessage = "Saved key config: " + config->configName;
 }
 
 /// <summary>
@@ -1049,6 +1101,11 @@ bool BattleSetupFlowController::ValidateSetup(std::string& outMessage) const
 /// </summary>
 void BattleSetupFlowController::StartBattle()
 {
+	if (inputConfigController.IsSaving())
+	{
+		return;
+	}
+
 	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
 	SceneManager::GetInstance().RequestChangeScene(
 		std::make_unique<BattleScene>(width, height, setupData));
@@ -1059,6 +1116,11 @@ void BattleSetupFlowController::StartBattle()
 /// </summary>
 void BattleSetupFlowController::RequestTitleScene()
 {
+	if (inputConfigController.IsSaving())
+	{
+		return;
+	}
+
 	SceneManager::GetInstance().RequestChangeScene(
 		std::make_unique<TitleScene>(width, height));
 }

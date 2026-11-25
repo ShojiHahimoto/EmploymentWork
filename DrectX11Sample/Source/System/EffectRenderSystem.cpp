@@ -5,13 +5,13 @@
 #include "Core/GameObject.h"
 #include "Core/Renderer.h"
 #include "Core/World.h"
+#include "Manager/SceneManager.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
-#include <unordered_map>
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -80,7 +80,6 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 		ID3D11BlendState* additiveBlendState = nullptr;
 		ID3D11DepthStencilState* depthEnableState = nullptr;
 		ID3D11DepthStencilState* depthDisableState = nullptr;
-		std::unordered_map<std::string, ID3D11ShaderResourceView*> textureCache;
 	};
 
 	EffectRenderResources g_resources;
@@ -330,7 +329,7 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 	/// <summary>
 	/// texturePath に対応する ShaderResourceView を取得する。
 	/// </summary>
-	/// <param name="texturePath">読み込むテクスチャパス。空文字なら白テクスチャ。</param>
+	/// <param name="texturePath">準備済み画像のパス。空または未登録なら白テクスチャ。</param>
 	/// <returns>描画に使う ShaderResourceView。</returns>
 	ID3D11ShaderResourceView* GetTextureView(const std::string& texturePath)
 	{
@@ -339,22 +338,16 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 			return g_resources.whiteTextureView;
 		}
 
-		const auto found = g_resources.textureCache.find(texturePath);
-		if (found != g_resources.textureCache.end())
+		const auto *scene = SceneManager::GetInstance().GetCurrentScene();
+		if (scene)
 		{
-			return found->second ? found->second : g_resources.whiteTextureView;
+			if (auto *view = scene->FindSceneTexture(texturePath))
+			{
+				return view;
+			}
 		}
 
-		ID3D11ShaderResourceView* textureView = nullptr;
-		const HRESULT hr = Renderer::LoadTextureFromFile(texturePath, &textureView);
-		if (FAILED(hr))
-		{
-			g_resources.textureCache[texturePath] = nullptr;
-			return g_resources.whiteTextureView;
-		}
-
-		g_resources.textureCache[texturePath] = textureView;
-		return textureView;
+		return g_resources.whiteTextureView;
 	}
 
 	/// <summary>
@@ -484,12 +477,6 @@ void EffectRenderSystem::Draw(World& world, const CameraComponent& camera)
 /// <summary>EffectRenderSystem が保持する DirectX11 リソースを解放する。</summary>
 void EffectRenderSystem::ReleaseResources()
 {
-	for (auto& texture : g_resources.textureCache)
-	{
-		SAFE_RELEASE(texture.second);
-	}
-	g_resources.textureCache.clear();
-
 	SAFE_RELEASE(g_resources.depthDisableState);
 	SAFE_RELEASE(g_resources.depthEnableState);
 	SAFE_RELEASE(g_resources.additiveBlendState);

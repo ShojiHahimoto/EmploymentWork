@@ -69,7 +69,20 @@ namespace GameUI
 		static bool Initialize(ID3D11Device* device, int width, int height);
 		static void Shutdown();
 		static bool Resize(int width, int height);
-		static bool LoadAssets(const std::string& manifestPath);
+		struct PreparedImage
+		{
+			int width = 0;
+			int height = 0;
+			int sliceLeft = 0;
+			int sliceTop = 0;
+			int sliceRight = 0;
+			int sliceBottom = 0;
+			std::vector<unsigned char> pixels;
+		};
+
+		using PreparedImages = std::unordered_map<std::string, PreparedImage>;
+		static PreparedImages PrepareAssets(const std::string &manifestPath, const std::vector<std::string> &imageIds);
+		static bool UploadAssets(const PreparedImages &images);
 		static void UnloadAssets();
 		static void Draw(Renderer& renderer, const std::vector<DrawCommand>& commands);
 		static bool IsInitialized();

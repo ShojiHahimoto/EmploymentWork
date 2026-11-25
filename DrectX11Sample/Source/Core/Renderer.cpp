@@ -3,7 +3,8 @@
 #include "Resource/ModelResource.h"
 #include "Core/Debugger.h"
 
-#include <WICTextureLoader.h>
+#include "Resource/TexturePreparation.h"
+#include <chrono>
 
 #include <algorithm>
 #include <cmath>
@@ -1429,11 +1430,18 @@ HRESULT Renderer::LoadTextureFromFile(const std::string& path, ID3D11ShaderResou
 	}
 
 	const std::wstring widePath(path.begin(), path.end());
-	return DirectX::CreateWICTextureFromFile(
-		m_pDevice,
-		widePath.c_str(),
-		nullptr,
-		textureView);
+	TexturePreparation::Image image;
+	const auto start = std::chrono::steady_clock::now();
+	const HRESULT decoded = TexturePreparation::DecodeFile(widePath.c_str(), image);
+	const auto ready = std::chrono::steady_clock::now();
+	const HRESULT result = FAILED(decoded) ? decoded : TexturePreparation::Upload(m_pDevice, image, textureView);
+	const auto end = std::chrono::steady_clock::now();
+
+	using Milliseconds = std::chrono::duration<double, std::milli>;
+	DebugLog("[Texture] ", path, " CPU ms=", Milliseconds(ready - start).count(),
+			 " GPU ms=", Milliseconds(end - ready).count(), " hr=", static_cast<long>(result));
+
+	return result;
 }
 
 /// <summary>

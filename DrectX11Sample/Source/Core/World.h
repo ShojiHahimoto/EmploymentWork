@@ -20,6 +20,8 @@ enum class SpawnType
 	DebugPlayer2,
 };
 
+struct CharacterData;
+
 enum class BattleResult
 {
 	None,
@@ -50,6 +52,7 @@ struct SpawnRequest
 	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;
 	DirectX::SimpleMath::Vector3 rotationDegrees = DirectX::SimpleMath::Vector3::Zero;
 	std::string characterFolderPath;
+	std::shared_ptr<const CharacterData> preparedCharacter;
 };
 
 struct DestroyRequest
@@ -143,7 +146,8 @@ public:
 		const std::string& name,
 		const DirectX::SimpleMath::Vector3& position,
 		const DirectX::SimpleMath::Vector3& rotationDegrees,
-		const std::string& characterFolderPath = "");
+		const std::string& characterFolderPath = "",
+		std::shared_ptr<const CharacterData> preparedCharacter = nullptr);
 	void RequestDestroy(GameObjectId objectId);
 	void RequestEffectSpawn(
 		const std::string& effectDataId,
