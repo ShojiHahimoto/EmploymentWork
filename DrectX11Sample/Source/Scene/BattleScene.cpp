@@ -47,6 +47,37 @@
 
 using namespace DirectX::SimpleMath;
 
+namespace
+{
+	/// <summary>通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
+	/// <param name="world">描画対象のWorld。</param>
+	/// <param name="id">モデルを持つオブジェクトID。</param>
+	/// <param name="transform">対象のTransform。</param>
+	/// <returns>描画するモデル、ワールド行列、ボーン行列。モデルがない場合は空。</returns>
+	Renderer::ShadowCaster GetModelDrawData(World &world, GameObjectId id, const TransformComponent &transform)
+	{
+		const auto *component = world.GetComponent<ModelComponent>(id);
+		if (!component)
+		{
+			return {};
+		}
+
+		Renderer::ShadowCaster data;
+		data.model = ModelResourceManager::GetModel(component->resourceKey);
+		data.world = TransformSystem::GetWorldMatrix(transform);
+		const auto *pose = world.GetComponent<SkeletonPoseComponent>(id);
+		data.skinningMatrices = pose && pose->initialized ? &pose->skinningMatrices : nullptr;
+
+		const auto *motion = world.GetComponent<MotionPlayerComponent>(id);
+		if (motion && motion->visualRootOffset != Vector3::Zero)
+		{
+			data.world = data.world * Matrix::CreateTranslation(motion->visualRootOffset);
+		}
+
+		return data;
+	}
+}
+
 /// <summary>
 /// BattleScene を現在の描画サイズで初期化する。
 /// </summary>
@@ -252,6 +283,25 @@ void BattleScene::Draw(Renderer& renderer)
 	}
 
 	const CameraComponent& camera = world.GetActiveCamera();
+	std::vector<Renderer::ShadowCaster> casters;
+	casters.reserve(2);
+	for (const auto &object : world.GetGameObjects())
+	{
+		if (object.tag != GameObjectTag::Player)
+		{
+			continue;
+		}
+
+		const auto *transform = world.GetTransform(object.id);
+		if (transform)
+		{
+			casters.push_back(GetModelDrawData(world, object.id, *transform));
+		}
+	}
+
+	const float stageCenterX = (EmbedResolveSystem::StageMinX + EmbedResolveSystem::StageMaxX) * 0.5f;
+	renderer.DrawShadowMap(casters, Vector3(stageCenterX, 5.0f, 8.0f),
+						   EmbedResolveSystem::StageMaxX - EmbedResolveSystem::StageMinX + 38.0f);
 	DrawWorldWithCamera(renderer, camera);
 	EffectRenderSystem::Draw(world, camera);
 
@@ -278,7 +328,8 @@ void BattleScene::Draw(Renderer& renderer)
 void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera)
 {
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
-	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX);
+	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX,
+										-30.0f, 56.0f, 48.0f, 5.0f, true);
 
 	for (GameObject& object : world.GetGameObjects())
 	{
@@ -295,27 +346,10 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 		TransformComponent* transform = world.GetTransform(object.id);
 		if (transform)
 		{
-			const ModelComponent* modelComponent = world.GetComponent<ModelComponent>(object.id);
-			if (modelComponent)
+			const auto data = GetModelDrawData(world, object.id, *transform);
+			if (data.model && renderer.DrawModel(*data.model, data.world, data.skinningMatrices))
 			{
-				const ModelResource* model = ModelResourceManager::GetModel(modelComponent->resourceKey);
-				if (model)
-				{
-					const SkeletonPoseComponent* pose = world.GetComponent<SkeletonPoseComponent>(object.id);
-					const std::vector<Matrix>* skinningMatrices =
-						pose && pose->initialized ? &pose->skinningMatrices : nullptr;
-					const MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
-					Matrix modelWorld = TransformSystem::GetWorldMatrix(*transform);
-					if (motionPlayer && motionPlayer->visualRootOffset != Vector3::Zero)
-					{
-						modelWorld = modelWorld * Matrix::CreateTranslation(motionPlayer->visualRootOffset);
-					}
-
-					if (renderer.DrawModel(*model, modelWorld, skinningMatrices))
-					{
-						continue;
-					}
-				}
+				continue;
 			}
 
 			renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*transform));

@@ -11,12 +11,86 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 namespace
 {
+	/// <summary>HLSLを読み、D3DCompilerが解釈できないUTF-8 BOMを除く。</summary>
+	/// <param name="path">シェーダーまたはインクルードのパス。</param>
+	/// <returns>コンパイルに渡すテキスト。読み込み不可の場合は空。</returns>
+	std::string ReadShaderSource(const std::filesystem::path &path)
+	{
+		std::ifstream file(path, std::ios::binary);
+		std::string source((std::istreambuf_iterator<char>(file)), {});
+		if (source.starts_with("\xEF\xBB\xBF"))
+		{
+			source.erase(0, 3);
+		}
+
+		return source;
+	}
+
+	class ShaderInclude final : public ID3DInclude
+	{
+	public:
+		explicit ShaderInclude(std::filesystem::path directory);
+		HRESULT STDMETHODCALLTYPE Open(D3D_INCLUDE_TYPE type, LPCSTR name, LPCVOID parent, LPCVOID *data,
+									   UINT *size) override;
+		HRESULT STDMETHODCALLTYPE Close(LPCVOID data) override;
+
+	private:
+		std::filesystem::path directory;
+	};
+
+	/// <summary>シェーダーと同じディレクトリからインクルードを解決する。</summary>
+	/// <param name="directory">コンパイル対象ファイルの親ディレクトリ。</param>
+	ShaderInclude::ShaderInclude(std::filesystem::path directory) : directory(std::move(directory))
+	{
+	}
+
+	/// <summary>ローカルインクルードをコンパイル用のメモリに展開する。</summary>
+	/// <param name="type">ローカルまたはシステムインクルードの区別。</param>
+	/// <param name="name">インクルード名。</param>
+	/// <param name="parent">親ソース。探索範囲はルートのシェーダーディレクトリに固定するため未使用。</param>
+	/// <param name="data">コンパイラーへ渡すテキスト。</param>
+	/// <param name="size">テキストのバイト数。</param>
+	/// <returns>読み込み結果。</returns>
+	HRESULT STDMETHODCALLTYPE ShaderInclude::Open(D3D_INCLUDE_TYPE type, LPCSTR name, [[maybe_unused]] LPCVOID parent,
+								LPCVOID *data, UINT *size)
+	{
+		if (type != D3D_INCLUDE_LOCAL)
+		{
+			return E_INVALIDARG;
+		}
+
+		const auto source = ReadShaderSource(directory / name);
+		if (source.empty())
+		{
+			return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+		}
+
+		auto bytes = std::make_unique<char[]>(source.size());
+		std::memcpy(bytes.get(), source.data(), source.size());
+		*size = static_cast<UINT>(source.size());
+		*data = bytes.release();
+
+		return S_OK;
+	}
+
+	/// <summary>コンパイラーが使い終えたインクルードを解放する。</summary>
+	/// <param name="data">Openが返したテキスト。</param>
+	/// <returns>解放完了を示すS_OK。</returns>
+	HRESULT STDMETHODCALLTYPE ShaderInclude::Close(LPCVOID data)
+	{
+		delete[] static_cast<const char *>(data);
+		return S_OK;
+	}
+
 	const char* DebugCubeShaderSource = R"(
 cbuffer TransformBuffer : register(b0)
 {
@@ -317,6 +391,13 @@ HRESULT Renderer::Init()
 	{
 		DebugLog("[Renderer] Model render resources creation failed. hr=", static_cast<long>(hr));
 		return hr;
+	}
+
+	hr = CreateShadowResources();
+	if (FAILED(hr))
+	{
+		ReleaseShadowResources();
+		DebugLog("[Renderer] Shadow resources unavailable. hr=", static_cast<long>(hr));
 	}
 
 	m_pSpriteBatch = std::make_unique<SpriteBatch>(m_pDeviceContext);
@@ -859,14 +940,14 @@ HRESULT Renderer::CreateModelRenderResources()
 	ID3DBlob* vertexShaderBlob = nullptr;
 	ID3DBlob* pixelShaderBlob = nullptr;
 
-	HRESULT hr = CompileShaderFromFile(L"Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+	HRESULT hr = CompileShaderFromFile(L"Source/Shader/VS_ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
 	if (FAILED(hr))
 	{
-		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/VS_ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
 	}
 	if (FAILED(hr))
 	{
-		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
+		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/VS_ModelSkinned.hlsl", "VSMain", "vs_5_0", &vertexShaderBlob);
 	}
 	if (FAILED(hr))
 	{
@@ -879,14 +960,14 @@ HRESULT Renderer::CreateModelRenderResources()
 		return hr;
 	}
 
-	hr = CompileShaderFromFile(L"Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+	hr = CompileShaderFromFile(L"Source/Shader/PS_ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
 	if (FAILED(hr))
 	{
-		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+		hr = CompileShaderFromFile(L"DrectX11Sample/Source/Shader/PS_ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
 	}
 	if (FAILED(hr))
 	{
-		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
+		hr = CompileShaderFromFile(L"../../DrectX11Sample/Source/Shader/PS_ModelSkinned.hlsl", "PSMain", "ps_5_0", &pixelShaderBlob);
 	}
 	if (FAILED(hr))
 	{
@@ -1029,17 +1110,33 @@ HRESULT Renderer::CompileShaderFromFile(const std::wstring& path, const char* en
 	flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
+	const std::filesystem::path shaderPath(path);
+	const auto source = ReadShaderSource(shaderPath);
+	if (source.empty())
+	{
+		return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+	}
+
+	ShaderInclude include(shaderPath.parent_path());
+	const auto sourceName = shaderPath.filename().string();
 	ID3DBlob* errorBlob = nullptr;
-	HRESULT hr = D3DCompileFromFile(
-		path.c_str(),
+	HRESULT hr = D3DCompile(
+		source.data(),
+		source.size(),
+		sourceName.c_str(),
 		nullptr,
-		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		&include,
 		entryPoint,
 		target,
 		flags,
 		0,
 		blob,
 		&errorBlob);
+
+	if (FAILED(hr) && errorBlob)
+	{
+		DebugLog("[Shader] ", static_cast<const char *>(errorBlob->GetBufferPointer()));
+	}
 
 	SAFE_RELEASE(errorBlob);
 
@@ -1165,8 +1262,13 @@ void Renderer::DrawDebugBox(const Matrix& world, const Color& color)
 /// </summary>
 /// <param name="stageMinX">ロジック上の左画面端 X。</param>
 /// <param name="stageMaxX">ロジック上の右画面端 X。</param>
+/// <param name="nearZ">床の手前端。</param>
+/// <param name="farZ">床の奥端。</param>
+/// <param name="wallHeight">壁の高さ。</param>
+/// <param name="gridStep">グリッドの間隔。</param>
+/// <param name="receiveShadows">現在のシャドウマップを床に適用する場合はtrue。</param>
 void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
-	float nearZ, float farZ, float wallHeight, float gridStep)
+	float nearZ, float farZ, float wallHeight, float gridStep, bool receiveShadows)
 {
 	// 不正な寸法と0間隔による無限ループを防ぐ。既存バトルは従来の既定値を使用する。
 	if (!(stageMaxX > stageMinX) || !(farZ > nearZ) || !(wallHeight > 0.0f) || !(gridStep > 0.0f)) return;
@@ -1189,10 +1291,13 @@ void Renderer::DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
 	const Color centerLineColor(0.02f, 0.02f, 0.02f, 1.0f);
 
 	// 白い床・奥壁・左右端壁を先に敷き、後から黒いグリッド線を重ねる。
-	DrawDebugBox(
-		Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
-		* Matrix::CreateTranslation(stageCenterX, -0.04f, centerZ),
-		panelColor);
+	if (!receiveShadows || !DrawShadowFloor(stageMinX, stageMaxX, nearZ, farZ, panelColor))
+	{
+		DrawDebugBox(
+			Matrix::CreateScale(stageHalfWidth, 0.03f, halfDepth)
+			* Matrix::CreateTranslation(stageCenterX, -0.04f, centerZ),
+			panelColor);
+	}
 	DrawDebugBox(
 		Matrix::CreateScale(stageHalfWidth, wallCenterY, 0.03f)
 		* Matrix::CreateTranslation(stageCenterX, wallCenterY, farZ),
@@ -1307,29 +1412,16 @@ bool Renderer::DrawModel(const ModelResource& model, const Matrix& world, const 
 	return DrawModel(model, world, Color(1.0f, 1.0f, 1.0f, 1.0f), false, skinningMatrices);
 }
 
-/// <summary>
-/// ModelResource の各 Mesh を、指定色を乗算しながら描画する。
-/// </summary>
-/// <param name="model">描画するモデルリソース。</param>
-/// <param name="world">モデルの World 行列。</param>
-/// <param name="color">モデル色。alpha が 1 未満なら半透明合成する。</param>
-/// <param name="disableDepth">true の場合、比較用ゴーストなどとして深度を無効化して描画する。</param>
-/// <param name="skinningMatrices">GPU スキニングに使うボーン行列配列。nullptr の場合は静的モデルとして描画する。</param>
-/// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
-bool Renderer::DrawModel(
-	const ModelResource& model,
-	const Matrix& world,
-	const Color& color,
-	bool disableDepth,
-	const std::vector<Matrix>* skinningMatrices)
+/// <summary>通常描画と深度描画で同じモデル定数を作る。</summary>
+/// <param name="worldViewProjection">対象視点のモデル変換行列。</param>
+/// <param name="color">モデルに掛ける色。</param>
+/// <param name="skinningMatrices">同じフレームのボーン行列。なしなら静的モデル。</param>
+/// <returns>GPUへ送る定数バッファの内容。</returns>
+Renderer::ModelConstantBuffer Renderer::BuildModelConstants(const Matrix &worldViewProjection,
+	const Color &color, const std::vector<Matrix> *skinningMatrices)
 {
-	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
-	{
-		return false;
-	}
-
 	ModelConstantBuffer constantBuffer = {};
-	constantBuffer.worldViewProjection = (world * m_ViewMatrix * m_ProjectionMatrix).Transpose();
+	constantBuffer.worldViewProjection = worldViewProjection.Transpose();
 	constantBuffer.skinningFlags = XMINT4(0, 0, 0, 0);
 	constantBuffer.modelColor = color;
 
@@ -1351,6 +1443,32 @@ bool Renderer::DrawModel(
 
 		constantBuffer.skinningFlags.x = 1;
 	}
+
+	return constantBuffer;
+}
+
+/// <summary>
+/// ModelResource の各 Mesh を、指定色を乗算しながら描画する。
+/// </summary>
+/// <param name="model">描画するモデルリソース。</param>
+/// <param name="world">モデルの World 行列。</param>
+/// <param name="color">モデル色。alpha が 1 未満なら半透明合成する。</param>
+/// <param name="disableDepth">true の場合、比較用ゴーストなどとして深度を無効化して描画する。</param>
+/// <param name="skinningMatrices">GPU スキニングに使うボーン行列配列。nullptr の場合は静的モデルとして描画する。</param>
+/// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
+bool Renderer::DrawModel(
+	const ModelResource& model,
+	const Matrix& world,
+	const Color& color,
+	bool disableDepth,
+	const std::vector<Matrix>* skinningMatrices)
+{
+	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
+	{
+		return false;
+	}
+
+	const auto constantBuffer = BuildModelConstants(world * m_ViewMatrix * m_ProjectionMatrix, color, skinningMatrices);
 	m_pDeviceContext->UpdateSubresource(m_pModelConstantBuffer, 0, nullptr, &constantBuffer, 0, 0);
 
 	m_pDeviceContext->IASetInputLayout(m_pModelInputLayout);
@@ -1648,6 +1766,7 @@ void Renderer::Uninit()
 {
 	ModelResourceManager::UnloadAll();
 	m_pSpriteBatch.reset();
+	ReleaseShadowResources();
 	ReleaseModelRenderResources();
 	ReleaseDebugBoxResources();
 	ReleaseDebugCubeResources();

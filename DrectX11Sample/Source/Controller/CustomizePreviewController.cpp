@@ -482,11 +482,6 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 	TransformSystem::UpdateWorldTransform(cameraTransform);
 	CameraSystem::Update(camera, cameraTransform);
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
-	// 編集画面専用の空間寸法。バトルのステージ境界とは共有せず、
-	// プレビューのカメラ・深度・描画領域をそのまま使って床と壁を描く。
-	renderer.DrawTrainingRoomBackground(PreviewRoomMinX, PreviewRoomMaxX, PreviewRoomNearZ, PreviewRoomFarZ,
-										PreviewRoomHeight, PreviewGridStep);
-
 	const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey);
 	const std::vector<Matrix> *previewSkinningMatrices = nullptr;
 	SkeletonPose ghostSkeletonPose;
@@ -620,6 +615,14 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 		overlay->PopClipRect();
 	}
 
+	const auto modelWorld = TransformSystem::GetWorldMatrix(playerTransform);
+	const Renderer::ShadowCaster caster{previewModel, modelWorld, previewSkinningMatrices};
+	const Vector3 roomCenter((PreviewRoomMinX + PreviewRoomMaxX) * 0.5f, 5.0f,
+							 (PreviewRoomNearZ + PreviewRoomFarZ) * 0.5f);
+	renderer.DrawShadowMap(std::span(&caster, 1), roomCenter, 108.0f);
+	renderer.DrawTrainingRoomBackground(PreviewRoomMinX, PreviewRoomMaxX, PreviewRoomNearZ, PreviewRoomFarZ,
+										PreviewRoomHeight, PreviewGridStep, true);
+
 	if (previewModel && ghostSkinningMatrices)
 	{
 		TransformComponent ghostTransform = playerTransform;
@@ -631,7 +634,7 @@ void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, 
 
 	const bool drewModel =
 		previewModel &&
-		renderer.DrawModel(*previewModel, TransformSystem::GetWorldMatrix(playerTransform), previewSkinningMatrices);
+		renderer.DrawModel(*previewModel, modelWorld, previewSkinningMatrices);
 	if (!drewModel)
 	{
 		const Matrix fallbackWorld =

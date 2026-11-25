@@ -11,6 +11,7 @@
 #include <locale.h>
 #include <memory>
 #include <string>
+#include <span>
 #include <vector>
 
 #pragma comment(lib, "directxtk.lib")
@@ -181,6 +182,12 @@ private:
 	static HRESULT CreateDebugCubeResources();
 	static HRESULT CreateDebugBoxResources();
 	static HRESULT CreateModelRenderResources();
+	static HRESULT CreateShadowResources();
+	static void ReleaseShadowResources();
+	static bool DrawShadowFloor(float minX, float maxX, float nearZ, float farZ,
+		const DirectX::SimpleMath::Color &color);
+	static ModelConstantBuffer BuildModelConstants(const DirectX::SimpleMath::Matrix &worldViewProjection,
+		const DirectX::SimpleMath::Color &color, const std::vector<DirectX::SimpleMath::Matrix> *skinningMatrices);
 	static HRESULT CreateWhiteTextureResource();
 	static HRESULT CompileShader(const char* source, const char* entryPoint, const char* target, ID3DBlob** blob);
 	static HRESULT CompileShaderFromFile(const std::wstring& path, const char* entryPoint, const char* target, ID3DBlob** blob);
@@ -210,12 +217,18 @@ public:
 
 	static void DrawDebugCube(const DirectX::SimpleMath::Matrix& world);
 	static void DrawDebugBox(const DirectX::SimpleMath::Matrix& world, const DirectX::SimpleMath::Color& color);
-	/// <param name="nearZ">床と左右壁の手前端。</param>
-	/// <param name="farZ">奥壁の位置。</param>
-	/// <param name="wallHeight">壁の高さ。</param>
-	/// <param name="gridStep">グリッド線の間隔。</param>
+
 	static void DrawTrainingRoomBackground(float stageMinX, float stageMaxX,
-		float nearZ = -30.0f, float farZ = 56.0f, float wallHeight = 48.0f, float gridStep = 5.0f);
+		float nearZ = -30.0f, float farZ = 56.0f, float wallHeight = 48.0f, float gridStep = 5.0f,
+		bool receiveShadows = false);
+	struct ShadowCaster
+	{
+		const ModelResource *model = nullptr;
+		DirectX::SimpleMath::Matrix world;
+		const std::vector<DirectX::SimpleMath::Matrix> *skinningMatrices = nullptr;
+	};
+	static void DrawShadowMap(std::span<const ShadowCaster> casters, const DirectX::SimpleMath::Vector3 &center,
+		float coverage);
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,

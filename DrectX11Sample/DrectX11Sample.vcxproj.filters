@@ -267,6 +267,9 @@
     <ClCompile Include="Source\Core\Renderer.cpp">
       <Filter>ソース ファイル\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Core\RendererShadow.cpp">
+      <Filter>ソース ファイル\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Manager\SoundManager.cpp">
       <Filter>ソース ファイル\Manager</Filter>
     </ClCompile>
@@ -734,7 +737,25 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Source\Shader\ModelSkinned.hlsl">
+    <None Include="Source\Shader\ModelSkinning.hlsli">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\VS_ModelSkinned.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\PS_ModelSkinned.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\VS_ShadowDepth.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\ShadowReceiver.hlsli">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\VS_ShadowReceiver.hlsl">
+      <Filter>リソース ファイル\Shader</Filter>
+    </None>
+    <None Include="Source\Shader\PS_ShadowReceiver.hlsl">
       <Filter>リソース ファイル\Shader</Filter>
     </None>
     <None Include="assets\MotionData\debug_right_arm_wave.json">

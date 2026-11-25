@@ -94,6 +94,7 @@
     <ClCompile Include="Source\System\PlayerFacingSystem.cpp" />
     <ClCompile Include="Source\System\PlayerControlSystem.cpp" />
     <ClCompile Include="Source\Core\Renderer.cpp" />
+    <ClCompile Include="Source\Core\RendererShadow.cpp" />
     <ClCompile Include="Source\Manager\SoundManager.cpp" />
     <ClCompile Include="Source\System\SpawnDestroySystem.cpp" />
     <ClCompile Include="Source\System\StateUpdateSystem.cpp" />
@@ -224,7 +225,13 @@
     <ClInclude Include="Source\Core\World.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\Shader\ModelSkinned.hlsl" />
+    <None Include="Source\Shader\ModelSkinning.hlsli" />
+    <None Include="Source\Shader\VS_ModelSkinned.hlsl" />
+    <None Include="Source\Shader\PS_ModelSkinned.hlsl" />
+    <None Include="Source\Shader\VS_ShadowDepth.hlsl" />
+    <None Include="Source\Shader\ShadowReceiver.hlsli" />
+    <None Include="Source\Shader\VS_ShadowReceiver.hlsl" />
+    <None Include="Source\Shader\PS_ShadowReceiver.hlsl" />
     <None Include="assets\EffectData\GuardSpark.json" />
     <None Include="assets\EffectData\HitSpark.json" />
     <None Include="assets\Sound\BGM\BGM_Battle01_maou_.wav" />
