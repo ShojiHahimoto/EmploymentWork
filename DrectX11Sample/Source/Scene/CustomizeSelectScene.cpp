@@ -13,13 +13,14 @@ CustomizeSelectScene::CustomizeSelectScene(int initialWidth, int initialHeight, 
 void CustomizeSelectScene::DescribeLoad(SceneLoadRequest &request) const
 {
 	request.uiImageIds = {"customize_menu_normal", "customize_menu_selected", "header", "header_accent",
-						  "button", "back", "panel"};
+						  "button", "back", "panel", "slot_focused", "slot_forward",
+						  "badge_a", "badge_b", "badge_x", "badge_y"};
 }
 
 /// <summary>共通ロードワーカーを選択画面へ渡し、入場時の一覧読み込みに使えるようにする。</summary>
 void CustomizeSelectScene::Enter()
 {
-	flowController.Enter(loadWorker);
+	flowController.Enter(loadWorker, saveWorker);
 }
 
 void CustomizeSelectScene::Exit()

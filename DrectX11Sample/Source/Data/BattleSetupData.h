@@ -9,7 +9,7 @@
 
 namespace BattleSetup
 {
-	constexpr int CharacterSlotCount = 10;
+	constexpr int CharacterSlotCount = 12;
 	constexpr const char* CharacterDataRootPath = "assets/CharacterData";
 
 	enum class InputDeviceKind : uint8_t

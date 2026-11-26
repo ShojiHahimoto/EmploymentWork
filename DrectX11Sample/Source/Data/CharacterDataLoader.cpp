@@ -890,3 +890,33 @@ bool CharacterDataLoader::LoadAttackData(const std::string& attackDataId, Attack
 	LoadMovementKeysFromJson(root, outAttackData.movementKeys);
 	return true;
 }
+
+/// <summary>保存済みの割り当てが削除対象の技を参照していないか調べる。</summary>
+/// <param name="characterFolderPath">キャラクターの保存先。</param>
+/// <param name="attackDataId">削除対象の技ID。</param>
+/// <returns>参照があるか、安全に判定できない場合は true。</returns>
+bool CharacterDataLoader::IsAttackReferenced(const std::string &characterFolderPath, const std::string &attackDataId)
+{
+	JsonValue root;
+	std::filesystem::path target;
+	if (!ReadJsonFile(std::filesystem::path(characterFolderPath) / "AttackList.json", root) ||
+		!ResolveAttackDataPath(attackDataId, target))
+	{
+		return true;
+	}
+
+	std::vector<CharacterAttackSlotData> slots;
+	LoadAttackSlotsFromJson(root, slots);
+	for (const auto &slot : slots)
+	{
+		std::filesystem::path assigned;
+		if (slot.attackDataId == attackDataId ||
+			(ResolveAttackDataPath(slot.attackDataId, assigned) &&
+			 std::filesystem::equivalent(assigned, target)))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}

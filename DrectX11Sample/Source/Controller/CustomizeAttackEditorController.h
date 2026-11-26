@@ -33,10 +33,11 @@ struct AttackEditState
 class CustomizeAttackEditorController
 {
   public:
-	static constexpr int GroundAttackSlotCount = 20;
-	static constexpr int AirAttackSlotCount = 20;
-	static constexpr int SpecialAttackSlotCount = 20;
-	static constexpr int MaxAttackSlotCount = 20;
+	static constexpr int MaxAttackSlotCount = 40;
+	static constexpr int GroundAttackSlotCount = MaxAttackSlotCount;
+	static constexpr int AirAttackSlotCount = MaxAttackSlotCount;
+	static constexpr int SpecialAttackSlotCount = MaxAttackSlotCount;
+	const CustomizeAttackSlotSummary &GetSlotSummary(CustomizeAttackCategory category, int slot) const;
 	static constexpr int AttackNameBufferSize = 128;
 	static constexpr int MotionDataIdBufferSize = 128;
 
@@ -55,7 +56,6 @@ class CustomizeAttackEditorController
 
 	void RefreshSlotSummaries(CustomizeAttackCategory category);
 
-	std::string BuildSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 
 	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
 

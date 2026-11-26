@@ -2,28 +2,22 @@
 
 #include "Customize/CustomizeTypes.h"
 #include "Data/CharacterData.h"
+#include "Data/BattleSetupData.h"
 
 #include <array>
 #include <optional>
 #include <string>
 #include <vector>
 
-struct CustomizeCharacterSlotSelection
-{
-	std::optional<int> slotIndex;
-	bool backRequested = false;
-	bool refreshRequested = false;
-};
-
 /// <summary>CharacterData の下書き、技の割り当て、保存と読み込みを管理する。</summary>
 class CustomizeCharacterEditorController
 {
   public:
-	static constexpr int CharacterSlotCount = 10;
+	static constexpr int CharacterSlotCount = BattleSetup::CharacterSlotCount;
+	const CustomizeCharacterSlotSummary &GetSlotSummary(int slot) const;
 	static constexpr int AttackButtonSlotCount = 4;
 	static constexpr int CharacterNameBufferSize = 128;
 
-	CustomizeCharacterSlotSelection DrawSlotSelect();
 
 	CustomizeMode DrawEditor(std::string &statusMessage);
 
@@ -33,7 +27,6 @@ class CustomizeCharacterEditorController
 
 	std::string BuildCharacterFolderPath(int slotIndex) const;
 
-	std::string BuildSlotButtonLabel(int slotIndex) const;
 
 	std::string SelectSlot(int slotIndex);
 	void PrepareAttackPicker();

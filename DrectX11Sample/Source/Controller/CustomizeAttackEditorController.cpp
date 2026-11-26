@@ -326,39 +326,28 @@ void CustomizeAttackEditorController::RefreshSlotSummaries(CustomizeAttackCatego
 
 		if (!CharacterDataLoader::LoadAttackData(attackDataId, loadedAttack))
 		{
+			summary.hasSavedData = true;
+			summary.displayName = attackDataId;
+
 			continue;
 		}
 
 		summary.hasSavedData = true;
+		summary.frame = loadedAttack.frame;
 		summary.displayName = loadedAttack.displayName.empty() ? attackDataId : loadedAttack.displayName;
 	}
 }
 
-/// <summary>スロット番号と保存済み技名をまとめた、ImGui Button 用ラベルを作る。</summary>
-/// <param name="category">表示する技カテゴリ。</param>
-/// <param name="slotIndex">カテゴリ内スロット番号。</param>
-/// <returns>表示名と ImGui ID を含むボタンラベル。</returns>
-std::string CustomizeAttackEditorController::BuildSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const
+/// <summary>指定した技スロットの一覧データを取得する。</summary>
+/// <param name="category">技カテゴリ。</param>
+/// <param name="slot">カテゴリ内のスロット番号。</param>
+/// <returns>読み込み済みの概要。</returns>
+const CustomizeAttackSlotSummary &CustomizeAttackEditorController::GetSlotSummary(
+	CustomizeAttackCategory category, int slot) const
 {
-	std::ostringstream label;
-	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex;
-
-	const CustomizeAttackSlotSummary &summary = slotSummaries[ToCategoryIndex(category)][slotIndex];
-	label << "\n";
-
-	if (summary.hasSavedData)
-	{
-		label << summary.displayName;
-	}
-	else
-	{
-		label << "New Attack";
-	}
-
-	label << "##attack_slot_" << ToCategoryIndex(category) << "_" << slotIndex;
-
-	return label.str();
+	return slotSummaries[ToCategoryIndex(category)][slot];
 }
+
 
 /// <summary>カテゴリとスロット番号から、assets/AttackData 配下の保存 ID を作る。</summary>
 /// <param name="category">保存カテゴリ。</param>

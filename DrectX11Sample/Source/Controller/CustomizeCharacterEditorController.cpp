@@ -72,55 +72,6 @@ std::string BuildAttackDataIdFromPath(const std::filesystem::path &attackPath)
 }
 } // namespace
 
-/// <summary>キャラクタースロット選択画面を描画する。</summary>
-/// <returns>選択されたスロット番号、または戻る操作。</returns>
-CustomizeCharacterSlotSelection CustomizeCharacterEditorController::DrawSlotSelect()
-{
-	CustomizeCharacterSlotSelection selection;
-
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(560.0f, 420.0f), ImGuiCond_FirstUseEver);
-
-	if (ImGui::Begin("Character Slots"))
-	{
-		if (ImGui::Button("Refresh Character Slots", ImVec2(180.0f, 28.0f)))
-		{
-			selection.refreshRequested = true;
-		}
-
-		ImGui::Separator();
-
-		for (int slotIndex = 0; slotIndex < CharacterSlotCount; ++slotIndex)
-		{
-			ImGui::PushID(slotIndex);
-
-			const std::string label = BuildSlotButtonLabel(slotIndex);
-
-			if (ImGui::Button(label.c_str(), ImVec2(170.0f, 58.0f)))
-			{
-				selection.slotIndex = slotIndex;
-			}
-
-			ImGui::PopID();
-
-			if ((slotIndex + 1) % 3 != 0)
-			{
-				ImGui::SameLine();
-			}
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			selection.backRequested = true;
-		}
-	}
-
-	ImGui::End();
-
-	return selection;
-}
 
 /// <summary>キャラクター名と各攻撃ボタンの技割り当て編集画面を描画する。</summary>
 /// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
@@ -290,29 +241,6 @@ std::string CustomizeCharacterEditorController::BuildCharacterFolderPath(int slo
 	return (std::filesystem::path(CharacterDataRootPath) / BuildCharacterId(slotIndex)).generic_string();
 }
 
-/// <summary>キャラクタースロット一覧に表示するボタンラベルを作る。</summary>
-/// <param name="slotIndex">キャラクタースロット番号。</param>
-/// <returns>スロット番号、保存済み名、ImGui ID を含むラベル。</returns>
-std::string CustomizeCharacterEditorController::BuildSlotButtonLabel(int slotIndex) const
-{
-	std::ostringstream label;
-	label << "Slot " << std::setw(2) << std::setfill('0') << slotIndex << "\n";
-
-	const CustomizeCharacterSlotSummary &summary = slotSummaries[slotIndex];
-
-	if (summary.hasSavedData)
-	{
-		label << summary.characterName;
-	}
-	else
-	{
-		label << "New Character";
-	}
-
-	label << "##character_slot_" << slotIndex;
-
-	return label.str();
-}
 
 /// <summary>選択したキャラクタースロットを編集用 draft に読み込む。</summary>
 /// <param name="slotIndex">編集するキャラクタースロット番号。</param>
@@ -447,7 +375,26 @@ void CustomizeCharacterEditorController::RefreshSlotSummaries()
 		summary.characterName = loadedCharacter.parameter.characterName.empty()
 									? BuildCharacterId(slotIndex)
 									: loadedCharacter.parameter.characterName;
+
+		for (const auto &assigned : loadedCharacter.attacks)
+		{
+			const int button = static_cast<int>(assigned.button) - static_cast<int>(AttackButtonId::AttackA);
+			const int group = assigned.slotType == AttackSlotType::Special ? 2 :
+				assigned.slotUsableState == AttackUsableState::Air ? 1 : 0;
+			if (button >= 0 && button < AttackButtonSlotCount)
+			{
+				summary.attackNames[group][button] = assigned.attack.displayName;
+			}
+		}
 	}
+}
+
+/// <summary>指定したキャラクタースロットの一覧データを取得する。</summary>
+/// <param name="slot">スロット番号。</param>
+/// <returns>読み込み済みの概要。</returns>
+const CustomizeCharacterSlotSummary &CustomizeCharacterEditorController::GetSlotSummary(int slot) const
+{
+	return slotSummaries[slot];
 }
 
 /// <summary>キャラクター draft 内の attackDataId から表示名を読み直す。</summary>

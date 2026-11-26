@@ -10,6 +10,7 @@
 #include <string>
 
 class LoadWorker;
+class SaveWorker;
 
 class CustomizeFlowController
 {
@@ -17,7 +18,7 @@ class CustomizeFlowController
 	CustomizeFlowController(int initialWidth, int initialHeight, CustomizeMode initialMode,
 		CustomizeAttackCategory category);
 
-	void Enter(LoadWorker *worker);
+	void Enter(LoadWorker *worker, SaveWorker *writer);
 	void Update();
 	void DrawInterface(Renderer &renderer);
 	void OnResize(int newWidth, int newHeight);
@@ -62,15 +63,32 @@ class CustomizeFlowController
 	int categoryMenuSelection = 0;
 	int previousCategoryDirection = 0;
 	bool categorySubmitReady = false;
-	void DrawAttackSlotSelect();
+	void UpdateSlots();
+	void DrawSlots(Renderer &renderer) const;
+	void ResetSlots();
+	void DeleteSlot();
+	bool IsCharacterList() const;
+	bool SlotOccupied(int slot) const;
+	bool SlotsLoading() const;
+	GameUI::Rect SlotRect(int index) const;
+	GameUI::Rect SlotActionRect(int index) const;
+	GameUI::Root slotInput;
+	int slotPage = 0;
+	int slotFocus = 0;
+	int slotAction = -1;
+	int slotDirection = 0;
+	bool slotHighlighted = true;
+	bool confirmDelete = false;
+	std::wstring slotStatus;
+	SaveWorker *saveWorker = nullptr;
+	std::future<int> pendingDelete;
+#if defined(_DEBUG)
 	void DrawCommonMotionSelect();
-	void DrawCharacterSlotSelect();
-	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SelectCommonMotionSlot(int slotIndex);
+#endif
+	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 
-	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
 	void RefreshCharacterSlotSummaries();
 	void ApplyPreparedSummaries();
-	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
 };

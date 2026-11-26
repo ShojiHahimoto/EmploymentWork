@@ -3,6 +3,7 @@
 #include "Data/AttackData.h"
 
 #include <string>
+#include <array>
 
 enum class CustomizeMode
 {
@@ -38,6 +39,7 @@ struct CustomizeAttackSlotSummary
 {
 	bool hasSavedData = false;
 	std::string displayName;
+	AttackFrameData frame;
 };
 
 /// <summary>
@@ -47,6 +49,7 @@ struct CustomizeCharacterSlotSummary
 {
 	bool hasSavedData = false;
 	std::string characterName;
+	std::array<std::array<std::string, 4>, 3> attackNames;
 };
 
 /// <summary>

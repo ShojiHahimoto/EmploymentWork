@@ -6,6 +6,12 @@
     "bottom"
   ],
   "assets": [
+    { "name": "slot_focused", "file": "SlotSelect/focused.png", "slice": [28,28,28,28] },
+    { "name": "slot_forward", "file": "SlotSelect/forward.png", "slice": [0,0,0,0] },
+    { "name": "badge_a", "file": "SlotSelect/badge_a.png", "slice": [0,0,0,0] },
+    { "name": "badge_b", "file": "SlotSelect/badge_b.png", "slice": [0,0,0,0] },
+    { "name": "badge_x", "file": "SlotSelect/badge_x.png", "slice": [0,0,0,0] },
+    { "name": "badge_y", "file": "SlotSelect/badge_y.png", "slice": [0,0,0,0] },
     { "name": "customize_menu_normal", "file": "CustomizeMenu/button_normal.png", "slice": [0,0,0,0] },
     { "name": "customize_menu_selected", "file": "CustomizeMenu/button_selected.png", "slice": [0,0,0,0] },
     { "name": "title_v2_logo", "file": "TitleV2/title_logo.png", "slice": [0,0,0,0] },

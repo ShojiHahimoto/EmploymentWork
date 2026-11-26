@@ -7,10 +7,15 @@
 #include "Input/InputTypes.h"
 #include "Manager/SceneManager.h"
 #include "Manager/LoadWorker.h"
+#include "Manager/SaveWorker.h"
+#include "Data/CharacterDataLoader.h"
+#include <filesystem>
 #include "Core/Debugger.h"
 #include <chrono>
 #include "Scene/TitleScene.h"
+#if defined(_DEBUG)
 #include "ThirdParty/imgui-docking/imgui.h"
+#endif
 #include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include <cmath>
@@ -20,10 +25,11 @@
 namespace
 {
 
-constexpr const char *CategoryLabels[] = {"Ground", "Air", "Special"};
+#if defined(_DEBUG)
 constexpr const char *CommonMotionLabels[] = {"Idle",		 "WalkForward", "WalkBack", "Crouch",  "Guard",
 											  "CrouchGuard", "JumpStart",	"JumpLoop", "Hitstun", "AirHitstun",
 											  "AirToDown",	 "Down",		"Wakeup"};
+#endif
 
 /// <summary>
 /// enumのCustomizeAttackCategoryを配列アクセス用にintに変換する。
@@ -33,6 +39,45 @@ constexpr const char *CommonMotionLabels[] = {"Idle",		 "WalkForward", "WalkBack
 int ToCategoryIndex(CustomizeAttackCategory category)
 {
 	return static_cast<int>(category);
+}
+
+/// <summary>片方だけ削除されることを避けるため、保存ファイルを先に退避する。</summary>
+/// <param name="first">一つ目の保存ファイル。</param>
+/// <param name="second">二つ目の保存ファイル。</param>
+void RemoveSlotFiles(const std::filesystem::path &first, const std::filesystem::path &second)
+{
+	namespace fs = std::filesystem;
+	auto staged = first;
+	staged += ".deleting";
+	const bool hasFirst = fs::exists(first);
+	if (hasFirst)
+	{
+		fs::rename(first, staged);
+	}
+
+	try
+	{
+		fs::remove(second);
+	}
+	catch (...)
+	{
+		if (hasFirst)
+		{
+			fs::rename(staged, first);
+		}
+
+		throw;
+	}
+
+	if (hasFirst)
+	{
+		std::error_code error;
+		fs::remove(staged, error);
+		if (error)
+		{
+			DebugLog("[Customize] Could not remove staged slot file: ", staged.string());
+		}
+	}
 }
 } // namespace
 
@@ -49,9 +94,11 @@ CustomizeFlowController::CustomizeFlowController(int initialWidth, int initialHe
 
 /// <summary>選択画面の入力とスロット一覧を準備する。</summary>
 /// <param name="worker">一覧取得に使う共通ロードワーカー。</param>
-void CustomizeFlowController::Enter(LoadWorker *worker)
+/// <param name="writer">削除に使う共通保存ワーカー。</param>
+void CustomizeFlowController::Enter(LoadWorker *worker, SaveWorker *writer)
 {
 	loadWorker = worker;
+	saveWorker = writer;
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 
 	if (mode == CustomizeMode::AttackSlotSelect)
@@ -69,6 +116,13 @@ void CustomizeFlowController::Enter(LoadWorker *worker)
 void CustomizeFlowController::Update()
 {
 	ApplyPreparedSummaries();
+
+	if (mode == CustomizeMode::AttackSlotSelect || mode == CustomizeMode::CharacterSlotSelect)
+	{
+		UpdateSlots();
+
+		return;
+	}
 
 	if (mode == CustomizeMode::MainMenu)
 	{
@@ -119,14 +173,14 @@ void CustomizeFlowController::DrawInterface(Renderer &renderer)
 		DrawSelectionMenu(renderer, categoryMenuSelection, true);
 		break;
 	case CustomizeMode::AttackSlotSelect:
-		DrawAttackSlotSelect();
+	case CustomizeMode::CharacterSlotSelect:
+		DrawSlots(renderer);
 		break;
+#if defined(_DEBUG)
 	case CustomizeMode::CommonMotionSelect:
 		DrawCommonMotionSelect();
 		break;
-	case CustomizeMode::CharacterSlotSelect:
-		DrawCharacterSlotSelect();
-		break;
+#endif
 	default:
 		DrawSelectionMenu(renderer, creationMenuSelection, false);
 		break;
@@ -311,6 +365,7 @@ void CustomizeFlowController::UpdateCreationMenu()
 	{
 		RefreshCharacterSlotSummaries();
 		mode = CustomizeMode::CharacterSlotSelect;
+		ResetSlots();
 	}
 	else
 	{
@@ -382,64 +437,14 @@ void CustomizeFlowController::UpdateAttackCategorySelect()
 	RefreshAttackSlotSummaries(selectedCategory);
 	categorySubmitReady = false;
 	mode = CustomizeMode::AttackSlotSelect;
+	ResetSlots();
 }
 
-/// <summary>
-/// 選択中カテゴリ内の技スロット一覧を描画する。
-/// </summary>
-void CustomizeFlowController::DrawAttackSlotSelect()
-{
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(560.0f, 420.0f), ImGuiCond_FirstUseEver);
-
-	if (ImGui::Begin("Attack Slots"))
-	{
-		ImGui::Text("Category: %s", CategoryLabels[ToCategoryIndex(selectedCategory)]);
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Refresh Slot Names", ImVec2(160.0f, 28.0f)))
-		{
-			RefreshAttackSlotSummaries(selectedCategory);
-		}
-
-		ImGui::Separator();
-
-		const int slotCount = GetAttackSlotCount(selectedCategory);
-
-		for (int slotIndex = 0; slotIndex < slotCount; ++slotIndex)
-		{
-			ImGui::PushID(slotIndex);
-
-			const std::string label = BuildAttackSlotButtonLabel(selectedCategory, slotIndex);
-
-			if (ImGui::Button(label.c_str(), ImVec2(126.0f, 52.0f)))
-			{
-				SelectAttackSlot(selectedCategory, slotIndex);
-			}
-
-			ImGui::PopID();
-
-			if ((slotIndex + 1) % 4 != 0)
-			{
-				ImGui::SameLine();
-			}
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			NavigateBack();
-		}
-	}
-
-	ImGui::End();
-}
 
 /// <summary>
 /// 汎用モーションを選択し、MotionData 単体の編集画面へ入る。
 /// </summary>
+#if defined(_DEBUG)
 void CustomizeFlowController::DrawCommonMotionSelect()
 {
 	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
@@ -469,30 +474,8 @@ void CustomizeFlowController::DrawCommonMotionSelect()
 
 	ImGui::End();
 }
+#endif
 
-/// <summary>キャラクタースロット一覧を描画し、選択されたスロットの編集を予約する。</summary>
-void CustomizeFlowController::DrawCharacterSlotSelect()
-{
-	const auto selection = characterEditor.DrawSlotSelect();
-
-	if (selection.backRequested)
-	{
-		NavigateBack();
-
-		return;
-	}
-
-	if (selection.refreshRequested)
-	{
-		RefreshCharacterSlotSummaries();
-	}
-
-	if (selection.slotIndex)
-	{
-		SceneManager::GetInstance().RequestChangeScene(
-			std::make_unique<CustomizeCharacterScene>(width, height, *selection.slotIndex));
-	}
-}
 
 /// <summary>技の編集シーンへの遷移を予約する。</summary>
 /// <param name="category">技のカテゴリ。</param>
@@ -505,21 +488,14 @@ void CustomizeFlowController::SelectAttackSlot(CustomizeAttackCategory category,
 
 /// <summary>汎用モーションの編集シーンへの遷移を予約する。</summary>
 /// <param name="slotIndex">汎用モーション一覧内の番号。</param>
+#if defined(_DEBUG)
 void CustomizeFlowController::SelectCommonMotionSlot(int slotIndex)
 {
 	SceneManager::GetInstance().RequestChangeScene(
 		std::make_unique<CustomizeAttackScene>(width, height, CustomizeCommonMotionSlot{CommonMotionLabels[slotIndex]}));
 }
+#endif
 
-/// <summary>
-/// 技カテゴリごとのスロット数を取得する。
-/// </summary>
-/// <param name="category">確認する技カテゴリ。</param>
-/// <returns>対象カテゴリのスロット数。</returns>
-int CustomizeFlowController::GetAttackSlotCount(CustomizeAttackCategory category) const
-{
-	return attackEditor.GetSlotCount(category);
-}
 
 /// <summary>
 /// 選択カテゴリのスロット JSON を確認し、一覧表示用の保存済み名を更新する。
@@ -585,18 +561,532 @@ void CustomizeFlowController::ApplyPreparedSummaries()
 	catch (const std::exception &error)
 	{
 		DebugLog("[Customize] Slot list load failed: ", error.what());
+		slotStatus = L"一覧を読み込めませんでした";
 	}
 }
 
-/// <summary>
-/// スロット番号と保存済み技名をまとめた、ImGui Button 用ラベルを作る。
-/// </summary>
-/// <param name="category">表示する技カテゴリ。</param>
-/// <param name="slotIndex">カテゴリ内スロット番号。</param>
-/// <returns>表示名と ImGui ID を含むボタンラベル。</returns>
-std::string CustomizeFlowController::BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const
+
+
+/// <summary>キャラクターの一覧を表示中か確認する。</summary>
+/// <returns>キャラクター一覧なら true。</returns>
+bool CustomizeFlowController::IsCharacterList() const
 {
-	return attackEditor.BuildSlotButtonLabel(category, slotIndex);
+	return mode == CustomizeMode::CharacterSlotSelect;
+}
+
+/// <summary>一覧の読み込みまたは削除が完了していないか確認する。</summary>
+/// <returns>スロット操作を待機させる間は true。</returns>
+bool CustomizeFlowController::SlotsLoading() const
+{
+	return pendingAttackSummaries.valid() || pendingCharacterSummaries.valid() || pendingDelete.valid();
+}
+
+/// <summary>指定スロットに保存データがあるか確認する。</summary>
+/// <param name="slot">ページをまたいだスロット番号。</param>
+/// <returns>保存済みなら true。</returns>
+bool CustomizeFlowController::SlotOccupied(int slot) const
+{
+	return IsCharacterList() ? characterEditor.GetSlotSummary(slot).hasSavedData :
+		attackEditor.GetSlotSummary(selectedCategory, slot).hasSavedData;
+}
+
+/// <summary>一覧に入る際にページと操作欄の状態を初期化する。</summary>
+void CustomizeFlowController::ResetSlots()
+{
+	slotPage = 0;
+	slotFocus = 0;
+	slotAction = -1;
+	slotDirection = 0;
+	slotHighlighted = true;
+	confirmDelete = false;
+	slotStatus.clear();
+	slotInput = {};
+}
+
+/// <summary>ページ内のスロットの基準座標を取得する。</summary>
+/// <param name="index">ページ内の番号。</param>
+/// <returns>描画と入力に共通する矩形。</returns>
+GameUI::Rect CustomizeFlowController::SlotRect(int index) const
+{
+	const bool character = IsCharacterList();
+	const int columns = character ? 2 : 5;
+	const int x = 78 + (index % columns) * (character ? 770 : 307);
+	const int y = (character ? 171 : 210) + (index / columns) * (character ? 314 : 145);
+
+	return {x, y, x + (character ? 746 : 295), y + (character ? 296 : 138)};
+}
+
+/// <summary>展開中の操作ボタンの基準座標を取得する。</summary>
+/// <param name="index">操作欄内の番号。</param>
+/// <returns>操作ボタンの矩形。</returns>
+GameUI::Rect CustomizeFlowController::SlotActionRect(int index) const
+{
+	const auto card = SlotRect(slotFocus);
+	const int slot = slotPage * (IsCharacterList() ? 4 : 20) + slotFocus;
+	const int buttonWidth = SlotOccupied(slot) ? 142 : 218;
+	const int halfWidth = SlotOccupied(slot) ? buttonWidth + 3 : buttonWidth / 2;
+	const int x = (card.left + card.right) / 2 - halfWidth + index * (buttonWidth + 6);
+	const int top = IsCharacterList() && slotFocus >= 2 ? card.bottom - 12 : card.top - 72;
+
+	return {x, top, x + buttonWidth, top + 64};
+}
+
+/// <summary>スロット一覧のポインターと共通アクションを処理する。</summary>
+void CustomizeFlowController::UpdateSlots()
+{
+	if (pendingDelete.valid() && pendingDelete.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+	{
+		int result = 2;
+		try
+		{
+			result = pendingDelete.get();
+		}
+		catch (const std::exception &error)
+		{
+			DebugLog("[Customize] Slot deletion failed: ", error.what());
+		}
+
+		slotStatus = result == 0 ? L"削除しました" :
+			result == 1 ? L"割り当て中の技は削除できません" : L"削除できませんでした";
+		if (IsCharacterList())
+		{
+			RefreshCharacterSlotSummaries();
+		}
+		else
+		{
+			RefreshAttackSlotSummaries(selectedCategory);
+		}
+	}
+
+	const bool character = IsCharacterList();
+	const int columns = character ? 2 : 5;
+	const int count = character ? 4 : 20;
+	const int lastPage = character ? 2 : 1;
+	const int slot = slotPage * count + slotFocus;
+	const bool occupied = SlotOccupied(slot);
+	const int actions = occupied ? 2 : 1;
+	auto frame = GameUI::UIInputSystem::GetFrame();
+	frame.focusMove = 0;
+	frame.activatePressed = false;
+	frame.keysPressed.fill(false);
+
+	slotInput.BeginFrame({0, 0, width, height}, frame);
+	slotInput.AddButton("back", MapMenuRect({18, 12, 96, 66}));
+	if (!SlotsLoading())
+	{
+		for (int i = 0; i < count; ++i)
+		{
+			slotInput.AddButton(std::to_string(i), MapMenuRect(SlotRect(i)));
+		}
+	}
+
+	if (slotAction >= 0)
+	{
+		for (int i = 0; i < actions; ++i)
+		{
+			slotInput.AddButton("action/" + std::to_string(i), MapMenuRect(SlotActionRect(i)));
+		}
+	}
+	else
+	{
+		if (slotPage > 0)
+		{
+			slotInput.AddButton("prev", MapMenuRect({700, 833, 780, 895}));
+		}
+
+		if (slotPage < lastPage)
+		{
+			slotInput.AddButton("next", MapMenuRect({892, 833, 972, 895}));
+		}
+
+	}
+
+	slotInput.EndFrame();
+
+	if (WasCancelTriggered() || slotInput.WasActivated("back"))
+	{
+		if (confirmDelete)
+		{
+			confirmDelete = false;
+		}
+		else if (slotAction >= 0)
+		{
+			slotAction = -1;
+		}
+		else if (!pendingDelete.valid())
+		{
+			NavigateBack();
+		}
+
+		return;
+	}
+
+	if (SlotsLoading())
+	{
+		return;
+	}
+
+	const auto axis = Input::InputSystem::GetActionState(0, Input::InputActionId::Move).value.axis;
+	const int horizontal = axis.x > .5f ? 1 : axis.x < -.5f ? -1 : 0;
+	const int vertical = axis.y > .5f ? -1 : axis.y < -.5f ? 1 : 0;
+	const int direction = vertical ? vertical * columns : horizontal;
+	const bool moved = direction != 0 && direction != slotDirection;
+	slotDirection = direction;
+	const bool submit = Input::InputSystem::GetActionState(0, Input::InputActionId::Submit).trigger;
+	const bool pointerMoved = frame.pointerDelta.x || frame.pointerDelta.y;
+
+	for (int i = 0; i < count; ++i)
+	{
+		if (slotInput.WasActivated(std::to_string(i)))
+		{
+			slotFocus = i;
+			slotHighlighted = true;
+			slotAction = 0;
+			confirmDelete = false;
+
+			return;
+		}
+	}
+
+	if (slotAction >= 0)
+	{
+		bool pointerOnAction = false;
+		for (int i = 0; i < actions; ++i)
+		{
+			if (MapMenuRect(SlotActionRect(i)).Contains(frame.pointerPosition))
+			{
+				pointerOnAction = true;
+				if (pointerMoved)
+				{
+					slotAction = i;
+				}
+			}
+		}
+
+		if (frame.pointerReleased && !pointerOnAction)
+		{
+			slotAction = -1;
+			confirmDelete = false;
+			slotHighlighted = false;
+
+			return;
+		}
+
+		if (moved && horizontal)
+		{
+			slotAction = std::clamp(slotAction + horizontal, 0, actions - 1);
+		}
+
+		int action = submit ? slotAction : -1;
+		for (int i = 0; i < actions; ++i)
+		{
+			if (slotInput.WasActivated("action/" + std::to_string(i)))
+			{
+				action = i;
+			}
+		}
+
+		if (action < 0)
+		{
+			return;
+		}
+
+		if (confirmDelete)
+		{
+			if (action == 1)
+			{
+				DeleteSlot();
+			}
+			else
+			{
+				confirmDelete = false;
+			}
+		}
+		else if (action == 1)
+		{
+			slotAction = 0;
+			confirmDelete = true;
+		}
+		else if (character)
+		{
+			SceneManager::GetInstance().RequestChangeScene(
+				std::make_unique<CustomizeCharacterScene>(width, height, slot));
+		}
+		else
+		{
+			SelectAttackSlot(selectedCategory, slot);
+		}
+
+		return;
+	}
+
+	if (slotInput.WasActivated("prev") || (moved && horizontal < 0 && slotFocus % columns == 0))
+	{
+		if (slotPage > 0)
+		{
+			--slotPage;
+			slotFocus = slotFocus / columns * columns + columns - 1;
+		}
+	}
+	else if (slotInput.WasActivated("next") ||
+		(moved && horizontal > 0 && slotFocus % columns == columns - 1))
+	{
+		if (slotPage < lastPage)
+		{
+			++slotPage;
+			slotFocus -= slotFocus % columns;
+		}
+	}
+	else if (moved)
+	{
+		const int nextSlot = slotFocus + direction;
+		if (nextSlot >= 0 && nextSlot < count)
+		{
+			slotFocus = nextSlot;
+		}
+	}
+
+	if (pointerMoved || frame.pointerReleased)
+	{
+		slotHighlighted = false;
+		for (int i = 0; i < count; ++i)
+		{
+			if (MapMenuRect(SlotRect(i)).Contains(frame.pointerPosition))
+			{
+				slotFocus = i;
+				slotHighlighted = true;
+
+				break;
+			}
+		}
+	}
+
+	if (moved || submit)
+	{
+		slotHighlighted = true;
+	}
+
+	if (submit)
+	{
+		slotAction = 0;
+	}
+}
+
+/// <summary>確認済みスロットの保存ファイルを削除するよう依頼する。</summary>
+void CustomizeFlowController::DeleteSlot()
+{
+	if (!saveWorker)
+	{
+		slotStatus = L"削除できませんでした";
+
+		return;
+	}
+
+	const bool character = IsCharacterList();
+	const int slot = slotPage * (character ? 4 : 20) + slotFocus;
+	const auto folder = characterEditor.BuildCharacterFolderPath(slot);
+	const auto id = attackEditor.BuildAttackDataId(selectedCategory, slot);
+	const auto motionId = attackEditor.BuildMotionDataId(selectedCategory, slot);
+
+	pendingDelete = saveWorker->Enqueue([character, folder, id, motionId]
+	{
+		namespace fs = std::filesystem;
+		if (character)
+		{
+			const fs::path path(folder);
+			RemoveSlotFiles(path / "AttackList.json", path / "Parameter.json");
+
+			return 0;
+		}
+
+		for (const auto &entry : fs::directory_iterator("assets/CharacterData"))
+		{
+			if (!entry.is_directory() || !fs::exists(entry.path() / "AttackList.json"))
+			{
+				continue;
+			}
+
+			if (CharacterDataLoader::IsAttackReferenced(entry.path().string(), id))
+			{
+				return 1;
+			}
+		}
+
+		RemoveSlotFiles(fs::path("assets/MotionData") / (motionId + ".json"),
+			fs::path("assets/AttackData") / (id + ".json"));
+
+		return 0;
+	});
+	slotAction = -1;
+	confirmDelete = false;
+	slotStatus.clear();
+}
+
+
+/// <summary>技とキャラクターで共通のスロット一覧を描画する。</summary>
+/// <param name="renderer">専用UIの描画先。</param>
+void CustomizeFlowController::DrawSlots(Renderer &renderer) const
+{
+	using namespace GameUI;
+	std::vector<DrawCommand> commands;
+	DrawCommand background;
+	background.bounds = {0, 0, width, height};
+	background.color = DirectX::SimpleMath::Color(.96f, .965f, .98f, 1);
+	commands.push_back(background);
+
+	const auto image = [&](const char *id, Rect bounds, bool slice = false, float opacity = 1)
+	{
+		DrawCommand command;
+		command.type = slice ? DrawCommandType::NineSliceImage : DrawCommandType::Image;
+		command.bounds = MapMenuRect(bounds).ToNativeRect();
+		command.imageId = id;
+		command.color.w = opacity;
+		commands.push_back(command);
+	};
+
+	const auto fill = [&](Rect bounds, const DirectX::SimpleMath::Color &color)
+	{
+		DrawCommand command;
+		command.bounds = MapMenuRect(bounds).ToNativeRect();
+		command.color = color;
+		commands.push_back(command);
+	};
+
+	const auto text = [&](std::wstring value, Rect bounds, float size, bool selected = false,
+						 bool wrap = false, bool bold = true)
+	{
+		DrawCommand command;
+		command.type = DrawCommandType::Text;
+		command.bounds = MapMenuRect(bounds).ToNativeRect();
+		command.clip = command.bounds;
+		command.text = std::move(value);
+		command.bold = bold;
+		command.wrapText = wrap;
+		command.fontSize = size * std::min(width / 1672.0f, height / 941.0f);
+		command.horizontalAlignment = TextHorizontalAlignment::Center;
+		command.color = selected ? DirectX::SimpleMath::Color(1, 1, 1, 1) :
+			DirectX::SimpleMath::Color(.08f, .09f, .12f, 1);
+		if (!wrap)
+		{
+			const float measured = UIRenderer::MeasureText(command.text, command.fontSize, bold);
+			const auto available = command.bounds.right - command.bounds.left;
+			if (measured > available && measured > 0)
+			{
+				command.fontSize *= available / measured;
+			}
+		}
+
+		commands.push_back(command);
+	};
+
+	const auto wide = [](const std::string &source)
+	{
+		const int length = MultiByteToWideChar(CP_UTF8, 0, source.data(), static_cast<int>(source.size()), nullptr, 0);
+		std::wstring result(length, L'\0');
+		if (length > 0)
+		{
+			MultiByteToWideChar(CP_UTF8, 0, source.data(), static_cast<int>(source.size()), result.data(), length);
+		}
+
+		return result;
+	};
+
+	const bool character = IsCharacterList();
+	const int count = character ? 4 : 20;
+	const int pageCount = character ? 3 : 2;
+	image("header", {0, 0, 1672, 80}, true);
+	image("header_accent", {103, 0, 155, 80});
+	image("button", {18, 12, 96, 66}, true);
+	image("back", {37, 25, 78, 53});
+	text(character ? L"キャラクター作成" : L"技作成", {157, 0, character ? 605 : 385, 80}, 48);
+
+	const wchar_t *groups[] = {L"地上技", L"空中技", L"必殺技"};
+	const char *badges[] = {"badge_a", "badge_b", "badge_x", "badge_y"};
+	for (int i = 0; i < count; ++i)
+	{
+		const int slot = slotPage * count + i;
+		const bool focused = i == slotFocus && slotHighlighted && !SlotsLoading();
+		const auto card = SlotRect(i);
+		image(focused ? "slot_focused" : "button", card, true);
+
+		if (SlotsLoading())
+		{
+			continue;
+		}
+
+		if (!SlotOccupied(slot))
+		{
+			text(L"空", card, character ? 56.0f : 44.0f, focused);
+
+			continue;
+		}
+
+		const int x = card.left;
+		const int y = card.top;
+		if (character)
+		{
+			const auto &summary = characterEditor.GetSlotSummary(slot);
+			const Rect title = {x + 20, y + 16, card.right - 20, y + 97};
+			image(focused ? "slot_focused" : "button", title, true);
+			text(wide(summary.characterName), title.Inset(12, 0), 40, focused, true);
+			for (int row = 0; row < 3; ++row)
+			{
+				const int top = y + 102 + row * 54;
+				const Rect category = {x + 25, top, x + 115, top + 49};
+				fill(category, {.78f, .81f, .85f, .96f});
+				text(groups[row], category, 21);
+				for (int button = 0; button < 4; ++button)
+				{
+					const int left = x + 121 + button * 151;
+					const auto &name = summary.attackNames[row][button];
+					fill({left, top, left + 145, top + 49}, {.91f, .92f, .95f, .96f});
+					image(badges[button], {left + 5, top + 6, left + 42, top + 43});
+					text(name.empty() ? L"空" : wide(name), {left + 45, top, left + 142, top + 49},
+						18, false, true);
+				}
+			}
+		}
+		else
+		{
+			const auto &summary = attackEditor.GetSlotSummary(selectedCategory, slot);
+			text(wide(summary.displayName), {x + 12, y + 9, card.right - 12, y + 90}, 34, focused, true);
+			const auto &frame = summary.frame;
+			text(L"発生 " + std::to_wstring(frame.startup) + L"F / 持続 " + std::to_wstring(frame.active) +
+				L"F / 硬直 " + std::to_wstring(frame.recovery) + L"F",
+				{x + 24, y + 89, card.right - 24, card.bottom - 21}, 19, focused, false, false);
+		}
+	}
+
+	image("button", {700, 833, 780, 895}, true, slotPage == 0 ? .35f : 1);
+	image("back", {718, 848, 762, 880}, false, slotPage == 0 ? .35f : 1);
+	image("button", {892, 833, 972, 895}, true, slotPage + 1 == pageCount ? .35f : 1);
+	image("slot_forward", {910, 848, 954, 880}, false, slotPage + 1 == pageCount ? .35f : 1);
+	text(std::to_wstring(slotPage + 1) + L" / " + std::to_wstring(pageCount), {782, 833, 890, 895}, 27);
+	text(SlotsLoading() ? L"処理中…" : slotStatus, {1000, 833, 1650, 895}, 22);
+
+	if (slotAction >= 0)
+	{
+		const int slot = slotPage * count + slotFocus;
+		const bool occupied = SlotOccupied(slot);
+		for (int i = 0; i < (occupied ? 2 : 1); ++i)
+		{
+			const auto bounds = SlotActionRect(i);
+			image(i == slotAction ? "slot_focused" : "button", bounds, true);
+			text(confirmDelete ? (i == 0 ? L"キャンセル" : L"削除") :
+				(occupied ? (i == 0 ? L"編集" : L"削除") : L"新規作成"),
+				bounds.Inset(8, 0), occupied ? 27.0f : 32.0f, i == slotAction);
+		}
+
+		if (confirmDelete)
+		{
+			const auto name = character ? characterEditor.GetSlotSummary(slot).characterName :
+				attackEditor.GetSlotSummary(selectedCategory, slot).displayName;
+			image("panel", {510, 81, 1162, 106}, true);
+			text(L"「" + wide(name) + L"」を削除しますか？", {520, 81, 1152, 106}, 19);
+		}
+	}
+
+	UIRenderer::Draw(renderer, commands);
 }
 
 void CustomizeFlowController::UpdateMenuPointer(GameUI::Root &root, const GameUI::InputFrame &frame, int &selection,
