@@ -11,6 +11,7 @@
 #include <locale.h>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <span>
 #include <vector>
 
@@ -232,6 +233,11 @@ public:
 	};
 	static void DrawShadowMap(std::span<const ShadowCaster> casters, const DirectX::SimpleMath::Vector3 &center,
 		float coverage);
+	struct ModelAlbedoOverride
+	{
+		std::string_view sourceFilename;
+		ID3D11ShaderResourceView* texture = nullptr;
+	};
 	static bool DrawModel(
 		const ModelResource& model,
 		const DirectX::SimpleMath::Matrix& world,
@@ -241,7 +247,8 @@ public:
 		const DirectX::SimpleMath::Matrix& world,
 		const DirectX::SimpleMath::Color& color,
 		bool disableDepth,
-		const std::vector<DirectX::SimpleMath::Matrix>* skinningMatrices = nullptr);
+		const std::vector<DirectX::SimpleMath::Matrix>* skinningMatrices = nullptr,
+		const ModelAlbedoOverride* albedoOverride = nullptr);
 	static HRESULT LoadTextureFromFile(const std::string& path, ID3D11ShaderResourceView** textureView);
 	static void ReleaseTexture(ID3D11ShaderResourceView*& textureView);
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);

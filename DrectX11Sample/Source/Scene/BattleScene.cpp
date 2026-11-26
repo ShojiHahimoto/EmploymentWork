@@ -49,6 +49,8 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
+	constexpr const char* GoldArmorTexture = "assets/model/Player_01/AlloyAtlas.gold.color.png";
+
 	/// <summary>通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
 	/// <param name="world">描画対象のWorld。</param>
 	/// <param name="id">モデルを持つオブジェクトID。</param>
@@ -108,9 +110,8 @@ BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup:
 void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 {
 	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
-	request.models.push_back({"DebugPlayer", "assets/model/DebugPlayer/man.fbx", true});
-	request.models.push_back({"DebugPlayer2", "assets/model/DebugPlayer2/woman.fbx", true});
 	request.textures.emplace_back("assets/texture/number.png");
+	request.optionalTextures.emplace_back(GoldArmorTexture);
 	request.effectIds = {"HitSpark", "GuardSpark"};
 	request.prepareScene = []
 	{
@@ -331,6 +332,8 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX,
 										-30.0f, 56.0f, 48.0f, 5.0f, true);
 
+	const auto secondPlayer = world.GetBattlePlayerId(1);
+	const Renderer::ModelAlbedoOverride goldArmor{"AlloyAtlas.color.png", FindSceneTexture(GoldArmorTexture)};
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.id == world.GetActiveCameraId())
@@ -347,7 +350,9 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 		if (transform)
 		{
 			const auto data = GetModelDrawData(world, object.id, *transform);
-			if (data.model && renderer.DrawModel(*data.model, data.world, data.skinningMatrices))
+			const auto* armor = object.id == secondPlayer ? &goldArmor : nullptr;
+			if (data.model && renderer.DrawModel(*data.model, data.world, Color(1, 1, 1, 1), false,
+				data.skinningMatrices, armor))
 			{
 				continue;
 			}

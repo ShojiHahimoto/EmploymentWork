@@ -25,7 +25,6 @@ void CustomizeAttackScene::DescribeLoad(SceneLoadRequest &request) const
 						  "phase_active", "phase_recovery", "section_accent", "undo", "redo", "rotate",
 						  "translate", "add", "delete", "copy", "paste", "mirror", "preset_save",
 						  "preset_load", "select_all", "deselect_all", "keyframe_movement"};
-	request.models.push_back({"DebugPlayer", "assets/model/DebugPlayer/man.fbx", true});
 	request.motionIds = {"Common/Idle", "Common/JumpLoop"};
 	request.prepareScene = [target = flowController.GetTarget()]
 	{

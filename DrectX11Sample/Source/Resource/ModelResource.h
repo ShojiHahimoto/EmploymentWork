@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+inline constexpr char PlayerModelKey[] = "PlayerModel";
+
 struct ModelVertex
 {
 	DirectX::SimpleMath::Vector3 position = DirectX::SimpleMath::Vector3::Zero;

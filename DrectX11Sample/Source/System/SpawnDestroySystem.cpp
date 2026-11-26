@@ -8,6 +8,7 @@
 #include "Component/HealthComponent.h"
 #include "Component/InputHistoryComponent.h"
 #include "Component/ModelComponent.h"
+#include "Resource/ModelResource.h"
 #include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
@@ -28,13 +29,11 @@ namespace
 	/// <param name="world">Component を追加する World。</param>
 	/// <param name="objectId">初期化対象の Player GameObject ID。</param>
 	/// <param name="request">Spawn 時の位置と回転を持つリクエスト。</param>
-	/// <param name="modelKey">描画に使う ModelResource のキー。</param>
 	/// <param name="initialFacingDirection">初期の対面方向。</param>
 	void InitializeDebugPlayer(
 		World& world,
 		GameObjectId objectId,
 		const SpawnRequest& request,
-		const std::string& modelKey,
 		FacingDirection initialFacingDirection)
 	{
 		if (GameObject* object = world.GetGameObject(objectId))
@@ -67,7 +66,7 @@ namespace
 		}
 
 		ModelComponent model;
-		model.resourceKey = modelKey;
+		model.resourceKey = PlayerModelKey;
 		world.AddComponent<ModelComponent>(objectId, model);
 
 		SkeletonPoseComponent skeletonPose;
@@ -157,14 +156,14 @@ void SpawnDestroySystem::ApplySpawnRequests(World& world)
 		case SpawnType::DebugPlayer:
 		{
 			const GameObjectId objectId = world.CreateTransform(request.name);
-			InitializeDebugPlayer(world, objectId, request, "DebugPlayer", FacingDirection::Right);
+			InitializeDebugPlayer(world, objectId, request, FacingDirection::Right);
 			world.SetBattlePlayerId(0, objectId);
 			break;
 		}
 		case SpawnType::DebugPlayer2:
 		{
 			const GameObjectId objectId = world.CreateTransform(request.name);
-			InitializeDebugPlayer(world, objectId, request, "DebugPlayer2", FacingDirection::Left);
+			InitializeDebugPlayer(world, objectId, request, FacingDirection::Left);
 			world.SetBattlePlayerId(1, objectId);
 			break;
 		}

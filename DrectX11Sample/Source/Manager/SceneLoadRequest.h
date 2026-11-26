@@ -27,6 +27,7 @@ struct SceneLoadRequest
 	std::vector<std::string> effectIds;
 	std::vector<SceneModelLoad> models;			//モデル
 	std::vector<std::string> textures;			//テクスチャ
+	std::vector<std::string> optionalTextures;	//欠落しても遷移できる差し替え素材
 	std::vector<std::string> characterFolders;	//使用キャラクター、攻撃データを含む
 	std::vector<std::string> motionIds;			//モーションデータ
 };

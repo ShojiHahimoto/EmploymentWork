@@ -1713,13 +1713,15 @@ Renderer::ModelConstantBuffer Renderer::BuildModelConstants(const Matrix &worldV
 /// <param name="color">モデル色。alpha が 1 未満なら半透明合成する。</param>
 /// <param name="disableDepth">true の場合、比較用ゴーストなどとして深度を無効化して描画する。</param>
 /// <param name="skinningMatrices">GPU スキニングに使うボーン行列配列。nullptr の場合は静的モデルとして描画する。</param>
+/// <param name="albedoOverride">現在の描画だけで差し替える拡散テクスチャ。</param>
 /// <returns>1 つ以上の Mesh を描画できた場合は true。</returns>
 bool Renderer::DrawModel(
 	const ModelResource& model,
 	const Matrix& world,
 	const Color& color,
 	bool disableDepth,
-	const std::vector<Matrix>* skinningMatrices)
+	const std::vector<Matrix>* skinningMatrices,
+	const ModelAlbedoOverride* albedoOverride)
 {
 	if (!m_pModelInputLayout || !m_pModelVertexShader || !m_pModelPixelShader || !m_pModelConstantBuffer)
 	{
@@ -1765,9 +1767,23 @@ bool Renderer::DrawModel(
 		m_pDeviceContext->IASetIndexBuffer(mesh.indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 
 		ID3D11ShaderResourceView* textureView = m_pWhiteTextureView;
-		if (mesh.materialIndex < materials.size() && materials[mesh.materialIndex].diffuseTextureView)
+		if (mesh.materialIndex < materials.size())
 		{
-			textureView = materials[mesh.materialIndex].diffuseTextureView;
+			const auto& material = materials[mesh.materialIndex];
+			if (material.diffuseTextureView)
+			{
+				textureView = material.diffuseTextureView;
+			}
+			if (albedoOverride && albedoOverride->texture)
+			{
+				const std::string_view path = material.diffuseTexturePath;
+				const auto separator = path.find_last_of("/\\");
+				const auto filename = separator == std::string_view::npos ? path : path.substr(separator + 1);
+				if (filename == albedoOverride->sourceFilename)
+				{
+					textureView = albedoOverride->texture;
+				}
+			}
 		}
 		m_pDeviceContext->PSSetShaderResources(0, 1, &textureView);
 		const bool satin = mesh.materialIndex < materials.size() && materials[mesh.materialIndex].satinMetal;

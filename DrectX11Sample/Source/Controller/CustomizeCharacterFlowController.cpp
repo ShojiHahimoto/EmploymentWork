@@ -31,7 +31,6 @@
 namespace
 {
 using namespace DirectX::SimpleMath;
-constexpr const char *PreviewModelKey = "CharacterEditorPlayer";
 constexpr const char *PreviewAttackSlot = "PreviewAttack";
 constexpr int AirAttackDelayFrames = 5;
 constexpr size_t HistoryLimit = 100;
@@ -113,7 +112,6 @@ void CustomizeCharacterFlowController::DescribeLoad(SceneLoadRequest &request) c
 	request.uiImageIds = {"header", "header_accent", "panel", "button", "button_primary_clean",
 		"button_primary", "number_field", "back", "undo", "redo", "play", "section_accent",
 		"badge_a", "badge_b", "badge_x", "badge_y", "slot_focused"};
-	request.models.push_back({PreviewModelKey, "assets/model/Player_01/Player_01_SurfaceAtlas.fbx", true});
 	request.motionIds = {"Common/Idle", "Common/JumpStart", "Common/JumpLoop"};
 }
 
@@ -648,10 +646,6 @@ void CustomizeCharacterFlowController::ResetPreview(World &world, const AttackDa
 	}
 
 	const auto id = world.GetGameObjects().front().id;
-	if (auto *model = world.GetComponent<ModelComponent>(id))
-	{
-		model->resourceKey = PreviewModelKey;
-	}
 
 	if (auto *motion = world.GetComponent<MotionPlayerComponent>(id))
 	{

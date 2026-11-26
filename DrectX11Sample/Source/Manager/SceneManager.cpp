@@ -66,7 +66,7 @@ void SceneManager::RequestChangeScene(std::unique_ptr<Scene> nextScene)
 	pendingScene = std::move(nextScene);
 	loadingDrawn = false;
 
-	if (!request.models.empty() || !request.textures.empty() || !request.characterFolders.empty() ||
+	if (!request.models.empty() || !request.textures.empty() || !request.optionalTextures.empty() || !request.characterFolders.empty() ||
 		!request.motionIds.empty() || request.prepareScene || !request.uiImageIds.empty() || !request.effectIds.empty())
 	{
 		using PreparationTask = std::packaged_task<std::optional<PreparedAssets>()>;
@@ -114,6 +114,13 @@ std::optional<SceneManager::PreparedAssets> SceneManager::PrepareAssets(const Sc
 
 	//画像を読み込む
 	auto texturePaths = request.textures;
+	for (const auto& path : request.optionalTextures)
+	{
+		if (std::find(texturePaths.begin(), texturePaths.end(), path) == texturePaths.end())
+		{
+			texturePaths.push_back(path);
+		}
+	}
 	for (const auto &id : request.effectIds)
 	{
 		EffectData effect;
