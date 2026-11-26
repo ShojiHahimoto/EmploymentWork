@@ -1,9 +1,11 @@
 ﻿#pragma once
 
 #include <Windows.h>
+#include <SimpleMath.h>
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -13,6 +15,7 @@ class Renderer;
 
 namespace GameUI
 {
+	struct DrawCommand;
 	/// <summary>
 	/// UI の画面矩形。座標はクライアント領域の左上を原点とする。
 	/// </summary>
@@ -92,15 +95,16 @@ namespace GameUI
 		bool ShouldCollapseInlineSection(std::string_view prefix, const Rect& section, const Rect& auxiliary = {}) const;
 		void BeginFrame(const Rect& viewport, const InputFrame& input);
 		void AddPanel(const Rect& bounds, std::string_view imageId = "panel");
-		void AddRule(const Rect& bounds);
+		void AddRule(const Rect& bounds, std::optional<DirectX::SimpleMath::Color> color = {});
 		void AddSectionHeader(std::string_view id, const Rect& bounds, std::string_view text, float fontSize = 18.0f);
 		void AddImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
 		void AddNineSliceImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
 		void AddButton(std::string_view id, const Rect& bounds, bool enabled = true, std::string_view imageId = {});
 		void AddLabel(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true,
-			float fontSize = 18.0f, bool centered = false, bool bold = false);
+			float fontSize = 18.0f, bool centered = false, bool bold = false,
+			std::optional<DirectX::SimpleMath::Color> color = {});
 		void AddButton(std::string_view id, const Rect& bounds, std::string_view text,
-			bool enabled = true, float fontSize = 18.0f);
+			bool enabled = true, float fontSize = 18.0f, bool bold = false);
 		void AddPrimaryButton(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true);
 		void AddImageButton(std::string_view id, const Rect& bounds, std::string_view imageId,
 			std::string_view fallbackText, bool enabled = true, bool showFocusOutline = true);
@@ -116,7 +120,8 @@ namespace GameUI
 		void BeginScrollArea(std::string_view id, const Rect& bounds, int contentHeight, int& scrollOffset);
 		void EndScrollArea();
 		void EndFrame();
-		void Draw(Renderer& renderer) const;
+		void Draw(Renderer& renderer, const DrawCommand* background = nullptr, bool strongButtonFocus = false) const;
+		void FocusButton(std::string_view id);
 
 		bool WasActivated(std::string_view id) const;
 		bool WasChanged(std::string_view id) const;
@@ -148,6 +153,7 @@ namespace GameUI
 		{
 			bool centered = false; // ラベルを矩形の中央へ揃える。
 			bool bold = false; // 強調表示用の太字。
+			std::optional<DirectX::SimpleMath::Color> color; // 既定のテーマ色を置き換える場合のみ指定。
 			bool showFocusOutline = true; // falseならフォーカス中の枠線だけを隠す。
 			ElementType type = ElementType::Panel; // 描画・入力の種別。
 			Rect bounds; // クライアント座標上の配置。

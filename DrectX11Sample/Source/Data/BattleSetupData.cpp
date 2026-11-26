@@ -183,6 +183,11 @@ namespace BattleSetup
 	/// <returns>同一デバイスが重複していなければ true。</returns>
 	bool AreDevicesUnique(const BattleSetupData& setupData)
 	{
+		if (setupData.players[0].cpuControlled || setupData.players[1].cpuControlled)
+		{
+			return true;
+		}
+
 		const InputDeviceAssignment& player1 = setupData.players[0].device;
 		const InputDeviceAssignment& player2 = setupData.players[1].device;
 		if (player1.kind != player2.kind)
@@ -209,6 +214,11 @@ namespace BattleSetup
 		for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
 		{
 			const PlayerSetup& player = setupData.players[static_cast<size_t>(playerIndex)];
+			if (player.cpuControlled)
+			{
+				continue;
+			}
+
 			if (player.device.kind == InputDeviceKind::Keyboard)
 			{
 				const KeyboardKeyConfig& config = player.keyboardConfig;

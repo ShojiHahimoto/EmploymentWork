@@ -303,16 +303,17 @@ void DrawBitmapNineSlice(ID2D1RenderTarget* target, ID2D1Bitmap* bitmap,
 	if (left + right >= sourceWidth || top + bottom >= sourceHeight) return;
 	// 小さい表示先では角だけを縦横別に潰さず、素材全体の縮小率で角を揃えて縮める。
 	const float cornerScale = std::min({1.0f, destinationWidth / sourceWidth, destinationHeight / sourceHeight});
-	const float destinationLeft = left * cornerScale;
-	const float destinationRight = right * cornerScale;
-	const float destinationTop = top * cornerScale;
-	const float destinationBottom = bottom * cornerScale;
+	// 隣接する半透明パーツを重ねず、共有境界をピクセル境界へ揃える。
+	const float destinationLeft = static_cast<float>(static_cast<int>(left * cornerScale + 0.5f));
+	const float destinationRight = static_cast<float>(static_cast<int>(right * cornerScale + 0.5f));
+	const float destinationTop = static_cast<float>(static_cast<int>(top * cornerScale + 0.5f));
+	const float destinationBottom = static_cast<float>(static_cast<int>(bottom * cornerScale + 0.5f));
 	const float sourceX[] = {0.0f, left, sourceWidth - right, sourceWidth};
 	const float sourceY[] = {0.0f, top, sourceHeight - bottom, sourceHeight};
 	const float destinationX[] = {destination.left, destination.left + destinationLeft,
-		destination.right - destinationRight, destination.right};
+		std::max(destination.left + destinationLeft, destination.right - destinationRight), destination.right};
 	const float destinationY[] = {destination.top, destination.top + destinationTop,
-		destination.bottom - destinationBottom, destination.bottom};
+		std::max(destination.top + destinationTop, destination.bottom - destinationBottom), destination.bottom};
 	for (int row = 0; row < 3; ++row)
 	{
 		for (int column = 0; column < 3; ++column)
@@ -567,6 +568,37 @@ UIRenderer::PreparedImages UIRenderer::PrepareAssets(const std::string &manifest
 			DebugLog("[UI] Skipping UI image with invalid slice bounds: " + id);
 			continue;
 		}
+
+		const JsonValue* mirror = value.Find("mirrorX");
+		if (mirror && mirror->AsBool())
+		{
+			for (UINT y = 0; y < imageHeight; ++y)
+			{
+				for (UINT x = 0; x < imageWidth / 2; ++x)
+				{
+					const UINT left = y * pitch + x * 4;
+					const UINT right = y * pitch + (imageWidth - 1 - x) * 4;
+					std::swap_ranges(asset.pixels.begin() + left, asset.pixels.begin() + left + 4,
+						asset.pixels.begin() + right);
+				}
+			}
+			std::swap(asset.sliceLeft, asset.sliceRight);
+		}
+
+		const JsonValue* tint = value.Find("tintRgb");
+		if (tint && tint->IsArray() && tint->AsArray().size() == 3)
+		{
+			const auto& channels = tint->AsArray();
+			for (UINT i = 0; i < size; i += 4)
+			{
+				for (UINT channel = 0; channel < 3; ++channel)
+				{
+					const double multiplier = std::clamp(channels[2 - channel].AsNumber(1.0), 0.0, 1.0);
+					asset.pixels[i + channel] = static_cast<unsigned char>(asset.pixels[i + channel] * multiplier);
+				}
+			}
+		}
+
 		loadedAssets.emplace(id, std::move(asset));
 	}
 	return loadedAssets;

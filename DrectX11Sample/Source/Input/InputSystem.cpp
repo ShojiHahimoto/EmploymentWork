@@ -676,6 +676,17 @@ namespace Input
 		return (gamepad.wButtons & xinputButton) != 0;
 	}
 
+	/// <summary>指定した機器の左スティックをデッドゾーン適用後の値で取得する。</summary>
+	/// <param name="gamepadIndex">XInputの機器番号。</param>
+	/// <returns>左スティック入力。未接続ならゼロ。</returns>
+	Vector2 InputSystem::GetLeftStick(int gamepadIndex)
+	{
+		GamepadAxis2DBinding binding;
+		binding.gamepadIndex = gamepadIndex;
+		binding.source = GamepadAxis2DSource::LeftStick;
+		return GetGamepadAxis2D(binding);
+	}
+
 	/// <summary>
 	/// 指定ゲームパッド Binding から Axis2D 入力を取得する。
 	/// </summary>

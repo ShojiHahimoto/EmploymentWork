@@ -218,11 +218,13 @@ void Root::AddPanel(const Rect &b, std::string_view imageId)
 }
 /// <summary>入力を受け取らない区切り線または目盛りを登録する。</summary>
 /// <param name="bounds">細い矩形で指定する描画範囲。</param>
-void Root::AddRule(const Rect& bounds)
+/// <param name="color">指定がなければテーマの境界色。</param>
+void Root::AddRule(const Rect& bounds, std::optional<Color> color)
 {
 	Element e;
 	e.type = ElementType::Rule;
 	e.bounds = bounds;
+	e.color = color;
 	RegisterElement(e);
 }
 /// <summary>淡色背景と縦アクセントを持つセクション見出しを登録する。</summary>
@@ -308,14 +310,16 @@ void Root::AddButton(std::string_view id, const Rect& bounds, const char* text, 
 /// <param name="enabled">操作可否。
 /// 操作可能ならtrue。</param>
 /// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+/// <param name="bold">trueならボタン名を太字にする。</param>
 /// <remarks>文字付きボタンを登録する。押下結果は WasActivated で照会できる。</remarks>
-void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, bool enabled, float fontSize)
+void Root::AddButton(std::string_view id, const Rect &b, std::string_view text, bool enabled, float fontSize, bool bold)
 {
 	Element e;
 	e.type = ElementType::Button;
 	e.id = id;
 	e.bounds = b;
 	e.label = text;
+	e.bold = bold;
 	e.imageId = Theme::ButtonImage;
 	e.enabled = enabled;
 	e.fontSize = fontSize;
@@ -388,8 +392,9 @@ void Root::AddIconButton(std::string_view id, const Rect& bounds, std::string_vi
 /// <param name="size">96 DPI基準の文字サイズ。</param>
 /// <param name="centered">trueなら文字を矩形の中央へ揃える。</param>
 /// <param name="bold">trueなら太字で表示する。</param>
+/// <param name="color">指定がなければテーマの文字色。</param>
 void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, bool enabled,
-	float size, bool centered, bool bold)
+	float size, bool centered, bool bold, std::optional<Color> color)
 {
 	Element e;
 	e.type = ElementType::Label;
@@ -400,6 +405,7 @@ void Root::AddLabel(std::string_view id, const Rect &b, std::string_view text, b
 	e.fontSize = size;
 	e.centered = centered;
 	e.bold = bold;
+	e.color = color;
 	RegisterElement(e);
 }
 /// <summary>IME文字入力、カーソル移動、削除に対応するテキスト欄を登録する。</summary>
@@ -808,6 +814,18 @@ void Root::ApplyFocusedInput()
 	else if (input.activatePressed || Pressed(input, Key::Enter))
 		ActivateElement(*e);
 }
+/// <summary>画面固有のナビゲーションで選んだボタンへフォーカスを移す。</summary>
+/// <param name="id">このフレームで登録した有効なボタンのID。</param>
+void Root::FocusButton(std::string_view id)
+{
+	const auto* element = FindElement(std::string(id));
+	if (element && element->type == ElementType::Button && IsFocusable(*element))
+	{
+		focusedId = element->id;
+		keyboardFocusActive = true;
+	}
+}
+
 /// <summary>登録済み部品からフォーカス移動と押下捕捉を解決する。</summary>
 void Root::EndFrame()
 {
@@ -991,12 +1009,22 @@ bool Root::ShouldCollapseInlineSection(std::string_view prefix, const Rect& sect
 /// <summary>素材を先に描き、部品の状態表現と動的な文字をその上へ重ねる。</summary>
 /// <remarks>登録部品をテーマ色で描画する。</remarks>
 /// <param name="renderer">矩形を画面へ描くレンダラー。</param>
-void Root::Draw(Renderer &renderer) const
+/// <param name="background">UIと同じ描画で合成する任意の背景。</param>
+/// <param name="strongButtonFocus">暗い画面上でボタンのフォーカスを高コントラストにする。</param>
+void Root::Draw(Renderer &renderer, const DrawCommand* background, bool strongButtonFocus) const
 {
 	if (!endedFrame)
+	{
 		return;
+	}
+
 	std::vector<DrawCommand> commands;
-	commands.reserve(elements.size() * 4);
+	commands.reserve(elements.size() * 4 + (background ? 1 : 0));
+	if (background)
+	{
+		commands.push_back(*background);
+	}
+
 	auto pushImage = [&commands](const Rect& bounds, const Rect& clip, std::string_view imageId,
 		bool nineSlice, float opacity = 1.0f)
 	{
@@ -1080,7 +1108,7 @@ void Root::Draw(Renderer &renderer) const
 		if (e.bounds.Intersect(e.clipBounds).IsEmpty()) continue;
 		if (e.type == ElementType::Rule)
 		{
-			pushFill(e.bounds, e.clipBounds, Theme::Border);
+			pushFill(e.bounds, e.clipBounds, e.color.value_or(Theme::Border));
 			continue;
 		}
 		if (e.type == ElementType::Image || e.type == ElementType::NineSliceImage)
@@ -1132,7 +1160,18 @@ void Root::Draw(Renderer &renderer) const
 				pushStroke(e.bounds, e.clipBounds, Theme::Border, Theme::BorderThickness);
 			}
 			interactionOverlay(e);
-			if (focused(e) && e.showFocusOutline) pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+			if (focused(e) && e.showFocusOutline)
+			{
+				if (strongButtonFocus)
+				{
+					pushStroke(e.bounds, e.clipBounds, Color(0.06f, 0.15f, 0.17f, 1.0f), 6.0f);
+					pushStroke(e.bounds, e.clipBounds, Color(0.39f, 1.0f, 0.87f, 1.0f), 3.0f);
+				}
+				else
+				{
+					pushStroke(e.bounds, e.clipBounds, Theme::Focus, 2.0f);
+				}
+			}
 
 			const bool fullImageButton = !e.stretchBackground && imageLoaded;
 			if (!e.iconImageId.empty() && !fullImageButton)
@@ -1179,7 +1218,7 @@ void Root::Draw(Renderer &renderer) const
 		if (e.type == ElementType::Label)
 		{
 			pushText(e.bounds.Inset(4, 1), e.clipBounds, getElementText(e), e.fontSize,
-				e.enabled ? Theme::Text : Theme::DisabledText,
+				e.enabled ? e.color.value_or(Theme::Text) : Theme::DisabledText,
 				e.centered ? TextHorizontalAlignment::Center : TextHorizontalAlignment::Near, e.bold);
 			continue;
 		}

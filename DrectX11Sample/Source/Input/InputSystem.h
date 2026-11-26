@@ -45,6 +45,7 @@ namespace Input
 		static bool IsGamepadConnected(int gamepadIndex);
 		static bool IsKeyboardKeyDown(KeyboardKey key);
 		static bool IsGamepadButtonDown(int gamepadIndex, GamepadButton button);
+		static DirectX::SimpleMath::Vector2 GetLeftStick(int gamepadIndex);
 
 	private:
 		// 現在有効な ActionMap。プレイヤーごとには分けない。

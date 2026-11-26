@@ -54,6 +54,7 @@ namespace BattleSetup
 	struct PlayerSetup
 	{
 		InputDeviceAssignment device;
+		bool cpuControlled = false; // この側には対戦用の物理入力を割り当てない。
 		int characterSlotIndex = 0;
 		std::string characterId = "CharacterSlot00";
 		std::string characterFolderPath = "assets/CharacterData/CharacterSlot00";

@@ -697,6 +697,46 @@
       "name": "keyframe_movement",
       "file": "keyframe_movement.png",
       "height": 199
+    },
+    {
+      "name": "battle_keyboard",
+      "file": "BattleSetup/device_keyboard.png",
+      "slice": [0, 0, 0, 0]
+    },
+    {
+      "name": "battle_gamepad",
+      "file": "BattleSetup/device_gamepad.png",
+      "slice": [0, 0, 0, 0]
+    },
+    {
+      "name": "battle_roster_button",
+      "file": "button.png",
+      "slice": [28, 28, 28, 28],
+      "tintRgb": [0.31, 0.39, 0.45]
+    },
+    {
+      "name": "battle_panel",
+      "file": "panel.png",
+      "slice": [28, 28, 28, 28],
+      "tintRgb": [0.25, 0.31, 0.36]
+    },
+    {
+      "name": "battle_tab_left",
+      "file": "BattleSetup/player_tab.png",
+      "slice": [0, 0, 0, 0],
+      "tintRgb": [0.18, 0.82, 0.76],
+      "mirrorX": true
+    },
+    {
+      "name": "battle_tab_right",
+      "file": "BattleSetup/player_tab.png",
+      "slice": [0, 0, 0, 0],
+      "tintRgb": [1.0, 0.73, 0.28]
+    },
+    {
+      "name": "battle_surface",
+      "file": "BattleSetup/battle_surface_overlay.png",
+      "slice": [20, 20, 20, 20]
     }
   ],
   "version": 1

@@ -3,6 +3,7 @@
 #include "Data/BattleSetupData.h"
 #include "Input/InputConfigLoader.h"
 #include "Core/Renderer.h"
+#include "UI/UIRoot.h"
 
 #include <array>
 #include <future>
@@ -37,7 +38,11 @@ struct BattleSetupCharacterSlotSummary
 	std::string characterId;
 	std::string characterFolderPath;
 	std::string characterName;
+	std::array<std::array<std::string, 4>, 3> attackNames;
 };
+
+enum class BattleSetupControl : size_t { Left, Right, Up, Down, Confirm, Cancel, Count };
+using BattleSetupControls = std::array<bool, static_cast<size_t>(BattleSetupControl::Count)>;
 
 // Scene-owned editing state shared by the focused setup controllers.
 struct BattleSetupSession
@@ -46,7 +51,10 @@ struct BattleSetupSession
 	std::array<BattleSetupCharacterSlotSummary, BattleSetup::CharacterSlotCount> characterSlotSummaries = {};
 	std::vector<Input::NamedInputConfig> keyboardInputConfigs;
 	std::vector<Input::NamedInputConfig> gamepadInputConfigs;
-	std::array<char, 128> inputConfigNameBuffer = {};
+	std::array<bool, Input::MaxPlayers> characterConfirmed = {};
+	std::array<bool, Input::MaxPlayers> ready = {};
+	int cpuSide = -1;
+	int activeSide = 0;
 	std::string statusMessage;
 	int width = 0;
 	int height = 0;
@@ -73,10 +81,15 @@ class BattleSetupDeviceAssignmentController : protected BattleSetupControllerCon
 {
 public:
 	explicit BattleSetupDeviceAssignmentController(BattleSetupSession& session);
-	void DrawDeviceSelector(int playerIndex, bool inputConfigEditing);
+	void Update(const std::vector<BattleSetupControls>& controls);
+	void BuildUI(GameUI::Root& root) const;
+	bool IsComplete() const;
+	void Reset();
 
 private:
 	BattleSetup::BattleSetupData& setupData;
+	std::array<int, Input::MaxPlayers> lockedDevices{-1, -1};
+	std::vector<int> deviceSides;
 };
 
 class BattleSetupCharacterSelectionController : protected BattleSetupControllerContext
@@ -84,12 +97,17 @@ class BattleSetupCharacterSelectionController : protected BattleSetupControllerC
 public:
 	explicit BattleSetupCharacterSelectionController(BattleSetupSession& session);
 	void RefreshCharacterSlotSummaries();
-	void DrawCharacterSelector(int playerIndex);
+	void SelectFirst();
+	void MoveSelection(int playerIndex, int horizontal, int vertical);
+	void SelectCharacter(int playerIndex, int slotIndex);
+	void BuildRoster(GameUI::Root& root, const GameUI::Rect& bounds, bool enabled) const;
+	void BuildSummary(GameUI::Root& root, int playerIndex, const GameUI::Rect& bounds);
 	bool HasSavedCharacterSlot(int slotIndex) const;
 
 private:
 	BattleSetup::BattleSetupData& setupData;
 	std::array<BattleSetupCharacterSlotSummary, BattleSetup::CharacterSlotCount>& characterSlotSummaries;
+	std::array<int, Input::MaxPlayers> attackScroll{};
 };
 
 class BattleSetupInputConfigController : protected BattleSetupControllerContext
@@ -102,14 +120,19 @@ public:
 	void ApplyInputConfigSave();
 	bool IsSaving() const;
 	void UpdateBindingCapture();
-	void DrawKeyConfig(int playerIndex);
-	bool IsCreatingInputConfigFor(int playerIndex) const;
+	void Open(int playerIndex);
+	void CyclePreset(int playerIndex, int direction);
+	std::string PresetLabel(int playerIndex) const;
+	void BuildUI(GameUI::Root& root, const GameUI::Rect& bounds);
+	void HandleUI(const GameUI::Root& root);
+	void MoveEditorFocus(int horizontal, int vertical);
+	void Close();
+	int Owner() const;
 
 private:
 	BattleSetup::BattleSetupData& setupData;
 	std::vector<Input::NamedInputConfig>& keyboardInputConfigs;
 	std::vector<Input::NamedInputConfig>& gamepadInputConfigs;
-	std::array<char, 128>& inputConfigNameBuffer;
 	std::string& statusMessage;
 	int& capturingPlayerIndex;
 	int& captureWaitFrames;
@@ -124,25 +147,17 @@ private:
 	std::future<std::optional<Input::NamedInputConfig>> pendingSave;
 	int savingPlayerIndex = -1;
 
-	void DrawInputConfigSelector(int playerIndex);
-	void DrawNewInputConfigEditor(int playerIndex);
-	void DrawKeyboardKeyConfig(int playerIndex);
-	void DrawGamepadKeyConfig(int playerIndex);
-	void DrawKeyboardBindingButton(int playerIndex, BattleSetupCaptureTarget target, const char* label, Input::KeyboardKey currentKey);
-	void DrawGamepadBindingButton(int playerIndex, BattleSetupCaptureTarget target, const char* label, Input::GamepadButton currentButton);
-	void BeginNewInputConfig(int playerIndex);
-	void CancelNewInputConfig();
+	int owner = -1;
+	int editorFocus = 0;
+	int PresetIndex(int playerIndex) const;
+	void BuildConfigEditor(GameUI::Root& root, const GameUI::Rect& bounds);
+	void BeginPresetEdit(int playerIndex);
+	void CancelPresetEdit();
 	void SaveDraftInputConfig();
 	void ApplyNamedInputConfig(int playerIndex, const Input::NamedInputConfig& config);
 	void BeginBindingCapture(int playerIndex, BattleSetupCaptureDevice device, BattleSetupCaptureTarget target);
 	void ApplyCapturedKeyboardKey(Input::KeyboardKey key);
 	void ApplyCapturedGamepadButton(Input::GamepadButton button);
-	bool IsKeyboardKeyAlreadyUsed(int playerIndex, BattleSetupCaptureTarget target, Input::KeyboardKey key) const;
-	bool IsGamepadButtonAlreadyUsed(int playerIndex, BattleSetupCaptureTarget target, Input::GamepadButton button) const;
-	const BattleSetup::KeyboardKeyConfig& GetKeyboardConfigForDraw(int playerIndex) const;
-	const BattleSetup::GamepadKeyConfig& GetGamepadConfigForDraw(int playerIndex) const;
-	BattleSetup::KeyboardKeyConfig& GetKeyboardConfigForEdit(int playerIndex);
-	BattleSetup::GamepadKeyConfig& GetGamepadConfigForEdit(int playerIndex);
 };
 
 class BattleSetupFlowController : protected BattleSetupControllerContext
@@ -165,8 +180,17 @@ private:
 	BattleSetupDeviceAssignmentController deviceAssignmentController;
 	BattleSetupCharacterSelectionController characterSelectionController;
 	BattleSetupInputConfigController inputConfigController;
+	GameUI::Root root;
+	std::vector<BattleSetupControls> previousControls;
+	std::array<bool, Input::MaxPlayers> readyFocused{};
+	bool selectingCharacters = false;
 
-	void DrawSetupWindow();
+	void BuildUI(GameUI::InputFrame frame);
+	void UpdateSetupUI();
+	void UpdateCharacters(const std::vector<BattleSetupControls>& controls);
+	void HandleCharacterInput(int playerIndex, const BattleSetupControls& controls);
+	void MarkReady(int playerIndex);
+	void GoBack();
 	bool ValidateSetup(std::string& outMessage) const;
 	void StartBattle();
 	void RequestTitleScene();
