@@ -185,7 +185,7 @@ void MotionSystem::SyncMotionPlayerFromState(
 		player.motionDataId = commonMotionDataId;
 		player.boundActionState = state->currentActionState;
 		player.boundAttackSlotId.clear();
-		player.looping = false;
+		player.looping = player.forceIdleLoop && state->currentActionState == PlayerActionState::Idle;
 		if (restarted)
 		{
 			player.playing = true;

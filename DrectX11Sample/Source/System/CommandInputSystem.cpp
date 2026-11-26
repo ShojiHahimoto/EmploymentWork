@@ -272,22 +272,35 @@ void CommandInputSystem::AddBufferedCommand(
 /// <returns>コマンドが成立していれば true。</returns>
 bool CommandInputSystem::MatchCommand(const InputHistoryComponent& inputHistory, AttackCommandId commandId)
 {
+	if (commandId == AttackCommandId::FullRotate)
+	{
+		return MatchFullRotateCommand(inputHistory);
+	}
+
+	const auto steps = GetDirectionalCommand(commandId);
+
+	return !steps.empty() && MatchDirectionCommand(inputHistory, steps);
+}
+
+/// <summary>入力判定と画面表示で共通のコマンド方向列を取得する。</summary>
+/// <param name="commandId">必殺技コマンド。</param>
+/// <returns>右向き基準の入力順。回転入力など方向列を持たない場合は空。</returns>
+std::span<const CommandDirectionStep> CommandInputSystem::GetDirectionalCommand(AttackCommandId commandId)
+{
 	switch (commandId)
 	{
 	case AttackCommandId::Hadouken:
-		return MatchDirectionCommand(inputHistory, HadoukenCommand);
+		return HadoukenCommand;
 	case AttackCommandId::Tatsumaki:
-		return MatchDirectionCommand(inputHistory, TatumakiCommand);
+		return TatumakiCommand;
 	case AttackCommandId::Shoryuu:
-		return MatchDirectionCommand(inputHistory, ShoryuuCommand);
+		return ShoryuuCommand;
 	case AttackCommandId::Yoga:
-		return MatchDirectionCommand(inputHistory, YogaCommand);
+		return YogaCommand;
 	case AttackCommandId::ReverseYoga:
-		return MatchDirectionCommand(inputHistory, ReverseYogaCommand);
-	case AttackCommandId::FullRotate:
-		return MatchFullRotateCommand(inputHistory);
+		return ReverseYogaCommand;
 	default:
-		return false;
+		return {};
 	}
 }
 

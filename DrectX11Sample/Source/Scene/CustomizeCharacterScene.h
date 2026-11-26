@@ -1,11 +1,8 @@
 ﻿#pragma once
 
-#include "Controller/CustomizeCharacterEditorController.h"
+#include "Controller/CustomizeCharacterFlowController.h"
 #include "Core/World.h"
 #include "Scene/Scene.h"
-
-#include <string>
-#include <future>
 
 class CustomizeCharacterScene : public Scene
 {
@@ -24,13 +21,6 @@ class CustomizeCharacterScene : public Scene
 
   private:
 	World world;
-	CustomizeCharacterEditorController editor;
-	CustomizeMode mode = CustomizeMode::CharacterEditor;
-	std::string statusMessage;
-	std::future<std::string> pendingSave;
-	int width;
-	int height;
+	CustomizeCharacterFlowController flow;
 	int slotIndex;
-
-	void RequestSlotSelection();
 };

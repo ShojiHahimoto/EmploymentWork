@@ -41,6 +41,23 @@ void StateUpdateSystem::Update(World& world)
 	}
 }
 
+/// <summary>外部で確定した行動を通常の状態遷移と同じ処理で開始する。</summary>
+/// <param name="world">対象プレイヤーが存在する World。</param>
+/// <param name="objectId">行動を開始するプレイヤー。</param>
+/// <param name="decision">開始する行動と技スロット。</param>
+void StateUpdateSystem::StartAction(World &world, GameObjectId objectId, const PlayerActionDecision &decision)
+{
+	auto *state = world.GetComponent<StateComponent>(objectId);
+	if (!state)
+	{
+		return;
+	}
+
+	ApplyActionState(*state, world.GetComponent<HitBoxComponent>(objectId),
+		world.GetComponent<CharacterAttackDataComponent>(objectId),
+		world.GetComponent<CommandBufferComponent>(objectId), decision);
+}
+
 /// <summary>
 /// 1体の Player について、入力履歴と現在状態から今フレームの PlayerActionState を確定する。
 /// </summary>
@@ -410,6 +427,12 @@ PlayerActionDecision StateUpdateSystem::DecideNeutralAction(
 
 	if (!state.isGrounded)
 	{
+		if (IsAttackActionState(state.currentActionState))
+		{
+			// Resume the jump loop without applying jump launch velocity again.
+			return { PlayerActionState::Fall, true };
+		}
+
 		return {
 			velocity.velocity.y > 0.0f ? state.currentActionState : PlayerActionState::Fall,
 			false

@@ -9,10 +9,10 @@ public:
 	static constexpr float StageMaxX = 45.0f;
 
 	static void Update(World& world);
+	static void ResolveTemporaryGround(World& world);
 
 private:
 	static void ResolveWallBounds(World& world);
 	static void ResolveCameraViewBounds(World& world);
 	static void ResolvePlayerPushBoxes(World& world);
-	static void ResolveTemporaryGround(World& world);
 };

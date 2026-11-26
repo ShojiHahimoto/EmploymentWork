@@ -472,10 +472,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	root.BeginFrame({0, 0, width, height}, input);
 
 	const int headerHeight = std::max(44, height * 8 / 100);
-	root.AddPanel({0, 0, width, headerHeight}, GameUI::Theme::HeaderImage);
-	root.AddIconButton("back", {16, 8, 82, headerHeight - 10}, "", "back");
-	root.AddImage("title/accent", {94, 0, 128, headerHeight}, GameUI::Theme::HeaderAccentImage);
-	root.AddLabel("title", {136, 6, width * 28 / 100, headerHeight - 6}, "技の編集", true, 34.0f, false, true);
+	AddHeader(root, width, headerHeight, width * 28 / 100, "技の編集");
 
 	const int nameX = width * 28 / 100;
 	root.AddLabel("header/name/label", {nameX, 8, nameX + 58, headerHeight - 10}, commonMotion ? "名前" : "技名", true,
@@ -496,11 +493,7 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 					  true, 20);
 	}
 
-	root.AddIconButton("undo", {width * 78 / 100, 8, width * 83 / 100, headerHeight - 10}, "", "undo",
-					   canUndo || canCommitTextForUndo, false);
-	root.AddIconButton("redo", {width * 84 / 100, 8, width * 89 / 100 - 8, headerHeight - 10}, "", "redo", canRedo,
-					   false);
-	root.AddPrimaryButton("save", {width * 89 / 100, 8, width - 16, headerHeight - 10}, "保存");
+	AddHistorySaveButtons(root, width, headerHeight, canUndo || canCommitTextForUndo, canRedo);
 
 	root.AddPanel({split, headerHeight + 4, width - 8, bottom - 8}, GameUI::Theme::PanelImage);
 	rowY = 0;
@@ -971,6 +964,37 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 void CustomizeEditorUI::Draw(Renderer &renderer) const
 {
 	root.Draw(renderer);
+}
+
+/// <summary>編集画面の共通バーと戻るボタンを登録する。</summary>
+/// <param name="root">登録先のUI。</param>
+/// <param name="width">画面幅。</param>
+/// <param name="height">バーの高さ。</param>
+/// <param name="titleRight">画面タイトル欄の右端。</param>
+/// <param name="title">画面タイトル。</param>
+/// <param name="titleSize">タイトルの文字サイズ。</param>
+void CustomizeEditorUI::AddHeader(GameUI::Root &root, int width, int height, int titleRight,
+	std::string_view title, float titleSize)
+{
+	root.AddPanel({0, 0, width, height}, GameUI::Theme::HeaderImage);
+	root.AddIconButton("back", {16, 8, 82, height - 10}, "", "back");
+	root.AddImage("title/accent", {94, 0, 128, height}, GameUI::Theme::HeaderAccentImage);
+	root.AddLabel("title", {136, 6, titleRight, height - 6}, title, true, titleSize, false, true);
+}
+
+/// <summary>編集画面右上の履歴と保存ボタンを登録する。</summary>
+/// <param name="root">登録先のUI。</param>
+/// <param name="width">画面幅。</param>
+/// <param name="height">バーの高さ。</param>
+/// <param name="canUndo">取り消し可能なら true。</param>
+/// <param name="canRedo">やり直し可能なら true。</param>
+/// <param name="canSave">保存可能なら true。</param>
+void CustomizeEditorUI::AddHistorySaveButtons(GameUI::Root &root, int width, int height,
+	bool canUndo, bool canRedo, bool canSave)
+{
+	root.AddIconButton("undo", {width * 78 / 100, 8, width * 83 / 100, height - 10}, "", "undo", canUndo, false);
+	root.AddIconButton("redo", {width * 84 / 100, 8, width * 89 / 100 - 8, height - 10}, "", "redo", canRedo, false);
+	root.AddPrimaryButton("save", {width * 89 / 100, 8, width - 16, height - 10}, "保存", canSave);
 }
 
 /// <summary>履歴復元後に古い入力バッファとドラッグ捕捉だけを捨てる。</summary>

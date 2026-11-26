@@ -22,6 +22,9 @@ struct MotionPlayerComponent : public Component
 	// true の場合、MotionData::totalFrames 到達後に 0 へ戻す。
 	bool looping = true;
 
+	// エディターの常時プレビューでは、待機の保存設定にかかわらず繰り返す。
+	bool forceIdleLoop = false;
+
 	// false の場合、現在フレームの姿勢で停止する。再開は明示的な開始時のみ。
 	bool playing = true;
 

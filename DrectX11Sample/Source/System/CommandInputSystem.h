@@ -30,6 +30,7 @@ class CommandInputSystem
 public:
 	// InputHistoryComponent からコマンド成立を判定し、CommandBufferComponent に候補を保存する。
 	static void Update(World& world);
+	static std::span<const CommandDirectionStep> GetDirectionalCommand(AttackCommandId commandId);
 
 	// 先行入力として保持する共通猶予フレーム。
 	// 技ごとではなく一括調整できるよう、現段階では System 側の固定値にする。

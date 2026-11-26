@@ -3,7 +3,6 @@
 #include "Data/BattleSetupData.h"
 #include "Data/CharacterDataLoader.h"
 #include "Data/CharacterDataSaver.h"
-#include "ThirdParty/imgui-docking/imgui.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -73,116 +72,7 @@ std::string BuildAttackDataIdFromPath(const std::filesystem::path &attackPath)
 } // namespace
 
 
-/// <summary>キャラクター名と各攻撃ボタンの技割り当て編集画面を描画する。</summary>
-/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
-/// <returns>次に表示する CustomizeMode。</returns>
-CustomizeMode CustomizeCharacterEditorController::DrawEditor(std::string &statusMessage)
-{
-	CustomizeMode nextMode = CustomizeMode::CharacterEditor;
 
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(720.0f, 620.0f), ImGuiCond_FirstUseEver);
-
-	if (ImGui::Begin("Character Editor"))
-	{
-		ImGui::Text("Character Id: %s", draftParameter.characterId.c_str());
-		ImGui::InputText("Character Name", characterNameBuffer.data(), characterNameBuffer.size());
-
-		bool requestedAttackPicker = false;
-		requestedAttackPicker = DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Ground, "Ground Attack Slots") ||
-								requestedAttackPicker;
-		requestedAttackPicker =
-			DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Air, "Air Attack Slots") || requestedAttackPicker;
-		requestedAttackPicker =
-			DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup::Special, "Special Attack Slots") ||
-			requestedAttackPicker;
-		if (requestedAttackPicker)
-		{
-			nextMode = CustomizeMode::AttackPicker;
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Save Character", ImVec2(150.0f, 30.0f)))
-		{
-			saveRequested = true;
-		}
-
-		ImGui::SameLine();
-
-		if (ImGui::Button("Back", ImVec2(120.0f, 30.0f)))
-		{
-			nextMode = CustomizeMode::CharacterSlotSelect;
-		}
-
-		if (!statusMessage.empty())
-		{
-			ImGui::TextWrapped("%s", statusMessage.c_str());
-		}
-	}
-
-	ImGui::End();
-
-	return nextMode;
-}
-
-/// <summary>現在選択中のキャラクター側スロットへ割り当てる AttackData 候補を描画する。</summary>
-/// <param name="statusMessage">画面に表示する処理結果メッセージ。</param>
-/// <returns>次に表示する CustomizeMode。</returns>
-CustomizeMode CustomizeCharacterEditorController::DrawAttackPicker(std::string &statusMessage)
-{
-	CustomizeMode nextMode = CustomizeMode::AttackPicker;
-
-
-	ImGui::SetNextWindowPos(ImVec2(40.0f, 40.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(620.0f, 520.0f), ImGuiCond_FirstUseEver);
-
-	if (ImGui::Begin("Select Attack Data"))
-	{
-		const std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &drafts =
-			GetAttackSlotDrafts(pickingSlotGroup);
-		const CustomizeCharacterAttackSlotDraft &targetSlot = drafts[pickingSlotIndex];
-		ImGui::Text("Assign To: %s %s", CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(pickingSlotGroup)],
-					ToAttackButtonShortLabel(targetSlot.button));
-		ImGui::Separator();
-
-		bool hasCompatibleAttack = false;
-		for (const auto &item : attackPickerItems)
-		{
-			if (!IsAttackCompatibleWithSlotGroup(pickingSlotGroup, item))
-			{
-				continue;
-			}
-
-			hasCompatibleAttack = true;
-			std::ostringstream label;
-			label << (item.displayName.empty() ? item.attackDataId : item.displayName)
-				  << "  [" << item.attackDataId << "]";
-
-			if (ImGui::Selectable(label.str().c_str()))
-			{
-				AssignAttackToCurrentSlot(item.attackDataId, item);
-				nextMode = CustomizeMode::CharacterEditor;
-			}
-		}
-
-		if (!hasCompatibleAttack)
-		{
-			ImGui::TextDisabled("No compatible AttackData found.");
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::Button("Back", ImVec2(120.0f, 28.0f)))
-		{
-			nextMode = CustomizeMode::CharacterEditor;
-		}
-	}
-
-	ImGui::End();
-
-	return nextMode;
-}
 
 /// <summary>技候補をファイルから準備する。描画では準備済み候補だけを参照する。</summary>
 void CustomizeCharacterEditorController::PrepareAttackPicker()
@@ -223,6 +113,27 @@ void CustomizeCharacterEditorController::PrepareAttackPicker()
 			  {
 				  return lhs.attackDataId < rhs.attackDataId;
 			  });
+}
+
+/// <summary>ロードワーカーで準備した作成済み技を取得する。</summary>
+/// <returns>分類で絞る前の候補一覧。</returns>
+const std::vector<AttackData> &CustomizeCharacterEditorController::GetAttackPickerItems() const
+{
+	return attackPickerItems;
+}
+
+/// <summary>準備済み候補から指定の技を検索する。</summary>
+/// <param name="id">保存済みの技ID。</param>
+/// <returns>見つかった技。存在しない場合は nullptr。</returns>
+const AttackData *CustomizeCharacterEditorController::FindAttack(const std::string &id) const
+{
+	const auto found = std::find_if(attackPickerItems.begin(), attackPickerItems.end(),
+		[&id](const AttackData &attack)
+		{
+			return attack.attackDataId == id;
+		});
+
+	return found == attackPickerItems.end() ? nullptr : &*found;
 }
 
 /// <summary>キャラクタースロット番号から CharacterData フォルダ名に使う ID を作る。</summary>
@@ -314,15 +225,6 @@ std::string CustomizeCharacterEditorController::SelectSlot(int slotIndex)
 							: "Loaded character draft with missing or invalid attack data.";
 }
 
-/// <summary>編集画面の保存要求を一度だけ受け取る。</summary>
-/// <returns>保存ボタンが押されていた場合はtrue。</returns>
-bool CustomizeCharacterEditorController::ConsumeSaveRequest()
-{
-	const bool requested = saveRequested;
-	saveRequested = false;
-
-	return requested;
-}
 
 /// <summary>キャラクター編集バッファの内容を CharacterData JSON として保存する。</summary>
 /// <returns>ユーザー表示用の処理結果メッセージ。</returns>
@@ -505,7 +407,7 @@ const CharacterParameterData &CustomizeCharacterEditorController::GetDraftParame
 }
 
 /// <summary>キャラクター名入力用バッファを取得する。</summary>
-/// <returns>ImGui InputText に渡す固定長バッファ。</returns>
+/// <returns>保存時に使用する UTF-8 固定長バッファ。</returns>
 std::array<char, CustomizeCharacterEditorController::CharacterNameBufferSize> &CustomizeCharacterEditorController::
 	GetCharacterNameBuffer()
 {
@@ -636,60 +538,9 @@ bool CustomizeCharacterEditorController::AreRequiredAttackSlotsFilled(std::strin
 	return checkSlots(groundAttackSlotDrafts, "Ground") && checkSlots(airAttackSlotDrafts, "Air");
 }
 
-/// <summary>draftParameter のキャラクター名を ImGui 入力用固定バッファへコピーする。</summary>
+/// <summary>draftParameter のキャラクター名を編集用固定バッファへコピーする。</summary>
 void CustomizeCharacterEditorController::CopyCharacterNameToBuffer()
 {
 	characterNameBuffer.fill('\0');
 	std::snprintf(characterNameBuffer.data(), characterNameBuffer.size(), "%s", draftParameter.characterName.c_str());
-}
-
-/// <summary>指定したキャラクター側スロットグループの割り当て一覧を描画する。</summary>
-/// <param name="group">描画するスロットグループ。</param>
-/// <param name="label">ImGui に表示するグループ名。</param>
-bool CustomizeCharacterEditorController::DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char *label)
-{
-	bool requestedAttackPicker = false;
-
-	ImGui::Separator();
-	ImGui::Text("%s", label);
-
-	std::array<CustomizeCharacterAttackSlotDraft, AttackButtonSlotCount> &drafts = GetAttackSlotDrafts(group);
-	const bool isSpecial = group == CustomizeCharacterAttackSlotGroup::Special;
-
-	for (int slotIndex = 0; slotIndex < AttackButtonSlotCount; ++slotIndex)
-	{
-		CustomizeCharacterAttackSlotDraft &draft = drafts[slotIndex];
-
-		const std::string assignedName =
-			draft.attackDataId.empty()
-				? (isSpecial ? "(Empty)" : "(Required)")
-				: (draft.attackDisplayName.empty() ? draft.attackDataId : draft.attackDisplayName);
-
-		ImGui::PushID(static_cast<int>(group) * 10 + slotIndex);
-		ImGui::Text("%s Slot %s: %s", CharacterSlotGroupLabels[ToCharacterSlotGroupIndex(group)],
-					ToAttackButtonShortLabel(draft.button), assignedName.c_str());
-		ImGui::SameLine(360.0f);
-
-		if (ImGui::Button("Select", ImVec2(90.0f, 24.0f)))
-		{
-			pickingSlotGroup = group;
-			pickingSlotIndex = slotIndex;
-			requestedAttackPicker = true;
-		}
-
-		if (isSpecial)
-		{
-			ImGui::SameLine();
-
-			if (ImGui::Button("Clear", ImVec2(80.0f, 24.0f)))
-			{
-				draft.attackDataId.clear();
-				draft.attackDisplayName.clear();
-			}
-		}
-
-		ImGui::PopID();
-	}
-
-	return requestedAttackPicker;
 }

@@ -38,6 +38,10 @@ class CustomizeEditorUI
 	void Draw(Renderer &renderer) const;
 	void DrawBackdrop(Renderer &renderer, int width, int height) const;
 	static RECT PreviewRegion(int width, int height);
+	static void AddHeader(GameUI::Root &root, int width, int height, int titleRight,
+		std::string_view title, float titleSize = 34.0f);
+	static void AddHistorySaveButtons(GameUI::Root &root, int width, int height,
+		bool canUndo, bool canRedo, bool canSave = true);
 
   private:
 	CustomizeAttackEditorAction requestedAction = CustomizeAttackEditorAction::None;

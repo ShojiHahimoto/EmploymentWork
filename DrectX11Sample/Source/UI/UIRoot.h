@@ -96,7 +96,7 @@ namespace GameUI
 		void AddSectionHeader(std::string_view id, const Rect& bounds, std::string_view text, float fontSize = 18.0f);
 		void AddImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
 		void AddNineSliceImage(std::string_view id, const Rect& bounds, std::string_view imageId, float opacity = 1.0f);
-		void AddButton(std::string_view id, const Rect& bounds, bool enabled = true);
+		void AddButton(std::string_view id, const Rect& bounds, bool enabled = true, std::string_view imageId = {});
 		void AddLabel(std::string_view id, const Rect& bounds, std::string_view text, bool enabled = true,
 			float fontSize = 18.0f, bool centered = false, bool bold = false);
 		void AddButton(std::string_view id, const Rect& bounds, std::string_view text,

@@ -273,9 +273,17 @@ void Root::AddNineSliceImage(std::string_view id, const Rect& bounds, std::strin
 /// <param name="id">フレーム間で安定して維持する一意な識別子。</param>
 /// <param name="b">ボタン矩形。</param>
 /// <param name="enabled">操作可能なら true。</param>
-void Root::AddButton(std::string_view id, const Rect &b, bool enabled)
+/// <param name="imageId">ボタンの背景画像。空なら通常のボタン素材。</param>
+void Root::AddButton(std::string_view id, const Rect &b, bool enabled, std::string_view imageId)
 {
 	AddButton(id, b, std::string_view{}, enabled);
+	if (!imageId.empty())
+	{
+		if (Element *element = FindElement(std::string(id)))
+		{
+			element->imageId = imageId;
+		}
+	}
 }
 /// <summary>文字列リテラルを文字付きボタンの登録へ転送する。</summary>
 /// <param name="id">部品ID。

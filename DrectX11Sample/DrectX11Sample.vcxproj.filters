@@ -204,6 +204,9 @@
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Controller\CustomizeCharacterFlowController.cpp">
+      <Filter>ソース ファイル\Controller</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp">
       <Filter>ソース ファイル\Controller</Filter>
     </ClCompile>
@@ -567,6 +570,9 @@
       <Filter>ヘッダー ファイル\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h">
+      <Filter>ヘッダー ファイル\Controller</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Controller\CustomizeCharacterFlowController.h">
       <Filter>ヘッダー ファイル\Controller</Filter>
     </ClInclude>
     <ClInclude Include="Source\Controller\CustomizeFlowController.h">

@@ -44,6 +44,7 @@
     <ClCompile Include="Source\Input\UIInputSystem.cpp" />
     <ClCompile Include="Source\UI\UIRenderer.cpp" />
     <ClCompile Include="Source\Controller\CustomizeCharacterEditorController.cpp" />
+    <ClCompile Include="Source\Controller\CustomizeCharacterFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeAttackFlowController.cpp" />
     <ClCompile Include="Source\Controller\CustomizeMotionEditorController.cpp" />
@@ -153,6 +154,7 @@
     <ClInclude Include="Source\UI\UIRenderer.h" />
     <ClInclude Include="Source\UI\UITheme.h" />
     <ClInclude Include="Source\Controller\CustomizeCharacterEditorController.h" />
+    <ClInclude Include="Source\Controller\CustomizeCharacterFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeAttackFlowController.h" />
     <ClInclude Include="Source\Controller\CustomizeMotionEditorController.h" />

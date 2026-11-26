@@ -19,9 +19,9 @@ class CustomizeCharacterEditorController
 	static constexpr int CharacterNameBufferSize = 128;
 
 
-	CustomizeMode DrawEditor(std::string &statusMessage);
-
-	CustomizeMode DrawAttackPicker(std::string &statusMessage);
+	const std::vector<AttackData> &GetAttackPickerItems() const;
+	const AttackData *FindAttack(const std::string &id) const;
+	void AssignAttackToCurrentSlot(const std::string &attackDataId, const AttackData &attackData);
 
 	std::string BuildCharacterId(int slotIndex) const;
 
@@ -32,7 +32,6 @@ class CustomizeCharacterEditorController
 	void PrepareAttackPicker();
 
 	std::string SaveDraft();
-	bool ConsumeSaveRequest();
 
 	void RefreshSlotSummaries();
 
@@ -68,9 +67,6 @@ class CustomizeCharacterEditorController
 
 	void RefreshAttackSlotNames();
 
-	bool DrawAttackSlotGroup(CustomizeCharacterAttackSlotGroup group, const char *label);
-
-	void AssignAttackToCurrentSlot(const std::string &attackDataId, const AttackData &attackData);
 
 	CharacterParameterData draftParameter;
 	std::array<char, CharacterNameBufferSize> characterNameBuffer = {};
@@ -82,6 +78,5 @@ class CustomizeCharacterEditorController
 	int selectedSlotIndex = 0;
 	int pickingSlotIndex = 0;
 	std::string editingFolderPath;
-	bool saveRequested = false;
 	std::vector<AttackData> attackPickerItems;
 };
