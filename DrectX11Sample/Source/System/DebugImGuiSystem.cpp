@@ -9,6 +9,7 @@
 #include "Component/StateComponent.h"
 #include "Component/VelocityComponent.h"
 #include "Core/Debugger.h"
+#include "Core/Application.h"
 #include "Manager/SoundManager.h"
 #include "System/TransformSystem.h"
 
@@ -309,6 +310,16 @@ void DebugImGuiSystem::BeginFrame()
 		return;
 	}
 
+	auto &io = ImGui::GetIO();
+	if (Application::IsFullscreen())
+	{
+		io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+	}
+	else
+	{
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	}
+
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
@@ -340,9 +351,10 @@ void DebugImGuiSystem::Render()
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
+	// The next frame checks this even when viewports have just been re-enabled.
+	ImGui::UpdatePlatformWindows();
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-		ImGui::UpdatePlatformWindows();
 		ImGui::RenderPlatformWindowsDefault();
 	}
 #endif

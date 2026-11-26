@@ -28,12 +28,14 @@ public:
 	}
 
 	static void Destroy();	//終了
+	static bool IsFullscreen();
 
 private:
 	static HINSTANCE	m_hInst;		//インスタンスハンドル
 	static HWND			m_hWnd;			//ウィンドウハンドル
 	static uint32_t		m_Width;		//ウィンドウの横幅
 	static uint32_t		m_Height;		//ウィンドウの縦幅
+	static bool fullscreen;
 
 	static bool InitApp();		//初期化
 	static void UninitApp();	//終了処理

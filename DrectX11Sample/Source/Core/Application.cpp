@@ -14,6 +14,14 @@ HINSTANCE	Application::m_hInst;		//インスタンスハンドル
 HWND		Application::m_hWnd;		//ウィンドウハンドル
 uint32_t	Application::m_Width;		//ウィンドウの横幅
 uint32_t	Application::m_Height;		//ウィンドウの縦幅
+bool Application::fullscreen = false;
+
+/// <summary>現在の枠なし全画面表示の状態を取得する。</summary>
+/// <returns>全画面表示中なら true。</returns>
+bool Application::IsFullscreen()
+{
+	return fullscreen;
+}
 
 //ゲームインスタンス
 static Game game;
@@ -186,6 +194,23 @@ void Application::MainLoop()
 		//新たにメッセージがあれば
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
+			// Handle F11 for both the main HWND and detached debug windows on this thread.
+			if (msg.message == WM_KEYDOWN && msg.wParam == VK_F11)
+			{
+				constexpr LPARAM previousKeyState = 1L << 30;
+				if ((msg.lParam & previousKeyState) == 0)
+				{
+					if (!fullscreen && msg.hwnd != GetWindow())
+					{
+						SetForegroundWindow(GetWindow());
+					}
+
+					ActiveFullScreen(!fullscreen);
+				}
+
+				continue;
+			}
+
 			//ウィンドウプロシージャにメッセージを送る
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -249,7 +274,6 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 		return true;
 	}
 	
-	static bool isFullscreen = false;
 	static bool isMessageBoxShowed = false;
 
 	switch (uMsg)
@@ -274,18 +298,12 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 			//PostMessage(hWnd, WM_CLOSE, wParam, lParam);	//「WM_CLOSE」を送る
 		}
 
-		else if (LOWORD(wParam) == VK_F11)
-		{
-			isFullscreen = !isFullscreen;
-
-			ActiveFullScreen(isFullscreen);
-		}
 		break;
 
 	case WM_ACTIVATE:
 		if (wParam == WA_INACTIVE) {
 			//フルスクリーン表示かつメッセージボックスが非表示なら
-			if (isFullscreen && !isMessageBoxShowed)
+			if (fullscreen && !isMessageBoxShowed)
 			{
 				//ウィンドウを最小化する（タスク切り替え時に背後に残る問題対策）
 				ShowWindow(hWnd, SW_MINIMIZE);
@@ -297,10 +315,15 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 	case WM_SIZE:	//ウィンドウサイズに変更があったメッセージ
 		if (wParam != SIZE_MINIMIZED)
 		{
-			int width = LOWORD(lParam);	//横幅
-			int height = HIWORD(lParam);	//縦幅
-			game.OnResize(width, height);
-			//レンダラークラスリサイズ処理
+			const int width = LOWORD(lParam);
+			const int height = HIWORD(lParam);
+			if (width > 0 && height > 0)
+			{
+				m_Width = static_cast<uint32_t>(width);
+				m_Height = static_cast<uint32_t>(height);
+
+				game.OnResize(width, height);
+			}
 		}
 		break;
 
@@ -315,21 +338,31 @@ LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARA
 //---------------------------------------------------------------------------
 // フルスクリーン切り替え処理
 //---------------------------------------------------------------------------
-void Application::ActiveFullScreen(bool _isFullScreen)
+/// <summary>枠なし全画面表示を切り替え、解除時は切り替え前のウィンドウを復元する。</summary>
+/// <param name="isFullScreen">枠なし全画面に切り替える場合は true。</param>
+void Application::ActiveFullScreen(bool isFullScreen)
 {
-	if (_isFullScreen)
+	const HWND window = GetWindow();
+	static RECT windowedBounds = {};
+	static LONG_PTR windowedStyle = 0;
+	fullscreen = isFullScreen;
+
+	if (isFullScreen)
 	{
-		//疑似フルスクリーンモードに変更
-		SetWindowLongPtr(Application::GetWindow(), GWL_STYLE, WS_POPUP | WS_MINIMIZEBOX);	//ウィンドウ枠を削除
-		//ディスプレイ解像度を取得
-		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-		SetWindowPos(Application::GetWindow(), HWND_TOP, 0, 0, screenWidth, screenHeight, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+		GetWindowRect(window, &windowedBounds);
+		windowedStyle = GetWindowLongPtr(window, GWL_STYLE);
+
+		const int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+		const int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+		SetWindowLongPtr(window, GWL_STYLE, WS_POPUP | WS_MINIMIZEBOX);
+		SetWindowPos(window, HWND_TOP, 0, 0, screenWidth, screenHeight, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 	}
 	else
 	{
-		//通常ウィンドウに戻す
-		SetWindowLongPtr(Application::GetWindow(), GWL_STYLE, WS_OVERLAPPEDWINDOW);	//ウィンドウ枠を戻す
-		SetWindowPos(Application::GetWindow(), HWND_TOP, 100, 100, m_Width, m_Height, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+		const int windowWidth = windowedBounds.right - windowedBounds.left;
+		const int windowHeight = windowedBounds.bottom - windowedBounds.top;
+		SetWindowLongPtr(window, GWL_STYLE, windowedStyle);
+		SetWindowPos(window, HWND_TOP, windowedBounds.left, windowedBounds.top,
+			windowWidth, windowHeight, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
 	}
 }

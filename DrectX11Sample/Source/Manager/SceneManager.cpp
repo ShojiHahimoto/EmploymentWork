@@ -322,6 +322,8 @@ void SceneManager::ApplyPendingSceneChange()
 	currentScene = std::move(pendingScene);
 	currentScene->loadWorker = loadWorker;
 	currentScene->saveWorker = saveWorker;
+
+	currentScene->OnResize(width, height);
 	currentScene->Enter();
 }
 
