@@ -488,8 +488,8 @@ AttackData CustomizeAttackEditorController::CreateDefaultAttackData(CustomizeAtt
 		category == CustomizeAttackCategory::Air ? AttackUsableState::Air : AttackUsableState::Ground;
 	attackData.attackHeight = AttackHeight::High;
 	attackData.damage = 100;
-	attackData.hitstunFrames = 30;
-	attackData.guardstunFrames = 30;
+	attackData.hitstunFrames = 15;
+	attackData.guardstunFrames = 8;
 	attackData.hitReactionType = HitReactionType::Normal;
 	attackData.frame.startup = 5;
 	attackData.frame.active = 3;

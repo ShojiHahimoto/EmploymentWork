@@ -51,7 +51,7 @@ namespace
 {
 	constexpr const char* GoldArmorTexture = "assets/model/Player_01/AlloyAtlas.gold.color.png";
 
-	/// <summary>通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
+	/// <summary>向きに応じた見た目オフセットを含め、通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
 	/// <param name="world">描画対象のWorld。</param>
 	/// <param name="id">モデルを持つオブジェクトID。</param>
 	/// <param name="transform">対象のTransform。</param>
@@ -73,7 +73,14 @@ namespace
 		const auto *motion = world.GetComponent<MotionPlayerComponent>(id);
 		if (motion && motion->visualRootOffset != Vector3::Zero)
 		{
-			data.world = data.world * Matrix::CreateTranslation(motion->visualRootOffset);
+			Vector3 drawOffset = motion->visualRootOffset;
+			const auto *state = world.GetComponent<StateComponent>(id);
+			if (state && state->facingDirection == FacingDirection::Left)
+			{
+				drawOffset.x = -drawOffset.x;
+			}
+
+			data.world = data.world * Matrix::CreateTranslation(drawOffset);
 		}
 
 		return data;

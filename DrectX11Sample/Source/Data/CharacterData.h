@@ -38,8 +38,8 @@ struct CharacterParameterData
 	float fallGravityPerFrame = -0.040f;
 	int maxHp = 10000;
 	DirectX::SimpleMath::Vector3 modelScale = DirectX::SimpleMath::Vector3(0.05f, 0.05f, 0.05f);
-	CharacterBoxParameterData pushBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(2.0f, 8.5f) };
-	CharacterBoxParameterData hurtBox = { DirectX::SimpleMath::Vector2(-0.15f, 4.5f), DirectX::SimpleMath::Vector2(1.5f, 8.0f) };
+	CharacterBoxParameterData pushBox = { DirectX::SimpleMath::Vector2(-0.0f, 4.5f), DirectX::SimpleMath::Vector2(4.0f, 9.5f) };
+	CharacterBoxParameterData hurtBox = { DirectX::SimpleMath::Vector2(-0.0f, 4.5f), DirectX::SimpleMath::Vector2(3.5f, 9.0f) };
 };
 
 /// <summary>

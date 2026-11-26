@@ -8,7 +8,7 @@
   "motionDataId": "Attack/Ground/slot_04",
   "hitSoundId": "",
   "damage": 200,
-  "hitstunFrames": 30,
+  "hitstunFrames": 15,
   "guardstunFrames": 8,
   "hitReactionType": "Normal",
   "frame": {
