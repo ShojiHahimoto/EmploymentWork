@@ -269,6 +269,7 @@ namespace Input
 		addKeyboardAxis2D(InputActionMapId::UI, InputActionId::Move, KeyboardKey::Left, KeyboardKey::Right, KeyboardKey::Down, KeyboardKey::Up);
 		addKeyboardAxis2D(InputActionMapId::UI, InputActionId::Move, KeyboardKey::A, KeyboardKey::D, KeyboardKey::S, KeyboardKey::W);
 		addKeyboardButton(InputActionMapId::UI, InputActionId::Submit, KeyboardKey::F);
+		addKeyboardButton(InputActionMapId::UI, InputActionId::Submit, KeyboardKey::Enter);
 		addKeyboardButton(InputActionMapId::UI, InputActionId::Cancel, KeyboardKey::Escape);
 		for (int gamepadIndex = 0; gamepadIndex < MaxXInputGamepads; ++gamepadIndex)
 		{
@@ -519,9 +520,17 @@ namespace Input
 			return;
 		}
 
-		PlayerInputState& player = players[binding.playerIndex];
+		const auto deviceType = binding.deviceType == BindingDeviceType::Keyboard
+			? InputDeviceType::Keyboard : InputDeviceType::Gamepad;
+		MergeActionValue(players[binding.playerIndex], binding, ReadBinding(binding), deviceType);
+	}
+
+	/// <summary>共有操作にも機器別操作にも同じ物理割り当てを使う。</summary>
+	/// <param name="binding">読み取る物理入力の割り当て。</param>
+	/// <returns>現在の入力値。</returns>
+	InputValue InputSystem::ReadBinding(const InputBinding& binding)
+	{
 		InputValue value;
-		InputDeviceType deviceType = InputDeviceType::None;
 
 		if (binding.deviceType == BindingDeviceType::Keyboard)
 		{
@@ -546,7 +555,6 @@ namespace Input
 				value = InputValue::Axis2D(axis);
 			}
 
-			deviceType = InputDeviceType::Keyboard;
 		}
 		else if (binding.deviceType == BindingDeviceType::Gamepad)
 		{
@@ -559,14 +567,41 @@ namespace Input
 				value = InputValue::Axis2D(GetGamepadAxis2D(binding.gamepadAxis2D));
 			}
 
-			deviceType = InputDeviceType::Gamepad;
-		}
-		else
-		{
-			return;
 		}
 
-		MergeActionValue(player, binding, value, deviceType);
+		return value;
+	}
+
+	/// <summary>共通UIマップから指定した機器の値のみを集める。</summary>
+	/// <param name="gamepadIndex">パッド番号。-1の場合はキーボード。</param>
+	/// <returns>他の機器を合流していないUI入力値。</returns>
+	PlayerInputState InputSystem::ReadDeviceUIActions(int gamepadIndex)
+	{
+		PlayerInputState result{};
+		if (currentActionMap != InputActionMapId::UI)
+		{
+			return result;
+		}
+
+		const bool keyboard = gamepadIndex == -1;
+		for (const auto& binding : bindings)
+		{
+			if (binding.actionMap != InputActionMapId::UI)
+			{
+				continue;
+			}
+
+			const bool matchesKeyboard = keyboard && binding.deviceType == BindingDeviceType::Keyboard;
+			const bool matchesGamepad = !keyboard && binding.deviceType == BindingDeviceType::Gamepad &&
+				(binding.valueType == InputValueType::Button ? binding.gamepadButton.gamepadIndex :
+					binding.gamepadAxis2D.gamepadIndex) == gamepadIndex;
+			if (matchesKeyboard || matchesGamepad)
+			{
+				MergeActionValue(result, binding, ReadBinding(binding),
+					keyboard ? InputDeviceType::Keyboard : InputDeviceType::Gamepad);
+			}
+		}
+		return result;
 	}
 
 	/// <summary>

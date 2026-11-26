@@ -10,6 +10,7 @@
 #include "ThirdParty/imgui-docking/imgui.h"
 #include "ThirdParty/ImGuizmo/ImGuizmo.h"
 #include "UI/UIRoot.h"
+#include "Input/UIInputSystem.h"
 
 #include <DirectXMath.h>
 
@@ -975,13 +976,10 @@ void CustomizePreviewController::UpdateCameraInput(const RECT &region)
 	const ImVec2 origin = ImGui::GetMainViewport()->Pos;
 	const POINT clientMouse{static_cast<LONG>(io.MousePos.x - origin.x), static_cast<LONG>(io.MousePos.y - origin.y)};
 
-	if (IsOverEditorToolbar(clientMouse))
-	{
-		return;
-	}
-
-	const bool inside = io.MousePos.x >= origin.x + region.left && io.MousePos.x < origin.x + region.right &&
-						io.MousePos.y >= origin.y + region.top && io.MousePos.y < origin.y + region.bottom;
+	const auto& frame = GameUI::UIInputSystem::GetFrame();
+	const POINT rightStart = frame.rightPointerPressed ? frame.rightPressPosition : clientMouse;
+	const bool inside = PtInRect(&region, clientMouse) && !IsOverEditorToolbar(clientMouse);
+	const bool rightStartsInside = PtInRect(&region, rightStart) && !IsOverEditorToolbar(rightStart);
 	// 操作の基準も固定の初期位置に揃える。再生・シーク・オフセット編集には追従しない。
 	const Vector3 baseTarget = GetPreviewPlayerBasePosition() + Vector3(0, 4, 0);
 	// 開始判定だけを領域内に限定。ドラッグ中は領域外でもボタン解除まで追跡する。
@@ -999,13 +997,13 @@ void CustomizePreviewController::UpdateCameraInput(const RECT &region)
 		return;
 	}
 
-	if (cameraDragButton < 0 && inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive())
+	if (cameraDragButton < 0 && !io.WantCaptureMouse && !ImGui::IsAnyItemActive())
 	{
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		if (rightStartsInside && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		{
 			cameraDragButton = ImGuiMouseButton_Right;
 		}
-		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+		else if (inside && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
 		{
 			cameraDragButton = ImGuiMouseButton_Middle;
 		}

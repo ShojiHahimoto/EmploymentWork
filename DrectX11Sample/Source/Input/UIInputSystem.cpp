@@ -3,11 +3,27 @@
 #include "Input/InputSystem.h"
 
 #include <imm.h>
+#include <windowsx.h>
 
 #pragma comment(lib, "imm32.lib")
 
 namespace GameUI
 {
+/// <summary>文字編集中を除き、共通のキーボード決定を専用UI部品へ渡す。</summary>
+/// <param name="frame">編集画面が使用する入力フレーム。</param>
+/// <param name="editingText">現在のフォーカスが文字を受け取る場合はtrue。</param>
+void UIInputSystem::AddKeyboardSubmit(InputFrame& frame, bool editingText)
+{
+	if (editingText || frame.composing || frame.focusLost || frame.pointerPressed ||
+		Input::InputSystem::GetActionMap() != Input::InputActionMapId::UI)
+	{
+		return;
+	}
+
+	const auto& submit = Input::InputSystem::GetActionState(0, Input::InputActionId::Submit);
+	frame.activatePressed |= submit.trigger && submit.deviceType == Input::InputDeviceType::Keyboard;
+}
+
 namespace
 {
 InputFrame currentFrame;
@@ -22,6 +38,7 @@ bool leftReleased = false;
 bool middlePressed = false;
 bool middleReleased = false;
 bool rightPressed = false;
+POINT rightPressPosition = {};
 bool rightReleased = false;
 int pendingWheelDelta = 0;
 POINT previousPointer = {};
@@ -95,6 +112,7 @@ void UIInputSystem::HandleWindowMessage(HWND windowHandle, UINT message, WPARAM 
 	case WM_RBUTTONDOWN:
 		rightDown = true;
 		rightPressed = true;
+		rightPressPosition = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
 
 		break;
 	case WM_RBUTTONUP:
@@ -237,6 +255,7 @@ void UIInputSystem::Update(HWND windowHandle)
 	currentFrame.middlePointerDown = middleDown;
 	currentFrame.middlePointerReleased = middleReleased;
 	currentFrame.rightPointerPressed = rightPressed;
+	currentFrame.rightPressPosition = rightPressPosition;
 	currentFrame.rightPointerDown = rightDown;
 	currentFrame.rightPointerReleased = rightReleased;
 	currentFrame.wheelDelta = pendingWheelDelta;

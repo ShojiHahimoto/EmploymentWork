@@ -49,6 +49,7 @@ namespace GameUI
 		bool middlePointerDown = false; // 中ボタン押下状態。
 		bool middlePointerReleased = false; // 中ボタン解放エッジ。
 		bool rightPointerPressed = false; // 右ボタン押下エッジ。
+		POINT rightPressPosition = {}; // WM_RBUTTONDOWN時点の座標。
 		bool rightPointerDown = false; // 右ボタン押下状態。
 		bool rightPointerReleased = false; // 右ボタン解放エッジ。
 		int wheelDelta = 0; // Windows標準の120単位を基準とするホイール差分。

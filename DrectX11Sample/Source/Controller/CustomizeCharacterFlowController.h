@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Controller/CustomizeCharacterEditorController.h"
 #include "Core/Renderer.h"
@@ -39,7 +39,7 @@ private:
 	void BuildUI();
 	void BuildSlots(const GameUI::Rect &bounds);
 	void BuildPicker(const GameUI::Rect &bounds);
-	void ApplyUI(World &world);
+	void ApplyUI(World &world, bool wasEditingText);
 	void AddAttackFields(std::string_view id, const AttackData &attack, const GameUI::Rect &bounds, bool command);
 	void NavigateBack();
 	void Save();

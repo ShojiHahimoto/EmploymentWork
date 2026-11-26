@@ -12,6 +12,6 @@ public:
 private:
 	BattleResult result;
 
-	bool WasSubmitTriggered() const;
+	bool WasReturnTriggered() const;
 	void RequestTitleScene();
 };

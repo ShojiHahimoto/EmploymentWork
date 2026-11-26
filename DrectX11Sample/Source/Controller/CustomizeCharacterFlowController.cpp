@@ -159,6 +159,7 @@ void CustomizeCharacterFlowController::Update(World &world)
 {
 	PollSave();
 	const auto before = Capture();
+	const bool wasEditingText = root.WantsTextInput();
 	BuildUI();
 	ResizePreviewTexture();
 	const bool editingName = root.GetEditInteraction().id == "text/character/name" &&
@@ -173,7 +174,7 @@ void CustomizeCharacterFlowController::Update(World &world)
 		CommitName();
 	}
 
-	ApplyUI(world);
+	ApplyUI(world, wasEditingText);
 	UpdatePreview(world);
 }
 
@@ -268,7 +269,10 @@ void CustomizeCharacterFlowController::Redo()
 /// <summary>共通ヘッダーと二つのリストを登録して入力を処理する。</summary>
 void CustomizeCharacterFlowController::BuildUI()
 {
-	const auto &frame = GameUI::UIInputSystem::GetFrame();
+	auto frame = GameUI::UIInputSystem::GetFrame();
+	GameUI::UIInputSystem::AddKeyboardSubmit(frame, root.WantsTextInput());
+	frame.cancelPressed |= frame.rightPointerPressed && !frame.focusLost &&
+		!previewRegion.Contains(frame.rightPressPosition);
 	root.BeginFrame({0, 0, width, height}, frame);
 	const int titleRight = width * 36 / 100;
 	const float titleSize = std::clamp(static_cast<float>(titleRight - 146) / 10.0f, 15.0f, 34.0f);
@@ -421,12 +425,18 @@ void CustomizeCharacterFlowController::AddAttackFields(std::string_view id, cons
 
 /// <summary>ボタンとキャンセル入力を編集・保存・プレビューへ振り分ける。</summary>
 /// <param name="world">プレビュー用 World。</param>
-void CustomizeCharacterFlowController::ApplyUI(World &world)
+/// <param name="wasEditingText">入力処理の前に名前欄を編集中だったか。</param>
+void CustomizeCharacterFlowController::ApplyUI(World &world, bool wasEditingText)
 {
+	const auto &input = GameUI::UIInputSystem::GetFrame();
 	bool cancel = root.WasActivated("back");
-	for (int player = 0; player < Input::MaxPlayers; ++player)
+	if (!wasEditingText && !input.composing && !input.focusLost)
 	{
-		cancel |= Input::InputSystem::GetActionState(player, Input::InputActionId::Cancel).trigger;
+		cancel |= input.rightPointerPressed && !previewRegion.Contains(input.rightPressPosition);
+		for (int player = 0; player < Input::MaxPlayers; ++player)
+		{
+			cancel |= Input::InputSystem::GetActionState(player, Input::InputActionId::Cancel).trigger;
+		}
 	}
 
 	if (cancel)
@@ -443,7 +453,6 @@ void CustomizeCharacterFlowController::ApplyUI(World &world)
 		return;
 	}
 
-	const auto &input = GameUI::UIInputSystem::GetFrame();
 	const auto &focused = root.GetFocusedId();
 	// Reflow after release so the layout cannot move under a captured button.
 	if (pickerOpen && input.pointerReleased && !pickerRegion.Contains(input.pointerPosition) &&

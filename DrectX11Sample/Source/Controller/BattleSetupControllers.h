@@ -84,11 +84,13 @@ public:
 	void Update(const std::vector<BattleSetupControls>& controls);
 	void BuildUI(GameUI::Root& root) const;
 	bool IsComplete() const;
+	bool WantsTitle() const;
 	void Reset();
 
 private:
 	BattleSetup::BattleSetupData& setupData;
 	std::array<int, Input::MaxPlayers> lockedDevices{-1, -1};
+	bool titleRequested = false; // 未決定の機器から受けた、今フレームの戻る要求。
 	std::vector<int> deviceSides;
 };
 

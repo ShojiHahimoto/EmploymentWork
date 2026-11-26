@@ -209,6 +209,12 @@ void CustomizeFlowController::OnResize(int newWidth, int newHeight)
 /// <returns>Cancel が今フレーム押された場合は true。</returns>
 bool CustomizeFlowController::WasCancelTriggered()
 {
+	const auto& frame = GameUI::UIInputSystem::GetFrame();
+	if (frame.rightPointerPressed && !frame.focusLost)
+	{
+		return true;
+	}
+
 	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
 	{
 		const Input::InputActionState &cancel =

@@ -60,28 +60,13 @@ namespace
 
 	BattleSetupControls ReadControls(int device)
 	{
-		constexpr Keyboard keys[] = {Keyboard::Left, Keyboard::Right, Keyboard::Up, Keyboard::Down,
-			Keyboard::Enter, Keyboard::Escape};
-		constexpr Keyboard alternate[] = {Keyboard::A, Keyboard::D, Keyboard::W, Keyboard::S};
-		constexpr Pad buttons[] = {Pad::DPadLeft, Pad::DPadRight, Pad::DPadUp, Pad::DPadDown, Pad::A, Pad::B};
-
-		BattleSetupControls result{};
-		for (size_t i = 0; i < result.size(); ++i)
-		{
-			result[i] = device == 0
-				? Input::InputSystem::IsKeyboardKeyDown(keys[i])
-					|| (i < std::size(alternate) && Input::InputSystem::IsKeyboardKeyDown(alternate[i]))
-				: Input::InputSystem::IsGamepadButtonDown(device - 1, buttons[i]);
-		}
-		if (device != 0)
-		{
-			const auto stick = Input::InputSystem::GetLeftStick(device - 1);
-			result[0] |= stick.x < -0.5f;
-			result[1] |= stick.x > 0.5f;
-			result[2] |= stick.y > 0.5f;
-			result[3] |= stick.y < -0.5f;
-		}
-		return result;
+		const auto state = Input::InputSystem::ReadDeviceUIActions(device - 1);
+		const auto& move = state.actions[static_cast<size_t>(Input::InputActionId::Move)].value.axis;
+		const auto& submit = state.actions[static_cast<size_t>(Input::InputActionId::Submit)].value;
+		const auto& cancel = state.actions[static_cast<size_t>(Input::InputActionId::Cancel)].value;
+		const float threshold = Input::InputSystem::GetSettings().buttonThreshold;
+		return {move.x < -0.5f, move.x > 0.5f, move.y > 0.5f, move.y < -0.5f,
+			submit.IsActive(threshold), cancel.IsActive(threshold)};
 	}
 
 	void AddPlayerTab(GameUI::Root& root, int side, const GameUI::Rect& card)
@@ -118,12 +103,24 @@ namespace
 /// <param name="controls">キーボード、続いて各パッドの押下エッジ。</param>
 void BattleSetupDeviceAssignmentController::Update(const std::vector<BattleSetupControls>& controls)
 {
+	titleRequested = false;
 	deviceSides.resize(controls.size(), 0);
 	for (auto& device : lockedDevices)
 	{
 		if (device >= 0 && !DeviceConnected(device))
 		{
 			device = -1;
+		}
+	}
+
+	// 未決定の機器からの取消は、同時に届いた別機器の決定より優先する。
+	for (int device = 0; device < static_cast<int>(controls.size()); ++device)
+	{
+		if (DeviceConnected(device) && Pressed(controls[device], Control::Cancel) &&
+			lockedDevices[0] != device && lockedDevices[1] != device)
+		{
+			titleRequested = true;
+			return;
 		}
 	}
 
@@ -192,10 +189,18 @@ bool BattleSetupDeviceAssignmentController::IsComplete() const
 	return session.cpuSide >= 0 || (lockedDevices[0] >= 0 && lockedDevices[1] >= 0);
 }
 
+/// <summary>未決定の機器からタイトルへ戻る要求があったか返す。</summary>
+/// <returns>今フレームに戻る要求があればtrue。</returns>
+bool BattleSetupDeviceAssignmentController::WantsTitle() const
+{
+	return titleRequested;
+}
+
 void BattleSetupDeviceAssignmentController::Reset()
 {
 	lockedDevices.fill(-1);
 	deviceSides.clear();
+	titleRequested = false;
 }
 
 /// <summary>機器の決定状態に応じて中央または左上からアイコンを配置する。</summary>
@@ -1204,6 +1209,10 @@ void BattleSetupFlowController::UpdateSetupUI()
 		}
 		previousControls[device] = current;
 	}
+	if (foreground && frame.rightPointerPressed)
+	{
+		edges[0][static_cast<size_t>(Control::Cancel)] = true;
+	}
 
 	frame.focusMove = 0;
 	frame.activatePressed = false;
@@ -1216,7 +1225,12 @@ void BattleSetupFlowController::UpdateSetupUI()
 		const auto& access = edges[DeviceIndex(setupData.players[configOwner].device)];
 		if (capturing)
 		{
-			if (foreground)
+			if (foreground && frame.rightPointerPressed && configOwner >= 0 &&
+				setupData.players[configOwner].device.kind == BattleSetup::InputDeviceKind::Keyboard)
+			{
+				session.capturingTarget = Target::None;
+			}
+			else if (foreground)
 			{
 				inputConfigController.UpdateBindingCapture();
 			}
@@ -1247,6 +1261,11 @@ void BattleSetupFlowController::UpdateSetupUI()
 	else
 	{
 		deviceAssignmentController.Update(edges);
+		if (deviceAssignmentController.WantsTitle())
+		{
+			RequestTitleScene();
+			return;
+		}
 		if (deviceAssignmentController.IsComplete())
 		{
 			selectingCharacters = true;

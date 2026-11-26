@@ -13,6 +13,7 @@ namespace GameUI
 		static void HandleWindowMessage(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 		static void Update(HWND windowHandle);
 		static const InputFrame& GetFrame();
+		static void AddKeyboardSubmit(InputFrame& frame, bool editingText);
 		static void Reset();
 	};
 }

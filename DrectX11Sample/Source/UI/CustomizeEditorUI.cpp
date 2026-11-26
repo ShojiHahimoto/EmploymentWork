@@ -443,7 +443,14 @@ void CustomizeEditorUI::Update(CustomizeAttackEditorController &controller, Cust
 	}
 
 	const bool hadKeyboardCapture = root.WantsKeyboardCapture();
-	const GameUI::InputFrame input = suppressInputOnce ? GameUI::InputFrame{} : GameUI::UIInputSystem::GetFrame();
+	auto input = suppressInputOnce ? GameUI::InputFrame{} : GameUI::UIInputSystem::GetFrame();
+	if (!suppressInputOnce)
+	{
+		GameUI::UIInputSystem::AddKeyboardSubmit(input, root.WantsTextInput());
+		const RECT preview = PreviewRegion(width, height);
+		input.cancelPressed |= input.rightPointerPressed && !input.focusLost &&
+			!PtInRect(&preview, input.rightPressPosition);
+	}
 	suppressInputOnce = false;
 	timelineKeyMoved = false;
 
