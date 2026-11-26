@@ -1771,11 +1771,16 @@ bool Renderer::DrawModel(
 		}
 		m_pDeviceContext->PSSetShaderResources(0, 1, &textureView);
 		const bool satin = mesh.materialIndex < materials.size() && materials[mesh.materialIndex].satinMetal;
+		ID3D11ShaderResourceView* normalView = satin ? materials[mesh.materialIndex].normalTextureView.Get() : nullptr;
+		m_pDeviceContext->PSSetShaderResources(1, 1, &normalView);
 		m_pDeviceContext->PSSetShader(satin && satinMetalPS ? satinMetalPS.Get() : m_pModelPixelShader, nullptr, 0);
 
 		m_pDeviceContext->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
 		drewMesh = true;
 	}
+
+	ID3D11ShaderResourceView* noNormalView = nullptr;
+	m_pDeviceContext->PSSetShaderResources(1, 1, &noNormalView);
 
 	if (needsAlphaBlend)
 	{

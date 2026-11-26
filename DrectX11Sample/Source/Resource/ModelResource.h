@@ -2,6 +2,7 @@
 
 #include <SimpleMath.h>
 #include <d3d11.h>
+#include <wrl/client.h>
 #include "Resource/TexturePreparation.h"
 
 #include <cstdint>
@@ -42,6 +43,7 @@ struct ModelMaterial
 	bool satinMetal = false;
 	std::string diffuseTexturePath;
 	ID3D11ShaderResourceView* diffuseTextureView = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalTextureView;
 
 	~ModelMaterial();
 	ModelMaterial() = default;
@@ -98,6 +100,7 @@ struct PreparedModelMaterial
 	bool satinMetal = false;
 	std::string path;
 	std::shared_ptr<const TexturePreparation::Image> image;
+	std::shared_ptr<const TexturePreparation::Image> normalImage;
 };
 
 struct PreparedModelData

@@ -312,6 +312,18 @@ namespace
 				material.satinMetal = std::string(materialName.C_Str()).starts_with("SatinMetal_");
 			}
 
+			if (material.satinMetal)
+			{
+				const auto normalPath = path.parent_path() / (std::string(materialName.C_Str()) + ".normal.png");
+				auto normalImage = std::make_shared<TexturePreparation::Image>();
+				if (std::filesystem::is_regular_file(normalPath) &&
+					SUCCEEDED(TexturePreparation::DecodeFile(normalPath.c_str(), *normalImage)))
+				{
+					normalImage->format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					material.normalImage = std::move(normalImage);
+				}
+			}
+
 			const auto load = [&](const std::string &key, const aiTexture *embedded)
 			{
 				if (key.empty())
@@ -546,6 +558,7 @@ ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
 	: satinMetal(other.satinMetal)
 	, diffuseTexturePath(std::move(other.diffuseTexturePath))
 	, diffuseTextureView(other.diffuseTextureView)
+	, normalTextureView(std::move(other.normalTextureView))
 {
 	other.diffuseTextureView = nullptr;
 }
@@ -567,6 +580,7 @@ ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 	diffuseTexturePath = std::move(other.diffuseTexturePath);
 	satinMetal = other.satinMetal;
 	diffuseTextureView = other.diffuseTextureView;
+	normalTextureView = std::move(other.normalTextureView);
 	other.diffuseTextureView = nullptr;
 
 	return *this;
@@ -773,6 +787,11 @@ bool ModelResource::Upload(ID3D11Device *device, PreparedModelData &&prepared)
 		auto &material = uploadedMaterials.emplace_back();
 		material.diffuseTexturePath = source.path;
 		material.satinMetal = source.satinMetal;
+		if (source.normalImage)
+		{
+			TexturePreparation::Upload(device, *source.normalImage, material.normalTextureView.GetAddressOf());
+		}
+
 		if (!source.image)
 		{
 			continue;

@@ -24,7 +24,7 @@ void TitleScene::DescribeLoad(SceneLoadRequest &request) const
 	request.uiImageIds = {"title_v2_logo", "title_v2_normal", "title_v2_selected"};
 	//request.models.push_back({"DebugPlayer", "assets/model/DebugPlayer/man.fbx", true});
 	//request.models.push_back({ "DebugPlayer", "assets/model/TitleMannequin/TitleMannequin.fbx", true });
-	request.models.push_back({ "DebugPlayer", "assets/model/Player_01/Player_01.fbx", true });
+	request.models.push_back({ "DebugPlayer", "assets/model/Player_01/Player_01_SurfaceAtlas.fbx", true });
 	request.motionIds.emplace_back("Common/Idle");
 	request.motionIds.emplace_back("Common/JumpLoop");
 	request.characterFolders.push_back(BattleSetup::BuildCharacterFolderPath(0));

@@ -14,18 +14,21 @@ for (const m of source.matchAll(/"SubDeformer::([^"]+)","Cluster" \{[\s\S]*?(Tra
 const sub = (a,b) => a.map((v,i) => v-b[i]);
 const cross = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
 const unit = a => a.map(x => x/(Math.hypot(...a)||1));
-const groups = ['Alloy','Flex','Trim'].map(name => ({name,v:[],n:[],uv:[],f:[],bones:new Map()}));
+const useSurfaceAtlas = process.argv.includes('--surface-atlas');
+const groups = ['Alloy','Flex','Trim'].map(name => ({name,v:[],n:[],uv:[],f:[],bones:new Map(), islands:[]}));
 // Each section gives normalized length, two independent radii and optional center offsets.
 function loft(material,bone,a,b,sections,count=24,exponent=1) {
     const g=groups[material], axis=sub(b,a), direction=unit(axis);
     const u=unit(cross(Math.abs(direction[2])>.85?[0,1,0]:[0,0,1],direction)), v=cross(direction,u);
     const base=g.v.length;
+    g.islands.push({ bone, start: base, wrap: true });
     if (!g.bones.has(bone)) g.bones.set(bone,[]);
-    for (const [t,w,d,du=0,dv=0] of sections) {
+    for (const [t,w,d,du=0,dv=0,rearOffset=0] of sections) {
         for (let j=0;j<count;j++) {
             const s=2*Math.PI*j/count, profile=x=>Math.sign(x)*Math.abs(x)**exponent;
             g.bones.get(bone).push(g.v.length);
-            g.v.push(a.map((x,i)=>x+t*axis[i]+u[i]*(du+w*profile(Math.cos(s)))+v[i]*(dv+d*profile(Math.sin(s)))));
+            const depth = dv + d * profile(Math.sin(s)) + rearOffset * Math.max(0, -Math.sin(s)) ** 2;
+            g.v.push(a.map((x,i)=>x+t*axis[i]+u[i]*(du+w*profile(Math.cos(s)))+v[i]*depth));
             g.n.push([0,0,0]);
             g.uv.push([j/count,t]);
         }
@@ -53,6 +56,7 @@ function plate(shell, outline, angle=0, lift=.45, ridge=.24) {
     const {a,axis,u,v,sections,exponent,bone}=shell;
     for(const layer of [1,0]) {
         const g=groups[layer],start=g.v.length,steps=16;
+        g.islands.push({ bone, start, wrap: false });
         if(!g.bones.has(bone)) g.bones.set(bone,[]);
         for(let row=0;row<outline.length;row++) {
             const [height,half,sweep=0,bend=0]=outline[row];
@@ -88,7 +92,7 @@ function vertical(m,b,x,z,lo,hi,s,n=32,e=1) {
     return loft(m,b,[x,lo,z],[x,hi,z],s,n,e);
 }
 const body=(m,b,lo,hi,s,e=1)=>vertical(m,b,0,0,lo,hi,s,40,e);
-body(1,'Hips',91,112,[[0,5,6],[.2,11,9,0,-1],[.55,14,11.7,0,-1.7],[.9,12,10,0,-1],[1,10,8]]);
+body(1,'Hips',91,112,[[0,4,4],[.2,8,6],[.55,11,8.6,0,-.5],[.9,10,8],[1,9,7]]);
 // A separate vertex grid for each rim keeps the rim normals out of the broad outer face.
 function armour(bone, rows, cols, point, inside, material=0) {
     const g=groups[material];
@@ -97,6 +101,7 @@ function armour(bone, rows, cols, point, inside, material=0) {
     }
     function grid(n,m,sample,reverse) {
         const start=g.v.length;
+        g.islands.push({ bone, start, wrap: false });
         for(let i=0;i<=n;i++) for(let j=0;j<=m;j++) {
             g.bones.get(bone).push(g.v.length);
             g.v.push(sample(i/n,j/m));
@@ -131,17 +136,23 @@ function polarPlate(bone,rows,cols,sample,thickness) {
     };
     armour(bone,rows,cols,(t,u)=>point(t,u,0),(t,u)=>point(t,u,thickness));
 }
-polarPlate('Hips',5,14,(t,u)=>{
-    const s=2*u-1;
-    return [s*(.55+.32*t),90+15*t+3*Math.abs(s)*(1-t),6.8+6*t,8.7+3.5*t,0,1];
-},1);
+// Sample adjoining belt plates on one envelope, leaving narrow open seams.
+for(const [start,end] of [[-.72,.72],[.745,2.48],[2.505,2*Math.PI-2.505],[-2.48,-.745]]) {
+    polarPlate('Hips',6,14,(t,u)=>{
+        const a=start+(end-start)*u;
+        const front=Math.max(0,Math.cos(a));
+        const lower=99.2-8.6*front**5-4.2*Math.max(0,-Math.cos(a))**3;
+        const upper=106.4+2.4*Math.sin(a)**2;
+        return [a,lower+(upper-lower)*t,13+1.35*t,11.6+.85*t,0,-.4];
+    },1.05);
+}
 for(let i=0;i<3;i++) body(1,i===0?'Hips':'Spine2',105+i*5,114+i*5,[[0,10+i,7.5],[.22,12+i,9],[.7,12.5+i,9.4],[1,11+i,8]]);
 // Central abdominal scales are narrower than the surrounding flexible side bands.
 for(let i=0;i<3;i++) {
     vertical(2,i===0?'Hips':'Spine2',0,7.4,106+5*i,111.6+5*i,
         [[0,4.3+i*.65,1.6],[.15,5.1+i*.8,2.1],[.8,5.6+i*.8,2.6],[1,5.2+i*.8,2.25]],24,.68);
 }
-const chest=body(1,'Spine2',119,149,[[0,9,6],[.12,11,8,0,-.3],[.36,14,9.7,0,-.9],[.63,16,10.5,0,-.1],[.83,14,8.7,0,-1.1],[1,7,5]],.96);
+body(1,'Spine2',119,149,[[0,9,6],[.12,11,8,0,-.3],[.36,14,9.7,0,-.9],[.63,16,10.5,0,-.1],[.83,14,8.7,0,-1.1],[1,7,5]],.96);
 for(const side of [-1,1]) {
     polarPlate('Spine2',8,12,(t,u)=>{
         const s=side>0?u:1-u;
@@ -149,13 +160,24 @@ for(const side of [-1,1]) {
         const lower=125-5*Math.min(1,Math.max(0,(s-.28)/.49))+2*Math.max(0,(s-.78)/.22);
         const y=lower+(148-2*s-lower)*t;
         const bulge=Math.sin(Math.PI*t);
-        return [a,y,14+5.3*bulge+1.4*t,10+4.3*bulge-.7*t,0,-.3+.85*(1-s)**4];
+        // A sloping lower plane meets the rounded upper chest at an oblique ridge.
+        // Fade towards the arm socket rather than inflating the entire rib cage.
+        const ridge=.43+.13*s;
+        const lowerPlane=t/ridge;
+        const upperArc=Math.cos((t-ridge)/(1-ridge)*Math.PI/2);
+        const profile=t<ridge?lowerPlane:upperArc;
+        const depth=10+4.3*bulge-.7*t+(1-s*s)*(5.85*profile-4.3*bulge);
+        return [a,y,14+5.3*bulge+1.4*t,depth,0,-.3+.85*(1-s)**4];
     },1.3);
-    plate(chest,[[.2,.25,0,.11],[.41,.49],[.66,.54],[.85,.46],[.94,.27,0,-.06]],Math.PI+side*.58,.55);
-    polarPlate('Hips',4,14,(t,u)=>{
+    polarPlate('Spine2',10,16,(t,u)=>{
         const s=side>0?u:1-u;
-        return [side*(.65+1.85*s),99+7*t+3*Math.sin(s*Math.PI),14.4+.6*t,12-.6*t,0,-1];
-    },1.1);
+        const a=Math.PI+side*1.54*s;
+        const lower=125-4.6*Math.min(1,Math.max(0,(s-.32)/.49));
+        const upper=149-3*s;
+        const arch=Math.sin(Math.PI*t);
+        const lat=2.15*s*s*4*t*(1-t)*Math.min(1,t/.6);
+        return [a,lower+(upper-lower)*t,14+5.3*arch+1.4*t+lat,10.4+4.1*arch-2*t,0,-.8+.6*s];
+    },1.25);
 }
 body(1,'Head',146,164,[[0,7.4,6.8],[.18,6.6,6],[.42,5.2,5.1],[.75,5,5],[1,6,6]]);
 // One continuous shell. Specify the front and rear silhouettes independently.
@@ -175,35 +197,92 @@ const headSections = [
     [.98, 3.8, 5.7, -3.7],
     [1, 1.4, 4, 0]
 ];
-const helmetCore=headSections.map(([t,w,f,r])=>[t,w*.91,(f-r)*.455,0,(f+r)/2]);
-vertical(1,'Head',0,0,155.7,180,helmetCore,40,.9);
-vertical(0,'Head',0,2,179.88,180,[[0,1.72,2.32],[1,1.4,2]],32);
-function helmetSurface(t) {
-    const k=Math.max(1,headSections.findIndex(row=>row[0]>=t));
-    const a=headSections[k-1],b=headSections[k],f=(t-a[0])/(b[0]-a[0]);
-    return a.map((v,i)=>v+(b[i]-v)*f);
+const helmetCore=headSections.map(([t,w,f,r])=>[t,w*.67,(f-r)*.32,0,(f+r)/2]);
+vertical(1,'Head',0,0,156,177.5,helmetCore,40,.9);
+
+// Sagittal stations run from chin to nape. Each row specifies the centreline
+// (Y,Z) and the lateral lip (X,Y,Z). The two creases cross the crown, not the opening.
+const shellStations=[
+    [155.7,7.7,3.35,156.1,5.0],
+    [156.8,8.65,4.1,157.1,5.1],
+    [159.1,9.9,4.9,159.0,4.9],
+    [162.0,10.6,5.8,161.6,4.5],
+    [165.0,11.3,6.5,164.2,3.9],
+    [168.1,11.72,7.2,166.8,2.8],
+    [170.5,11.9,7.8,168.7,1.3],
+    [173.0,11.6,8.35,170.1,-.6],
+    [175.8,10.7,8.7,171.0,-2.3],
+    [178.0,8.4,8.9,171.55,-3.8],
+    [179.4,5.8,9.05,171.85,-5.0],
+    [180,2,9.1,172.0,-6.0],
+    [179.5,-2.6,8.9,172.0,-7.0],
+    [178.3,-6.55,8.45,171.7,-7.9],
+    [176.6,-8.9,7.9,171.2,-8.5],
+    [174.2,-10.12,7.15,170.3,-8.9],
+    [172.45,-10.4,6.6,169.4,-8.9],
+    [169.0,-9.95,6.2,167.0,-8.65],
+    [165.0,-8.45,5.65,164.4,-7.35],
+    [162.0,-6.7,4.8,162.0,-5.7]
+];
+const bands=[-1,-.64,.64,1];
+for(let band=1;band<bands.length;band++) {
+    const surface=(v,u,inset)=>{
+        const row=shellStations[Math.round(v*(shellStations.length-1))];
+        const [y,z,w,lipY,lipZ]=row;
+        const s=bands[band-1]+(bands[band]-bands[band-1])*u;
+        const q=Math.abs(s);
+        const bend=.84*(1-Math.sqrt(Math.max(0,1-q*q)))+.16*Math.max(0,(q-.64)/.36);
+        const shrink=inset?.94:1;
+        return [w*s*shrink,168+(y+(lipY-y)*bend-168)*shrink,
+            1+(z+(lipZ-z)*bend-1)*shrink];
+    };
+    armour('Head',shellStations.length-1,band===2?16:8,
+        (v,u)=>surface(v,u,false),(v,u)=>surface(v,u,true));
 }
-for(const face of [true,false]) {
-    polarPlate('Head',20,face?16:32,(v,u)=>{
-        const s=2*u-1;
-        const t=v+(face?0:.055)*(1-v);
-        const [,w,front,rear]=helmetSurface(t);
-        const edge=.97+.47*t-.13*Math.sin(Math.PI*t);
-        const gap=.026+.18*Math.sin(Math.PI*t)**2;
-        const angle=face?s*edge:Math.PI+s*(Math.PI-edge-gap);
-        const crown=face?.48*Math.sin(Math.PI*t)*(1-Math.abs(s)):0;
-        return [angle,155.7+24.3*t,w,(front-rear)/2,0,(front+rear)/2+crown];
-    },.87);
+// Horizontal cuts through the opening give both the liner and the guard the
+// actual front and rear lip positions, including the sloping jawline.
+const cheekContour=shellStations.map(([, ,x,y,z])=>[x,y,z]);
+function cheekSection(y) {
+    const hits=[];
+    for(let i=0;i<cheekContour.length;i++) {
+        const a=cheekContour[i],b=cheekContour[(i+1)%cheekContour.length];
+        if(y<Math.min(a[1],b[1])||y>=Math.max(a[1],b[1])) {
+            continue;
+        }
+        const t=(y-a[1])/(b[1]-a[1]);
+        hits.push([a[0]+(b[0]-a[0])*t,a[2]+(b[2]-a[2])*t]);
+    }
+    hits.sort((a,b)=>b[1]-a[1]);
+    return [hits[0],hits.at(-1)];
 }
-// Side guards rise towards the back, exposing a curved recess rather than a painted stripe.
+function cheekPoint(side,y,s,offset) {
+    const [front,rear]=cheekSection(y);
+    const t=Math.max(0,Math.min(1,s));
+    const fullness=Math.min(1,(y-156.1)/12);
+    const arch=4*t*(1-t);
+    const rim=front[0]+(rear[0]-front[0])*t-.22;
+    const x=rim+(8.65-rim)*arch*fullness;
+    return [side*Math.min(9.09,x+offset),y,front[1]+(rear[1]-front[1])*s];
+}
 for(const side of [-1,1]) {
-    polarPlate('Head',7,12,(v,u)=>{
+    const cheek=(v,u,offset)=>{
+        const y=156.11+15.88*v;
+        return cheekPoint(side,y,side>0?u:1-u,offset);
+    };
+    armour('Head',24,14,(v,u)=>cheek(v,u,0),(v,u)=>cheek(v,u,-.45),1);
+
+    const guard=(v,u,inset)=>{
         const s=side>0?u:1-u;
-        const low=.17+.20*s,high=.28+.30*Math.sin(s*Math.PI*.65)+.13*s;
-        const t=low+(high-low)*v;
-        const [,w,f,r]=helmetSurface(t);
-        return [side*(1.03+1.32*s),155.7+24.3*t,w+.42,(f-r)/2+.42,0,(f+r)/2];
-    },.63);
+        const bottom=158.15+4.15*s;
+        const top=160.0+11.3*Math.sin(s*Math.PI*.50)**.65;
+        const y=bottom+(top-bottom)*v;
+        // Roll the forward tip into the cheek; slide the rear edge under the shell.
+        const reach=.10+.98*s;
+        const thickness=.12+.36*Math.sin(Math.PI*s);
+        const tuck=1.15*Math.max(0,(s-.82)/.18);
+        return cheekPoint(side,y,reach,thickness-tuck-(inset?.56:0));
+    };
+    armour('Head',10,20,(v,u)=>guard(v,u,false),(v,u)=>guard(v,u,true));
 }
 for(const side of ['Left','Right']) {
     const sign=side==='Left'?1:-1;
@@ -237,7 +316,14 @@ for(const side of ['Left','Right']) {
     const [kx,ky,kz]=pos('Leg');
     const knee=vertical(1,side+'Leg',kx,kz+4,ky-6,ky+6,[[0,2,1],[.22,4,2.7],[.55,5,3.5],[.84,4.5,3],[1,2.4,1.7]],20,.72);
     plate(knee,[[.06,.72,0,.1],[.25,1.22],[.55,1.27],[.78,1.18],[.95,.76,0,-.08]],0,.58,.48);
-    const shin=limb(0,'Leg','Foot',[[.06,4.9,5],[.16,6.1,7.2,0,-.5],[.33,7.6,9.55,0,-2.95],[.48,6.7,8.4,0,-2.5],[.72,4.6,5.5,0,-.3],[.94,3.7,4],[1,3.4,3.6]]);
+    // Intermediate rings follow the original front contour; only the rear arc bulges.
+    const shin=limb(0,'Leg','Foot',[
+        [.06,4.9,5],[.16,6.1,7.2,0,-.5,.55],
+        [.245,6.85,8.375,0,-1.725,1.35],[.2875,7.225,8.9625,0,-2.3375,1.9],
+        [.33,7.6,9.55,0,-2.95,2.6],[.3675,7.375,9.2625,0,-2.8375,2.0],
+        [.405,7.15,8.975,0,-2.725,1.65],[.4425,6.925,8.6875,0,-2.6125,1.45],
+        [.48,6.7,8.4,0,-2.5,1.35],[.72,4.6,5.5,0,-.3],[.94,3.7,4],[1,3.4,3.6]
+    ]);
     plate(shin,[[.12,.54,0,-.03],[.31,.9],[.5,.76],[.72,.57],[.91,.37,0,-.08]],0,.35,.52);
     joint('Foot',3.9);
     const [fx,,fz]=pos('Foot');
@@ -274,9 +360,49 @@ let objects=header, connections=source.split('Connections: {')[1].split('\n').fi
 });
 let id=400,total=0;
 const link=(child,parent)=>connections.push('C: "OO",'+child+','+parent);
+const atlasLayout = {};
+
+// FBX polygon-corner UVs allow a wrapped island to split without changing the mesh.
+function packSurfaceAtlas(group) {
+    const columns = Math.ceil(Math.sqrt(group.islands.length));
+    const padding = 0.04;
+    const islandByVertex = [];
+
+    atlasLayout[group.name] = group.islands.map(({ bone, start, wrap }, index) => {
+        const end = group.islands[index + 1]?.start ?? group.v.length;
+        for (let vertex = start; vertex < end; vertex++) {
+            islandByVertex[vertex] = index;
+        }
+
+        return {
+            bone, wrap,
+            u: (index % columns + padding) / columns,
+            v: (Math.floor(index / columns) + padding) / columns,
+            size: (1 - 2 * padding) / columns
+        };
+    });
+
+    const packed = [];
+    for (let corner = 0; corner < group.f.length; corner += 3) {
+        const vertices = [group.f[corner], group.f[corner + 1], -group.f[corner + 2] - 1];
+        const island = atlasLayout[group.name][islandByVertex[vertices[0]]];
+        const uValues = vertices.map(vertex => group.uv[vertex][0]);
+        const crossesSeam = island.wrap && Math.max(...uValues) - Math.min(...uValues) > 0.5;
+
+        for (const vertex of vertices) {
+            const [u, v] = group.uv[vertex];
+            const localU = crossesSeam && u === 0 ? 1 : u;
+            packed.push(island.u + localU * island.size, island.v + v * island.size);
+        }
+    }
+
+    return packed;
+}
+
 for(const g of groups.filter(g=>g.v.length)) {
     const model=id++,geo=id++,mat=id++,skin=id++,tex=id++,video=id++;
-    const file=g.name+'.bmp',rgb=g.name==='Alloy'?[192,195,201]:g.name==='Trim'?[63,65,69]:[43,45,50];
+    const file = useSurfaceAtlas ? g.name + 'Atlas.color.png' : g.name + '.bmp';
+    const rgb = g.name === 'Alloy' ? [192,195,201] : g.name === 'Trim' ? [63,65,69] : [43,45,50];
     const size=128;
     const bmp=Buffer.alloc(54+size*size*3);
     bmp.write('BM'); bmp.writeUInt32LE(bmp.length,2); bmp.writeUInt32LE(54,10); bmp.writeUInt32LE(40,14);
@@ -287,15 +413,21 @@ for(const g of groups.filter(g=>g.v.length)) {
         const detail=g.name==='Alloy'?brushed:woven;
         for(let c=0;c<3;c++) bmp[54+3*(size*y+x)+c]=Math.round(rgb[2-c]+detail);
     }
-    fs.writeFileSync(path.join(out,file),bmp);
+    if (!useSurfaceAtlas) {
+        fs.writeFileSync(path.join(out,file),bmp);
+    }
     objects+='Model: '+model+',"Model::'+g.name+'","Mesh" { Version: 232 }\n';
     objects+='Geometry: '+geo+',"Geometry::'+g.name+'","Mesh" {\n'+array('Vertices',g.v.flat())+'\n'+array('PolygonVertexIndex',g.f)+'\n';
-    for(const [type,attr,data] of [['Normal','Normals',g.n.map(unit).flat()],['UV','UV',g.uv.flat()]]) {
-        objects+='LayerElement'+type+': 0 {\nVersion: 101\nName: ""\nMappingInformationType: "ByVertice"\nReferenceInformationType: "Direct"\n'+array(attr,data)+'\n}\n';
+    const uvData = useSurfaceAtlas ? packSurfaceAtlas(g) : g.uv.flat();
+    for(const [type,attr,data] of [['Normal','Normals',g.n.map(unit).flat()],['UV','UV',uvData]]) {
+        const mapping = useSurfaceAtlas && type === 'UV' ? 'ByPolygonVertex' : 'ByVertice';
+        objects+='LayerElement'+type+': 0 {\nVersion: 101\nName: ""\nMappingInformationType: "'+mapping+'"\nReferenceInformationType: "Direct"\n'+array(attr,data)+'\n}\n';
     }
     objects+='LayerElementMaterial: 0 {\nVersion: 101\nName: ""\nMappingInformationType: "AllSame"\nReferenceInformationType: "IndexToDirect"\nMaterials: *1 { a: 0 }\n}\nLayer: 0 {\nVersion: 100\n';
     for(const type of ['Normal','Material','UV']) objects+='LayerElement: {\nType: "LayerElement'+type+'"\nTypedIndex: 0\n}\n';
-    const materialName=g.name==='Alloy'?'SatinMetal_Alloy':g.name;
+    const materialName = g.name === 'Alloy'
+        ? (useSurfaceAtlas ? 'SatinMetal_AlloyAtlas' : 'SatinMetal_Alloy')
+        : g.name;
     objects+='}\n}\nMaterial: '+mat+',"Material::'+materialName+'","" {\nShadingModel: "phong"\nProperties70: {\nP: "DiffuseColor","Color","","A",'+rgb.map(x=>x/255).join(',')+'\n}\n}\n';
     objects+='Video: '+video+',"Video::'+g.name+'","Clip" {\nType: "Clip"\nFilename: "'+file+'"\nRelativeFilename: "'+file+'"\n}\nTexture: '+tex+',"Texture::'+g.name+'","" {\nType: "TextureVideoClip"\nFileName: "'+file+'"\nRelativeFilename: "'+file+'"\n}\n';
     link(video,tex); connections.push('C: "OP",'+tex+','+mat+',"DiffuseColor"');
@@ -308,5 +440,9 @@ for(const g of groups.filter(g=>g.v.length)) {
     }
     total+=g.f.length/3;
 }
-fs.writeFileSync(path.join(out,'Player_01.fbx'),objects+'}\nConnections: {\n'+connections.join('\n')+'\n}\n');
+const outputName = useSurfaceAtlas ? 'Player_01_SurfaceAtlas' : 'Player_01';
+fs.writeFileSync(path.join(out,outputName+'.fbx'),objects+'}\nConnections: {\n'+connections.join('\n')+'\n}\n');
+if (useSurfaceAtlas) {
+    fs.writeFileSync(path.join(out, outputName + '.json'), JSON.stringify(atlasLayout, null, 2));
+}
 console.log({bones:names.size,triangles:total});

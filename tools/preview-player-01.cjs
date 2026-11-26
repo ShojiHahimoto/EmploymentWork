@@ -4,8 +4,10 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const root = path.join(__dirname,'..');
 const source = fs.readFileSync(path.join(root,'DrectX11Sample/assets/model/Player_01/Player_01.fbx'),'utf8');
-const details=process.argv.includes('--details');
-const width=1600,height=details?800:640;
+const audit=process.argv.includes('--audit');
+const helmet=process.argv.includes('--helmet');
+const details=audit||helmet||process.argv.includes('--details');
+const width=1600,height=audit||helmet?400:details?800:640;
 const pixels=Buffer.alloc(width*height*3,207);
 const depth=new Float32Array(width*height).fill(-Infinity);
 const unit=a=>a.map(x=>x/Math.hypot(...a));
@@ -14,16 +16,19 @@ for(const mesh of source.split(/(?=Geometry: \d+,)/).slice(1)) {
     const values=name=>mesh.match(new RegExp(name+': \\*\\d+ \\{ a: ([^}]+)'))[1].split(',').map(Number);
     const points=values('Vertices'),normals=values('Normals'),indices=values('PolygonVertexIndex');
     const alloy=mesh.startsWith('Geometry:') && mesh.split('\n')[0].includes('Alloy');
-    const views=details?[168,136,102,7].flatMap((target,col)=>[0,-.65].map((angle,row)=>{
+    const views=audit?[[200,0,12,200,0,0,Math.PI/2],[600,-.5,14,200+168*14,400,0],[1000,Math.PI,8,200+134*8,800,0],[1400,2.5,10,200+103*10,1200,0]]:details?[168,136,102,7].flatMap((target,col)=>[0,-.65].map((angle,row)=>{
         const scale=[13,8.7,10,12][col];
         return [400*col+200,angle,scale,row*400+200+target*scale,col*400,row*400];
     })):[[295,0,3.05],[799,-.76,3.05],[1310,Math.PI,3.05]];
-    for(const [center,angle,scale,baseline=595,left=0,top=0] of views) {
+    const headViews=[[0,0],[-Math.PI/2,0],[-.8,.55],[Math.PI,.5]].map(([angle,pitch],i)=>
+        [200+400*i,angle,13,200+168*13*Math.cos(pitch),400*i,0,pitch]);
+    for(const [center,angle,scale,baseline=595,left=0,top=0,pitch=0] of helmet?headViews:views) {
         const c=Math.cos(angle),s=Math.sin(angle);
         const verts=[];
         for(let i=0;i<points.length;i+=3) {
             const [x,y,z]=points.slice(i,i+3),[nx,ny,nz]=normals.slice(i,i+3);
-            verts.push([center+scale*(x*c-z*s),baseline-y*scale,x*s+z*c,nx*c-nz*s,ny,nx*s+nz*c]);
+            const q=x*s+z*c,nq=nx*s+nz*c,cp=Math.cos(pitch),sp=Math.sin(pitch);
+            verts.push([center+scale*(x*c-z*s),baseline-(y*cp-q*sp)*scale,q*cp+y*sp,nx*c-nz*s,ny*cp-nq*sp,nq*cp+ny*sp]);
         }
         for(let i=0;i<indices.length;i+=3) {
             const [a,b,d]=indices.slice(i,i+3).map(k=>verts[k<0?-k-1:k]);
@@ -60,6 +65,6 @@ function chunk(name,data) {
 const ihdr=Buffer.alloc(13);
 ihdr.writeUInt32BE(width); ihdr.writeUInt32BE(height,4); ihdr[8]=8; ihdr[9]=2;
 const rows=Array.from({length:height},(_,y)=>Buffer.concat([Buffer.alloc(1),pixels.subarray(y*width*3,(y+1)*width*3)]));
-fs.writeFileSync(path.join(root,details?'docs/Player_01/ArmourDetails.png':'docs/Player_01/MeshPreview.png'),Buffer.concat([
+fs.writeFileSync(path.join(root,helmet?'docs/Player_01/HelmetViews.png':audit?'docs/Player_01/ArmourAudit.png':details?'docs/Player_01/ArmourDetails.png':'docs/Player_01/MeshPreview.png'),Buffer.concat([
     Buffer.from('89504e470d0a1a0a','hex'),chunk('IHDR',ihdr),chunk('IDAT',zlib.deflateSync(Buffer.concat(rows))),chunk('IEND',Buffer.alloc(0))
 ]));
