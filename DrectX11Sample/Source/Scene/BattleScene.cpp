@@ -118,6 +118,10 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 {
 	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
 	request.textures.emplace_back("assets/texture/number.png");
+	for (const char* path : BattleHUDSystem::TexturePaths)
+	{
+		request.textures.emplace_back(path);
+	}
 	request.optionalTextures.emplace_back(GoldArmorTexture);
 	request.effectIds = {"HitSpark", "GuardSpark"};
 	request.prepareScene = []
@@ -319,7 +323,7 @@ void BattleScene::Draw(Renderer& renderer)
 	DrawDebugHitBoxes(renderer);
 #endif
 
-	DrawBattleHUD();
+	DrawBattleHUD(renderer);
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
@@ -436,9 +440,15 @@ void BattleScene::RunInitialWorldSetup()
 /// <summary>
 /// BattleScene の HPバーとタイマーをゲームビューに重ねて描画する。
 /// </summary>
-void BattleScene::DrawBattleHUD()
+void BattleScene::DrawBattleHUD(Renderer& renderer)
 {
-	BattleHUDSystem::Draw(world, width, height, hudNumberTexture);
+	BattleHUDSystem::Textures textures{};
+	for (size_t index = 0; index < textures.size(); ++index)
+	{
+		textures[index] = FindSceneTexture(BattleHUDSystem::TexturePaths[index]);
+	}
+
+	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures);
 }
 
 /// <summary>

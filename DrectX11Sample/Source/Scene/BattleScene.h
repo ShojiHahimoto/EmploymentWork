@@ -36,7 +36,7 @@ private:
 	void InitializeBattleSounds();
 	void RunInitialWorldSetup();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
-	void DrawBattleHUD();
+	void DrawBattleHUD(Renderer& renderer);
 	void RequestResultSceneIfBattleFinished();
 
 #if defined(_DEBUG)

@@ -1944,7 +1944,7 @@ void Renderer::DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws)
 /// <param name="destination">描画先の画面座標 RECT。</param>
 /// <param name="source">切り出すテクスチャ領域。</param>
 /// <param name="color">乗算する描画色。</param>
-void Renderer::DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const Color& color)
+void Renderer::DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const Color& color, bool flipX)
 {
 	if (!textureView || !m_pSpriteBatch)
 	{
@@ -1953,7 +1953,8 @@ void Renderer::DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RE
 
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateDisable, 0);
 	m_pSpriteBatch->Begin();
-	m_pSpriteBatch->Draw(textureView, destination, &source, color);
+	m_pSpriteBatch->Draw(textureView, destination, &source, color, 0.0f, DirectX::XMFLOAT2{},
+		flipX ? DirectX::SpriteEffects_FlipHorizontally : DirectX::SpriteEffects_None);
 	m_pSpriteBatch->End();
 	m_pDeviceContext->OMSetDepthStencilState(m_pDepthStateEnable, 0);
 }

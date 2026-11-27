@@ -254,7 +254,7 @@ public:
 	static bool GetTextureSize(ID3D11ShaderResourceView* textureView, int& width, int& height);
 	static void DrawScreenRect(const RECT& destination, const DirectX::SimpleMath::Color& color);
 	static void DrawScreenRectBatch(const std::vector<ScreenRectDraw>& draws);
-	static void DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const DirectX::SimpleMath::Color& color);
+	static void DrawTextureRegion(ID3D11ShaderResourceView* textureView, const RECT& destination, const RECT& source, const DirectX::SimpleMath::Color& color, bool flipX = false);
 	static void DrawFullscreenTexture(ID3D11ShaderResourceView* textureView, int width, int height);
 	static void SetDepthEnable(bool Enable);
 };
