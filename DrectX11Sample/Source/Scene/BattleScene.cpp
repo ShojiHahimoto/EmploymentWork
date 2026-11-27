@@ -161,6 +161,18 @@ void BattleScene::Enter()
 	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
+	round = {};
+	InitializeBattleSounds();
+#if defined(_DEBUG)
+	InitializeDebugSceneView();
+#endif
+	BuildRoundWorld();
+}
+
+/// <summary>試合の得点と対戦設定を保持し、ラウンド用のプレイヤー・カメラ・HUDを初期化する。</summary>
+void BattleScene::BuildRoundWorld()
+{
+	world.Clear();
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
 	world.AddComponent<BattleCameraFollowComponent>(cameraId);
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
@@ -198,17 +210,13 @@ void BattleScene::Enter()
 	//	Vector3(20.0f, 32.0f, 0.0f));
 
 	InitializeBattleHUD();
-	InitializeBattleSounds();
 
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	CameraSystem::SetPerspective(camera, 45.0f, aspectRatio, 0.1f, 1000.0f);
 	world.SetActiveCamera(cameraId, camera);
 
-#if defined(_DEBUG)
-	InitializeDebugSceneView();
-#endif
-
+	BattleResultSystem::BeginRound(world, round);
 	RunInitialWorldSetup();
 }
 
@@ -232,6 +240,39 @@ void BattleScene::Update()
 	UpdateDebugSceneViewCamera();
 #endif
 
+	if (round.waitFrames > 0)
+	{
+		if (round.endReason == RoundEndReason::None)
+		{
+			MotionSystem::Update(world);
+		}
+
+		BattleResultSystem::AdvanceWait(world, round);
+		if (round.waitFrames == 0 && round.endReason != RoundEndReason::None)
+		{
+			if (BattleResultSystem::GetMatchResult(round) != BattleResult::None)
+			{
+				RequestResultSceneIfBattleFinished();
+			}
+			else
+			{
+				++round.number;
+				BuildRoundWorld();
+			}
+		}
+
+		return;
+	}
+
+	if (round.endReason == RoundEndReason::None)
+	{
+		RunActiveRound();
+	}
+}
+
+/// <summary>操作可能なラウンドを1フレーム進め、ダメージ反映後に決着を判定する。</summary>
+void BattleScene::RunActiveRound()
+{
 	SpawnDestroySystem::Update(world);
 	const bool hitStopActive = world.IsHitStopActive();
 
@@ -261,7 +302,7 @@ void BattleScene::Update()
 		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 	}
 
-	BattleResultSystem::Update(world);
+	BattleResultSystem::Update(world, round);
 	EffectSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 
@@ -280,7 +321,6 @@ void BattleScene::Update()
 		}
 	}
 
-	RequestResultSceneIfBattleFinished();
 }
 
 /// <summary>
@@ -448,7 +488,7 @@ void BattleScene::DrawBattleHUD(Renderer& renderer)
 		textures[index] = FindSceneTexture(BattleHUDSystem::TexturePaths[index]);
 	}
 
-	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures);
+	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures, round.points);
 }
 
 /// <summary>
@@ -502,16 +542,16 @@ const World& BattleScene::GetWorld() const
 }
 
 /// <summary>
-/// World に勝敗結果が記録されていれば、ResultScene への切り替えを予約する。
+/// 試合全体の勝敗が決まったら、暫定の ResultScene への切り替えを予約する。
 /// </summary>
 void BattleScene::RequestResultSceneIfBattleFinished()
 {
-	if (!world.HasBattleResult())
+	const BattleResult result = BattleResultSystem::GetMatchResult(round);
+	if (result == BattleResult::None)
 	{
 		return;
 	}
 
-	const BattleResult result = world.GetBattleResult();
 	DebugLog("[BattleScene] Battle finished. Result=", static_cast<int>(result));
 
 	SceneManager::GetInstance().RequestChangeScene(

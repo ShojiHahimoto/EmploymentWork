@@ -54,9 +54,57 @@ namespace
 	}
 }
 
-/// <summary>HP とラウンドタイマーを確認し、勝敗が決まった場合は World に BattleResult を記録する。</summary>
+/// <summary>前ラウンドの決着理由を消し、タイマーを停止した状態で開始待ちに入る。</summary>
+/// <param name="world">ラウンドタイマーを保持する World。</param>
+/// <param name="round">得点を保持したまま開始待ちに切り替えるラウンド状態。</param>
+void BattleResultSystem::BeginRound(World& world, BattleRoundState& round)
+{
+	round.endReason = RoundEndReason::None;
+	round.waitFrames = 60;
+	FindBattleTimer(world)->isRunning = false;
+}
+
+/// <summary>ラウンドの待ち時間を1フレーム進め、開始待ちが終わったときだけタイマーを動かす。</summary>
+/// <param name="world">ラウンドタイマーを保持する World。</param>
+/// <param name="round">残り待ち時間と決着理由を保持するラウンド状態。</param>
+void BattleResultSystem::AdvanceWait(World& world, BattleRoundState& round)
+{
+	if (round.waitFrames > 0)
+	{
+		--round.waitFrames;
+	}
+
+	if (round.waitFrames == 0 && round.endReason == RoundEndReason::None)
+	{
+		FindBattleTimer(world)->isRunning = true;
+	}
+}
+
+/// <summary>両者の取得ポイントから、2ポイント先取制の試合結果を判定する。</summary>
+/// <param name="round">両者の取得ポイントを保持するラウンド状態。</param>
+/// <returns>試合結果。両者とも2ポイント未満なら None。</returns>
+BattleResult BattleResultSystem::GetMatchResult(const BattleRoundState& round)
+{
+	if (round.points[0] >= 2 && round.points[1] >= 2)
+	{
+		return BattleResult::Draw;
+	}
+	if (round.points[0] >= 2)
+	{
+		return BattleResult::Player1Win;
+	}
+	if (round.points[1] >= 2)
+	{
+		return BattleResult::Player2Win;
+	}
+
+	return BattleResult::None;
+}
+
+/// <summary>ラウンドを判定し、決着フレームで一度だけ得点を反映する。</summary>
 /// <param name="world">BattlePlayerId、HealthComponent、BattleTimerComponent を保持する World。</param>
-void BattleResultSystem::Update(World& world)
+/// <param name="round">取得ポイントと現在のラウンド状態。</param>
+void BattleResultSystem::Update(World& world, BattleRoundState& round)
 {
 	if (world.HasBattleResult())
 	{
@@ -66,10 +114,30 @@ void BattleResultSystem::Update(World& world)
 	// 同じフレームで KO とタイムアップが重なった場合は、先にダメージ結果を優先する。
 	if (ResolveKnockOut(world))
 	{
+		round.endReason = world.GetBattleResult() == BattleResult::Draw
+			? RoundEndReason::DoubleKnockOut : RoundEndReason::KnockOut;
+	}
+	else if (UpdateTimerAndResolveTimeUp(world))
+	{
+		round.endReason = RoundEndReason::TimeOver;
+	}
+	else
+	{
 		return;
 	}
 
-	UpdateTimerAndResolveTimeUp(world);
+	const auto result = world.GetBattleResult();
+	if (result == BattleResult::Draw || result == BattleResult::Player1Win)
+	{
+		++round.points[0];
+	}
+	if (result == BattleResult::Draw || result == BattleResult::Player2Win)
+	{
+		++round.points[1];
+	}
+
+	FindBattleTimer(world)->isRunning = false;
+	round.waitFrames = 60;
 }
 
 /// <summary>

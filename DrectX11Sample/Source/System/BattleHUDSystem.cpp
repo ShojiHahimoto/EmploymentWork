@@ -533,7 +533,7 @@ void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight)
 
 /// <summary>対戦HUDと入力履歴を描画する。</summary>
 void BattleHUDSystem::Draw(Renderer& renderer, const World& world, int screenWidth, int screenHeight,
-	ID3D11ShaderResourceView* numberTexture, const Textures& textures)
+	ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints)
 {
 	const float width = static_cast<float>(screenWidth);
 	const float scale = std::min(width / 1600.0f, screenHeight / 900.0f);
@@ -574,7 +574,8 @@ void BattleHUDSystem::Draw(Renderer& renderer, const World& world, int screenWid
 			{
 				const float inset = (25.0f + mark * 34.0f) * scale;
 				const float x = right ? center + timerHalf + inset : center - timerHalf - inset - 30.0f * scale;
-				DrawImage(textures[7], MakeRect(x, 19.0f * scale, 30.0f * scale, 30.0f * scale));
+				const int textureIndex = mark < roundPoints[right ? 1 : 0] ? 14 : 7;
+				DrawImage(textures[textureIndex], MakeRect(x, 19.0f * scale, 30.0f * scale, 30.0f * scale));
 			}
 		}
 

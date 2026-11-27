@@ -7,6 +7,7 @@
 #include "Core/Renderer.h"
 #include "System/DebugCameraControlSystem.h"
 #include "Core/World.h"
+#include "System/BattleResultSystem.h"
 
 class BattleScene : public Scene
 {
@@ -27,6 +28,7 @@ public:
 
 private:
 	World world;
+	BattleRoundState round;
 	BattleSetup::BattleSetupData setupData;
 	int width;
 	int height;
@@ -35,6 +37,8 @@ private:
 	void InitializeBattleHUD();
 	void InitializeBattleSounds();
 	void RunInitialWorldSetup();
+	void BuildRoundWorld();
+	void RunActiveRound();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
 	void DrawBattleHUD(Renderer& renderer);
 	void RequestResultSceneIfBattleFinished();

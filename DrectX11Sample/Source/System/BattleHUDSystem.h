@@ -29,11 +29,12 @@ public:
 		"assets/texture/UI/Parts/SlotSelect/badge_b.png",
 		"assets/texture/UI/Parts/SlotSelect/badge_x.png",
 		"assets/texture/UI/Parts/SlotSelect/badge_y.png",
-		"assets/texture/UI/Parts/Battle/PlayerPlate_P2.png"
+		"assets/texture/UI/Parts/Battle/PlayerPlate_P2.png",
+		"assets/texture/UI/Parts/Battle/Round_Won.png"
 	};
 	using Textures = std::array<ID3D11ShaderResourceView*, TexturePaths.size()>;
 	static void Draw(Renderer& renderer, const World& world, int screenWidth, int screenHeight,
-		ID3D11ShaderResourceView* numberTexture, const Textures& textures);
+		ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints);
 
 private:
 	static void UpdateUIObject(World& world, GameObject& object, int screenWidth);
