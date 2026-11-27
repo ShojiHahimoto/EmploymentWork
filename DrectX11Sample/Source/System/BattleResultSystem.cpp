@@ -4,8 +4,11 @@
 #include "Component/HealthComponent.h"
 #include "Core/GameObject.h"
 #include "Core/World.h"
+#include "Data/JsonValue.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 namespace
 {
@@ -54,14 +57,58 @@ namespace
 	}
 }
 
+/// <summary>演出時間をJSONから読み、未指定や不正な値には既定時間を使う。</summary>
+/// <returns>固定フレーム単位の演出時間。</returns>
+BattleRoundTiming BattleResultSystem::LoadTiming()
+{
+	BattleRoundTiming timing;
+	std::ifstream file("assets/BattleConfig/RoundTiming.json", std::ios::binary);
+	std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+	if (content.starts_with("\xEF\xBB\xBF"))
+	{
+		content.erase(0, 3);
+	}
+
+	JsonValue root;
+	std::string error;
+	if (!JsonParser::Parse(content, root, error))
+	{
+		return timing;
+	}
+
+	const auto read = [&root](const char* key, int fallback)
+	{
+		const auto* value = root.Find(key);
+		const double frames = value ? value->AsNumber(fallback) : fallback;
+		return frames >= 0 && frames <= 36000 ? static_cast<int>(frames) : fallback;
+	};
+
+	timing.roundIntroDelayFrames = read("roundIntroDelayFrames", timing.roundIntroDelayFrames);
+	timing.roundDisplayFrames = read("roundDisplayFrames", timing.roundDisplayFrames);
+	timing.roundToFightFrames = read("roundToFightFrames", timing.roundToFightFrames);
+	timing.fightDisplayFrames = read("fightDisplayFrames", timing.fightDisplayFrames);
+	timing.fightToControlFrames = read("fightToControlFrames", timing.fightToControlFrames);
+	timing.roundEndDisplayDelayFrames = read("roundEndDisplayDelayFrames", timing.roundEndDisplayDelayFrames);
+	timing.roundEndDisplayFrames = read("roundEndDisplayFrames", timing.roundEndDisplayFrames);
+	timing.roundEndAfterDisplayFrames = read("roundEndAfterDisplayFrames", timing.roundEndAfterDisplayFrames);
+	timing.releaseToVictoryFrames = read("releaseToVictoryFrames", timing.releaseToVictoryFrames);
+	timing.victoryMotionFrames = read("victoryMotionFrames", timing.victoryMotionFrames);
+	timing.matchResultDisplayFrames = read("matchResultDisplayFrames", timing.matchResultDisplayFrames);
+	timing.doubleKnockoutDownFrames = read("doubleKnockoutDownFrames", timing.doubleKnockoutDownFrames);
+	timing.fadeOutFrames = read("fadeOutFrames", timing.fadeOutFrames);
+	timing.fadeInFrames = read("fadeInFrames", timing.fadeInFrames);
+	return timing;
+}
+
 /// <summary>前ラウンドの決着理由を消し、タイマーを停止した状態で開始待ちに入る。</summary>
 /// <param name="world">ラウンドタイマーを保持する World。</param>
 /// <param name="round">得点を保持したまま開始待ちに切り替えるラウンド状態。</param>
-void BattleResultSystem::BeginRound(World& world, BattleRoundState& round)
+/// <param name="introFrames">操作解禁までのフレーム数。</param>
+void BattleResultSystem::BeginRound(World& world, BattleRoundState& round, int introFrames)
 {
 	round.endReason = RoundEndReason::None;
-	round.waitFrames = 60;
-	FindBattleTimer(world)->isRunning = false;
+	round.waitFrames = introFrames;
+	FindBattleTimer(world)->isRunning = introFrames == 0;
 }
 
 /// <summary>ラウンドの待ち時間を1フレーム進め、開始待ちが終わったときだけタイマーを動かす。</summary>
@@ -137,7 +184,6 @@ void BattleResultSystem::Update(World& world, BattleRoundState& round)
 	}
 
 	FindBattleTimer(world)->isRunning = false;
-	round.waitFrames = 60;
 }
 
 /// <summary>

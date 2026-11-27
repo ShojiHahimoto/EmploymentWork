@@ -516,7 +516,8 @@ namespace
 /// <param name="world">HUD GameObject と Player の HealthComponent を保持する World。</param>
 /// <param name="screenWidth">現在の描画幅。</param>
 /// <param name="screenHeight">現在の描画高さ。</param>
-void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight)
+/// <param name="holdDamage">被弾状態に応じてダメージ表示を保持する場合は true。</param>
+void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight, bool holdDamage)
 {
 	(void)screenHeight;
 
@@ -527,7 +528,7 @@ void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight)
 			continue;
 		}
 
-		UpdateUIObject(world, object, screenWidth);
+		UpdateUIObject(world, object, screenWidth, holdDamage);
 	}
 }
 
@@ -604,11 +605,12 @@ void BattleHUDSystem::Draw(Renderer& renderer, const World& world, int screenWid
 /// <param name="world">Component を取得する World。</param>
 /// <param name="object">更新対象の UI GameObject。</param>
 /// <param name="screenWidth">現在の描画幅。</param>
-void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int screenWidth)
+/// <param name="holdDamage">ダメージ表示の保持を許可する場合は true。</param>
+void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int screenWidth, bool holdDamage)
 {
 	if (HealthGaugeComponent* gauge = world.GetComponent<HealthGaugeComponent>(object.id))
 	{
-		UpdateHealthGauge(world, object, *gauge, screenWidth);
+		UpdateHealthGauge(world, object, *gauge, screenWidth, holdDamage);
 	}
 
 	// BattleTimerComponent は BattleResultSystem が残りフレームを更新する。
@@ -622,7 +624,9 @@ void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int scree
 /// <param name="object">HealthGaugeComponent を持つ UI GameObject。</param>
 /// <param name="gauge">更新する HealthGaugeComponent。</param>
 /// <param name="screenWidth">現在の描画幅。</param>
-void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth)
+/// <param name="holdDamage">false の場合、被弾状態に関係なくダメージ表示を現在HPに揃える。</param>
+void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth,
+	bool holdDamage)
 {
 	TransformComponent* transform = world.GetTransform(object.id);
 	if (!transform)
@@ -647,7 +651,7 @@ void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, Health
 	else
 	{
 		gauge.healthRatio = currentRatio;
-		if (IsPlayerInDamageHoldState(world, targetPlayerId))
+		if (holdDamage && IsPlayerInDamageHoldState(world, targetPlayerId))
 		{
 			// ヒットスタン/ガードスタン中はダメージバーを古い長さで止め、連続ダメージの蓄積を見せる。
 			gauge.damageRatio = std::max(gauge.damageRatio, gauge.healthRatio);

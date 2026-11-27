@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <iterator>
 
 namespace
 {
@@ -28,7 +29,7 @@ namespace
 #if defined(_DEBUG)
 constexpr const char *CommonMotionLabels[] = {"Idle",		 "WalkForward", "WalkBack", "Crouch",  "Guard",
 											  "CrouchGuard", "JumpStart",	"JumpLoop", "Hitstun", "AirHitstun",
-											  "AirToDown",	 "Down",		"Wakeup"};
+											  "AirToDown",	 "Down",		"Wakeup",	"Win"};
 #endif
 
 /// <summary>
@@ -458,7 +459,7 @@ void CustomizeFlowController::DrawCommonMotionSelect()
 
 	if (ImGui::Begin("Common Motion Select"))
 	{
-		for (int slotIndex = 0; slotIndex < CommonMotionSlotCount; ++slotIndex)
+		for (int slotIndex = 0; slotIndex < std::ssize(CommonMotionLabels); ++slotIndex)
 		{
 			ImGui::PushID(slotIndex);
 

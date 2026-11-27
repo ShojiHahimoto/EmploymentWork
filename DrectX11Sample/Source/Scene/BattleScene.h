@@ -29,6 +29,14 @@ public:
 private:
 	World world;
 	BattleRoundState round;
+	std::array<int, 2> visibleRoundPoints{};
+	BattleRoundTiming roundTiming;
+	int introFrame = 0;
+	int endingFrame = 0;
+	int fadeFrame = -1;
+	bool postStopMotionStarted = false;
+	bool victoryMotionStarted = false;
+	const char* roundBanner = nullptr;
 	BattleSetup::BattleSetupData setupData;
 	int width;
 	int height;
@@ -39,6 +47,9 @@ private:
 	void RunInitialWorldSetup();
 	void BuildRoundWorld();
 	void RunActiveRound();
+	void RunRoundIntro();
+	void RunRoundEnding();
+	void DrawRoundPresentation();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
 	void DrawBattleHUD(Renderer& renderer);
 	void RequestResultSceneIfBattleFinished();

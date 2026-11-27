@@ -13,7 +13,7 @@ class Renderer;
 class BattleHUDSystem
 {
 public:
-	static void Update(World& world, int screenWidth, int screenHeight);
+	static void Update(World& world, int screenWidth, int screenHeight, bool holdDamage = true);
 
 	static constexpr std::array TexturePaths{
 		"assets/texture/UI/Parts/Battle/HP_Frame.png",
@@ -37,7 +37,8 @@ public:
 		ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints);
 
 private:
-	static void UpdateUIObject(World& world, GameObject& object, int screenWidth);
-	static void UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth);
+	static void UpdateUIObject(World& world, GameObject& object, int screenWidth, bool holdDamage);
+	static void UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth,
+		bool holdDamage);
 
 };

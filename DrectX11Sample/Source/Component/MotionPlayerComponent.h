@@ -22,6 +22,9 @@ struct MotionPlayerComponent : public Component
 	// true の場合、MotionData::totalFrames 到達後に 0 へ戻す。
 	bool looping = true;
 
+	// 決着演出では、ループ指定の素材でも最終フレームで停止する。
+	bool holdFinalFrame = false;
+
 	// エディターの常時プレビューでは、待機の保存設定にかかわらず繰り返す。
 	bool forceIdleLoop = false;
 

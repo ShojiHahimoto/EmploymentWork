@@ -627,7 +627,7 @@ void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const Motio
 		return;
 	}
 
-	if (player.looping || motion.looping)
+	if (!player.holdFinalFrame && (player.looping || motion.looping))
 	{
 		player.currentFrame = 0;
 	}

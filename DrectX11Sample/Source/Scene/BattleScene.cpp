@@ -9,6 +9,7 @@
 #include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
+#include "Component/VelocityComponent.h"
 #include "Data/EffectDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
@@ -50,6 +51,18 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	constexpr const char* GoldArmorTexture = "assets/model/Player_01/AlloyAtlas.gold.color.png";
+	constexpr const char* RoundBanners[] = {
+		"assets/texture/UI/Parts/Battle/Round_1.png",
+		"assets/texture/UI/Parts/Battle/Round_2.png",
+		"assets/texture/UI/Parts/Battle/Final_Round.png",
+		"assets/texture/UI/Parts/Battle/Fight.png",
+		"assets/texture/UI/Parts/Battle/KO.png",
+		"assets/texture/UI/Parts/Battle/Double_KO.png",
+		"assets/texture/UI/Parts/Battle/Time_Over.png",
+		"assets/texture/UI/Parts/Battle/Player1_Win.png",
+		"assets/texture/UI/Parts/Battle/Player2_Win.png",
+		"assets/texture/UI/Parts/Battle/Draw.png"
+	};
 
 	/// <summary>向きに応じた見た目オフセットを含め、通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
 	/// <param name="world">描画対象のWorld。</param>
@@ -118,6 +131,10 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 {
 	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
 	request.textures.emplace_back("assets/texture/number.png");
+	for (const char* path : RoundBanners)
+	{
+		request.textures.emplace_back(path);
+	}
 	for (const char* path : BattleHUDSystem::TexturePaths)
 	{
 		request.textures.emplace_back(path);
@@ -146,7 +163,7 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 	};
 	request.motionIds = {"Common/Idle", "Common/WalkForward", "Common/WalkBack", "Common/Crouch",
 						 "Common/Guard", "Common/CrouchGuard", "Common/JumpStart", "Common/JumpLoop",
-						 "Common/Hitstun", "Common/AirHitstun", "Common/AirToDown", "Common/Down", "Common/Wakeup"};
+						 "Common/Hitstun", "Common/AirHitstun", "Common/AirToDown", "Common/Down", "Common/Wakeup", "Common/Win"};
 
 	for (const auto &player : setupData.players)
 	{
@@ -158,21 +175,32 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 /// <summary>準備済み素材を使って対戦用のWorldとカメラを初期化する。</summary>
 void BattleScene::Enter()
 {
+	//キーコンを取得
 	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
+	//アクションマップをゲームプレイに変更
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
+	//ラウンド情報を初期化
 	round = {};
+	visibleRoundPoints = {};
+	//ラウンド中の演出の時間を取得
+	roundTiming = BattleResultSystem::LoadTiming();
+	//サウンド初期化
+	//ラウンドごとにサウンドが再起動しないように他とは別で初期化する
 	InitializeBattleSounds();
 #if defined(_DEBUG)
 	InitializeDebugSceneView();
 #endif
+	//ラウンドを開始する
 	BuildRoundWorld();
 }
 
 /// <summary>試合の得点と対戦設定を保持し、ラウンド用のプレイヤー・カメラ・HUDを初期化する。</summary>
 void BattleScene::BuildRoundWorld()
 {
+	//ワールドを初期化
 	world.Clear();
+	//カメラを生成
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
 	world.AddComponent<BattleCameraFollowComponent>(cameraId);
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
@@ -182,11 +210,13 @@ void BattleScene::BuildRoundWorld()
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
+	//追跡対象にプレイヤーを登録
 	const auto preparedCharacter = [this](const std::string &folder)
 	{
 		return FindSceneCharacter(folder.empty() ? BattleSetup::BuildCharacterFolderPath(0) : folder);
 	};
 
+	//プレイヤー生成
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
@@ -209,14 +239,26 @@ void BattleScene::BuildRoundWorld()
 	//	Vector3(0.0f, 0.0f, 6.0f),
 	//	Vector3(20.0f, 32.0f, 0.0f));
 
+	//HUD初期化
 	InitializeBattleHUD();
 
+	//カメラシステムにカメラ登録
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	CameraSystem::SetPerspective(camera, 45.0f, aspectRatio, 0.1f, 1000.0f);
 	world.SetActiveCamera(cameraId, camera);
 
-	BattleResultSystem::BeginRound(world, round);
+	introFrame = 0;
+	endingFrame = 0;
+	fadeFrame = -1;
+	postStopMotionStarted = false;
+	victoryMotionStarted = false;
+	roundBanner = nullptr;
+	//ラウンド演出による遅延を計算
+	const int fadeIn = round.number > 1 ? roundTiming.fadeInFrames : 0;
+	BattleResultSystem::BeginRound(world, round,
+		fadeIn + roundTiming.roundIntroDelayFrames + roundTiming.roundDisplayFrames +
+		roundTiming.roundToFightFrames + roundTiming.fightDisplayFrames + roundTiming.fightToControlFrames);
 	RunInitialWorldSetup();
 }
 
@@ -240,17 +282,175 @@ void BattleScene::Update()
 	UpdateDebugSceneViewCamera();
 #endif
 
-	if (round.waitFrames > 0)
+	//決着がついた場合ラウンド終了演出を開始
+	if (round.endReason != RoundEndReason::None)
 	{
-		if (round.endReason == RoundEndReason::None)
+		RunRoundEnding();
+	}
+	//待機時間が発生している場合待機時間の処理を進める
+	else if (round.waitFrames > 0)
+	{
+		RunRoundIntro();
+	}
+	//通常のラウンド処理（バトル処理）
+	else
+	{
+		RunActiveRound();
+	}
+}
+
+/// <summary>ラウンド開始時の演出。開幕表示と待機モーションを進め、最後の待ち時間まで対戦操作を止める。</summary>
+void BattleScene::RunRoundIntro()
+{
+	//演出時間を計算
+	const auto& timing = roundTiming;
+	const int fadeIn = round.number > 1 ? timing.fadeInFrames : 0;
+	const int roundStart = fadeIn + timing.roundIntroDelayFrames;
+	const int fightStart = roundStart + timing.roundDisplayFrames + timing.roundToFightFrames;
+	//ラウンド開始時のバナーを選択する
+	roundBanner = nullptr;
+	if (introFrame >= roundStart && introFrame < roundStart + timing.roundDisplayFrames)
+	{
+		roundBanner = RoundBanners[std::clamp(round.number - 1, 0, 2)];
+	}
+	else if (introFrame >= fightStart && introFrame < fightStart + timing.fightDisplayFrames)
+	{
+		roundBanner = RoundBanners[3];
+	}
+
+	//演出による操作停止中もモーションは更新する
+	MotionSystem::Update(world);
+	++introFrame;
+	//待機時間計測を進める
+	BattleResultSystem::AdvanceWait(world, round);
+}
+
+/// <summary>ラウンド決着演出。操作を停止したまま、決着表示・モーション・暗転を順に進める。</summary>
+void BattleScene::RunRoundEnding()
+{
+	//時間を計測
+	const auto& timing = roundTiming;
+	const bool doubleKO = round.endReason == RoundEndReason::DoubleKnockOut;
+	const bool timeOver = round.endReason == RoundEndReason::TimeOver;
+	const int displayEnd = timing.roundEndDisplayDelayFrames + timing.roundEndDisplayFrames;
+	const int release = timeOver ? 0 : displayEnd;
+	const auto result = world.GetBattleResult();
+	const auto match = BattleResultSystem::GetMatchResult(round);
+	const int winner = result == BattleResult::Player1Win ? 0 : (result == BattleResult::Player2Win ? 1 : -1);
+	const int victoryStart = std::max(displayEnd + timing.roundEndAfterDisplayFrames, release +
+		(doubleKO ? timing.doubleKnockoutDownFrames : timing.releaseToVictoryFrames));
+	const bool matchFinished = match != BattleResult::None;
+	const int victoryFrames = winner >= 0 ? timing.victoryMotionFrames : 0;
+	const int framesBeforeFade = matchFinished ? timing.matchResultDisplayFrames : victoryFrames;
+
+	//バナーを選択する
+	roundBanner = nullptr;
+	if (fadeFrame < 0 && endingFrame >= timing.roundEndDisplayDelayFrames && endingFrame < displayEnd)
+	{
+		roundBanner = RoundBanners[timeOver ? 6 : (doubleKO ? 5 : 4)];
+	}
+
+	if (!postStopMotionStarted && endingFrame >= release)
+	{
+		world.ClearHitStop();
+		for (int side = 0; side < World::BattlePlayerCount; ++side)
 		{
-			MotionSystem::Update(world);
+			const auto id = world.GetBattlePlayerId(side);
+			auto* motion = world.GetComponent<MotionPlayerComponent>(id);
+			auto* state = world.GetComponent<StateComponent>(id);
+			if (motion && state)
+			{
+				const bool down = !timeOver && (doubleKO || side != winner);
+				const bool airborne = !state->isGrounded;
+				state->currentActionState = airborne ? PlayerActionState::Fall
+					: (down ? PlayerActionState::Down : PlayerActionState::Idle);
+				if (auto* velocity = world.GetComponent<VelocityComponent>(id))
+				{
+					MovementSystem::SetVelocityX(*velocity, 0);
+					MovementSystem::SetVelocityZ(*velocity, 0);
+				}
+
+				*motion = {};
+				motion->motionDataId = airborne ? "Common/JumpLoop" : (down ? "Common/Down" : "Common/Idle");
+				motion->looping = airborne || !down;
+				motion->holdFinalFrame = !airborne && down;
+			}
 		}
 
-		BattleResultSystem::AdvanceWait(world, round);
-		if (round.waitFrames == 0 && round.endReason != RoundEndReason::None)
+		BattleHUDSystem::Update(world, width, height, false);
+		postStopMotionStarted = true;
+	}
+
+	if (fadeFrame < 0 && endingFrame >= victoryStart)
+	{
+		visibleRoundPoints = round.points;
+		const int victoryFrame = endingFrame - victoryStart;
+		if (!victoryMotionStarted && winner >= 0 && (matchFinished || victoryFrames > 0))
 		{
-			if (BattleResultSystem::GetMatchResult(round) != BattleResult::None)
+			auto* motion = world.GetComponent<MotionPlayerComponent>(world.GetBattlePlayerId(winner));
+			if (motion)
+			{
+				*motion = {};
+				motion->motionDataId = "Common/Win";
+				motion->looping = false;
+				victoryMotionStarted = true;
+			}
+		}
+
+		if (matchFinished && victoryFrame < framesBeforeFade)
+		{
+			roundBanner = RoundBanners[match == BattleResult::Draw ? 9 : (match == BattleResult::Player1Win ? 7 : 8)];
+		}
+
+		bool skip = false;
+		const bool canSkip = matchFinished
+			? victoryFrame < framesBeforeFade
+			: victoryMotionStarted && victoryFrame > 0 && victoryFrame < victoryFrames;
+		if (canSkip)
+		{
+			for (int side = 0; side < World::BattlePlayerCount; ++side)
+			{
+				for (int action = 0; action < static_cast<int>(Input::InputActionId::Count); ++action)
+				{
+					skip |= Input::InputSystem::GetActionState(side, static_cast<Input::InputActionId>(action)).trigger;
+				}
+			}
+		}
+
+		if (skip || victoryFrame >= framesBeforeFade)
+		{
+			roundBanner = nullptr;
+			fadeFrame = 0;
+		}
+	}
+
+	if (postStopMotionStarted)
+	{
+		MovementSystem::Update(world);
+		EmbedResolveSystem::Update(world);
+		for (int side = 0; side < World::BattlePlayerCount; ++side)
+		{
+			const auto id = world.GetBattlePlayerId(side);
+			auto* motion = world.GetComponent<MotionPlayerComponent>(id);
+			const auto* state = world.GetComponent<StateComponent>(id);
+			if (motion && state && state->isGrounded && motion->motionDataId == "Common/JumpLoop")
+			{
+				const bool down = !timeOver && (doubleKO || side != winner);
+				*motion = {};
+				motion->motionDataId = down ? "Common/AirToDown" : "Common/Idle";
+				motion->holdFinalFrame = down;
+			}
+		}
+
+		MotionSystem::Update(world, false);
+		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+	}
+
+	if (fadeFrame >= 0)
+	{
+		if (fadeFrame >= timing.fadeOutFrames)
+		{
+			if (match != BattleResult::None)
 			{
 				RequestResultSceneIfBattleFinished();
 			}
@@ -259,20 +459,54 @@ void BattleScene::Update()
 				++round.number;
 				BuildRoundWorld();
 			}
+
+			return;
 		}
 
-		return;
+		++fadeFrame;
 	}
 
-	if (round.endReason == RoundEndReason::None)
+	++endingFrame;
+}
+
+/// <summary>ラウンド演出の文字と暗転を描画する。</summary>
+void BattleScene::DrawRoundPresentation()
+{
+	if (roundBanner)
 	{
-		RunActiveRound();
+		auto* texture = FindSceneTexture(roundBanner);
+		int textureWidth = 0;
+		int textureHeight = 0;
+		Renderer::GetTextureSize(texture, textureWidth, textureHeight);
+		const float scale = std::min(width / 1600.0f, height / 900.0f) * 0.53f;
+		const int w = static_cast<int>(textureWidth * scale);
+		const int h = static_cast<int>(textureHeight * scale);
+		const int x = (width - w) / 2;
+		const int y = static_cast<int>(height * 0.31f);
+		Renderer::DrawTextureRegion(texture, {x, y, x + w, y + h}, {0, 0, textureWidth, textureHeight},
+			Color(1, 1, 1, 1));
+	}
+
+	float alpha = 0.0f;
+	if (fadeFrame >= 0)
+	{
+		alpha = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
+	}
+	else if (round.number > 1 && round.waitFrames > 0 && introFrame < roundTiming.fadeInFrames)
+	{
+		alpha = 1.0f - static_cast<float>(introFrame) / roundTiming.fadeInFrames;
+	}
+
+	if (alpha > 0.0f)
+	{
+		Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, alpha));
 	}
 }
 
 /// <summary>操作可能なラウンドを1フレーム進め、ダメージ反映後に決着を判定する。</summary>
 void BattleScene::RunActiveRound()
 {
+	roundBanner = nullptr;
 	SpawnDestroySystem::Update(world);
 	const bool hitStopActive = world.IsHitStopActive();
 
@@ -303,10 +537,16 @@ void BattleScene::RunActiveRound()
 	}
 
 	BattleResultSystem::Update(world, round);
+	if (round.endReason != RoundEndReason::None && round.endReason != RoundEndReason::TimeOver)
+	{
+		world.ClearHitStop();
+		world.RequestHitStop(HitStopLevel::SpecialAttack,
+			roundTiming.roundEndDisplayDelayFrames + roundTiming.roundEndDisplayFrames);
+	}
 	EffectSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 
-	if (hitStopActive)
+	if (hitStopActive && round.endReason == RoundEndReason::None)
 	{
 		HitStopSystem::Update(world);
 	}
@@ -364,6 +604,7 @@ void BattleScene::Draw(Renderer& renderer)
 #endif
 
 	DrawBattleHUD(renderer);
+	DrawRoundPresentation();
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
@@ -488,7 +729,7 @@ void BattleScene::DrawBattleHUD(Renderer& renderer)
 		textures[index] = FindSceneTexture(BattleHUDSystem::TexturePaths[index]);
 	}
 
-	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures, round.points);
+	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures, visibleRoundPoints);
 }
 
 /// <summary>

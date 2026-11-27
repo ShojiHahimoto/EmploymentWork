@@ -25,7 +25,6 @@ class CustomizeFlowController
 	void RequestCreationMenu(bool character);
 
   private:
-	static constexpr int CommonMotionSlotCount = 13;
 
 	CustomizeMode mode = CustomizeMode::MainMenu;
 	int creationMenuSelection = 0; // 0:技作成、1:キャラクター作成。今後の専用UIも共有する。
