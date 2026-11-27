@@ -12,6 +12,8 @@
 #include "Core/World.h"
 
 #include "UI/UIRenderer.h"
+#include "Data/BattleSetupData.h"
+#include "System/BattleResultSystem.h"
 
 #include <SimpleMath.h>
 
@@ -597,6 +599,66 @@ void BattleHUDSystem::Draw(Renderer& renderer, const World& world, int screenWid
 
 	DrawInputHistories(world, numberTexture, textures, std::max(92.0f, 116.0f * scale));
 	GameUI::UIRenderer::Draw(renderer, labels);
+}
+
+/// <summary>人間側のリザルト選択肢とフォーカス、決定済み表示を描画する。</summary>
+/// <param name="renderer">専用UIの合成先。</param>
+/// <param name="width">描画幅。</param>
+/// <param name="height">描画高さ。</param>
+/// <param name="setup">メニューを表示する側を決める対戦設定。</param>
+/// <param name="menu">各側の選択状態。</param>
+void BattleHUDSystem::DrawResultMenu(Renderer& renderer, int width, int height,
+	const BattleSetup::BattleSetupData& setup, const BattleResultMenu& menu)
+{
+	constexpr const wchar_t* labels[] = {L"再戦", L"キャラ選択に戻る", L"タイトルに戻る"};
+	const float scale = std::min(width / 1600.0f, height / 900.0f);
+	const float buttonWidth = 298.0f * scale;
+	const float buttonHeight = 58.0f * scale;
+	std::vector<GameUI::DrawCommand> commands;
+	for (size_t side = 0; side < menu.players.size(); ++side)
+	{
+		if (setup.players[side].cpuControlled)
+		{
+			continue;
+		}
+
+		const auto& player = menu.players[side];
+		const float center = width * (side == 0 ? 0.15f : 0.85f);
+		for (int index = 0; index < 3; ++index)
+		{
+			const bool focused = index == player.cursor;
+			const float y = height * 0.49f + index * 69.0f * scale;
+			GameUI::DrawCommand button;
+			button.type = GameUI::DrawCommandType::NineSliceImage;
+			button.bounds = MakeRect(center - buttonWidth * 0.5f, y, buttonWidth, buttonHeight);
+			button.imageId = focused ? "button_primary" : "button";
+			const float opacity = player.confirmed && !focused ? 0.5f : 1.0f;
+			button.color = Color(1, 1, 1, opacity);
+			commands.push_back(button);
+
+			GameUI::DrawCommand label;
+			label.type = GameUI::DrawCommandType::Text;
+			label.bounds = button.bounds;
+			label.text = labels[index];
+			label.fontSize = 25.0f * scale;
+			label.bold = true;
+			label.horizontalAlignment = GameUI::TextHorizontalAlignment::Center;
+			label.color = focused ? Color(1, 1, 1, 1) : Color(0.09f, 0.1f, 0.12f, opacity);
+			commands.push_back(label);
+
+			if (focused && player.confirmed)
+			{
+				GameUI::DrawCommand border;
+				border.type = GameUI::DrawCommandType::StrokeRectangle;
+				border.bounds = button.bounds;
+				border.color = Color(1.0f, 0.82f, 0.38f, 1.0f);
+				border.strokeWidth = 2.0f * scale;
+				commands.push_back(border);
+			}
+		}
+	}
+
+	GameUI::UIRenderer::Draw(renderer, commands);
 }
 
 /// <summary>

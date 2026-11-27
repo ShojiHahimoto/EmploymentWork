@@ -29,6 +29,7 @@ public:
 private:
 	World world;
 	BattleRoundState round;
+	BattleResultMenu resultMenu;
 	std::array<int, 2> visibleRoundPoints{};
 	BattleRoundTiming roundTiming;
 	int introFrame = 0;
@@ -52,7 +53,7 @@ private:
 	void DrawRoundPresentation();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
 	void DrawBattleHUD(Renderer& renderer);
-	void RequestResultSceneIfBattleFinished();
+	void RunResultMenu();
 
 #if defined(_DEBUG)
 	TransformComponent debugSceneCameraTransform;

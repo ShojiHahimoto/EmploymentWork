@@ -4,6 +4,35 @@
 
 class World;
 enum class BattleResult;
+namespace BattleSetup
+{
+	struct BattleSetupData;
+}
+
+/// <summary>リザルトの選択肢。数値が高いほど両者の決定が異なるときに優先する。</summary>
+enum class BattleResultChoice
+{
+	None = -1,
+	Rematch,
+	CharacterSelect,
+	Title
+};
+
+/// <summary>各プレイヤーのフォーカスと決定状態を対戦シーン内に保持する。</summary>
+struct BattleResultMenu
+{
+	struct Player
+	{
+		int cursor = 0;
+		bool confirmed = false;
+		std::array<bool, 4> previous{};
+	};
+
+	std::array<Player, 2> players{};
+	bool active = false;
+	bool inputPrimed = false;
+	BattleResultChoice choice = BattleResultChoice::None;
+};
 
 /// <summary>
 /// ラウンド決着の理由
@@ -51,6 +80,7 @@ public:
 	static void AdvanceWait(World& world, BattleRoundState& round);
 	static void Update(World& world, BattleRoundState& round);
 	static BattleResult GetMatchResult(const BattleRoundState& round);
+	static void UpdateMenu(const BattleSetup::BattleSetupData& setup, BattleResultMenu& menu);
 
 private:
 	static bool ResolveKnockOut(World& world);

@@ -582,11 +582,24 @@ BattleSetupFlowController::BattleSetupFlowController(
 /// UI 入力マップへ切り替え、準備済み一覧を使う。
 /// </summary>
 /// <param name="writer">入力設定の保存先ワーカー。</param>
-void BattleSetupFlowController::Enter(SaveWorker *writer)
+/// <param name="resumeCharacterSelection">対戦後にキャラ選択から再開する場合はtrue。</param>
+void BattleSetupFlowController::Enter(SaveWorker *writer, bool resumeCharacterSelection)
 {
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
 	inputConfigController.SetSaveWorker(writer);
 	statusMessage.clear();
+
+	if (resumeCharacterSelection)
+	{
+		selectingCharacters = true;
+		session.cpuSide = setupData.players[0].cpuControlled ? 0 : (setupData.players[1].cpuControlled ? 1 : -1);
+		session.activeSide = session.cpuSide == 0 ? 1 : 0;
+		previousControls.resize(Input::InputSystem::GetMaxGamepadCount() + 1);
+		for (int device = 0; device < static_cast<int>(previousControls.size()); ++device)
+		{
+			previousControls[device] = ReadControls(device);
+		}
+	}
 }
 
 /// <summary>

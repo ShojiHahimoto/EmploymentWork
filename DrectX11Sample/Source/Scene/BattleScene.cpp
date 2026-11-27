@@ -13,7 +13,8 @@
 #include "Data/EffectDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
-#include "Scene/ResultScene.h"
+#include "Scene/BattleSetupScene.h"
+#include "Scene/TitleScene.h"
 #include "Manager/SceneManager.h"
 #include "System/BattleCameraSystem.h"
 #include "System/BattleHUDSystem.h"
@@ -51,6 +52,7 @@ using namespace DirectX::SimpleMath;
 namespace
 {
 	constexpr const char* GoldArmorTexture = "assets/model/Player_01/AlloyAtlas.gold.color.png";
+	constexpr float ResultBackdropOpacity = 0.48f;
 	constexpr const char* RoundBanners[] = {
 		"assets/texture/UI/Parts/Battle/Round_1.png",
 		"assets/texture/UI/Parts/Battle/Round_2.png",
@@ -131,6 +133,7 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 {
 	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
 	request.textures.emplace_back("assets/texture/number.png");
+	request.uiImageIds = {"button", "button_primary"};
 	for (const char* path : RoundBanners)
 	{
 		request.textures.emplace_back(path);
@@ -182,6 +185,7 @@ void BattleScene::Enter()
 
 	//ラウンド情報を初期化
 	round = {};
+	resultMenu = {};
 	visibleRoundPoints = {};
 	//ラウンド中の演出の時間を取得
 	roundTiming = BattleResultSystem::LoadTiming();
@@ -283,7 +287,11 @@ void BattleScene::Update()
 #endif
 
 	//決着がついた場合ラウンド終了演出を開始
-	if (round.endReason != RoundEndReason::None)
+	if (resultMenu.active)
+	{
+		RunResultMenu();
+	}
+	else if (round.endReason != RoundEndReason::None)
 	{
 		RunRoundEnding();
 	}
@@ -452,7 +460,10 @@ void BattleScene::RunRoundEnding()
 		{
 			if (match != BattleResult::None)
 			{
-				RequestResultSceneIfBattleFinished();
+				resultMenu.active = true;
+				Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
+				fadeFrame = -1;
+				roundBanner = RoundBanners[match == BattleResult::Draw ? 9 : (match == BattleResult::Player1Win ? 7 : 8)];
 			}
 			else
 			{
@@ -491,6 +502,10 @@ void BattleScene::DrawRoundPresentation()
 	if (fadeFrame >= 0)
 	{
 		alpha = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
+		if (BattleResultSystem::GetMatchResult(round) != BattleResult::None)
+		{
+			alpha *= ResultBackdropOpacity;
+		}
 	}
 	else if (round.number > 1 && round.waitFrames > 0 && introFrame < roundTiming.fadeInFrames)
 	{
@@ -604,7 +619,16 @@ void BattleScene::Draw(Renderer& renderer)
 #endif
 
 	DrawBattleHUD(renderer);
+	if (resultMenu.active)
+	{
+		Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, ResultBackdropOpacity));
+	}
+
 	DrawRoundPresentation();
+	if (resultMenu.active)
+	{
+		BattleHUDSystem::DrawResultMenu(renderer, width, height, setupData, resultMenu);
+	}
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
@@ -783,20 +807,34 @@ const World& BattleScene::GetWorld() const
 }
 
 /// <summary>
-/// 試合全体の勝敗が決まったら、暫定の ResultScene への切り替えを予約する。
+/// 両者の決定が揃うまで結果画面を維持し、採用された操作で再戦または遷移する。
 /// </summary>
-void BattleScene::RequestResultSceneIfBattleFinished()
+void BattleScene::RunResultMenu()
 {
-	const BattleResult result = BattleResultSystem::GetMatchResult(round);
-	if (result == BattleResult::None)
+	if (resultMenu.choice != BattleResultChoice::None)
 	{
 		return;
 	}
 
-	DebugLog("[BattleScene] Battle finished. Result=", static_cast<int>(result));
-
-	SceneManager::GetInstance().RequestChangeScene(
-		std::make_unique<ResultScene>(width, height, result));
+	BattleResultSystem::UpdateMenu(setupData, resultMenu);
+	switch (resultMenu.choice)
+	{
+	case BattleResultChoice::Rematch:
+		Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
+		round = {};
+		visibleRoundPoints = {};
+		resultMenu = {};
+		BuildRoundWorld();
+		break;
+	case BattleResultChoice::CharacterSelect:
+		SceneManager::GetInstance().RequestChangeScene(std::make_unique<BattleSetupScene>(width, height, setupData));
+		break;
+	case BattleResultChoice::Title:
+		SceneManager::GetInstance().RequestChangeScene(std::make_unique<TitleScene>(width, height));
+		break;
+	case BattleResultChoice::None:
+		break;
+	}
 }
 
 #if defined(_DEBUG)

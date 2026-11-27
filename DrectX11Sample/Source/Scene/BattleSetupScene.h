@@ -8,6 +8,7 @@ class BattleSetupScene : public Scene
 {
 public:
 	BattleSetupScene(int initialWidth, int initialHeight);
+	BattleSetupScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& previousMatch);
 	~BattleSetupScene() override = default;
 
 	void Enter() override;
@@ -24,4 +25,5 @@ private:
 	World world;
 	BattleSetupSession session;
 	BattleSetupFlowController flowController;
+	bool resumeCharacterSelection = false;
 };

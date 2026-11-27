@@ -167,7 +167,7 @@ class BattleSetupFlowController : protected BattleSetupControllerContext
 public:
 	BattleSetupFlowController(BattleSetupSession& session, int initialWidth, int initialHeight);
 
-	void Enter(SaveWorker *writer);
+	void Enter(SaveWorker *writer, bool resumeCharacterSelection);
 	void Exit();
 	void Update();
 	void Draw(Renderer& renderer);

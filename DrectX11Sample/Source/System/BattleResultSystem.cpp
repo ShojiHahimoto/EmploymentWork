@@ -5,6 +5,9 @@
 #include "Core/GameObject.h"
 #include "Core/World.h"
 #include "Data/JsonValue.h"
+#include "Data/BattleSetupData.h"
+#include "Core/Application.h"
+#include "Input/InputSystem.h"
 
 #include <algorithm>
 #include <fstream>
@@ -98,6 +101,62 @@ BattleRoundTiming BattleResultSystem::LoadTiming()
 	timing.fadeOutFrames = read("fadeOutFrames", timing.fadeOutFrames);
 	timing.fadeInFrames = read("fadeInFrames", timing.fadeInFrames);
 	return timing;
+}
+
+/// <summary>人間側の独立したUI入力を処理し、必要な決定が揃ったら優先度が高い選択を記録する。</summary>
+/// <param name="setup">対戦に使ったデバイスとCPUの割り当て。</param>
+/// <param name="menu">リザルトのカーソル、決定状態、遷移先。</param>
+void BattleResultSystem::UpdateMenu(const BattleSetup::BattleSetupData& setup, BattleResultMenu& menu)
+{
+	bool allConfirmed = true;
+	BattleResultChoice choice = BattleResultChoice::None;
+	const bool foreground = GetForegroundWindow() == Application::GetWindow();
+	for (size_t side = 0; side < menu.players.size(); ++side)
+	{
+		const auto& player = setup.players[side];
+		if (player.cpuControlled)
+		{
+			continue;
+		}
+
+		auto& selection = menu.players[side];
+		const int gamepad = player.device.kind == BattleSetup::InputDeviceKind::Keyboard
+			? -1 : player.device.gamepadIndex;
+		const auto input = Input::InputSystem::ReadDeviceUIActions(gamepad);
+		const auto axis = input.actions[static_cast<size_t>(Input::InputActionId::Move)].value.axis;
+		const float threshold = Input::InputSystem::GetSettings().buttonThreshold;
+		const std::array current{axis.y > 0.5f, axis.y < -0.5f,
+			input.actions[static_cast<size_t>(Input::InputActionId::Submit)].value.IsActive(threshold),
+			input.actions[static_cast<size_t>(Input::InputActionId::Cancel)].value.IsActive(threshold)};
+
+		if (menu.inputPrimed && foreground)
+		{
+			if (current[3] && !selection.previous[3])
+			{
+				selection.confirmed = false;
+			}
+			else if (!selection.confirmed)
+			{
+				const int direction = static_cast<int>(current[1] && !selection.previous[1])
+					- static_cast<int>(current[0] && !selection.previous[0]);
+				selection.cursor = std::clamp(selection.cursor + direction, 0, 2);
+				selection.confirmed = current[2] && !selection.previous[2];
+			}
+		}
+
+		selection.previous = current;
+		allConfirmed &= selection.confirmed;
+		if (selection.confirmed)
+		{
+			choice = std::max(choice, static_cast<BattleResultChoice>(selection.cursor));
+		}
+	}
+
+	menu.inputPrimed = foreground;
+	if (allConfirmed)
+	{
+		menu.choice = choice;
+	}
 }
 
 /// <summary>前ラウンドの決着理由を消し、タイマーを停止した状態で開始待ちに入る。</summary>

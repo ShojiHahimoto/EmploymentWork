@@ -9,6 +9,11 @@ struct HealthGaugeComponent;
 struct TransformComponent;
 class World;
 class Renderer;
+struct BattleResultMenu;
+namespace BattleSetup
+{
+	struct BattleSetupData;
+}
 
 class BattleHUDSystem
 {
@@ -35,6 +40,8 @@ public:
 	using Textures = std::array<ID3D11ShaderResourceView*, TexturePaths.size()>;
 	static void Draw(Renderer& renderer, const World& world, int screenWidth, int screenHeight,
 		ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints);
+	static void DrawResultMenu(Renderer& renderer, int width, int height,
+		const BattleSetup::BattleSetupData& setup, const BattleResultMenu& menu);
 
 private:
 	static void UpdateUIObject(World& world, GameObject& object, int screenWidth, bool holdDamage);

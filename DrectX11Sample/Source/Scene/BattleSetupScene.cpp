@@ -12,12 +12,23 @@ BattleSetupScene::BattleSetupScene(int initialWidth, int initialHeight)
 {
 }
 
+/// <summary>前の試合のデバイスとキャラクター設定を保持してセットアップへ戻る。</summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
+/// <param name="previousMatch">引き継ぐ対戦設定。</param>
+BattleSetupScene::BattleSetupScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& previousMatch)
+	: BattleSetupScene(initialWidth, initialHeight)
+{
+	session.setupData = previousMatch;
+	resumeCharacterSelection = true;
+}
+
 /// <summary>
 /// セットアップ画面の開始処理をControllerへ委譲する。
 /// </summary>
 void BattleSetupScene::Enter()
 {
-	flowController.Enter(saveWorker);
+	flowController.Enter(saveWorker, resumeCharacterSelection);
 }
 
 /// <summary>対戦設定のキャラクターと入力設定一覧を遷移前に準備する。</summary>
