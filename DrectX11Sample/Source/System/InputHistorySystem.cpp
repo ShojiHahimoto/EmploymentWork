@@ -2,7 +2,7 @@
 
 #include "Component/StateComponent.h"
 #include "Input/InputSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cstddef>

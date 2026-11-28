@@ -1,6 +1,6 @@
 ﻿#include "Controller/ResultPresentationController.h"
 
-#include "System/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui.h"
 
 namespace
 {

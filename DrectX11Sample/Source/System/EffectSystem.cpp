@@ -4,7 +4,7 @@
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -144,6 +144,8 @@ namespace
 	}
 }
 
+/// <summary>エフェクトの粒子生成、粒子更新、再生終了時の削除リクエストを行う。</summary>
+/// <param name="world">EffectComponent を持つ GameObject を保持する World。</param>
 void EffectSystem::Update(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())

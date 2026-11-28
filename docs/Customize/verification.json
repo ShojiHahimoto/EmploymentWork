@@ -1,0 +1,36 @@
+{
+  "pages": 103,
+  "linksChecked": 7593,
+  "linkErrors": [],
+  "withoutContractOrExplanation": [],
+  "browser": {
+    "checks": [
+      {
+        "page": "index.html",
+        "h1": "カスタマイズのコードを読む",
+        "bodyOverflow": false
+      },
+      {
+        "page": "chapter-6.html",
+        "h1": "モーション：キーから1フレームの姿勢へ",
+        "bodyOverflow": false
+      },
+      {
+        "page": "chapter-7.html",
+        "h1": "IKと可動域：位置要求を回転に変換する",
+        "bodyOverflow": false
+      },
+      {
+        "page": "files/Controller--CustomizeMotionEditorController.cpp.html",
+        "h1": "Controller/CustomizeMotionEditorController.cpp",
+        "bodyOverflow": false
+      },
+      {
+        "page": "chapter-7 at 800px",
+        "bodyOverflow": false
+      }
+    ],
+    "searchVisibleFiles": 1,
+    "consoleErrors": []
+  }
+}

@@ -1,7 +1,7 @@
 ﻿{
   "motionDataId": "Attack/Special/slot_02",
   "displayName": "ヘッドバッド",
-  "totalFrames": 17,
+  "totalFrames": 44,
   "looping": false,
   "rootOffsetKeys": [],
   "boneTracks": [
@@ -9,20 +9,12 @@
       "boneName": "Head",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -30,20 +22,12 @@
       "boneName": "Spine",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.205, "y": -0.170, "z": 0.036, "w": 0.963 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.345, "y": -0.163, "z": -0.061, "w": 0.922 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.345, "y": -0.163, "z": -0.061, "w": 0.922 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.168, "y": -0.188, "z": 0.019, "w": 0.968 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -51,20 +35,12 @@
       "boneName": "Waist",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.696103036, "z": 0.000000000, "w": 0.717941880 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.000, "y": 0.216, "z": 0.000, "w": 0.976 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.000, "y": 0.233, "z": 0.000, "w": 0.972 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.696103036, "z": 0.000000000, "w": 0.717941880 }
         }
       ]
     },
@@ -72,20 +48,12 @@
       "boneName": "RShoulder",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.480, "y": -0.247, "z": -0.469, "w": 0.699 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.472, "y": 0.380, "z": 0.401, "w": 0.686 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.472, "y": 0.380, "z": 0.401, "w": 0.686 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.437, "y": -0.300, "z": -0.480, "w": 0.699 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -93,20 +61,12 @@
       "boneName": "LShoulder",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.577, "y": 0.240, "z": 0.258, "w": 0.736 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.512, "y": -0.358, "z": -0.482, "w": 0.614 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.512, "y": -0.358, "z": -0.482, "w": 0.614 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.394, "y": 0.351, "z": 0.520, "w": 0.672 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -114,20 +74,12 @@
       "boneName": "RElbow",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.104, "y": -0.261, "z": -0.793, "w": 0.541 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.045, "y": -0.069, "z": -0.906, "w": 0.414 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.045, "y": -0.069, "z": -0.906, "w": 0.414 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.089, "y": -0.325, "z": -0.335, "w": 0.880 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -135,20 +87,12 @@
       "boneName": "LElbow",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.112, "y": 0.066, "z": 0.836, "w": 0.533 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.127, "y": 0.030, "z": 0.958, "w": 0.257 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.127, "y": 0.030, "z": 0.958, "w": 0.257 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.284, "y": 0.378, "z": 0.378, "w": 0.796 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -156,20 +100,12 @@
       "boneName": "RHand",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.243, "y": -0.100, "z": -0.365, "w": 0.893 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.243, "y": -0.100, "z": -0.365, "w": 0.893 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.243, "y": -0.100, "z": -0.365, "w": 0.893 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.263, "y": -0.047, "z": -0.198, "w": 0.943 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -177,20 +113,12 @@
       "boneName": "LHand",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.151, "y": 0.354, "z": 0.314, "w": 0.868 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.265, "y": 0.204, "z": 0.058, "w": 0.941 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.265, "y": 0.204, "z": 0.058, "w": 0.941 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.126, "y": 0.000, "z": 0.000, "w": 0.992 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -198,20 +126,12 @@
       "boneName": "RHipjoint",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.113, "y": 0.000, "z": 0.000, "w": 0.994 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.113, "y": 0.000, "z": 0.000, "w": 0.994 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.113, "y": 0.000, "z": 0.000, "w": 0.994 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.113, "y": 0.000, "z": 0.000, "w": 0.994 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -219,20 +139,12 @@
       "boneName": "LHipjoint",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.204, "y": 0.000, "z": 0.000, "w": 0.979 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.204, "y": 0.000, "z": 0.000, "w": 0.979 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.204, "y": 0.000, "z": 0.000, "w": 0.979 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.204, "y": 0.000, "z": 0.000, "w": 0.979 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -240,20 +152,12 @@
       "boneName": "RKnees",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -261,20 +165,12 @@
       "boneName": "LKnees",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.191, "y": 0.000, "z": 0.000, "w": 0.982 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.191, "y": 0.000, "z": 0.000, "w": 0.982 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.191, "y": 0.000, "z": 0.000, "w": 0.982 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.191, "y": 0.000, "z": 0.000, "w": 0.982 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -282,20 +178,12 @@
       "boneName": "RFeet",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -303,20 +191,12 @@
       "boneName": "LFeet",
       "keyframes": [
         {
-          "frame": 9,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
-        },
-        {
           "frame": 14,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         },
         {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
-        },
-        {
-          "frame": 16,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "frame": 28,
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     }

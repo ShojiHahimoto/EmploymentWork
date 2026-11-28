@@ -25,8 +25,8 @@ struct SkeletonPose
 	// 実親ボーン基準のローカル姿勢。MotionPose がモデルの bind pose から初期化する。
 	std::vector<BonePose> bonePoses;
 
-	// 既存の名前を維持しているが、実体は階層反映済みのモデル空間行列。本体 Transform は含まない。
-	std::vector<DirectX::SimpleMath::Matrix> boneWorldMatrices;
+	// 階層反映済みのモデル空間行列。
+	std::vector<DirectX::SimpleMath::Matrix> boneModelMatrices;
 
 	// Renderer に渡す最終スキニング行列。頂点の boneIndices / boneWeights から参照される。
 	std::vector<DirectX::SimpleMath::Matrix> skinningMatrices;

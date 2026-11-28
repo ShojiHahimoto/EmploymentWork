@@ -2,17 +2,19 @@
 
 #include "Controller/BattleSetupControllers.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class BattleSetupScene : public Scene
 {
 public:
 	BattleSetupScene(int initialWidth, int initialHeight);
+	BattleSetupScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& previousMatch);
 	~BattleSetupScene() override = default;
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer& renderer) override;
 	void OnResize(int newWidth, int newHeight) override;
 
@@ -23,4 +25,5 @@ private:
 	World world;
 	BattleSetupSession session;
 	BattleSetupFlowController flowController;
+	bool resumeCharacterSelection = false;
 };

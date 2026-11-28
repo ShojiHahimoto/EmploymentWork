@@ -4,7 +4,7 @@
 #include "Component/StateComponent.h"
 #include "System/EmbedResolveSystem.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <DirectXMath.h>
 
@@ -140,6 +140,8 @@ namespace
 	}
 }
 
+/// <summary>2 Player の位置から、バトル用メインカメラの Transform を更新する。</summary>
+/// <param name="world">ActiveCamera と BattlePlayerId を保持する World。</param>
 void BattleCameraSystem::Update(World& world)
 {
 	if (!world.HasActiveCamera())
@@ -185,9 +187,7 @@ void BattleCameraSystem::Update(World& world)
 	TransformSystem::SetLocalPosition(*cameraTransform, cameraPosition);
 }
 
-/// <summary>
-/// 指定 Z 平面上で、現在のカメラに映る X 範囲を計算する。
-/// </summary>
+/// <summary>指定 Z 平面上で、現在のカメラに映る X 範囲を計算する。</summary>
 /// <param name="camera">FOV とアスペクト比を持つ CameraComponent。</param>
 /// <param name="cameraTransform">カメラ位置を持つ TransformComponent。</param>
 /// <param name="targetPlaneZ">表示範囲を求めたい対象平面の Z 座標。</param>

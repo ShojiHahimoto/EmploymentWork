@@ -1,17 +1,17 @@
 ﻿#pragma once
 
-#include "World/World.h"
+#include "Core/World.h"
 
 class ResultNavigationController
 {
 public:
 	explicit ResultNavigationController(BattleResult result);
 	void Enter();
-	void RunSystems(bool returnRequestedByView);
+	void Update(bool returnRequestedByView);
 
 private:
 	BattleResult result;
 
-	bool WasSubmitTriggered() const;
+	bool WasReturnTriggered() const;
 	void RequestTitleScene();
 };

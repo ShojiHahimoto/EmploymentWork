@@ -1,4 +1,4 @@
-﻿// https://github.com/CedricGuillemet/ImGuizmo
+// https://github.com/CedricGuillemet/ImGuizmo
 // v1.92.5 WIP
 //
 // The MIT License(MIT)
@@ -27,8 +27,8 @@
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
-#include "System/imgui-docking/imgui.h"
-#include "System/imgui-docking/imgui_internal.h"
+#include "ThirdParty/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui_internal.h"
 #include "ImGuizmo.h"
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -778,8 +778,12 @@ namespace IMGUIZMO_NAMESPACE
    };
 
    static Context gContext;
-   static bool translationAxesOnly = false;
-   void SetTranslationAxesOnly(bool enabled) { translationAxesOnly = enabled; }
+   static bool screenTranslationEnabled = true;
+
+   void SetScreenTranslationEnabled(bool enabled)
+   {
+      screenTranslationEnabled = enabled;
+   }
 
    static const vec_t directionUnary[3] = { makeVect(1.f, 0.f, 0.f), makeVect(0.f, 1.f, 0.f), makeVect(0.f, 0.f, 1.f) };
    static const char* translationInfoMask[] = { "X : %5.3f", "Y : %5.3f", "Z : %5.3f",
@@ -1669,7 +1673,7 @@ namespace IMGUIZMO_NAMESPACE
          // draw plane
          if (!gContext.mbUsing || (gContext.mbUsing && type == MT_MOVE_YZ + i))
          {
-            if (!translationAxesOnly && belowPlaneLimit && Contains(op, TRANSLATE_PLANS[i]))
+            if (belowPlaneLimit && Contains(op, TRANSLATE_PLANS[i]))
             {
                ImVec2 screenQuadPts[4];
                for (int j = 0; j < 4; ++j)
@@ -1683,8 +1687,10 @@ namespace IMGUIZMO_NAMESPACE
          }
       }
 
-      if (!translationAxesOnly)
+      if (screenTranslationEnabled)
+      {
          drawList->AddCircleFilled(gContext.mScreenSquareCenter, gContext.mStyle.CenterCircleSize, colors[0], 32);
+      }
 
       if (gContext.mbUsing && (gContext.GetCurrentID() == gContext.mEditingID) && IsTranslateType(type))
       {
@@ -2207,7 +2213,7 @@ namespace IMGUIZMO_NAMESPACE
       // screen
       if (io.MousePos.x >= gContext.mScreenSquareMin.x && io.MousePos.x <= gContext.mScreenSquareMax.x &&
          io.MousePos.y >= gContext.mScreenSquareMin.y && io.MousePos.y <= gContext.mScreenSquareMax.y &&
-         Contains(op, TRANSLATE) && !translationAxesOnly)
+         Contains(op, TRANSLATE) && screenTranslationEnabled)
       {
          type = MT_MOVE_SCREEN;
       }
@@ -2241,7 +2247,7 @@ namespace IMGUIZMO_NAMESPACE
 
          const float dx = dirPlaneX.Dot3((posOnPlan - gContext.mModel.v.position) * (1.f / gContext.mScreenFactor));
          const float dy = dirPlaneY.Dot3((posOnPlan - gContext.mModel.v.position) * (1.f / gContext.mScreenFactor));
-         if (!translationAxesOnly && belowPlaneLimit && dx >= quadUV[0] && dx <= quadUV[4] && dy >= quadUV[1] && dy <= quadUV[3] && Contains(op, TRANSLATE_PLANS[i]))
+         if (belowPlaneLimit && dx >= quadUV[0] && dx <= quadUV[4] && dy >= quadUV[1] && dy <= quadUV[3] && Contains(op, TRANSLATE_PLANS[i]))
          {
             if ((!isAxisMasked || isMultipleAxesMasked) && !isNoAxesMasked)
                break;

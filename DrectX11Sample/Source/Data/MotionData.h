@@ -67,25 +67,5 @@ struct MotionData
 class MotionDataManager
 {
 public:
-	/// <summary>
-	/// 指定 ID の MotionData を読み込み、読み込み済みなら再利用する。
-	/// </summary>
-	/// <param name="motionDataId">assets/MotionData 配下のモーション ID。</param>
-	/// <returns>読み込みまたは再利用に成功した場合は true。</returns>
-	static bool LoadMotionData(const std::string& motionDataId);
-
-	/// <summary>
-	/// 読み込み済み MotionData を取得する。
-	/// </summary>
-	/// <param name="motionDataId">取得するモーション ID。</param>
-	/// <returns>見つかった MotionData。存在しない場合は nullptr。</returns>
 	static const MotionData* GetMotionData(const std::string& motionDataId);
-
-	/// <summary>
-	/// 読み込み済み MotionData を全て破棄する。
-	/// </summary>
-	static void UnloadAll();
-
-private:
-	static std::unordered_map<std::string, std::unique_ptr<MotionData>> resources;
 };

@@ -1,7 +1,7 @@
 ﻿#include "System/HitStopSystem.h"
 
 #include "Data/AttackData.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 namespace
 {
@@ -19,9 +19,7 @@ void HitStopSystem::Update(World& world)
 	world.AdvanceHitStopFrame();
 }
 
-/// <summary>
-/// 解決済みのヒット/ガード結果から、対応するヒットストップを World へ要求する。
-/// </summary>
+/// <summary>解決済みのヒット/ガード結果から、対応するヒットストップを World へ要求する。</summary>
 /// <param name="world">ヒットストップ状態を保持する World。</param>
 /// <param name="result">HitCollisionSystem が収集した攻撃接触結果。</param>
 /// <param name="guarded">ガードとして解決された場合は true。</param>
@@ -36,9 +34,7 @@ void HitStopSystem::RequestFromResolvedHit(
 	world.RequestHitStop(level, GetHitStopFrames(level));
 }
 
-/// <summary>
-/// ヒットストップ段階ごとの停止フレーム数を取得する。
-/// </summary>
+/// <summary>ヒットストップ段階ごとの停止フレーム数を取得する。</summary>
 /// <param name="level">確認するヒットストップ段階。</param>
 /// <returns>停止フレーム数。None の場合は 0。</returns>
 int HitStopSystem::GetHitStopFrames(HitStopLevel level)
@@ -61,9 +57,7 @@ int HitStopSystem::GetHitStopFrames(HitStopLevel level)
 	}
 }
 
-/// <summary>
-/// 現在使用しているヒットストップ共通設定を取得する。
-/// </summary>
+/// <summary>現在使用しているヒットストップ共通設定を取得する。</summary>
 /// <returns>ガード、通常技、必殺技、相打ちごとの停止フレーム設定。</returns>
 const HitStopFrameSettings& HitStopSystem::GetFrameSettings()
 {

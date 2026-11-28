@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <array>
 #include <d3d11.h>
 
 struct BattleTimerComponent;
@@ -7,32 +8,44 @@ struct GameObject;
 struct HealthGaugeComponent;
 struct TransformComponent;
 class World;
+class Renderer;
+struct BattleResultMenu;
+namespace BattleSetup
+{
+	struct BattleSetupData;
+}
 
 class BattleHUDSystem
 {
 public:
-	/// <summary>
-	/// UIタグを持つ GameObject を走査し、HUD用 Component ごとの表示状態を更新する。
-	/// </summary>
-	/// <param name="world">HUD GameObject と Player の HealthComponent を保持する World。</param>
-	/// <param name="screenWidth">現在の描画幅。</param>
-	/// <param name="screenHeight">現在の描画高さ。</param>
-	static void Update(World& world, int screenWidth, int screenHeight);
+	static void Update(World& world, int screenWidth, int screenHeight, bool holdDamage = true);
 
-	/// <summary>
-	/// HPバー、ラウンドタイマー、入力履歴をゲームビューへ 2D 描画する。
-	/// </summary>
-	/// <param name="world">BattleTimerComponent と HealthGaugeComponent を保持する World。</param>
-	/// <param name="screenWidth">現在の描画幅。</param>
-	/// <param name="screenHeight">現在の描画高さ。</param>
-	/// <param name="numberTexture">数字スプライトシートの ShaderResourceView。</param>
-	static void Draw(const World& world, int screenWidth, int screenHeight, ID3D11ShaderResourceView* numberTexture);
+	static constexpr std::array TexturePaths{
+		"assets/texture/UI/Parts/Battle/HP_Frame.png",
+		"assets/texture/UI/Parts/Battle/HP_Player1.png",
+		"assets/texture/UI/Parts/Battle/HP_Player2.png",
+		"assets/texture/UI/Parts/Battle/HP_Damage.png",
+		"assets/texture/UI/Parts/Battle/PlayerPlate_P1.png",
+		"assets/texture/UI/Parts/Battle/Icon_Player1.png",
+		"assets/texture/UI/Parts/Battle/Icon_Player2.png",
+		"assets/texture/UI/Parts/Battle/Round_Empty.png",
+		"assets/texture/UI/Parts/Battle/Timer_Digits.png",
+		"assets/texture/UI/Parts/SlotSelect/badge_a.png",
+		"assets/texture/UI/Parts/SlotSelect/badge_b.png",
+		"assets/texture/UI/Parts/SlotSelect/badge_x.png",
+		"assets/texture/UI/Parts/SlotSelect/badge_y.png",
+		"assets/texture/UI/Parts/Battle/PlayerPlate_P2.png",
+		"assets/texture/UI/Parts/Battle/Round_Won.png"
+	};
+	using Textures = std::array<ID3D11ShaderResourceView*, TexturePaths.size()>;
+	static void Draw(Renderer& renderer, const World& world, int screenWidth, int screenHeight,
+		ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints);
+	static void DrawResultMenu(Renderer& renderer, int width, int height,
+		const BattleSetup::BattleSetupData& setup, const BattleResultMenu& menu);
 
 private:
-	static void UpdateUIObject(World& world, GameObject& object, int screenWidth);
-	static void UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth);
+	static void UpdateUIObject(World& world, GameObject& object, int screenWidth, bool holdDamage);
+	static void UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth,
+		bool holdDamage);
 
-	static void DrawUIObject(const World& world, const GameObject& object, int screenWidth, ID3D11ShaderResourceView* numberTexture);
-	static void DrawHealthGauge(const World& world, const GameObject& object, const HealthGaugeComponent& gauge);
-	static void DrawTimer(const BattleTimerComponent& timer, int screenWidth, ID3D11ShaderResourceView* numberTexture);
 };

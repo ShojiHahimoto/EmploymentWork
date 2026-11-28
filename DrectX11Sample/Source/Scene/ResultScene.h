@@ -3,7 +3,7 @@
 #include "Controller/ResultNavigationController.h"
 #include "Controller/ResultPresentationController.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class ResultScene : public Scene
 {
@@ -13,7 +13,7 @@ public:
 
 	void Enter() override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer& renderer) override;
 	void OnResize(int newWidth, int newHeight) override;
 

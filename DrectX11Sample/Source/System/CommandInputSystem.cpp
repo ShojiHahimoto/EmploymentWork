@@ -3,7 +3,7 @@
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/CommandBufferComponent.h"
 #include "Component/StateComponent.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 namespace
 {
@@ -12,6 +12,7 @@ namespace
 	constexpr int NormalAttackBPriority = 103;
 	constexpr int NormalAttackAPriority = 104;
 	constexpr int HadoukenPriority = 200;
+	constexpr int TatsumakiPriority = 200;
 	constexpr int ShoryuuPriority = 300;
 	constexpr int YogaPriority = 400;
 	constexpr int FullRotatePriority = 500;
@@ -27,6 +28,13 @@ namespace
 		{ 2, CommandDirectionMatchMode::ContainsComponents },
 		{ 3, CommandDirectionMatchMode::ContainsComponents },
 		{ 6, CommandDirectionMatchMode::ContainsComponents },
+	};
+
+	constexpr CommandDirectionStep TatumakiCommand[] =
+	{
+		{ 2, CommandDirectionMatchMode::ContainsComponents },
+		{ 1, CommandDirectionMatchMode::ContainsComponents },
+		{ 4, CommandDirectionMatchMode::ContainsComponents },
 	};
 
 	constexpr CommandDirectionStep ShoryuuCommand[] =
@@ -264,20 +272,35 @@ void CommandInputSystem::AddBufferedCommand(
 /// <returns>コマンドが成立していれば true。</returns>
 bool CommandInputSystem::MatchCommand(const InputHistoryComponent& inputHistory, AttackCommandId commandId)
 {
+	if (commandId == AttackCommandId::FullRotate)
+	{
+		return MatchFullRotateCommand(inputHistory);
+	}
+
+	const auto steps = GetDirectionalCommand(commandId);
+
+	return !steps.empty() && MatchDirectionCommand(inputHistory, steps);
+}
+
+/// <summary>入力判定と画面表示で共通のコマンド方向列を取得する。</summary>
+/// <param name="commandId">必殺技コマンド。</param>
+/// <returns>右向き基準の入力順。回転入力など方向列を持たない場合は空。</returns>
+std::span<const CommandDirectionStep> CommandInputSystem::GetDirectionalCommand(AttackCommandId commandId)
+{
 	switch (commandId)
 	{
 	case AttackCommandId::Hadouken:
-		return MatchDirectionCommand(inputHistory, HadoukenCommand);
+		return HadoukenCommand;
+	case AttackCommandId::Tatsumaki:
+		return TatumakiCommand;
 	case AttackCommandId::Shoryuu:
-		return MatchDirectionCommand(inputHistory, ShoryuuCommand);
+		return ShoryuuCommand;
 	case AttackCommandId::Yoga:
-		return MatchDirectionCommand(inputHistory, YogaCommand);
+		return YogaCommand;
 	case AttackCommandId::ReverseYoga:
-		return MatchDirectionCommand(inputHistory, ReverseYogaCommand);
-	case AttackCommandId::FullRotate:
-		return MatchFullRotateCommand(inputHistory);
+		return ReverseYogaCommand;
 	default:
-		return false;
+		return {};
 	}
 }
 
@@ -506,7 +529,7 @@ int CommandInputSystem::GetNormalAttackPriority(AttackButtonId button)
 /// コマンド種別ごとの優先度を返す。
 /// </summary>
 /// <param name="commandId">優先度を取得するコマンド ID。</param>
-/// <returns>一回転、ヨガ、昇竜、波動の順に高い優先度。</returns>
+/// <returns>一回転、ヨガ、昇竜、波動・竜巻の順に高い優先度。</returns>
 int CommandInputSystem::GetCommandPriority(AttackCommandId commandId)
 {
 	switch (commandId)
@@ -520,6 +543,8 @@ int CommandInputSystem::GetCommandPriority(AttackCommandId commandId)
 		return ShoryuuPriority;
 	case AttackCommandId::Hadouken:
 		return HadoukenPriority;
+	case AttackCommandId::Tatsumaki:
+		return TatsumakiPriority;
 	default:
 		return 0;
 	}

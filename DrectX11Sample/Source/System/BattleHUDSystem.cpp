@@ -7,13 +7,18 @@
 #include "Component/StateComponent.h"
 #include "Component/TransformComponent.h"
 #include "Core/GameObject.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
+
+#include "UI/UIRenderer.h"
+#include "Data/BattleSetupData.h"
+#include "System/BattleResultSystem.h"
 
 #include <SimpleMath.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <string>
 
@@ -21,18 +26,9 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
-	const Color GaugeBackColor(0.04f, 0.04f, 0.05f, 0.92f);
-	const Color GaugeFrameColor(0.82f, 0.82f, 0.82f, 0.95f);
-	const Color DamageGaugeColor(0.86f, 0.18f, 0.12f, 0.88f);
-	const Color HealthGaugeColor(0.12f, 0.86f, 0.22f, 0.94f);
 	const Color InputHistoryBackColor(0.02f, 0.02f, 0.025f, 0.58f);
 	const Color InputHistoryFrameColor(0.95f, 0.95f, 0.95f, 0.88f);
 	const Color InputHistoryDirectionColor(1.0f, 0.92f, 0.28f, 1.0f);
-	const Color InputHistoryTextColor(1.0f, 1.0f, 1.0f, 1.0f);
-	const Color InputHistoryButtonAColor(0.15f, 0.74f, 0.32f, 0.94f);
-	const Color InputHistoryButtonBColor(0.20f, 0.52f, 1.0f, 0.94f);
-	const Color InputHistoryButtonXColor(0.78f, 0.38f, 1.0f, 0.94f);
-	const Color InputHistoryButtonYColor(1.0f, 0.58f, 0.16f, 0.94f);
 
 	/// <summary>
 	/// float 座標から SpriteBatch 用の RECT を作成する。
@@ -332,59 +328,60 @@ namespace
 		}
 	}
 
-	/// <summary>
-	/// 攻撃ボタン 1 つ分の背景と A/B/X/Y ラベルを描画する。
-	/// </summary>
-	/// <param name="label">表示するボタン名。</param>
-	/// <param name="x">描画先左上 X。</param>
-	/// <param name="y">描画先左上 Y。</param>
-	/// <param name="backgroundColor">ボタン背景色。</param>
-	void DrawAttackButtonLabel(char label, float x, float y, const Color& backgroundColor)
+	void DrawImage(ID3D11ShaderResourceView* texture, const RECT& destination, bool flip = false)
 	{
-		constexpr float buttonSize = 20.0f;
-		constexpr float glyphCellSize = 2.0f;
-		constexpr float glyphWidth = 5.0f * glyphCellSize;
-		constexpr float glyphHeight = 7.0f * glyphCellSize;
-
-		Renderer::DrawScreenRect(MakeRect(x, y, buttonSize, buttonSize), backgroundColor);
-		DrawBlockGlyph(
-			label,
-			x + (buttonSize - glyphWidth) * 0.5f,
-			y + (buttonSize - glyphHeight) * 0.5f,
-			glyphCellSize,
-			InputHistoryTextColor);
+		int width = 0;
+		int height = 0;
+		Renderer::GetTextureSize(texture, width, height);
+		Renderer::DrawTextureRegion(texture, destination, {0, 0, width, height}, Color(1, 1, 1, 1), flip);
 	}
 
-	/// <summary>
-	/// 押されている攻撃ボタン群を A/B/X/Y の順に描画する。
-	/// </summary>
-	/// <param name="attackPressMask">InputHistoryAttackMask の Press ビットマスク。</param>
-	/// <param name="x">描画開始 X。描画した分だけ右へ進める。</param>
-	/// <param name="y">描画先左上 Y。</param>
-	void DrawAttackButtons(uint32_t attackPressMask, float& x, float y)
+	/// <summary>HP素材の斜めの内枠を基準に、各行の残量を描画する。</summary>
+	void DrawHealthFill(ID3D11ShaderResourceView* texture, const RECT& bar, bool flip, float ratio)
 	{
-		constexpr float buttonGap = 4.0f;
-		constexpr float buttonAdvance = 20.0f + buttonGap;
+		if (ratio <= 0.0f || bar.bottom <= bar.top || bar.right <= bar.left)
+		{
+			return;
+		}
 
-		if (attackPressMask & InputHistoryAttackMask::AttackA)
+		// HP fill PNGs share the same 768 x 48 trapezoid and vertical gradient.
+		constexpr float assetWidth = 768.0f;
+		constexpr float assetHeight = 48.0f;
+		const float barWidth = static_cast<float>(bar.right - bar.left);
+		const float barHeight = static_cast<float>(bar.bottom - bar.top);
+		for (long y = bar.top; y < bar.bottom; ++y)
 		{
-			DrawAttackButtonLabel('A', x, y, InputHistoryButtonAColor);
-			x += buttonAdvance;
+			const float sourceY = (static_cast<float>(y - bar.top) + 0.5f) * assetHeight / barHeight;
+			if (sourceY < 6.0f || sourceY >= 40.0f)
+			{
+				continue;
+			}
+
+			const float t = (sourceY - 6.0f) / 34.0f;
+			const float innerStart = (9.0f + 22.0f * t) * barWidth / assetWidth;
+			const float innerEnd = (736.0f + 21.0f * t) * barWidth / assetWidth;
+			const long fullStart = static_cast<long>(std::lround(innerStart));
+			const long end = std::max(fullStart + 1, static_cast<long>(std::lround(innerEnd)));
+			const long start = std::clamp(
+				static_cast<long>(std::lround(std::lerp(innerEnd, innerStart, ratio))), fullStart, end - 1);
+			const long sampleY = static_cast<long>(sourceY);
+			const RECT destination = flip ? RECT{bar.right - end, y, bar.right - start, y + 1}
+				: RECT{bar.left + start, y, bar.left + end, y + 1};
+			Renderer::DrawTextureRegion(texture, destination, {384, sampleY, 385, sampleY + 1}, Color(1, 1, 1, 1));
 		}
-		if (attackPressMask & InputHistoryAttackMask::AttackB)
+	}
+
+	void DrawAttackButtons(uint32_t mask, float x, float y, const BattleHUDSystem::Textures& textures)
+	{
+		constexpr uint32_t masks[] = {InputHistoryAttackMask::AttackA, InputHistoryAttackMask::AttackB,
+			InputHistoryAttackMask::AttackX, InputHistoryAttackMask::AttackY};
+		for (size_t index = 0; index < std::size(masks); ++index)
 		{
-			DrawAttackButtonLabel('B', x, y, InputHistoryButtonBColor);
-			x += buttonAdvance;
-		}
-		if (attackPressMask & InputHistoryAttackMask::AttackX)
-		{
-			DrawAttackButtonLabel('X', x, y, InputHistoryButtonXColor);
-			x += buttonAdvance;
-		}
-		if (attackPressMask & InputHistoryAttackMask::AttackY)
-		{
-			DrawAttackButtonLabel('Y', x, y, InputHistoryButtonYColor);
-			x += buttonAdvance;
+			if (mask & masks[index])
+			{
+				DrawImage(textures[9 + index], MakeRect(x, y, 20, 20));
+				x += 24.0f;
+			}
 		}
 	}
 
@@ -399,6 +396,7 @@ namespace
 	/// <param name="y">行の左上 Y。</param>
 	void DrawInputHistoryEntry(
 		const InputDisplayHistoryEntry& entry,
+		const BattleHUDSystem::Textures& textures,
 		ID3D11ShaderResourceView* numberTexture,
 		int sourceDigitWidth,
 		int sourceDigitHeight,
@@ -442,7 +440,7 @@ namespace
 			InputHistoryDirectionColor);
 		currentX += 22.0f;
 
-		DrawAttackButtons(entry.attackPressMask, currentX, y + 2.0f);
+		DrawAttackButtons(entry.attackPressMask, currentX, y + 2.0f, textures);
 	}
 
 	/// <summary>
@@ -456,6 +454,8 @@ namespace
 	void DrawInputHistoryForPlayer(
 		const World& world,
 		int playerIndex,
+		float startY,
+		const BattleHUDSystem::Textures& textures,
 		ID3D11ShaderResourceView* numberTexture,
 		int sourceDigitWidth,
 		int sourceDigitHeight)
@@ -468,7 +468,6 @@ namespace
 		}
 
 		constexpr float startX = 24.0f;
-		constexpr float startY = 92.0f;
 		constexpr float rowGap = 4.0f;
 		constexpr float rowHeight = 24.0f;
 		const int entryCount = std::min(
@@ -480,6 +479,7 @@ namespace
 			const float y = startY + static_cast<float>(index) * (rowHeight + rowGap);
 			DrawInputHistoryEntry(
 				inputHistory->displayEntries[static_cast<size_t>(index)],
+				textures,
 				numberTexture,
 				sourceDigitWidth,
 				sourceDigitHeight,
@@ -493,7 +493,8 @@ namespace
 	/// </summary>
 	/// <param name="world">Player と InputHistoryComponent を保持する World。</param>
 	/// <param name="numberTexture">数字スプライトシートの ShaderResourceView。</param>
-	void DrawInputHistories(const World& world, ID3D11ShaderResourceView* numberTexture)
+	void DrawInputHistories(const World& world, ID3D11ShaderResourceView* numberTexture,
+		const BattleHUDSystem::Textures& textures, float startY)
 	{
 		int sourceDigitWidth = 0;
 		int sourceDigitHeight = 0;
@@ -505,13 +506,20 @@ namespace
 		DrawInputHistoryForPlayer(
 			world,
 			0,
+			startY,
+			textures,
 			numberTexture,
 			sourceDigitWidth,
 			sourceDigitHeight);
 	}
 }
 
-void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight)
+/// <summary>UIタグを持つ GameObject を走査し、HUD用 Component ごとの表示状態を更新する。</summary>
+/// <param name="world">HUD GameObject と Player の HealthComponent を保持する World。</param>
+/// <param name="screenWidth">現在の描画幅。</param>
+/// <param name="screenHeight">現在の描画高さ。</param>
+/// <param name="holdDamage">被弾状態に応じてダメージ表示を保持する場合は true。</param>
+void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight, bool holdDamage)
 {
 	(void)screenHeight;
 
@@ -522,25 +530,135 @@ void BattleHUDSystem::Update(World& world, int screenWidth, int screenHeight)
 			continue;
 		}
 
-		UpdateUIObject(world, object, screenWidth);
+		UpdateUIObject(world, object, screenWidth, holdDamage);
 	}
 }
 
-void BattleHUDSystem::Draw(const World& world, int screenWidth, int screenHeight, ID3D11ShaderResourceView* numberTexture)
+/// <summary>対戦HUDと入力履歴を描画する。</summary>
+void BattleHUDSystem::Draw(Renderer& renderer, const World& world, int screenWidth, int screenHeight,
+	ID3D11ShaderResourceView* numberTexture, const Textures& textures, const std::array<int, 2>& roundPoints)
 {
-	(void)screenHeight;
+	const float width = static_cast<float>(screenWidth);
+	const float scale = std::min(width / 1600.0f, screenHeight / 900.0f);
+	const float center = width * 0.5f;
+	const float timerHalf = 64.0f * scale;
+	const float barInset = 86.0f * scale;
+	const float barWidth = center - timerHalf - barInset;
+	std::vector<GameUI::DrawCommand> labels;
 
-	for (const GameObject& object : world.GetGameObjects())
+	for (const auto& object : world.GetGameObjects())
 	{
-		if (object.tag != GameObjectTag::UI)
+		if (const auto* gauge = world.GetComponent<HealthGaugeComponent>(object.id))
+		{
+			const bool right = gauge->targetPlayerIndex == 1;
+			const float barX = right ? center + timerHalf : barInset;
+			const RECT bar = MakeRect(barX, 53.0f * scale, barWidth, 47.0f * scale);
+			DrawImage(textures[0], bar, right);
+			DrawHealthFill(textures[3], bar, right, gauge->damageRatio);
+			DrawHealthFill(textures[right ? 2 : 1], bar, right, gauge->healthRatio);
+
+			const float plateWidth = 270.0f * scale;
+			DrawImage(textures[right ? 13 : 4], MakeRect(right ? width - plateWidth : 0.0f,
+				18.0f * scale, plateWidth, 80.0f * scale));
+			DrawImage(textures[right ? 6 : 5], MakeRect(right ? width - 90.0f * scale : 14.0f * scale,
+				20.0f * scale, 76.0f * scale, 76.0f * scale));
+
+			GameUI::DrawCommand label;
+			label.type = GameUI::DrawCommandType::Text;
+			label.bounds = MakeRect(right ? width - 247.0f * scale : 87.0f * scale,
+				18.0f * scale, 160.0f * scale, 36.0f * scale);
+			label.text = right ? L"Player 2" : L"Player 1";
+			label.fontSize = 24.0f * scale;
+			label.bold = true;
+			label.horizontalAlignment = GameUI::TextHorizontalAlignment::Center;
+			labels.push_back(label);
+
+			for (int mark = 0; mark < 2; ++mark)
+			{
+				const float inset = (25.0f + mark * 34.0f) * scale;
+				const float x = right ? center + timerHalf + inset : center - timerHalf - inset - 30.0f * scale;
+				const int textureIndex = mark < roundPoints[right ? 1 : 0] ? 14 : 7;
+				DrawImage(textures[textureIndex], MakeRect(x, 19.0f * scale, 30.0f * scale, 30.0f * scale));
+			}
+		}
+
+		if (const auto* timer = world.GetComponent<BattleTimerComponent>(object.id))
+		{
+			const int seconds = CalculateDisplaySeconds(*timer);
+			const std::string digits = seconds < 10 ? "0" + std::to_string(seconds) : std::to_string(seconds);
+			const float digitWidth = 61.0f * scale;
+			float x = center - digitWidth * static_cast<float>(digits.size()) * 0.5f;
+			for (const char digit : digits)
+			{
+				DrawNumberDigit(textures[8], 128, 144, digit - '0', x, 33.0f * scale,
+					digitWidth, 69.0f * scale, Color(1, 1, 1, 1));
+				x += digitWidth;
+			}
+		}
+	}
+
+	DrawInputHistories(world, numberTexture, textures, std::max(92.0f, 116.0f * scale));
+	GameUI::UIRenderer::Draw(renderer, labels);
+}
+
+/// <summary>人間側のリザルト選択肢とフォーカス、決定済み表示を描画する。</summary>
+/// <param name="renderer">専用UIの合成先。</param>
+/// <param name="width">描画幅。</param>
+/// <param name="height">描画高さ。</param>
+/// <param name="setup">メニューを表示する側を決める対戦設定。</param>
+/// <param name="menu">各側の選択状態。</param>
+void BattleHUDSystem::DrawResultMenu(Renderer& renderer, int width, int height,
+	const BattleSetup::BattleSetupData& setup, const BattleResultMenu& menu)
+{
+	constexpr const wchar_t* labels[] = {L"再戦", L"キャラ選択に戻る", L"タイトルに戻る"};
+	const float scale = std::min(width / 1600.0f, height / 900.0f);
+	const float buttonWidth = 298.0f * scale;
+	const float buttonHeight = 58.0f * scale;
+	std::vector<GameUI::DrawCommand> commands;
+	for (size_t side = 0; side < menu.players.size(); ++side)
+	{
+		if (setup.players[side].cpuControlled)
 		{
 			continue;
 		}
 
-		DrawUIObject(world, object, screenWidth, numberTexture);
+		const auto& player = menu.players[side];
+		const float center = width * (side == 0 ? 0.15f : 0.85f);
+		for (int index = 0; index < 3; ++index)
+		{
+			const bool focused = index == player.cursor;
+			const float y = height * 0.49f + index * 69.0f * scale;
+			GameUI::DrawCommand button;
+			button.type = GameUI::DrawCommandType::NineSliceImage;
+			button.bounds = MakeRect(center - buttonWidth * 0.5f, y, buttonWidth, buttonHeight);
+			button.imageId = focused ? "button_primary" : "button";
+			const float opacity = player.confirmed && !focused ? 0.5f : 1.0f;
+			button.color = Color(1, 1, 1, opacity);
+			commands.push_back(button);
+
+			GameUI::DrawCommand label;
+			label.type = GameUI::DrawCommandType::Text;
+			label.bounds = button.bounds;
+			label.text = labels[index];
+			label.fontSize = 25.0f * scale;
+			label.bold = true;
+			label.horizontalAlignment = GameUI::TextHorizontalAlignment::Center;
+			label.color = focused ? Color(1, 1, 1, 1) : Color(0.09f, 0.1f, 0.12f, opacity);
+			commands.push_back(label);
+
+			if (focused && player.confirmed)
+			{
+				GameUI::DrawCommand border;
+				border.type = GameUI::DrawCommandType::StrokeRectangle;
+				border.bounds = button.bounds;
+				border.color = Color(1.0f, 0.82f, 0.38f, 1.0f);
+				border.strokeWidth = 2.0f * scale;
+				commands.push_back(border);
+			}
+		}
 	}
 
-	DrawInputHistories(world, numberTexture);
+	GameUI::UIRenderer::Draw(renderer, commands);
 }
 
 /// <summary>
@@ -549,11 +667,12 @@ void BattleHUDSystem::Draw(const World& world, int screenWidth, int screenHeight
 /// <param name="world">Component を取得する World。</param>
 /// <param name="object">更新対象の UI GameObject。</param>
 /// <param name="screenWidth">現在の描画幅。</param>
-void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int screenWidth)
+/// <param name="holdDamage">ダメージ表示の保持を許可する場合は true。</param>
+void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int screenWidth, bool holdDamage)
 {
 	if (HealthGaugeComponent* gauge = world.GetComponent<HealthGaugeComponent>(object.id))
 	{
-		UpdateHealthGauge(world, object, *gauge, screenWidth);
+		UpdateHealthGauge(world, object, *gauge, screenWidth, holdDamage);
 	}
 
 	// BattleTimerComponent は BattleResultSystem が残りフレームを更新する。
@@ -567,7 +686,9 @@ void BattleHUDSystem::UpdateUIObject(World& world, GameObject& object, int scree
 /// <param name="object">HealthGaugeComponent を持つ UI GameObject。</param>
 /// <param name="gauge">更新する HealthGaugeComponent。</param>
 /// <param name="screenWidth">現在の描画幅。</param>
-void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth)
+/// <param name="holdDamage">false の場合、被弾状態に関係なくダメージ表示を現在HPに揃える。</param>
+void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, HealthGaugeComponent& gauge, int screenWidth,
+	bool holdDamage)
 {
 	TransformComponent* transform = world.GetTransform(object.id);
 	if (!transform)
@@ -592,7 +713,7 @@ void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, Health
 	else
 	{
 		gauge.healthRatio = currentRatio;
-		if (IsPlayerInDamageHoldState(world, targetPlayerId))
+		if (holdDamage && IsPlayerInDamageHoldState(world, targetPlayerId))
 		{
 			// ヒットスタン/ガードスタン中はダメージバーを古い長さで止め、連続ダメージの蓄積を見せる。
 			gauge.damageRatio = std::max(gauge.damageRatio, gauge.healthRatio);
@@ -610,111 +731,4 @@ void BattleHUDSystem::UpdateHealthGauge(World& world, GameObject& object, Health
 	const Vector3 scale(gauge.maxWidth, gauge.height, 1.0f);
 	TransformSystem::SetLocalPosition(*transform, position);
 	TransformSystem::SetLocalScale(*transform, scale);
-}
-
-/// <summary>
-/// UIタグを持つ 1 つの GameObject に対して、保持 Component に応じた描画処理を呼ぶ。
-/// </summary>
-/// <param name="world">Component と Transform を取得する World。</param>
-/// <param name="object">描画対象の UI GameObject。</param>
-/// <param name="screenWidth">現在の描画幅。</param>
-/// <param name="numberTexture">数字スプライトシートの ShaderResourceView。</param>
-void BattleHUDSystem::DrawUIObject(const World& world, const GameObject& object, int screenWidth, ID3D11ShaderResourceView* numberTexture)
-{
-	if (const HealthGaugeComponent* gauge = world.GetComponent<HealthGaugeComponent>(object.id))
-	{
-		DrawHealthGauge(world, object, *gauge);
-	}
-
-	if (const BattleTimerComponent* timer = world.GetComponent<BattleTimerComponent>(object.id))
-	{
-		DrawTimer(*timer, screenWidth, numberTexture);
-	}
-}
-
-/// <summary>
-/// HealthGaugeComponent を持つ UI GameObject を 2D 矩形として描画する。
-/// </summary>
-/// <param name="world">TransformComponent を取得する World。</param>
-/// <param name="object">描画対象の UI GameObject。</param>
-/// <param name="gauge">描画する HealthGaugeComponent。</param>
-void BattleHUDSystem::DrawHealthGauge(const World& world, const GameObject& object, const HealthGaugeComponent& gauge)
-{
-	const TransformComponent* transform = world.GetTransform(object.id);
-	if (!transform)
-	{
-		return;
-	}
-
-	const Vector3& position = TransformSystem::GetLocalPosition(*transform);
-	const Vector3& scale = TransformSystem::GetLocalScale(*transform);
-	if (scale.x <= 0.0f || scale.y <= 0.0f)
-	{
-		return;
-	}
-
-	Renderer::DrawScreenRect(MakeRect(position.x - 2.0f, position.y - 2.0f, scale.x + 4.0f, scale.y + 4.0f), GaugeFrameColor);
-	Renderer::DrawScreenRect(MakeRect(position.x, position.y, scale.x, scale.y), GaugeBackColor);
-	Renderer::DrawScreenRect(MakeRect(position.x, position.y, scale.x * gauge.damageRatio, scale.y), DamageGaugeColor);
-	Renderer::DrawScreenRect(MakeRect(position.x, position.y, scale.x * gauge.healthRatio, scale.y), HealthGaugeColor);
-}
-
-/// <summary>
-/// number.png の 0〜9 スプライトシートから残り時間を切り出して描画する。
-/// </summary>
-/// <param name="timer">表示秒数の元にする BattleTimerComponent。</param>
-/// <param name="screenWidth">現在の描画幅。</param>
-/// <param name="numberTexture">数字スプライトシートの ShaderResourceView。</param>
-void BattleHUDSystem::DrawTimer(const BattleTimerComponent& timer, int screenWidth, ID3D11ShaderResourceView* numberTexture)
-{
-	if (!numberTexture)
-	{
-		return;
-	}
-
-	int textureWidth = 0;
-	int textureHeight = 0;
-	if (!Renderer::GetTextureSize(numberTexture, textureWidth, textureHeight) || textureWidth <= 0 || textureHeight <= 0)
-	{
-		return;
-	}
-
-	const int digitCountInTexture = 10;
-	const int sourceDigitWidth = textureWidth / digitCountInTexture;
-	const int sourceDigitHeight = textureHeight;
-	if (sourceDigitWidth <= 0)
-	{
-		return;
-	}
-
-	const int displaySeconds = CalculateDisplaySeconds(timer);
-	const std::string digits = displaySeconds < 10
-		? "0" + std::to_string(displaySeconds)
-		: std::to_string(displaySeconds);
-
-	const float digitWidth = 40.0f;
-	const float digitHeight = 44.0f;
-	const float gap = 2.0f;
-	const float totalWidth = digitWidth * static_cast<float>(digits.size())
-		+ gap * static_cast<float>(digits.size() - 1);
-	const float startX = static_cast<float>(screenWidth) * 0.5f - totalWidth * 0.5f;
-	const float top = 20.0f;
-
-	for (size_t index = 0; index < digits.size(); ++index)
-	{
-		const int digit = digits[index] - '0';
-		if (digit < 0 || digit > 9)
-		{
-			continue;
-		}
-
-		RECT source = {};
-		source.left = sourceDigitWidth * digit;
-		source.top = 0;
-		source.right = source.left + sourceDigitWidth;
-		source.bottom = sourceDigitHeight;
-
-		const float x = startX + (digitWidth + gap) * static_cast<float>(index);
-		Renderer::DrawTextureRegion(numberTexture, MakeRect(x, top, digitWidth, digitHeight), source, Color(1.0f, 1.0f, 1.0f, 1.0f));
-	}
 }

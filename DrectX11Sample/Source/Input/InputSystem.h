@@ -42,9 +42,11 @@ namespace Input
 
 		// セットアップ画面などが物理入力状態を直接確認するための API。
 		static int GetMaxGamepadCount();
+		static PlayerInputState ReadDeviceUIActions(int gamepadIndex);
 		static bool IsGamepadConnected(int gamepadIndex);
 		static bool IsKeyboardKeyDown(KeyboardKey key);
 		static bool IsGamepadButtonDown(int gamepadIndex, GamepadButton button);
+		static DirectX::SimpleMath::Vector2 GetLeftStick(int gamepadIndex);
 
 	private:
 		// 現在有効な ActionMap。プレイヤーごとには分けない。
@@ -70,6 +72,7 @@ namespace Input
 
 		// 1 つの Binding を読み、対応する Action に反映する。
 		static void ApplyBinding(const InputBinding& binding);
+		static InputValue ReadBinding(const InputBinding& binding);
 
 		// 1 フレーム分の XInput 状態をキャッシュする。
 		static void UpdateGamepadStates();

@@ -37,6 +37,7 @@ class StateUpdateSystem
 public:
 	// Updates PlayerActionState and actionFrame from input history and current player conditions.
 	static void Update(World& world);
+	static void StartAction(World &world, GameObjectId objectId, const PlayerActionDecision &decision);
 
 private:
 	static void UpdatePlayerState(World& world, GameObjectId objectId);

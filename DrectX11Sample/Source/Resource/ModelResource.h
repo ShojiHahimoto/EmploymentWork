@@ -2,12 +2,16 @@
 
 #include <SimpleMath.h>
 #include <d3d11.h>
+#include <wrl/client.h>
+#include "Resource/TexturePreparation.h"
 
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+inline constexpr char PlayerModelKey[] = "PlayerModel";
 
 struct ModelVertex
 {
@@ -38,8 +42,10 @@ struct ModelMesh
 
 struct ModelMaterial
 {
+	bool satinMetal = false;
 	std::string diffuseTexturePath;
 	ID3D11ShaderResourceView* diffuseTextureView = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalTextureView;
 
 	~ModelMaterial();
 	ModelMaterial() = default;
@@ -91,12 +97,30 @@ struct ModelAnimationClip
 	std::vector<ModelAnimationChannel> channels;
 };
 
+struct PreparedModelMaterial
+{
+	bool satinMetal = false;
+	std::string path;
+	std::shared_ptr<const TexturePreparation::Image> image;
+	std::shared_ptr<const TexturePreparation::Image> normalImage;
+};
+
+struct PreparedModelData
+{
+	std::vector<ModelMesh> meshes;
+	std::vector<PreparedModelMaterial> materials;
+	std::vector<ModelBone> bones;
+	std::vector<ModelAnimationClip> animationClips;
+};
+
 class ModelResource
 {
 public:
 	~ModelResource() = default;
 
 	bool LoadFromFile(ID3D11Device* device, const std::string& path);
+	static bool PrepareFromFile(const std::string &path, PreparedModelData &output);
+	bool Upload(ID3D11Device *device, PreparedModelData &&prepared);
 	const std::vector<ModelMesh>& GetMeshes() const;
 	const std::vector<ModelMaterial>& GetMaterials() const;
 	const std::vector<ModelBone>& GetBones() const;
@@ -115,6 +139,7 @@ class ModelResourceManager
 public:
 	static bool LoadModel(const std::string& key, const std::string& path, ID3D11Device* device);
 	static const ModelResource* GetModel(const std::string& key);
+	static void RegisterPreparedPlayer(const std::string &key, std::unique_ptr<ModelResource> model);
 	static void UnloadAll();
 
 private:

@@ -4,9 +4,10 @@
 #include "Component/CameraComponent.h"
 #include "Component/TransformComponent.h"
 #include "Data/BattleSetupData.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "System/DebugCameraControlSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
+#include "System/BattleResultSystem.h"
 
 class BattleScene : public Scene
 {
@@ -16,8 +17,9 @@ public:
 	~BattleScene() override = default;
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer& renderer) override;
 	void OnResize(int width, int height) override;
 
@@ -26,17 +28,33 @@ public:
 
 private:
 	World world;
+	BattleRoundState round;
+	BattleResultMenu resultMenu;
+	std::array<int, 2> visibleRoundPoints{};
+	BattleRoundTiming roundTiming;
+	int introFrame = 0;
+	bool rematchFadeIn = false;
+	int endingFrame = 0;
+	int fadeFrame = -1;
+	bool postStopMotionStarted = false;
+	bool victoryMotionStarted = false;
+	const char* roundBanner = nullptr;
 	BattleSetup::BattleSetupData setupData;
 	int width;
 	int height;
 	ID3D11ShaderResourceView* hudNumberTexture = nullptr;
 
 	void InitializeBattleHUD();
-	void InitializeBattleSounds();
 	void RunInitialWorldSetup();
+	void BuildRoundWorld();
+	void RunActiveRound();
+	void RunRoundIntro();
+	void RunRoundEnding();
+	void DrawRoundPresentation();
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
-	void DrawBattleHUD();
-	void RequestResultSceneIfBattleFinished();
+	void DrawBattleHUD(Renderer& renderer);
+	void RunResultMenu();
+	void RunRematchFadeOut();
 
 #if defined(_DEBUG)
 	TransformComponent debugSceneCameraTransform;

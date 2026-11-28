@@ -1,13 +1,14 @@
 ﻿#include "System/MovementSystem.h"
 
 #include "Component/CharacterParameterComponent.h"
+#include "Data/KeyframeSearch.h"
 #include "Component/CharacterAttackDataComponent.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/StateComponent.h"
 #include "Component/TransformComponent.h"
 #include "Component/VelocityComponent.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 
@@ -97,6 +98,20 @@ void MovementSystem::ApplyAirGravity(World& world)
 			continue;
 		}
 
+		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+		const CharacterAttackDataComponent* attackData = world.GetComponent<CharacterAttackDataComponent>(object.id);
+
+		if (IsAttackGravitySuppressed(*state, hitBox, attackData))
+		{
+			// 開始時の慣性だけを消す。技の移動キーは後続処理で反映する。
+			if (state->actionFrame == 0)
+			{
+				SetVelocityY(*velocity, 0.0f);
+			}
+
+			continue;
+		}
+
 		if (!ShouldApplyGravity(*transform, *state))
 		{
 			continue;
@@ -179,12 +194,34 @@ void MovementSystem::ApplyAttackMovement(World& world)
 	}
 }
 
-/// <summary>
-/// 指定 Player に今フレーム重力を適用するべきか判定する。
-/// </summary>
-/// <param name="transform">現在位置を確認する TransformComponent。</param>
-/// <param name="state">接地状態と ActionState を確認する StateComponent。</param>
-/// <returns>重力を加算する必要があれば true。</returns>
+/// <summary>実行中の技データを基準に、地上技と必殺技の重力を停止する。</summary>
+/// <param name="state">攻撃状態を確認する状態。</param>
+/// <param name="hitBox">実行中の技スロット。未取得なら通常の重力判定に任せる。</param>
+/// <param name="attackData">キャラクターへ割り当てた技データ。</param>
+/// <returns>地上技または必殺技を実行中ならtrue。</returns>
+bool MovementSystem::IsAttackGravitySuppressed(const StateComponent& state,
+	const HitBoxComponent* hitBox, const CharacterAttackDataComponent* attackData)
+{
+	if ((state.currentActionState != PlayerActionState::GroundAttack
+		&& state.currentActionState != PlayerActionState::AirAttack) || !hitBox)
+	{
+		return false;
+	}
+
+	const CharacterAssignedAttackData* assignedAttack = FindAssignedAttack(attackData, hitBox->currentAttack.slotId);
+	if (!assignedAttack)
+	{
+		return false;
+	}
+
+	return assignedAttack->attack.usableState == AttackUsableState::Ground
+		|| assignedAttack->attack.attackKind == AttackKind::Special;
+}
+
+/// <summary>攻撃固有の重力停止を除いた通常の重力適用条件を判定する。</summary>
+/// <param name="transform">既存の位置判定用引数。</param>
+/// <param name="state">接地状態。</param>
+/// <returns>非接地ならtrue。</returns>
 bool MovementSystem::ShouldApplyGravity(const TransformComponent& transform, const StateComponent& state)
 {
 	//if (state.currentActionState == PlayerActionState::VerticalJump
@@ -220,21 +257,7 @@ Vector2 MovementSystem::SampleAttackMovementOffset(const AttackData& attack, int
 		return Vector2::Zero;
 	}
 
-	const AttackMovementKeyData* previousKey = nullptr;
-	const AttackMovementKeyData* nextKey = nullptr;
-	for (const AttackMovementKeyData& key : attack.movementKeys)
-	{
-		if (key.frame <= actionFrame)
-		{
-			previousKey = &key;
-		}
-
-		if (key.frame >= actionFrame)
-		{
-			nextKey = &key;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(attack.movementKeys, actionFrame);
 
 	if (!previousKey && nextKey)
 	{

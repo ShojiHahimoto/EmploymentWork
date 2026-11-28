@@ -4,7 +4,7 @@
 #include "Controller/TitleNavigationController.h"
 #include "Controller/TitlePresentationController.h"
 #include "Scene/Scene.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 class TitleScene : public Scene
 {
@@ -13,8 +13,9 @@ public:
 	~TitleScene() override = default;
 
 	void Enter() override;
+	void DescribeLoad(SceneLoadRequest &request) const override;
 	void Exit() override;
-	void RunSystems() override;
+	void Update() override;
 	void Draw(Renderer& renderer) override;
 	void OnResize(int newWidth, int newHeight) override;
 
@@ -24,6 +25,7 @@ public:
 private:
 	World world;
 	TitlePresentationController presentationController;
+	PreparedTitlePresentation preparedPresentation;
 	int width = 1;
 	int height = 1;
 	TitleMenuController menuController;

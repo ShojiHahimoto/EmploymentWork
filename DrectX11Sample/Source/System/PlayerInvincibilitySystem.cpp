@@ -2,8 +2,10 @@
 
 #include "Component/StateComponent.h"
 #include "Core/GameObject.h"
-#include "World/World.h"
+#include "Core/World.h"
 
+/// <summary>Player の現在状態から、攻撃を受けないかどうかを StateComponent に反映する。</summary>
+/// <param name="world">Player GameObject と StateComponent を保持する World。</param>
 void PlayerInvincibilitySystem::Update(World& world)
 {
 	for (GameObject& object : world.GetGameObjects())
@@ -24,6 +26,9 @@ void PlayerInvincibilitySystem::Update(World& world)
 	}
 }
 
+/// <summary>ActionState と接地状態だけで決まる無敵かどうかを判定する。</summary>
+/// <param name="state">判定対象の StateComponent。</param>
+/// <returns>状態由来で攻撃を受けないなら true。</returns>
 bool PlayerInvincibilitySystem::IsInvincibleByState(const StateComponent& state)
 {
 	if (state.currentActionState == PlayerActionState::Down

@@ -3,9 +3,15 @@
 #include "Component/BattleTimerComponent.h"
 #include "Component/HealthComponent.h"
 #include "Core/GameObject.h"
-#include "World/World.h"
+#include "Core/World.h"
+#include "Data/JsonValue.h"
+#include "Data/BattleSetupData.h"
+#include "Core/Application.h"
+#include "Input/InputSystem.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 namespace
 {
@@ -54,7 +60,157 @@ namespace
 	}
 }
 
-void BattleResultSystem::Update(World& world)
+/// <summary>演出時間をJSONから読み、未指定や不正な値には既定時間を使う。</summary>
+/// <returns>固定フレーム単位の演出時間。</returns>
+BattleRoundTiming BattleResultSystem::LoadTiming()
+{
+	BattleRoundTiming timing;
+	std::ifstream file("assets/BattleConfig/RoundTiming.json", std::ios::binary);
+	std::string content{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+	if (content.starts_with("\xEF\xBB\xBF"))
+	{
+		content.erase(0, 3);
+	}
+
+	JsonValue root;
+	std::string error;
+	if (!JsonParser::Parse(content, root, error))
+	{
+		return timing;
+	}
+
+	const auto read = [&root](const char* key, int fallback)
+	{
+		const auto* value = root.Find(key);
+		const double frames = value ? value->AsNumber(fallback) : fallback;
+		return frames >= 0 && frames <= 36000 ? static_cast<int>(frames) : fallback;
+	};
+
+	timing.roundIntroDelayFrames = read("roundIntroDelayFrames", timing.roundIntroDelayFrames);
+	timing.roundDisplayFrames = read("roundDisplayFrames", timing.roundDisplayFrames);
+	timing.roundToFightFrames = read("roundToFightFrames", timing.roundToFightFrames);
+	timing.fightDisplayFrames = read("fightDisplayFrames", timing.fightDisplayFrames);
+	timing.fightToControlFrames = read("fightToControlFrames", timing.fightToControlFrames);
+	timing.roundEndDisplayDelayFrames = read("roundEndDisplayDelayFrames", timing.roundEndDisplayDelayFrames);
+	timing.roundEndDisplayFrames = read("roundEndDisplayFrames", timing.roundEndDisplayFrames);
+	timing.roundEndAfterDisplayFrames = read("roundEndAfterDisplayFrames", timing.roundEndAfterDisplayFrames);
+	timing.releaseToVictoryFrames = read("releaseToVictoryFrames", timing.releaseToVictoryFrames);
+	timing.victoryMotionFrames = read("victoryMotionFrames", timing.victoryMotionFrames);
+	timing.matchResultDisplayFrames = read("matchResultDisplayFrames", timing.matchResultDisplayFrames);
+	timing.doubleKnockoutDownFrames = read("doubleKnockoutDownFrames", timing.doubleKnockoutDownFrames);
+	timing.fadeOutFrames = read("fadeOutFrames", timing.fadeOutFrames);
+	timing.fadeInFrames = read("fadeInFrames", timing.fadeInFrames);
+	return timing;
+}
+
+/// <summary>人間側の独立したUI入力を処理し、必要な決定が揃ったら優先度が高い選択を記録する。</summary>
+/// <param name="setup">対戦に使ったデバイスとCPUの割り当て。</param>
+/// <param name="menu">リザルトのカーソル、決定状態、遷移先。</param>
+void BattleResultSystem::UpdateMenu(const BattleSetup::BattleSetupData& setup, BattleResultMenu& menu)
+{
+	bool allConfirmed = true;
+	BattleResultChoice choice = BattleResultChoice::None;
+	const bool foreground = GetForegroundWindow() == Application::GetWindow();
+	for (size_t side = 0; side < menu.players.size(); ++side)
+	{
+		const auto& player = setup.players[side];
+		if (player.cpuControlled)
+		{
+			continue;
+		}
+
+		auto& selection = menu.players[side];
+		const int gamepad = player.device.kind == BattleSetup::InputDeviceKind::Keyboard
+			? -1 : player.device.gamepadIndex;
+		const auto input = Input::InputSystem::ReadDeviceUIActions(gamepad);
+		const auto axis = input.actions[static_cast<size_t>(Input::InputActionId::Move)].value.axis;
+		const float threshold = Input::InputSystem::GetSettings().buttonThreshold;
+		const std::array current{axis.y > 0.5f, axis.y < -0.5f,
+			input.actions[static_cast<size_t>(Input::InputActionId::Submit)].value.IsActive(threshold),
+			input.actions[static_cast<size_t>(Input::InputActionId::Cancel)].value.IsActive(threshold)};
+
+		if (menu.inputPrimed && foreground)
+		{
+			if (current[3] && !selection.previous[3])
+			{
+				selection.confirmed = false;
+			}
+			else if (!selection.confirmed)
+			{
+				const int direction = static_cast<int>(current[1] && !selection.previous[1])
+					- static_cast<int>(current[0] && !selection.previous[0]);
+				selection.cursor = std::clamp(selection.cursor + direction, 0, 2);
+				selection.confirmed = current[2] && !selection.previous[2];
+			}
+		}
+
+		selection.previous = current;
+		allConfirmed &= selection.confirmed;
+		if (selection.confirmed)
+		{
+			choice = std::max(choice, static_cast<BattleResultChoice>(selection.cursor));
+		}
+	}
+
+	menu.inputPrimed = foreground;
+	if (allConfirmed)
+	{
+		menu.choice = choice;
+	}
+}
+
+/// <summary>前ラウンドの決着理由を消し、タイマーを停止した状態で開始待ちに入る。</summary>
+/// <param name="world">ラウンドタイマーを保持する World。</param>
+/// <param name="round">得点を保持したまま開始待ちに切り替えるラウンド状態。</param>
+/// <param name="introFrames">操作解禁までのフレーム数。</param>
+void BattleResultSystem::BeginRound(World& world, BattleRoundState& round, int introFrames)
+{
+	round.endReason = RoundEndReason::None;
+	round.waitFrames = introFrames;
+	FindBattleTimer(world)->isRunning = introFrames == 0;
+}
+
+/// <summary>ラウンドの待ち時間を1フレーム進め、開始待ちが終わったときだけタイマーを動かす。</summary>
+/// <param name="world">ラウンドタイマーを保持する World。</param>
+/// <param name="round">残り待ち時間と決着理由を保持するラウンド状態。</param>
+void BattleResultSystem::AdvanceWait(World& world, BattleRoundState& round)
+{
+	if (round.waitFrames > 0)
+	{
+		--round.waitFrames;
+	}
+
+	if (round.waitFrames == 0 && round.endReason == RoundEndReason::None)
+	{
+		FindBattleTimer(world)->isRunning = true;
+	}
+}
+
+/// <summary>両者の取得ポイントから、2ポイント先取制の試合結果を判定する。</summary>
+/// <param name="round">両者の取得ポイントを保持するラウンド状態。</param>
+/// <returns>試合結果。両者とも2ポイント未満なら None。</returns>
+BattleResult BattleResultSystem::GetMatchResult(const BattleRoundState& round)
+{
+	if (round.points[0] >= 2 && round.points[1] >= 2)
+	{
+		return BattleResult::Draw;
+	}
+	if (round.points[0] >= 2)
+	{
+		return BattleResult::Player1Win;
+	}
+	if (round.points[1] >= 2)
+	{
+		return BattleResult::Player2Win;
+	}
+
+	return BattleResult::None;
+}
+
+/// <summary>ラウンドを判定し、決着フレームで一度だけ得点を反映する。</summary>
+/// <param name="world">BattlePlayerId、HealthComponent、BattleTimerComponent を保持する World。</param>
+/// <param name="round">取得ポイントと現在のラウンド状態。</param>
+void BattleResultSystem::Update(World& world, BattleRoundState& round)
 {
 	if (world.HasBattleResult())
 	{
@@ -64,10 +220,29 @@ void BattleResultSystem::Update(World& world)
 	// 同じフレームで KO とタイムアップが重なった場合は、先にダメージ結果を優先する。
 	if (ResolveKnockOut(world))
 	{
+		round.endReason = world.GetBattleResult() == BattleResult::Draw
+			? RoundEndReason::DoubleKnockOut : RoundEndReason::KnockOut;
+	}
+	else if (UpdateTimerAndResolveTimeUp(world))
+	{
+		round.endReason = RoundEndReason::TimeOver;
+	}
+	else
+	{
 		return;
 	}
 
-	UpdateTimerAndResolveTimeUp(world);
+	const auto result = world.GetBattleResult();
+	if (result == BattleResult::Draw || result == BattleResult::Player1Win)
+	{
+		++round.points[0];
+	}
+	if (result == BattleResult::Draw || result == BattleResult::Player2Win)
+	{
+		++round.points[1];
+	}
+
+	FindBattleTimer(world)->isRunning = false;
 }
 
 /// <summary>

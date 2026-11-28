@@ -1,8 +1,7 @@
 ﻿#include "Input/InputSystem.h"
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "Controller/TitleMenuController.h"
-#include "UI/CustomizeMenuView.h"
-#include "UI/UIInputSystem.h"
+#include "Input/UIInputSystem.h"
 #include "UI/UIRenderer.h"
 #include "UI/UIRoot.h"
 #include <cassert>
@@ -14,6 +13,7 @@ using Microsoft::WRL::ComPtr;
 static ID3D11DeviceContext *testContext = nullptr;
 static int composites = 0;
 static const wchar_t* capturePath = nullptr;
+static bool verifySliceAlpha = false;
 ID3D11DeviceContext *Renderer::GetDeviceContext()
 {
 	return testContext;
@@ -40,6 +40,17 @@ void Renderer::DrawFullscreenTexture(ID3D11ShaderResourceView *view, int width, 
 	testContext->CopyResource(staging.Get(), source.Get());
 	D3D11_MAPPED_SUBRESOURCE mapped;
 	assert(SUCCEEDED(testContext->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped)));
+	if (verifySliceAlpha)
+	{
+		for (UINT y = 23; y < 58; ++y)
+		{
+			for (UINT x = 17; x < 158; ++x)
+			{
+				const auto alpha = static_cast<const unsigned char *>(mapped.pData)[y * mapped.RowPitch + x * 4 + 3];
+				assert(alpha == 128);
+			}
+		}
+	}
 	size_t visiblePixels = 0;
 	for (UINT y = 0; y < description.Height; ++y)
 		for (UINT x = 0; x < description.Width; ++x)
@@ -370,7 +381,17 @@ int main()
 									device.GetAddressOf(), nullptr, context.GetAddressOf())));
 	testContext = context.Get();
 	assert(UIRenderer::Initialize(device.Get(), 640, 480));
-	assert(UIRenderer::LoadAssets("assets/texture/UI/Parts/assets.json"));
+	const auto images = UIRenderer::PrepareAssets("assets/texture/UI/Parts/assets.json",
+		{"undo", "redo", "rotate", "translate", "add", "delete", "copy", "paste", "mirror", "preset_save",
+			"preset_load", "select_all", "deselect_all", "keyframe_movement", "panel", "label_background",
+			"section_accent", "button", "button_primary", "back", "play", "title_v2_logo",
+			"title_v2_normal", "title_v2_selected", "customize_menu_normal", "customize_menu_selected",
+			"battle_panel", "battle_tab_left", "battle_tab_right", "battle_surface"});
+	assert(UIRenderer::UploadAssets(images));
+	for (const char* image : {"battle_panel", "battle_tab_left", "battle_tab_right", "battle_surface"})
+	{
+		assert(UIRenderer::HasImage(image));
+	}
 	// モーション編集用素材も本番マニフェストに登録され、再出力後に欠落しないこと。
 	for (const char* image : {"undo", "redo", "rotate", "translate", "add", "delete", "copy", "paste",
 		"mirror", "preset_save", "preset_load", "select_all", "deselect_all", "keyframe_movement"})
@@ -436,34 +457,49 @@ int main()
 		capturePath = nullptr;
 	}
 	{
-		CustomizeMenuView menu;
-		int selection = 0;
-		InputFrame f;
-		f.pointerPosition = {350,570}; f.pointerDelta = {1,0};
-		assert(menu.Update(f,1672,941,selection) == -1 && selection == 1);
-		selection=0; f.pointerDelta={};
-		assert(menu.Update(f,1672,941,selection) == -1 && selection == 0);
-		f.pointerPressed=f.pointerDown=true;
-		menu.Update(f,1672,941,selection);
-		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-		assert(menu.Update(f,1672,941,selection) == 1);
+		Root menu;
+		const auto update = [&](const InputFrame& frame)
+		{
+			menu.BeginFrame({0, 0, 1672, 941}, frame);
+			menu.AddButton("back", {18, 12, 96, 66});
+			for (int index = 0; index < 3; ++index)
+			{
+				const int top = 220 + index * 190;
+				menu.AddButton(std::to_string(index), {91, top, 617, top + 136});
+			}
+			menu.EndFrame();
+		};
+
 		assert(UIRenderer::HasImage("customize_menu_normal"));
 		assert(UIRenderer::HasImage("customize_menu_selected"));
-		menu.Draw(renderer,800,600,selection);
 		for (int index=0;index<3;++index)
 		{
-			f={}; f.pointerPosition={350,270+190*index};
+			InputFrame f;
+			f.pointerPosition={350,270+190*index};
 			f.pointerPressed=f.pointerDown=true;
-			menu.Update(f,1672,941,selection,true);
+			update(f);
 			f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-			assert(menu.Update(f,1672,941,selection,true)==index);
+			update(f);
+			assert(menu.WasActivated(std::to_string(index)));
 		}
-		f={}; f.pointerPosition={55,40}; f.pointerPressed=f.pointerDown=true;
-		menu.Update(f,1672,941,selection,true);
+		InputFrame f;
+		f.pointerPosition={55,40}; f.pointerPressed=f.pointerDown=true;
+		update(f);
 		f.pointerPressed=f.pointerDown=false; f.pointerReleased=true;
-		assert(menu.Update(f,1672,941,selection,true)==3);
-		menu.Draw(renderer,800,600,selection,true);
+		update(f);
+		assert(menu.WasActivated("back"));
 	}
+	// 半透明の単色素材は、継ぎ目でアルファが減ったり二重に濃くなったりしない。
+	UIRenderer::PreparedImage uniform;
+	uniform.width = uniform.height = 96;
+	uniform.sliceLeft = uniform.sliceTop = uniform.sliceRight = uniform.sliceBottom = 20;
+	uniform.pixels.assign(96 * 96 * 4, 128);
+	assert(UIRenderer::UploadAssets({{"slice_alpha_test", uniform}}));
+	nineSliceCommand.bounds = {17, 23, 158, 58};
+	nineSliceCommand.imageId = "slice_alpha_test";
+	verifySliceAlpha = true;
+	UIRenderer::Draw(renderer, {nineSliceCommand});
+	verifySliceAlpha = false;
 	UIRenderer::Shutdown();
 
 	context.Reset();

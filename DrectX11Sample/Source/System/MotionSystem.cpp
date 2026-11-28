@@ -1,12 +1,13 @@
 ﻿#include "System/MotionSystem.h"
 
 #include "Component/CharacterAttackDataComponent.h"
+#include "Data/KeyframeSearch.h"
 #include "Component/HitBoxComponent.h"
 #include "Component/ModelComponent.h"
 #include "Component/MotionPlayerComponent.h"
 #include "Component/StateComponent.h"
 #include "Data/MotionData.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <DirectXMath.h>
 
@@ -64,11 +65,15 @@ namespace
 
 }
 
-/// <summary>
-/// モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。
-/// </summary>
-/// <param name="world">ModelComponent と SkeletonPoseComponent を検索する World。</param>
-void MotionSystem::Update(World& world)
+/// <summary>モデル付き GameObject の姿勢 Component を初期化し、毎フレーム描画用スキニング行列へ更新する。</summary>
+/// <param name="world">ModelComponent と SkeletonPoseComponent を検索する World。
+/// 対象World。</param>
+/// <param name="syncState">対戦状態に再生対象を同期する場合true。タイトルの演出再生ではfalse。
+/// 対戦状態から再生対象を同期する場合true。</param>
+/// <param name="presentationAttack">状態同期をしない演出の攻撃データ。待機中はnullptr。
+/// 演出再生中の攻撃データ。通常再生はnullptr。</param>
+/// <remarks>姿勢と再生時計を更新する。タイトル用の演出では状態同期を無効にできる。</remarks>
+void MotionSystem::Update(World& world, bool syncState, const AttackData* presentationAttack)
 {
 	for (GameObject& object : world.GetGameObjects())
 	{
@@ -91,12 +96,25 @@ void MotionSystem::Update(World& world)
 		}
 
 		MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
-		if (motionPlayer)
+		if (motionPlayer && syncState)
 		{
 			SyncMotionPlayerFromState(world, object.id, *motionPlayer, *pose);
 		}
 
-		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model))
+		const StateComponent* state = world.GetComponent<StateComponent>(object.id);
+		const HitBoxComponent* hitBox = world.GetComponent<HitBoxComponent>(object.id);
+		const CharacterAssignedAttackData* assignedAttack = nullptr;
+		if (state && hitBox && (state->currentActionState == PlayerActionState::GroundAttack
+			|| state->currentActionState == PlayerActionState::AirAttack))
+		{
+			assignedAttack = FindAssignedAttack(world.GetComponent<CharacterAttackDataComponent>(object.id),
+				hitBox->currentAttack.slotId);
+		}
+
+		const AttackData* activeAttack = syncState
+			? (assignedAttack ? &assignedAttack->attack : nullptr) : presentationAttack;
+
+		if (motionPlayer && ApplyMotionPlayer(*pose, *motionPlayer, *model, activeAttack))
 		{
 			MotionPose::UpdateSkinningMatrices(*pose, *model);
 			continue;
@@ -167,8 +185,11 @@ void MotionSystem::SyncMotionPlayerFromState(
 		player.motionDataId = commonMotionDataId;
 		player.boundActionState = state->currentActionState;
 		player.boundAttackSlotId.clear();
-		player.looping = false;
-		player.playing = true;
+		player.looping = player.forceIdleLoop && state->currentActionState == PlayerActionState::Idle;
+		if (restarted)
+		{
+			player.playing = true;
+		}
 		player.currentFrame = restarted ? 0 : std::max(0, player.currentFrame);
 		return;
 	}
@@ -225,8 +246,18 @@ void MotionSystem::SyncMotionPlayerFromState(
 	player.boundActionState = state->currentActionState;
 	player.boundAttackSlotId = hitBox->currentAttack.slotId;
 	player.looping = false;
-	player.playing = true;
-	player.currentFrame = restarted ? 0 : std::max(0, state->actionFrame);
+	if (restarted)
+	{
+		player.playing = true;
+	}
+	if (restarted)
+	{
+		player.currentFrame = 0;
+	}
+	else if (player.playing)
+	{
+		player.currentFrame = std::max(0, state->actionFrame);
+	}
 }
 
 /// <summary>
@@ -382,24 +413,24 @@ bool MotionSystem::IsAttackActionState(PlayerActionState actionState)
 
 
 
-/// <summary>
-/// MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。
-/// </summary>
-/// <param name="pose">変更する姿勢 Component。</param>
-/// <param name="player">再生中モーション ID と現在フレームを持つ Component。</param>
-/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。</param>
-/// <returns>MotionData を姿勢へ反映できた場合は true。</returns>
+/// <summary>MotionPlayerComponent が指定する MotionData を読み込み、現在フレームの姿勢を反映する。</summary>
+/// <param name="pose">変更する姿勢 Component。
+/// 反映先の姿勢。</param>
+/// <param name="player">再生中モーション ID と現在フレームを持つ Component。
+/// 再生対象と現在フレーム。</param>
+/// <param name="model">ボーン名検索と bind pose 取得に使う ModelResource。
+/// 対象モデル。</param>
+/// <param name="attack">実行中の技。地上・空中別の基準姿勢と末尾補間を指定する。通常モーションではnullptr。
+/// 実行中の技。通常モーションではnullptr。</param>
+/// <returns>MotionData を姿勢へ反映できた場合は true。
+/// モーションを取得して姿勢へ反映できた場合true。</returns>
+/// <remarks>現在フレームの姿勢を反映し、攻撃では地上・空中別の基準姿勢へ前後を補間する。</remarks>
 bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPoseComponent& pose,
 	MotionPlayerComponent& player,
-	const ModelResource& model)
+	const ModelResource& model, const AttackData* attack)
 {
-	if (!player.playing || player.motionDataId.empty())
-	{
-		return false;
-	}
-
-	if (!MotionDataManager::LoadMotionData(player.motionDataId))
+	if (player.motionDataId.empty())
 	{
 		return false;
 	}
@@ -413,9 +444,10 @@ bool MotionSystem::ApplyMotionPlayer(
 	SkeletonPose idleBasePose;
 	SkeletonPose transitionBasePose;
 	const SkeletonPose* basePose = nullptr;
-	if (IsAttackMotionDataId(player.motionDataId) && MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
+	const char* baseId = MotionPose::GetAttackBaseMotionId(attack ? attack->usableState : AttackUsableState::Ground);
+	if (attack)
 	{
-		const MotionData* idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
+		const MotionData* idleMotion = MotionDataManager::GetMotionData(baseId);
 		if (idleMotion)
 		{
 			MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, model);
@@ -428,8 +460,8 @@ bool MotionSystem::ApplyMotionPlayer(
 		basePose = &transitionBasePose;
 	}
 
-	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose);
-	const Vector3 targetRootOffset = IsAttackMotionDataId(player.motionDataId)
+	MotionPose::ApplyMotionData(pose, *motion, player.currentFrame, model, basePose, attack != nullptr);
+	const Vector3 targetRootOffset = attack || IsAttackMotionDataId(player.motionDataId)
 		? Vector3::Zero
 		: SampleRootOffset(*motion, player.currentFrame);
 	player.visualRootOffset = targetRootOffset;
@@ -452,7 +484,10 @@ bool MotionSystem::ApplyMotionPlayer(
 		}
 	}
 
-	AdvanceMotionFrame(player, *motion);
+	if (player.playing)
+	{
+		AdvanceMotionFrame(player, *motion);
+	}
 	return true;
 }
 
@@ -482,21 +517,7 @@ Vector3 MotionSystem::SampleRootOffset(const MotionData& motion, int frame)
 		}
 	}
 
-	const MotionRootOffsetKeyData* previousKey = nullptr;
-	const MotionRootOffsetKeyData* nextKey = nullptr;
-	for (const MotionRootOffsetKeyData& keyframe : motion.rootOffsetKeys)
-	{
-		if (keyframe.frame <= frame)
-		{
-			previousKey = &keyframe;
-		}
-
-		if (keyframe.frame >= frame)
-		{
-			nextKey = &keyframe;
-			break;
-		}
-	}
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(motion.rootOffsetKeys, frame);
 
 	if (!previousKey && nextKey)
 	{
@@ -606,7 +627,7 @@ void MotionSystem::AdvanceMotionFrame(MotionPlayerComponent& player, const Motio
 		return;
 	}
 
-	if (player.looping || motion.looping)
+	if (!player.holdFinalFrame && (player.looping || motion.looping))
 	{
 		player.currentFrame = 0;
 	}

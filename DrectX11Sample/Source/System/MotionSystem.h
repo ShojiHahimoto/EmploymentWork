@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Component/SkeletonPoseComponent.h"
-#include "System/MotionPose.h"
+#include "Customize/MotionPose.h"
 #include "Component/MotionPlayerComponent.h"
 #include "Core/GameObject.h"
 #include "Data/AttackData.h"
@@ -23,7 +23,7 @@ struct StateComponent;
 class MotionSystem
 {
 public:
-	static void Update(World& world);
+	static void Update(World& world, bool syncState = true, const AttackData* presentationAttack = nullptr);
 
 private:
 	static void SyncMotionPlayerFromState(
@@ -43,7 +43,8 @@ private:
 		PlayerActionState nextActionState);
 	static bool IsAttackMotionDataId(const std::string& motionDataId);
 	static bool IsAttackActionState(PlayerActionState actionState);
-	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player, const ModelResource& model);
+	static bool ApplyMotionPlayer(SkeletonPoseComponent& pose, MotionPlayerComponent& player,
+		const ModelResource& model, const AttackData* attack);
 	static DirectX::SimpleMath::Vector3 SampleRootOffset(
 		const MotionData& motion,
 		int frame);

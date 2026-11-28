@@ -1,7 +1,7 @@
 ﻿#include "Input/InputConfigLoader.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -440,6 +440,9 @@ namespace Input
 		return false;
 	}
 
+	/// <summary>指定デバイス種別の保存済みキーコンフィグをすべて読み込む。</summary>
+	/// <param name="deviceKind">Keyboard / Gamepad のどちらを読むか。</param>
+	/// <returns>読み込めたキーコンフィグ配列。</returns>
 	std::vector<NamedInputConfig> InputConfigLoader::LoadNamedInputConfigs(BattleSetup::InputDeviceKind deviceKind)
 	{
 		std::vector<NamedInputConfig> configs;
@@ -473,6 +476,9 @@ namespace Input
 		return configs;
 	}
 
+	/// <summary>名前付きキーコンフィグ JSON を保存する。</summary>
+	/// <param name="config">保存するキーコンフィグ。</param>
+	/// <returns>保存に成功した場合は true。</returns>
 	bool InputConfigLoader::SaveNamedInputConfig(const NamedInputConfig& config)
 	{
 		if (config.configId.empty() || config.configName.empty())
@@ -499,6 +505,9 @@ namespace Input
 		return WriteUtf8BomTextFile(path, BuildNamedInputConfigJson(config));
 	}
 
+	/// <summary>指定デバイス種別で未使用の configId を作る。</summary>
+	/// <param name="deviceKind">Keyboard / Gamepad のどちら用に作るか。</param>
+	/// <returns>保存ファイル名に使える configId。</returns>
 	std::string InputConfigLoader::GenerateNextConfigId(BattleSetup::InputDeviceKind deviceKind)
 	{
 		const char* prefix = deviceKind == BattleSetup::InputDeviceKind::Keyboard
@@ -518,6 +527,10 @@ namespace Input
 		return std::string(prefix) + "overflow";
 	}
 
+	/// <summary>configId から保存先 JSON パスを作る。</summary>
+	/// <param name="deviceKind">Keyboard / Gamepad のどちら用か。</param>
+	/// <param name="configId">保存ファイル名に使う ID。</param>
+	/// <returns>assets/InputConfig 配下の保存先パス。</returns>
 	std::string InputConfigLoader::BuildConfigFilePath(BattleSetup::InputDeviceKind deviceKind, const std::string& configId)
 	{
 		return (GetDeviceConfigDirectory(deviceKind) / (configId + ".json")).generic_string();

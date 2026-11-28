@@ -2,11 +2,11 @@
   "motionDataId": "Common/AirHitstun",
   "displayName": "AirHitstun",
   "totalFrames": 30,
-  "looping": true,
+  "looping": false,
   "rootOffsetKeys": [
     {
       "frame": 19,
-      "offset": { "x": 0.000, "y": -4.000, "z": 0.000 }
+      "offset": { "x": 0.000, "y": -4.096, "z": 0.000 }
     }
   ],
   "boneTracks": [
@@ -15,7 +15,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -24,7 +24,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": -0.783, "y": 0.000, "z": 0.000, "w": 0.623 }
+          "rotationQuaternion": { "x": -0.782523572, "y": 0.000000000, "z": 0.000000000, "w": 0.622621000 }
         }
       ]
     },
@@ -33,7 +33,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.906, "y": 0.000, "z": 0.000, "w": 0.423 }
+          "rotationQuaternion": { "x": 0.906106472, "y": 0.000000000, "z": 0.000000000, "w": 0.423049718 }
         }
       ]
     },
@@ -42,7 +42,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": -0.311, "y": -0.686, "z": -0.498, "w": 0.429 }
+          "rotationQuaternion": { "x": -0.311099291, "y": -0.686218977, "z": -0.498158962, "w": 0.429136932 }
         }
       ]
     },
@@ -51,7 +51,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": -0.362, "y": 0.638, "z": 0.498, "w": 0.463 }
+          "rotationQuaternion": { "x": -0.361916602, "y": 0.637853026, "z": 0.497885257, "w": 0.462893337 }
         }
       ]
     },
@@ -60,7 +60,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -69,7 +69,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -78,7 +78,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -87,7 +87,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -96,7 +96,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -105,7 +105,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -114,7 +114,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -123,7 +123,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -132,7 +132,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     },
@@ -141,7 +141,7 @@
       "keyframes": [
         {
           "frame": 8,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": 0.000000000, "w": 1.000000000 }
         }
       ]
     }

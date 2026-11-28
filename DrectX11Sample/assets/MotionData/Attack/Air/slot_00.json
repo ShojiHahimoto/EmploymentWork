@@ -10,15 +10,11 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": -0.574, "w": 0.819 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": -0.573931992, "w": 0.818902969 }
         },
         {
           "frame": 10,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": -0.574, "w": 0.819 }
-        },
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.437, "y": -0.300, "z": -0.480, "w": 0.699 }
+          "rotationQuaternion": { "x": 0.000000000, "y": 0.000000000, "z": -0.573931992, "w": 0.818902969 }
         }
       ]
     },
@@ -27,132 +23,11 @@
       "keyframes": [
         {
           "frame": 6,
-          "rotationQuaternion": { "x": 0.260, "y": -0.278, "z": 0.925, "w": 0.018 }
+          "rotationQuaternion": { "x": 0.259891778, "y": -0.277884275, "z": 0.924615026, "w": 0.017992508 }
         },
         {
           "frame": 10,
-          "rotationQuaternion": { "x": 0.184, "y": -0.401, "z": -0.897, "w": -0.033 }
-        },
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.168, "y": -0.188, "z": 0.019, "w": 0.968 }
-        }
-      ]
-    },
-    {
-      "boneName": "Head",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.104, "y": -0.048, "z": 0.005, "w": 0.993 }
-        }
-      ]
-    },
-    {
-      "boneName": "Waist",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.000, "y": 0.233, "z": 0.000, "w": 0.972 }
-        }
-      ]
-    },
-    {
-      "boneName": "LShoulder",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.394, "y": 0.351, "z": 0.520, "w": 0.672 }
-        }
-      ]
-    },
-    {
-      "boneName": "RElbow",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.089, "y": -0.325, "z": -0.335, "w": 0.880 }
-        }
-      ]
-    },
-    {
-      "boneName": "LElbow",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.284, "y": 0.378, "z": 0.378, "w": 0.796 }
-        }
-      ]
-    },
-    {
-      "boneName": "RHand",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.263, "y": -0.047, "z": -0.198, "w": 0.943 }
-        }
-      ]
-    },
-    {
-      "boneName": "LHand",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.126, "y": 0.000, "z": 0.000, "w": 0.992 }
-        }
-      ]
-    },
-    {
-      "boneName": "RHipjoint",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.113, "y": 0.000, "z": 0.000, "w": 0.994 }
-        }
-      ]
-    },
-    {
-      "boneName": "LHipjoint",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.204, "y": 0.000, "z": 0.000, "w": 0.979 }
-        }
-      ]
-    },
-    {
-      "boneName": "RKnees",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.083, "y": 0.000, "z": 0.000, "w": 0.997 }
-        }
-      ]
-    },
-    {
-      "boneName": "LKnees",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.191, "y": 0.000, "z": 0.000, "w": 0.982 }
-        }
-      ]
-    },
-    {
-      "boneName": "RFeet",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": -0.182, "y": 0.000, "z": 0.000, "w": 0.983 }
-        }
-      ]
-    },
-    {
-      "boneName": "LFeet",
-      "keyframes": [
-        {
-          "frame": 18,
-          "rotationQuaternion": { "x": 0.000, "y": 0.000, "z": 0.000, "w": 1.000 }
+          "rotationQuaternion": { "x": 0.183967352, "y": -0.400928825, "z": -0.896840811, "w": -0.032994144 }
         }
       ]
     }

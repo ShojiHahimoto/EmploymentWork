@@ -1,18 +1,20 @@
 ﻿#include "Controller/CustomizePreviewController.h"
 
 #include "Data/MotionDataLoader.h"
+#include "Data/KeyframeSearch.h"
 #include "Resource/ModelResource.h"
 #include "System/CameraSystem.h"
-#include "System/Debugger.h"
-#include "System/MotionPose.h"
+#include "Core/Debugger.h"
+#include "Customize/MotionPose.h"
 #include "System/TransformSystem.h"
-#include "UI/UIRoot.h"
-#include "System/imgui-docking/imgui.h"
+#include "ThirdParty/imgui-docking/imgui.h"
 #include "ThirdParty/ImGuizmo/ImGuizmo.h"
+#include "UI/UIRoot.h"
+#include "Input/UIInputSystem.h"
 
 #include <DirectXMath.h>
 
-#include "System/MotionRotationLimits.h"
+#include "Customize/MotionRotationLimits.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -25,294 +27,262 @@ using namespace DirectX::SimpleMath;
 
 namespace
 {
- constexpr float PreviewRoomMinX = -30.0f, PreviewRoomMaxX = 30.0f;
- constexpr float PreviewRoomNearZ = -30.0f, PreviewRoomFarZ = 38.0f;
- constexpr float PreviewRoomHeight = 32.0f, PreviewGridStep = 4.0f;
- // 近クリップ面と壁厚を含む余白。描画寸法とカメラ境界を同じ定数から求める。
- constexpr float PreviewCameraWallMargin = 1.0f;
-	// 操作感度は壁補正・距離基準の切替とは独立。初期距離14での従来のパン速度を基準にする。
-	constexpr float PreviewPanReferenceDistance = 14.0f;
-	constexpr float PreviewZoomUnitsPerNotch = 1.4f; // ホイール1目盛りの移動量。実距離に比例させない。
-	constexpr const char* CommonIdleMotionDataId = "Common/Idle";
-	constexpr const char* PreviewModelKey = "CustomizePreviewPlayer";
-	constexpr const char* PreviewModelPath = "assets/model/DebugPlayer/man.fbx";
-	constexpr float PreviewBoxDepth = 0.08f;
-	constexpr float JointMarkerRadius = 7.0f;
-	constexpr float JointPickRadius = 14.0f;
-	constexpr float RotationGizmoSizeClipSpace = 0.2f;
+constexpr float PreviewRoomMinX = -30.0f, PreviewRoomMaxX = 30.0f;
+constexpr float PreviewRoomNearZ = -30.0f, PreviewRoomFarZ = 38.0f;
+constexpr float PreviewRoomHeight = 32.0f, PreviewGridStep = 4.0f;
+// 近クリップ面と壁厚を含む余白。描画寸法とカメラ境界を同じ定数から求める。
+constexpr float PreviewCameraWallMargin = 1.0f;
+// 操作感度は壁補正・距離基準の切替とは独立。初期距離14での従来のパン速度を基準にする。
+constexpr float PreviewPanReferenceDistance = 14.0f;
+constexpr float PreviewZoomUnitsPerNotch = 1.4f; // ホイール1目盛りの移動量。実距離に比例させない。
+constexpr const char *CommonIdleMotionDataId = "Common/Idle";
+constexpr const char *PreviewModelKey = PlayerModelKey;
+constexpr float PreviewBoxDepth = 0.08f;
+constexpr float JointMarkerRadius = 7.0f;
+constexpr float JointPickRadius = 14.0f;
+constexpr float RotationGizmoSizeClipSpace = 0.2f;
 
-	/// <summary>
-	/// プレビューキャラの基準位置を取得する。
-	/// </summary>
-	/// <returns>プレビュー空間上の基準位置。</returns>
-	Vector3 GetPreviewPlayerBasePosition()
+/// <summary>
+/// プレビューキャラの基準位置を取得する。
+/// </summary>
+/// <returns>プレビュー空間上の基準位置。</returns>
+Vector3 GetPreviewPlayerBasePosition()
+{
+	return Vector3(0.0f, 0.0f, 8.0f);
+}
+
+/// <summary>
+/// 攻撃開始位置から見た相対移動量を、movementKeys から線形補間して取得する。
+/// </summary>
+/// <param name="attackData">参照する AttackData。</param>
+/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
+/// <returns>攻撃開始地点からの相対移動量。</returns>
+Vector2 GetAttackMovementOffsetAtFrameForPreview(const AttackData &attackData, int frame)
+{
+	if (attackData.movementKeys.empty() || frame < 0)
 	{
-		return Vector3(0.0f, 0.0f, 8.0f);
-	}
-
-	/// <summary>
-	/// 攻撃開始位置から見た相対移動量を、movementKeys から線形補間して取得する。
-	/// </summary>
-	/// <param name="attackData">参照する AttackData。</param>
-	/// <param name="frame">内部 0 始まりの攻撃フレーム。</param>
-	/// <returns>攻撃開始地点からの相対移動量。</returns>
-	Vector2 GetAttackMovementOffsetAtFrameForPreview(const AttackData& attackData, int frame)
-	{
-		if (attackData.movementKeys.empty() || frame < 0)
-		{
-			return Vector2::Zero;
-		}
-
-		const AttackMovementKeyData* previousKey = nullptr;
-		const AttackMovementKeyData* nextKey = nullptr;
-		for (const AttackMovementKeyData& keyframe : attackData.movementKeys)
-		{
-			if (keyframe.frame <= frame)
-			{
-				previousKey = &keyframe;
-			}
-			if (keyframe.frame >= frame)
-			{
-				nextKey = &keyframe;
-				break;
-			}
-		}
-
-		if (!previousKey && nextKey)
-		{
-			if (nextKey->frame <= 0)
-			{
-				return nextKey->offset;
-			}
-
-			const float rate = std::clamp(
-				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
-				0.0f,
-				1.0f);
-			return Vector2::Lerp(Vector2::Zero, nextKey->offset, rate);
-		}
-		if (previousKey && !nextKey)
-		{
-			return previousKey->offset;
-		}
-		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
-		{
-			const float rate = std::clamp(
-				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
-				0.0f,
-				1.0f);
-			return Vector2::Lerp(previousKey->offset, nextKey->offset, rate);
-		}
-		if (previousKey)
-		{
-			return previousKey->offset;
-		}
-
 		return Vector2::Zero;
 	}
 
-	/// <summary>
-	/// 汎用 MotionData の全身見た目オフセットを rootOffsetKeys から線形補間して取得する。
-	/// </summary>
-	/// <param name="motionData">参照する MotionData。</param>
-	/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
-	/// <returns>Transform ではなくモデル描画だけに使うオフセット。</returns>
-	Vector3 GetMotionRootOffsetAtFrameForPreview(const MotionData& motionData, int frame)
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(attackData.movementKeys, frame);
+
+	if (!previousKey && nextKey)
 	{
-		if (motionData.rootOffsetKeys.empty() || frame < 0)
+		if (nextKey->frame <= 0)
 		{
-			return Vector3::Zero;
+			return nextKey->offset;
 		}
 
-		const MotionRootOffsetKeyData* previousKey = nullptr;
-		const MotionRootOffsetKeyData* nextKey = nullptr;
-		for (const MotionRootOffsetKeyData& keyframe : motionData.rootOffsetKeys)
-		{
-			if (keyframe.frame <= frame)
-			{
-				previousKey = &keyframe;
-			}
-			if (keyframe.frame >= frame)
-			{
-				nextKey = &keyframe;
-				break;
-			}
-		}
+		const float rate = std::clamp(static_cast<float>(frame) / static_cast<float>(nextKey->frame), 0.0f, 1.0f);
 
-		if (!previousKey && nextKey)
-		{
-			if (nextKey->frame <= 0)
-			{
-				return nextKey->offset;
-			}
+		return Vector2::Lerp(Vector2::Zero, nextKey->offset, rate);
+	}
 
-			const float rate = std::clamp(
-				static_cast<float>(frame) / static_cast<float>(nextKey->frame),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(Vector3::Zero, nextKey->offset, rate);
-		}
-		if (motionData.looping && previousKey && !nextKey)
-		{
-			const MotionRootOffsetKeyData& firstKey = motionData.rootOffsetKeys.front();
-			const int totalFrames = std::max(1, motionData.totalFrames);
-			const int frameSpan = (totalFrames - previousKey->frame) + firstKey.frame;
-			const int frameOffset = frame - previousKey->frame;
-			if (frameSpan <= 0)
-			{
-				return previousKey->offset;
-			}
+	if (previousKey && !nextKey)
+	{
+		return previousKey->offset;
+	}
 
-			const float rate = std::clamp(
-				static_cast<float>(frameOffset) / static_cast<float>(frameSpan),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(previousKey->offset, firstKey.offset, rate);
-		}
-		if (previousKey && !nextKey)
-		{
-			return previousKey->offset;
-		}
-		if (previousKey && nextKey && previousKey->frame != nextKey->frame)
-		{
-			const float rate = std::clamp(
-				static_cast<float>(frame - previousKey->frame) / static_cast<float>(nextKey->frame - previousKey->frame),
-				0.0f,
-				1.0f);
-			return Vector3::Lerp(previousKey->offset, nextKey->offset, rate);
-		}
-		if (previousKey)
-		{
-			return previousKey->offset;
-		}
+	if (previousKey && nextKey && previousKey->frame != nextKey->frame)
+	{
+		const float rate = std::clamp(static_cast<float>(frame - previousKey->frame) /
+										  static_cast<float>(nextKey->frame - previousKey->frame),
+									  0.0f, 1.0f);
+		return Vector2::Lerp(previousKey->offset, nextKey->offset, rate);
+	}
 
+	if (previousKey)
+	{
+		return previousKey->offset;
+	}
+
+	return Vector2::Zero;
+}
+
+/// <summary>
+/// 汎用 MotionData の全身見た目オフセットを rootOffsetKeys から線形補間して取得する。
+/// </summary>
+/// <param name="motionData">参照する MotionData。</param>
+/// <param name="frame">内部 0 始まりのモーションフレーム。</param>
+/// <returns>Transform ではなくモデル描画だけに使うオフセット。</returns>
+Vector3 GetMotionRootOffsetAtFrameForPreview(const MotionData &motionData, int frame)
+{
+	if (motionData.rootOffsetKeys.empty() || frame < 0)
+	{
 		return Vector3::Zero;
 	}
 
-	/// <summary>
-	/// ワールド座標をプレビュー矩形上のスクリーン座標へ投影する。
-	/// </summary>
-	/// <param name="worldPosition">投影するワールド座標。</param>
-	/// <param name="view">現在のビュー行列。</param>
-	/// <param name="projection">現在のプロジェクション行列。</param>
-	/// <param name="region">プレビュー矩形。</param>
-	/// <param name="outScreenPosition">ImGui のスクリーン座標。</param>
-	/// <returns>画面内へ投影できた場合は true。</returns>
-	bool ProjectToPreviewScreen(
-		const Vector3& worldPosition,
-		const Matrix& view,
-		const Matrix& projection,
-		const RECT& region,
-		ImVec2& outScreenPosition)
+	auto [previousKey, nextKey] = KeyframeSearch::FindNeighbors(motionData.rootOffsetKeys, frame);
+
+	if (!previousKey && nextKey)
 	{
-		const Vector3 clipPosition = Vector3::Transform(worldPosition, view * projection);
-		if (clipPosition.z < 0.0f || clipPosition.z > 1.0f)
+		if (nextKey->frame <= 0)
 		{
-			return false;
+			return nextKey->offset;
 		}
 
-		const float regionWidth = static_cast<float>(region.right - region.left);
-		const float regionHeight = static_cast<float>(region.bottom - region.top);
-		if (regionWidth <= 0.0f || regionHeight <= 0.0f)
-		{
-			return false;
-		}
+		const float rate = std::clamp(static_cast<float>(frame) / static_cast<float>(nextKey->frame), 0.0f, 1.0f);
 
-		const ImVec2 viewportOrigin = ImGui::GetMainViewport()->Pos;
-		outScreenPosition.x = viewportOrigin.x + static_cast<float>(region.left) + (clipPosition.x + 1.0f) * 0.5f * regionWidth;
-		outScreenPosition.y = viewportOrigin.y + static_cast<float>(region.top) + (1.0f - clipPosition.y) * 0.5f * regionHeight;
-		return true;
+		return Vector3::Lerp(Vector3::Zero, nextKey->offset, rate);
 	}
 
-	/// <summary>
-	/// ImGuizmo の回転ハンドル種別を、ローカル回転軸番号へ変換する。
-	/// </summary>
-	/// <param name="handleType">現在操作中の ImGuizmo ハンドル。</param>
-	/// <returns>X=0, Y=1, Z=2。対象外なら -1。</returns>
-	int GetRotationAxisIndex(ImGuizmo::MOVETYPE handleType)
+	if (motionData.looping && previousKey && !nextKey)
 	{
-		switch (handleType)
+		const MotionRootOffsetKeyData &firstKey = motionData.rootOffsetKeys.front();
+		const int totalFrames = std::max(1, motionData.totalFrames);
+		const int frameSpan = (totalFrames - previousKey->frame) + firstKey.frame;
+		const int frameOffset = frame - previousKey->frame;
+
+		if (frameSpan <= 0)
 		{
-		case ImGuizmo::MT_ROTATE_X:
-			return 0;
-		case ImGuizmo::MT_ROTATE_Y:
-			return 1;
-		case ImGuizmo::MT_ROTATE_Z:
-			return 2;
-		default:
-			return -1;
+			return previousKey->offset;
 		}
+
+		const float rate = std::clamp(static_cast<float>(frameOffset) / static_cast<float>(frameSpan), 0.0f, 1.0f);
+
+		return Vector3::Lerp(previousKey->offset, firstKey.offset, rate);
 	}
 
-	/// <summary>
-	/// 回転軸番号からローカル空間の単位軸を取得する。
-	/// </summary>
-	/// <param name="axisIndex">X=0, Y=1, Z=2。</param>
-	/// <returns>ローカル空間の単位軸。</returns>
-	Vector3 GetLocalAxisByIndex(int axisIndex)
+	if (previousKey && !nextKey)
 	{
-		switch (axisIndex)
-		{
-		case 0:
-			return Vector3::UnitX;
-		case 1:
-			return Vector3::UnitY;
-		case 2:
-			return Vector3::UnitZ;
-		default:
-			return Vector3::Zero;
-		}
+		return previousKey->offset;
 	}
 
-	/// <summary>
-	/// モデルと現在姿勢から、編集用部位の実ボーンワールド行列を取得する。
-	/// </summary>
-	/// <param name="pose">参照する姿勢。</param>
-	/// <param name="model">部位名から実ボーンを解決するモデル。</param>
-	/// <param name="playerWorld">プレビューキャラ本体のワールド行列。</param>
-	/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
-	/// <param name="outModelBoneIndex">解決した実ボーン番号。</param>
-	/// <param name="outWorld">取得した実ワールド行列。</param>
-	/// <returns>有効な実ボーン行列を取得できた場合は true。</returns>
-	bool GetBodyPartWorldMatrix(
-		const SkeletonPose& pose,
-		const ModelResource& model,
-		const Matrix& playerWorld,
-		int bodyPartIndex,
-		int& outModelBoneIndex,
-		Matrix& outWorld)
+	if (previousKey && nextKey && previousKey->frame != nextKey->frame)
 	{
-		if (bodyPartIndex < 0 || bodyPartIndex >= MotionBodyPartCount)
-		{
-			return false;
-		}
-
-		outModelBoneIndex = MotionSkeleton::FindModelBoneIndex(
-			model,
-			MotionSkeleton::GetBodyPartName(bodyPartIndex));
-		if (outModelBoneIndex < 0 || outModelBoneIndex >= static_cast<int>(pose.boneWorldMatrices.size()))
-		{
-			return false;
-		}
-
-		return MotionPose::GetBoneWorldMatrix(pose, outModelBoneIndex, playerWorld, outWorld);
+		const float rate = std::clamp(static_cast<float>(frame - previousKey->frame) /
+										  static_cast<float>(nextKey->frame - previousKey->frame),
+									  0.0f, 1.0f);
+		return Vector3::Lerp(previousKey->offset, nextKey->offset, rate);
 	}
 
+	if (previousKey)
+	{
+		return previousKey->offset;
+	}
+
+	return Vector3::Zero;
 }
 
+/// <summary>
+/// ワールド座標をプレビュー矩形上のスクリーン座標へ投影する。
+/// </summary>
+/// <param name="worldPosition">投影するワールド座標。</param>
+/// <param name="view">現在のビュー行列。</param>
+/// <param name="projection">現在のプロジェクション行列。</param>
+/// <param name="region">プレビュー矩形。</param>
+/// <param name="outScreenPosition">ImGui のスクリーン座標。</param>
+/// <returns>画面内へ投影できた場合は true。</returns>
+bool ProjectToPreviewScreen(const Vector3 &worldPosition, const Matrix &view, const Matrix &projection,
+							const RECT &region, ImVec2 &outScreenPosition)
+{
+	const Vector3 clipPosition = Vector3::Transform(worldPosition, view * projection);
+
+	if (clipPosition.z < 0.0f || clipPosition.z > 1.0f)
+	{
+		return false;
+	}
+
+	const float regionWidth = static_cast<float>(region.right - region.left);
+	const float regionHeight = static_cast<float>(region.bottom - region.top);
+
+	if (regionWidth <= 0.0f || regionHeight <= 0.0f)
+	{
+		return false;
+	}
+
+	const ImVec2 viewportOrigin = ImGui::GetMainViewport()->Pos;
+	outScreenPosition.x =
+		viewportOrigin.x + static_cast<float>(region.left) + (clipPosition.x + 1.0f) * 0.5f * regionWidth;
+	outScreenPosition.y =
+		viewportOrigin.y + static_cast<float>(region.top) + (1.0f - clipPosition.y) * 0.5f * regionHeight;
+	return true;
+}
+
+/// <summary>
+/// ImGuizmo の回転ハンドル種別を、ローカル回転軸番号へ変換する。
+/// </summary>
+/// <param name="handleType">現在操作中の ImGuizmo ハンドル。</param>
+/// <returns>X=0, Y=1, Z=2。対象外なら -1。</returns>
+int GetRotationAxisIndex(ImGuizmo::MOVETYPE handleType)
+{
+	switch (handleType)
+	{
+	case ImGuizmo::MT_ROTATE_X:
+		return 0;
+	case ImGuizmo::MT_ROTATE_Y:
+		return 1;
+	case ImGuizmo::MT_ROTATE_Z:
+		return 2;
+	default:
+		return -1;
+	}
+}
+
+/// <summary>
+/// 回転軸番号からローカル空間の単位軸を取得する。
+/// </summary>
+/// <param name="axisIndex">X=0, Y=1, Z=2。</param>
+/// <returns>ローカル空間の単位軸。</returns>
+Vector3 GetLocalAxisByIndex(int axisIndex)
+{
+	switch (axisIndex)
+	{
+	case 0:
+		return Vector3::UnitX;
+	case 1:
+		return Vector3::UnitY;
+	case 2:
+		return Vector3::UnitZ;
+	default:
+		return Vector3::Zero;
+	}
+}
+
+/// <summary>
+/// モデルと現在姿勢から、編集用部位の実ボーンワールド行列を取得する。
+/// </summary>
+/// <param name="pose">参照する姿勢。</param>
+/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+/// <param name="playerWorld">プレビューキャラ本体のワールド行列。</param>
+/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
+/// <param name="outModelBoneIndex">解決した実ボーン番号。</param>
+/// <param name="outWorld">取得した実ワールド行列。</param>
+/// <returns>有効な実ボーン行列を取得できた場合は true。</returns>
+bool GetBodyPartWorldMatrix(const SkeletonPose &pose, const ModelResource &model, const Matrix &playerWorld,
+							int bodyPartIndex, int &outModelBoneIndex, Matrix &outWorld)
+{
+	if (bodyPartIndex < 0 || bodyPartIndex >= MotionBodyPartCount)
+	{
+		return false;
+	}
+
+	outModelBoneIndex = MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(bodyPartIndex));
+
+	if (outModelBoneIndex < 0 || outModelBoneIndex >= static_cast<int>(pose.boneModelMatrices.size()))
+	{
+		return false;
+	}
+
+	return MotionPose::GetBoneWorldMatrix(pose, outModelBoneIndex, playerWorld, outWorld);
+}
+
+} // namespace
+
+/// <summary>プレビュー用モデル、カメラ、RenderTexture を初期化する。</summary>
 void CustomizePreviewController::Initialize()
 {
 	Release();
 
-	ModelResourceManager::LoadModel(
-		PreviewModelKey,
-		PreviewModelPath,
-		Renderer::GetDevice());
-	if (const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey))
+	//プレビューモデルロード
+
+	//ロードできたら基準姿勢で初期化
+	if (const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey))
 	{
 		MotionPose::InitializeSkeletonPose(skeletonPose, *previewModel, PreviewModelKey);
 	}
 
+	//各種初期化
 	TransformSystem::SetLocalPosition(playerTransform, GetPreviewPlayerBasePosition());
 	TransformSystem::SetLocalEulerRotationDegrees(playerTransform, Vector3(0.0f, -90.0f, 0.0f));
 	TransformSystem::SetLocalScale(playerTransform, Vector3(0.05f, 0.05f, 0.05f));
@@ -327,12 +297,15 @@ void CustomizePreviewController::Initialize()
 	CameraSystem::Update(camera, cameraTransform);
 
 	const HRESULT hr = Renderer::CreateRenderTexture(renderTexture, PreviewTextureWidth, PreviewTextureHeight);
+
 	if (FAILED(hr))
 	{
 		DebugLog("[CustomizePreviewController] RenderTexture creation failed. hr=", static_cast<long>(hr));
 	}
 }
 
+/// <summary>初期化処理</summary>
+/// <remarks>プレビュー用 RenderTexture を解放する。</remarks>
 void CustomizePreviewController::Release()
 {
 	ResetCamera();
@@ -340,6 +313,7 @@ void CustomizePreviewController::Release()
 }
 
 /// <summary>カメラだけを既定の表示へ戻す。編集姿勢と再生フレームは変更しない。</summary>
+/// <remarks>カメラの角度・距離・注視点オフセットとマウス操作状態を初期化する。</remarks>
 void CustomizePreviewController::ResetCamera()
 {
 	cameraYawDegrees = 0.0f;
@@ -352,19 +326,30 @@ void CustomizePreviewController::ResetCamera()
 }
 
 /// <summary>再生操作欄に配置するカメラ初期化ボタンを描画する。</summary>
+/// <remarks>両編集画面で共用するカメラ初期化ボタンを描画する。</remarks>
 void CustomizePreviewController::DrawCameraResetButton()
 {
-	if (ImGui::Button("Reset Camera")) ResetCamera();
+	if (ImGui::Button("Reset Camera"))
+	{
+		ResetCamera();
+	}
 }
 
+/// <summary>Play 中なら表示フレームを進める。</summary>
+/// <param name="enabled">現在の画面がプレビュー再生対象なら true。</param>
+/// <param name="looping">終端到達時に 1F へ戻して再生継続するなら true。</param>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
+/// <returns>フレームが進んだ場合は true。</returns>
 bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int totalFrames)
 {
+	// 再生中でないならfalse
 	if (!enabled || !playing)
 	{
 		return false;
 	}
 
 	++currentFrame;
+	// 最終フレームに到達したらfalse
 	if (currentFrame >= totalFrames)
 	{
 		if (looping)
@@ -381,20 +366,27 @@ bool CustomizePreviewController::UpdatePlayback(bool enabled, bool looping, int 
 	return true;
 }
 
+/// <summary>プレビュー再生を開始する。</summary>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::Play(int totalFrames)
 {
 	if (currentFrame >= totalFrames)
 	{
 		currentFrame = 0;
 	}
+
 	playing = true;
 }
 
+/// <summary>プレビュー再生を停止する。</summary>
 void CustomizePreviewController::Stop()
 {
 	playing = false;
 }
 
+/// <summary>再生を止めて、指定フレーム数だけ手動で移動する。</summary>
+/// <param name="frameDelta">進めるフレーム数。負数なら戻す。</param>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::StepFrame(int frameDelta, int totalFrames)
 {
 	playing = false;
@@ -402,41 +394,44 @@ void CustomizePreviewController::StepFrame(int frameDelta, int totalFrames)
 	ClampCurrentFrame(totalFrames);
 }
 
+/// <summary>現在フレームをプレビュー表示範囲へ収める。</summary>
+/// <param name="totalFrames">0F Idle を含まない内部総フレーム数。</param>
 void CustomizePreviewController::ClampCurrentFrame(int totalFrames)
 {
 	currentFrame = std::clamp(currentFrame, 0, totalFrames);
 }
 
-void CustomizePreviewController::Render(
-	Renderer& renderer,
-	const RECT* region,
-	const AttackData& attackData,
-	const MotionData& motionData,
-	bool editingCommonMotion,
-	bool hasDraftMotion,
-	const std::string& editingMotionDataId,
-	int selectedBodyPartIndex,
-	bool rotationGizmoEnabled)
+/// <summary>プレビュー用カメラでモデルを描画する。</summary>
+/// <param name="renderer">描画に使う Renderer。</param>
+/// <param name="region">本体ウィンドウの描画矩形。nullptr の場合は RenderTexture へ描画する。</param>
+/// <param name="attackData">技編集時のプレビューに使う AttackData。</param>
+/// <param name="motionData">モーション編集時のプレビューに使う MotionData。</param>
+/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
+/// <param name="hasDraftMotion">motionData が有効な下書きなら true。</param>
+/// <param name="editingMotionDataId">現在編集している MotionData ID。</param>
+void CustomizePreviewController::Render(Renderer &renderer, const RECT *region, const AttackData &attackData,
+										const MotionData &motionData, bool editingCommonMotion, bool hasDraftMotion,
+										const std::string &editingMotionDataId, int selectedBodyPartIndex,
+										bool rotationGizmoEnabled)
 {
+
 	hasGizmoRotationEdit = false;
+	gizmoBlocksMarkerPicking = false;
+
 	if (!region && !renderTexture.renderTargetView)
 	{
 		return;
 	}
 
 	const Color defaultClearColor = Renderer::GetDefaultClearColor();
-	const float clearColor[4] = {
-		defaultClearColor.x,
-		defaultClearColor.y,
-		defaultClearColor.z,
-		defaultClearColor.w
-	};
+	const float clearColor[4] = {defaultClearColor.x, defaultClearColor.y, defaultClearColor.z, defaultClearColor.w};
 	std::optional<Renderer::ScopedRenderRegion> regionScope;
+
 	if (region)
 	{
 		regionScope.emplace(*region, true);
-		CameraSystem::SetAspectRatio(camera,
-			static_cast<float>(region->right - region->left) / static_cast<float>(region->bottom - region->top));
+		CameraSystem::SetAspectRatio(camera, static_cast<float>(region->right - region->left) /
+												 static_cast<float>(region->bottom - region->top));
 	}
 	else
 	{
@@ -446,7 +441,9 @@ void CustomizePreviewController::Render(
 
 	const int actionFrame = GetActionFrame();
 	const int editMode = rootMovementGizmoEnabled ? 2 : rotationGizmoEnabled ? (translationGizmoEnabled ? 1 : 0) : -1;
-	if (actionFrame != previousGizmoFrame || editMode != previousGizmoMode || selectedBodyPartIndex != previousGizmoPart || editorInputBlocked)
+
+	if (actionFrame != previousGizmoFrame || editMode != previousGizmoMode ||
+		selectedBodyPartIndex != previousGizmoPart || editorInputBlocked)
 	{
 		// ImGuizmo内部にも開始行列が残るため、自前フラグと同時に捕捉を終了する。
 		ImGuizmo::Enable(false);
@@ -456,46 +453,53 @@ void CustomizePreviewController::Render(
 		rootMovementActive = false;
 		EndIkSolveSession();
 	}
+
 	previousGizmoFrame = actionFrame;
 	previousGizmoMode = editMode;
 	previousGizmoPart = selectedBodyPartIndex;
-	const Vector2 movementOffset = !editingCommonMotion && actionFrame >= 0
-		? GetAttackMovementOffsetAtFrameForPreview(attackData, actionFrame)
-		: Vector2::Zero;
-	const Vector3 visualOffset = editingCommonMotion && actionFrame >= 0
-		? GetMotionRootOffsetAtFrameForPreview(motionData, actionFrame)
-		: Vector3::Zero;
-	TransformSystem::SetLocalPosition(
-		playerTransform,
-		GetPreviewPlayerBasePosition()
-		+ Vector3(movementOffset.x, movementOffset.y, 0.0f)
-		+ visualOffset);
 
-	if (region && !editorInputBlocked) UpdateCameraInput(*region);
+	const Vector2 movementOffset = !editingCommonMotion && actionFrame >= 0
+									   ? GetAttackMovementOffsetAtFrameForPreview(attackData, actionFrame)
+									   : Vector2::Zero;
+	const Vector3 visualOffset = editingCommonMotion && actionFrame >= 0
+									 ? GetMotionRootOffsetAtFrameForPreview(motionData, actionFrame)
+									 : Vector3::Zero;
+	TransformSystem::SetLocalPosition(playerTransform, GetPreviewPlayerBasePosition() +
+														   Vector3(movementOffset.x, movementOffset.y, 0.0f) +
+														   visualOffset);
+
+	if (region && !editorInputBlocked)
+	{
+		UpdateCameraInput(*region);
+	}
+
 	// 距離の壁補正・復帰も投影先を動かすため、全身移動ドラッグ中はカメラ行列自体を固定する。
-	if (!rootMovementActive) UpdateCameraTransform();
+	if (!rootMovementActive)
+	{
+		UpdateCameraTransform();
+	}
+
 	TransformSystem::UpdateWorldTransform(playerTransform);
 	TransformSystem::UpdateWorldTransform(cameraTransform);
 	CameraSystem::Update(camera, cameraTransform);
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
-	// 編集画面専用の空間寸法。バトルのステージ境界とは共有せず、
-	// プレビューのカメラ・深度・描画領域をそのまま使って床と壁を描く。
-	renderer.DrawTrainingRoomBackground(PreviewRoomMinX, PreviewRoomMaxX,
-		PreviewRoomNearZ, PreviewRoomFarZ, PreviewRoomHeight, PreviewGridStep);
-
-	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
-	const std::vector<Matrix>* previewSkinningMatrices = nullptr;
+	const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey);
+	const std::vector<Matrix> *previewSkinningMatrices = nullptr;
 	SkeletonPose ghostSkeletonPose;
-	const std::vector<Matrix>* ghostSkinningMatrices = nullptr;
+
+	const std::vector<Matrix> *ghostSkinningMatrices = nullptr;
+
 	if (previewModel && skeletonPose.initialized)
 	{
-		const MotionData* idleMotion = nullptr;
 		SkeletonPose idleBasePose;
-		const SkeletonPose* basePose = nullptr;
-		if (MotionDataManager::LoadMotionData(CommonIdleMotionDataId))
-		{
-			idleMotion = MotionDataManager::GetMotionData(CommonIdleMotionDataId);
-		}
+
+		const SkeletonPose *basePose = nullptr;
+
+		const char* baseMotionId = editingCommonMotion ? CommonIdleMotionDataId
+			: MotionPose::GetAttackBaseMotionId(attackData.usableState);
+
+		const auto *idleMotion = MotionDataManager::GetMotionData(baseMotionId);
+
 		if (idleMotion)
 		{
 			MotionPose::ApplyMotionData(ghostSkeletonPose, *idleMotion, 0, *previewModel);
@@ -514,43 +518,47 @@ void CustomizePreviewController::Render(
 		}
 		else if (!editingMotionDataId.empty())
 		{
-			const MotionData* motion = nullptr;
+			const MotionData *motion = nullptr;
+
 			if (hasDraftMotion && motionData.motionDataId == editingMotionDataId)
 			{
 				motion = &motionData;
 			}
-			else if (MotionDataManager::LoadMotionData(editingMotionDataId))
+			else
 			{
 				motion = MotionDataManager::GetMotionData(editingMotionDataId);
 			}
 
 			if (motion)
 			{
-				if (idleMotion && editingMotionDataId.rfind("Attack/", 0) == 0)
+				if (idleMotion && !editingCommonMotion)
 				{
 					MotionPose::ApplyMotionData(idleBasePose, *idleMotion, 0, *previewModel);
 					basePose = &idleBasePose;
 				}
 
-				MotionPose::ApplyMotionData(skeletonPose, *motion, actionFrame, *previewModel, basePose);
+				MotionPose::ApplyMotionData(skeletonPose, *motion, actionFrame, *previewModel, basePose, !editingCommonMotion);
 				MotionPose::UpdateSkinningMatrices(skeletonPose, *previewModel);
 				previewSkinningMatrices = &skeletonPose.skinningMatrices;
 			}
 		}
 	}
+
 	lastRenderedActionFrame = previewSkinningMatrices ? actionFrame : -100000;
 
 	if (region && previewModel && previewSkinningMatrices)
 	{
 		const ImVec2 origin = ImGui::GetMainViewport()->Pos;
-		ImDrawList* overlay = ImGui::GetForegroundDrawList();
+		ImDrawList *overlay = ImGui::GetForegroundDrawList();
 		// 3Dのビューポート制限はImGuiには伝わらないため、オーバーレイも明示的に切り取る。
 		overlay->PushClipRect(ImVec2(origin.x + region->left, origin.y + region->top),
-			ImVec2(origin.x + region->right, origin.y + region->bottom), true);
+							  ImVec2(origin.x + region->right, origin.y + region->bottom), true);
 		const ImVec2 mouse = ImGui::GetIO().MousePos;
-		const bool onToolbar = IsOverEditorToolbar(POINT{static_cast<LONG>(mouse.x - origin.x), static_cast<LONG>(mouse.y - origin.y)});
+		const bool onToolbar =
+			IsOverEditorToolbar(POINT{static_cast<LONG>(mouse.x - origin.x), static_cast<LONG>(mouse.y - origin.y)});
 		const bool blocked = editorInputBlocked || (onToolbar && !ImGuizmo::IsUsing());
 		ImGuizmo::Enable(!blocked);
+
 		if (rootMovementGizmoEnabled)
 		{
 			// 表示位置は腰、保存値はモデル原点からの移動量。両者を混ぜない。
@@ -562,62 +570,81 @@ void CustomizePreviewController::Render(
 				GetBodyPartWorldPosition(static_cast<int>(MotionBodyPart::Waist), rootMovementStartHandle);
 				rootMovementMatrix = Matrix::CreateTranslation(rootMovementStartHandle);
 			}
+
 			ImGuizmo::SetDrawlist(overlay);
 			ImGuizmo::SetOrthographic(false);
 			ImGuizmo::SetRect(origin.x + region->left, origin.y + region->top,
-				static_cast<float>(region->right - region->left), static_cast<float>(region->bottom - region->top));
+							  static_cast<float>(region->right - region->left),
+							  static_cast<float>(region->bottom - region->top));
 			ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
 			ImGuizmo::SetRotationAngleLimit(false, 0, 0);
-			ImGuizmo::SetTranslationAxesOnly(true);
+			ImGuizmo::SetScreenTranslationEnabled(false);
+
 			const auto axes = editingCommonMotion ? ImGuizmo::TRANSLATE : ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y;
-			if (ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11, axes, ImGuizmo::WORLD, &rootMovementMatrix._11))
+
+			if (ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11, axes, ImGuizmo::WORLD,
+									 &rootMovementMatrix._11))
 			{
 				// 毎フレームの加算ではなく、開始位置＋ハンドルの絶対変位を採用する。
-				rootMovementOffset = rootMovementStartOffset + (rootMovementMatrix.Translation() - rootMovementStartHandle);
-				if (!editingCommonMotion) rootMovementOffset.z = 0;
+				rootMovementOffset =
+					rootMovementStartOffset + (rootMovementMatrix.Translation() - rootMovementStartHandle);
+				if (!editingCommonMotion)
+				{
+					rootMovementOffset.z = 0;
+				}
+
 				rootMovementChanged = true;
 				Stop();
 				// データの確定を待たず、同じ描画フレームにも全身移動を反映する。
 				TransformSystem::SetLocalPosition(playerTransform, GetPreviewPlayerBasePosition() + rootMovementOffset);
 				TransformSystem::UpdateWorldTransform(playerTransform);
 			}
-			ImGuizmo::SetTranslationAxesOnly(false);
+
+			gizmoBlocksMarkerPicking = !blocked && ImGuizmo::IsOver();
+			ImGuizmo::SetScreenTranslationEnabled(true);
 			rootMovementActive = ImGuizmo::IsUsing();
 		}
 		else
 		{
 			rootMovementActive = false;
 			// Enable(false)で新規入力だけを止める。ツールバー上でも描画は続ける。
-			DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex, rotationGizmoEnabled && !editorInputBlocked);
+			DrawRotationGizmo(*region, *previewModel, selectedBodyPartIndex,
+							  rotationGizmoEnabled && !editorInputBlocked);
 		}
+
 		ImGuizmo::Enable(true);
 		overlay->PopClipRect();
 	}
+
+	const auto modelWorld = TransformSystem::GetWorldMatrix(playerTransform);
+	const Renderer::ShadowCaster caster{previewModel, modelWorld, previewSkinningMatrices};
+	const Vector3 roomCenter((PreviewRoomMinX + PreviewRoomMaxX) * 0.5f, 5.0f,
+							 (PreviewRoomNearZ + PreviewRoomFarZ) * 0.5f);
+	renderer.DrawShadowMap(std::span(&caster, 1), roomCenter, 108.0f);
+	renderer.DrawTrainingRoomBackground(PreviewRoomMinX, PreviewRoomMaxX, PreviewRoomNearZ, PreviewRoomFarZ,
+										PreviewRoomHeight, PreviewGridStep, true);
 
 	if (previewModel && ghostSkinningMatrices)
 	{
 		TransformComponent ghostTransform = playerTransform;
 		TransformSystem::SetLocalPosition(ghostTransform, GetPreviewPlayerBasePosition());
 		TransformSystem::UpdateWorldTransform(ghostTransform);
-		renderer.DrawModel(
-			*previewModel,
-			TransformSystem::GetWorldMatrix(ghostTransform),
-			Color(0.65f, 0.85f, 1.0f, 0.22f),
-			true,
-			ghostSkinningMatrices);
+		renderer.DrawModel(*previewModel, TransformSystem::GetWorldMatrix(ghostTransform),
+						   Color(0.65f, 0.85f, 1.0f, 0.22f), true, ghostSkinningMatrices);
 	}
 
-	const bool drewModel = previewModel
-		&& renderer.DrawModel(*previewModel, TransformSystem::GetWorldMatrix(playerTransform), previewSkinningMatrices);
+	const bool drewModel =
+		previewModel &&
+		renderer.DrawModel(*previewModel, modelWorld, previewSkinningMatrices);
 	if (!drewModel)
 	{
 		const Matrix fallbackWorld =
-			Matrix::CreateScale(1.0f, 4.0f, 1.0f)
-			* Matrix::CreateTranslation(Vector3(0.0f, 3.0f, 8.0f));
+			Matrix::CreateScale(1.0f, 4.0f, 1.0f) * Matrix::CreateTranslation(Vector3(0.0f, 3.0f, 8.0f));
 		renderer.DrawDebugCube(fallbackWorld);
 	}
 
 	DrawAttackBoxes(renderer, attackData, editingCommonMotion);
+
 	if (!region)
 	{
 		Renderer::RestoreBackBuffer();
@@ -626,39 +653,57 @@ void CustomizePreviewController::Render(
 	if (region && previewModel && previewSkinningMatrices && !editorInputBlocked && showJointMarkers)
 	{
 		const ImVec2 origin = ImGui::GetMainViewport()->Pos;
-		ImDrawList* overlay = ImGui::GetForegroundDrawList();
+		ImDrawList *overlay = ImGui::GetForegroundDrawList();
 		// ImGui前景描画が専用UIより手前になるので、ツールバーの背後には関節を描かない。
-		const auto drawMarkersClipped = [&](const RECT& clip)
+		const auto drawMarkersClipped = [&](const RECT &clip)
 		{
-			if (clip.right <= clip.left || clip.bottom <= clip.top) return;
+			if (clip.right <= clip.left || clip.bottom <= clip.top)
+			{
+				return;
+			}
+
 			overlay->PushClipRect(ImVec2(origin.x + clip.left, origin.y + clip.top),
-				ImVec2(origin.x + clip.right, origin.y + clip.bottom), true);
+								  ImVec2(origin.x + clip.right, origin.y + clip.bottom), true);
 			DrawJointMarkers(*region, *previewModel, selectedBodyPartIndex);
 			overlay->PopClipRect();
 		};
 		// 左上/右上など配置を仮定せず、表示中の部品を差し引く。
 		// 非表示の2段目や、部品間の空白は描画・入力の対象に残す。
 		std::vector<GameUI::Rect> visible{{region->left, region->top, region->right, region->bottom}};
-		for (const RECT& excluded : editorToolbarExclusions)
+
+		for (const RECT &excluded : editorToolbarExclusions)
 		{
 			std::vector<GameUI::Rect> next;
-			for (const auto& area : visible)
+
+			for (const auto &area : visible)
 			{
 				const auto parts = area.Subtract({excluded.left, excluded.top, excluded.right, excluded.bottom});
 				next.insert(next.end(), parts.begin(), parts.end());
 			}
+
 			visible = std::move(next);
 		}
-		for (const auto& area : visible) drawMarkersClipped(area.ToNativeRect());
+
+		for (const auto &area : visible)
+		{
+			drawMarkersClipped(area.ToNativeRect());
+		}
 	}
 }
 
+/// <summary>クライアント座標がプレビュー上の専用UIに重なるか確認する。</summary>
+/// <param name="point">ウィンドウ左上を原点とする位置。</param>
+/// <returns>表示中の部品と重なればtrue。</returns>
 bool CustomizePreviewController::IsOverEditorToolbar(POINT point) const
 {
 	return std::any_of(editorToolbarExclusions.begin(), editorToolbarExclusions.end(),
-		[point](const RECT& bounds) { return PtInRect(&bounds, point) != FALSE; });
+					   [point](const RECT &bounds)
+					   {
+						   return PtInRect(&bounds, point) != FALSE;
+					   });
 }
 
+/// <summary>Undo/Redo時にギズモの内部捕捉と未消費結果を破棄する。</summary>
 void CustomizePreviewController::CancelGizmoEditing()
 {
 	ImGuizmo::Enable(false);
@@ -669,10 +714,13 @@ void CustomizePreviewController::CancelGizmoEditing()
 	EndIkSolveSession();
 }
 
-bool CustomizePreviewController::ConsumeGizmoRotationEdit(
-	int& outBodyPartIndex,
-	int& outAxisIndex,
-	Quaternion& outLocalRotation)
+/// <summary>回転ギズモで編集された部位、操作軸、内部ローカル回転を取り出す。</summary>
+/// <param name="outBodyPartIndex">編集された部位番号の書き込み先。</param>
+/// <param name="outAxisIndex">操作された軸番号。X=0, Y=1, Z=2。</param>
+/// <param name="outLocalRotation">保存するローカル Quaternion の書き込み先。</param>
+/// <returns>今フレームにギズモ操作があった場合は true。</returns>
+bool CustomizePreviewController::ConsumeGizmoRotationEdit(int &outBodyPartIndex, int &outAxisIndex,
+														  Quaternion &outLocalRotation)
 {
 	if (!hasGizmoRotationEdit)
 	{
@@ -686,14 +734,19 @@ bool CustomizePreviewController::ConsumeGizmoRotationEdit(
 	gizmoEditedBodyPartIndex = -1;
 	gizmoEditedAxisIndex = -1;
 	gizmoLocalRotation = Quaternion::Identity;
+
 	return true;
 }
 
+/// <summary>IK 数値ドラッグ開始時の姿勢を固定し、ドラッグ中の IK 計算基準にする。</summary>
+/// <param name="actionFrame">固定する姿勢の内部 actionFrame。</param>
+/// <returns>現在のプレビュー姿勢を固定できた場合は true。</returns>
 bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 {
 	if (!skeletonPose.initialized || !HasRenderedActionFrame(actionFrame))
 	{
 		hasIkSolveBasePose = false;
+
 		return false;
 	}
 
@@ -704,19 +757,73 @@ bool CustomizePreviewController::BeginIkSolveSession(int actionFrame)
 	ikSolveAcceptedPose = skeletonPose;
 	ikSolveObjectWorld = TransformSystem::GetWorldMatrix(playerTransform);
 	hasIkSolveBasePose = true;
+
 	return true;
 }
 
-bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion& rotation) const
+/// <summary>補助ボーンを含む実親階層から、親の基準回転を合成する。</summary>
+/// <param name="part">編集部位番号。</param>
+/// <param name="basis">親座標からモデル座標への基準回転。
+/// 取得した回転行列。</param>
+/// <returns>部位と親階層が有効ならtrue。</returns>
+/// <remarks>実ボーンの親からモデル座標への基準回転を取得する。</remarks>
+bool CustomizePreviewController::GetBodyPartBindParentBasis(int part, Matrix& basis) const
 {
 	const auto* model = ModelResourceManager::GetModel(PreviewModelKey);
-	if (!model || part < 0 || part >= MotionBodyPartCount) return false;
+	if (!model || part < 0 || part >= MotionBodyPartCount)
+	{
+		return false;
+	}
+
 	const int bone = MotionSkeleton::FindModelBoneIndex(*model, MotionSkeleton::GetBodyPartName(part));
-	if (bone < 0) return false;
-	rotation = model->GetBones()[bone].bindLocalRotation;
+	if (bone < 0)
+	{
+		return false;
+	}
+
+	const auto& bones = model->GetBones();
+	basis = Matrix::Identity;
+	for (int child = bone; bones[child].parentIndex >= 0;)
+	{
+		const int parent = bones[child].parentIndex;
+		if (parent >= child)
+		{
+			return false;
+		}
+
+		basis *= Matrix::CreateFromQuaternion(bones[parent].bindLocalRotation);
+		child = parent;
+	}
+
 	return true;
 }
 
+/// <summary>数値回転とIKが同じ基準で制限できるよう、実モデルの基準回転を取得する。</summary>
+/// <param name="part">編集部位。</param>
+/// <param name="rotation">取得先。</param>
+/// <returns>取得成功時true。</returns>
+bool CustomizePreviewController::GetBodyPartBindRotation(int part, Quaternion &rotation) const
+{
+	const auto *model = ModelResourceManager::GetModel(PreviewModelKey);
+
+	if (!model || part < 0 || part >= MotionBodyPartCount)
+	{
+		return false;
+	}
+
+	const int bone = MotionSkeleton::FindModelBoneIndex(*model, MotionSkeleton::GetBodyPartName(part));
+
+	if (bone < 0)
+	{
+		return false;
+	}
+
+	rotation = model->GetBones()[bone].bindLocalRotation;
+
+	return true;
+}
+
+/// <summary>IK 数値ドラッグ用に固定していた基準姿勢を破棄する。</summary>
 void CustomizePreviewController::EndIkSolveSession()
 {
 	hasIkSolveBasePose = false;
@@ -724,119 +831,195 @@ void CustomizePreviewController::EndIkSolveSession()
 	ikSolveAcceptedPose = SkeletonPose{};
 }
 
-bool CustomizePreviewController::GetBodyPartWorldPosition(
-	int bodyPartIndex,
-	Vector3& outWorldPosition) const
+/// <summary>プレビュー上に表示されている現在姿勢から、指定部位のワールド位置を取得する。</summary>
+/// <param name="bodyPartIndex">取得する編集用部位番号。</param>
+/// <param name="outWorldPosition">取得したワールド位置の書き込み先。</param>
+/// <returns>現在のプレビュー姿勢とモデルから位置を取得できた場合は true。</returns>
+bool CustomizePreviewController::GetBodyPartWorldPosition(int bodyPartIndex, Vector3 &outWorldPosition) const
 {
-	const ModelResource* previewModel = ModelResourceManager::GetModel(PreviewModelKey);
+	const ModelResource *previewModel = ModelResourceManager::GetModel(PreviewModelKey);
+
 	if (!previewModel || !skeletonPose.initialized)
 	{
 		return false;
 	}
 
 	int modelBoneIndex = -1;
+
 	Matrix bodyPartWorld;
 	const Matrix playerWorld = TransformSystem::GetWorldMatrix(playerTransform);
+
 	if (!GetBodyPartWorldMatrix(skeletonPose, *previewModel, playerWorld, bodyPartIndex, modelBoneIndex, bodyPartWorld))
 	{
 		return false;
 	}
 
 	outWorldPosition = Vector3::Transform(Vector3::Zero, bodyPartWorld);
+
 	return true;
 }
 
-bool CustomizePreviewController::SolveIkTarget(
-    int targetBodyPartIndex, const Vector3& targetWorldPosition, MotionIkResult& result)
+/// <summary>選択関節を開始姿勢からワールド直線上で移動し、検証済み回転を返す。</summary>
+/// <param name="targetBodyPartIndex">手・肘・足・膝の編集部位。</param>
+/// <param name="targetWorldPosition">入力したワールド位置。</param>
+/// <param name="result">保存する回転と到達情報。</param>
+/// <returns>開始セッションと実骨格が有効で解を復元できた場合true。</returns>
+bool CustomizePreviewController::SolveIkTarget(int targetBodyPartIndex, const Vector3 &targetWorldPosition,
+											   MotionIkResult &result)
 {
-    const ModelResource* model = ModelResourceManager::GetModel(PreviewModelKey);
-    const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(targetBodyPartIndex));
-    if (!model || !chain || !hasIkSolveBasePose) return false;
-    // 入力値は開始時のワールド座標のまま。解の探索だけを前回の採用姿勢から続ける。
-    // 下書きやプレビューから読み戻さないため、他の編集更新の混入を防ぐ。
-    if (!MotionIk::Solve(*model, ikSolveAcceptedPose, ikSolveObjectWorld, *chain, targetWorldPosition, result)) return false;
-    for (int i = 0; i < 3; ++i)
-        ikSolveAcceptedPose.bonePoses[result.boneIndices[i]].localRotation = result.localRotations[i];
-    MotionPose::UpdateSkinningMatrices(ikSolveAcceptedPose, *model);
-    return true;
+	const ModelResource *model = ModelResourceManager::GetModel(PreviewModelKey);
+	const auto *chain = MotionIk::FindChain(static_cast<MotionBodyPart>(targetBodyPartIndex));
+
+	if (!model || !chain || !hasIkSolveBasePose)
+	{
+		return false;
+	}
+
+	// 入力値は開始時のワールド座標のまま。解の探索だけを前回の採用姿勢から続ける。
+	// 下書きやプレビューから読み戻さないため、他の編集更新の混入を防ぐ。
+	if (!MotionIk::Solve(*model, ikSolveAcceptedPose, ikSolveObjectWorld, *chain, targetWorldPosition, result))
+	{
+		return false;
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		ikSolveAcceptedPose.bonePoses[result.boneIndices[i]].localRotation = result.localRotations[i];
+	}
+
+	MotionPose::UpdateSkinningMatrices(ikSolveAcceptedPose, *model);
+
+	return true;
 }
 
+/// <summary>プレビュー上の関節クリックで選択された部位を取り出す。</summary>
+/// <returns>選択された部位番号。イベントなしは -1、空白クリックによる解除は -2。</returns>
 int CustomizePreviewController::ConsumePickedBodyPartIndex()
 {
 	const int result = pickedBodyPartIndex;
 	pickedBodyPartIndex = -1;
+
 	return result;
 }
 
+/// <summary>現在のプレビュー表示フレームを取得する。</summary>
+/// <returns>0F Idle を含むプレビュー表示フレーム。</returns>
 int CustomizePreviewController::GetCurrentFrame() const
 {
 	return currentFrame;
 }
 
+/// <summary>現在のプレビュー表示フレームを設定する。</summary>
+/// <param name="frame">0F Idle を含むプレビュー表示フレーム。</param>
 void CustomizePreviewController::SetCurrentFrame(int frame)
 {
 	currentFrame = frame;
 }
 
+/// <summary>現在の表示フレームを内部 actionFrame へ変換する。</summary>
+/// <returns>0F Idle は -1、1F 以降は 0 始まりの内部 actionFrame。</returns>
 int CustomizePreviewController::GetActionFrame() const
 {
 	return currentFrame - 1;
 }
 
+/// <summary>指定 actionFrame の姿勢が直近の Render でプレビュー姿勢へ反映済みか確認する。</summary>
+/// <param name="actionFrame">確認対象の内部 actionFrame。</param>
+/// <returns>現在の skeletonPose が指定フレームから作られている場合は true。</returns>
 bool CustomizePreviewController::HasRenderedActionFrame(int actionFrame) const
 {
 	return lastRenderedActionFrame == actionFrame;
 }
 
+/// <summary>プレビューが再生中か取得する。</summary>
+/// <returns>再生中なら true。</returns>
 bool CustomizePreviewController::IsPlaying() const
 {
 	return playing;
 }
 
-const Renderer::RenderTexture& CustomizePreviewController::GetRenderTexture() const
+/// <summary>プレビュー用 RenderTexture を取得する。</summary>
+/// <returns>RenderTexture 参照。</returns>
+const Renderer::RenderTexture &CustomizePreviewController::GetRenderTexture() const
 {
 	return renderTexture;
 }
 
-float& CustomizePreviewController::GetCameraYawDegrees()
+/// <summary>プレビューカメラの yaw 角度を編集する参照を取得する。</summary>
+/// <returns>yaw 角度の参照。</returns>
+float &CustomizePreviewController::GetCameraYawDegrees()
 {
 	return cameraYawDegrees;
 }
 
-float& CustomizePreviewController::GetCameraPitchDegrees()
+/// <summary>プレビューカメラの pitch 角度を編集する参照を取得する。</summary>
+/// <returns>pitch 角度の参照。</returns>
+float &CustomizePreviewController::GetCameraPitchDegrees()
 {
 	return cameraPitchDegrees;
 }
 
-float& CustomizePreviewController::GetCameraDistance()
+/// <summary>プレビューカメラ距離を編集する参照を取得する。</summary>
+/// <returns>距離の参照。</returns>
+float &CustomizePreviewController::GetCameraDistance()
 {
 	return cameraDistance;
 }
 
 /// <summary>プレビュー内から始まったマウス操作だけを取り込み、カメラ状態を更新する。</summary>
-/// <param name="region">ウィンドウ内のプレビュー領域。</param>
-void CustomizePreviewController::UpdateCameraInput(const RECT& region)
+/// <param name="region">ウィンドウ内のプレビュー領域。
+/// 本体ウィンドウ内のプレビュー領域。</param>
+/// <remarks>両編集画面共通の旋回・平行移動・ズームを処理する。</remarks>
+void CustomizePreviewController::UpdateCameraInput(const RECT &region)
 {
-	const ImGuiIO& io = ImGui::GetIO();
+	const ImGuiIO &io = ImGui::GetIO();
 	const ImVec2 origin = ImGui::GetMainViewport()->Pos;
 	const POINT clientMouse{static_cast<LONG>(io.MousePos.x - origin.x), static_cast<LONG>(io.MousePos.y - origin.y)};
-	if (IsOverEditorToolbar(clientMouse)) return;
-	const bool inside = io.MousePos.x >= origin.x + region.left && io.MousePos.x < origin.x + region.right
-		&& io.MousePos.y >= origin.y + region.top && io.MousePos.y < origin.y + region.bottom;
+
+	const auto& frame = GameUI::UIInputSystem::GetFrame();
+	const POINT rightStart = frame.rightPointerPressed ? frame.rightPressPosition : clientMouse;
+	const bool inside = PtInRect(&region, clientMouse) && !IsOverEditorToolbar(clientMouse);
+	const bool rightStartsInside = PtInRect(&region, rightStart) && !IsOverEditorToolbar(rightStart);
 	// 操作の基準も固定の初期位置に揃える。再生・シーク・オフセット編集には追従しない。
 	const Vector3 baseTarget = GetPreviewPlayerBasePosition() + Vector3(0, 4, 0);
 	// 開始判定だけを領域内に限定。ドラッグ中は領域外でもボタン解除まで追跡する。
-	if (cameraDragButton >= 0 && (!ImGui::IsMouseDown(cameraDragButton) || io.AppFocusLost)) cameraDragButton = -1;
-	const bool editing = ImGuizmo::IsUsing() || rotationGizmoDragActive || translationGizmoActive || hasIkSolveBasePose;
-	if (editing) { cameraDragButton = -1; return; }
-	if (cameraDragButton < 0 && inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive())
+	if (cameraDragButton >= 0 && (!ImGui::IsMouseDown(cameraDragButton) || io.AppFocusLost))
 	{
-		if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) cameraDragButton = ImGuiMouseButton_Right;
-		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) cameraDragButton = ImGuiMouseButton_Middle;
-		if (cameraDragButton >= 0) cameraDragTarget = baseTarget + cameraTargetOffset;
-		// 平行移動へ切り替えた時点の実距離を採用し、以前の距離への自動復帰を解除する。
-		if (cameraDragButton == ImGuiMouseButton_Middle) cameraDistance = actualCameraDistance;
+		cameraDragButton = -1;
 	}
+
+	const bool editing = ImGuizmo::IsUsing() || rotationGizmoDragActive || translationGizmoActive || hasIkSolveBasePose;
+
+	if (editing)
+	{
+		cameraDragButton = -1;
+
+		return;
+	}
+
+	if (cameraDragButton < 0 && !io.WantCaptureMouse && !ImGui::IsAnyItemActive())
+	{
+		if (rightStartsInside && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		{
+			cameraDragButton = ImGuiMouseButton_Right;
+		}
+		else if (inside && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+		{
+			cameraDragButton = ImGuiMouseButton_Middle;
+		}
+
+		if (cameraDragButton >= 0)
+		{
+			cameraDragTarget = baseTarget + cameraTargetOffset;
+		}
+
+		// 平行移動へ切り替えた時点の実距離を採用し、以前の距離への自動復帰を解除する。
+		if (cameraDragButton == ImGuiMouseButton_Middle)
+		{
+			cameraDistance = actualCameraDistance;
+		}
+	}
+
 	if (cameraDragButton >= 0)
 	{
 		if (cameraDragButton == ImGuiMouseButton_Right)
@@ -851,28 +1034,31 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 			const Vector3 forward(std::sin(yaw) * std::cos(pitch), std::sin(pitch), std::cos(yaw) * std::cos(pitch));
 			const Vector3 up = forward.Cross(right);
 			// 壁で距離が短縮されても操作量を縮めない。実距離は位置・壁判定だけに使う。
-			const float units = 2 * PreviewPanReferenceDistance * std::tan(XMConvertToRadians(camera.fovYDegrees) * 0.5f)
-				/ static_cast<float>(std::max(1L, region.bottom - region.top));
+			const float units = 2 * PreviewPanReferenceDistance *
+								std::tan(XMConvertToRadians(camera.fovYDegrees) * 0.5f) /
+								static_cast<float>(std::max(1L, region.bottom - region.top));
 			Vector3 movement = (-right * io.MouseDelta.x + up * io.MouseDelta.y) * units;
 			const Vector3 cameraPosition = cameraDragTarget - forward * actualCameraDistance;
 			const Vector3 lower(PreviewRoomMinX + PreviewCameraWallMargin, PreviewCameraWallMargin,
-				PreviewRoomNearZ + PreviewCameraWallMargin);
+								PreviewRoomNearZ + PreviewCameraWallMargin);
 			const Vector3 upper(PreviewRoomMaxX - PreviewCameraWallMargin, PreviewRoomHeight - PreviewCameraWallMargin,
-				PreviewRoomFarZ - PreviewCameraWallMargin);
+								PreviewRoomFarZ - PreviewCameraWallMargin);
 			// 同じ移動量を両点へ適用できる範囲に制限する。距離補正でパンを代用しない。
 			const auto clampMove = [](float delta, float target, float eye, float lo, float hi)
 			{
 				return std::clamp(delta, std::max(lo + 0.1f - target, lo - eye),
-					std::min(hi - 0.1f - target, hi - eye));
+								  std::min(hi - 0.1f - target, hi - eye));
 			};
 			movement.x = clampMove(movement.x, cameraDragTarget.x, cameraPosition.x, lower.x, upper.x);
 			movement.y = clampMove(movement.y, cameraDragTarget.y, cameraPosition.y, lower.y, upper.y);
 			movement.z = clampMove(movement.z, cameraDragTarget.z, cameraPosition.z, lower.z, upper.z);
 			cameraDragTarget += movement;
 		}
+
 		// パンで変更した注視点だけを固定基準からのオフセットとして保持する。
 		cameraTargetOffset = cameraDragTarget - baseTarget;
 	}
+
 	if (inside && !io.WantCaptureMouse && !ImGui::IsAnyItemActive() && io.MouseWheel != 0)
 	{
 		// 壁の向こうに残った指定距離ではなく、今見えている位置からズームする。
@@ -882,6 +1068,7 @@ void CustomizePreviewController::UpdateCameraInput(const RECT& region)
 }
 
 /// <summary>注視点オフセットと旋回角度からカメラTransformを更新する。</summary>
+/// <remarks>プレビューキャラを中心に回り込むオービットカメラの Transform を更新する。</remarks>
 void CustomizePreviewController::UpdateCameraTransform()
 {
 	cameraPitchDegrees = std::clamp(cameraPitchDegrees, -45.0f, 65.0f);
@@ -891,52 +1078,68 @@ void CustomizePreviewController::UpdateCameraTransform()
 	const Vector3 baseTarget = GetPreviewPlayerBasePosition() + Vector3(0.0f, 4.0f, 0.0f);
 	const Vector3 requestedTarget = baseTarget + cameraTargetOffset;
 	const Vector3 minimum(PreviewRoomMinX + PreviewCameraWallMargin, PreviewCameraWallMargin,
-		PreviewRoomNearZ + PreviewCameraWallMargin);
+						  PreviewRoomNearZ + PreviewCameraWallMargin);
 	const Vector3 maximum(PreviewRoomMaxX - PreviewCameraWallMargin, PreviewRoomHeight - PreviewCameraWallMargin,
-		PreviewRoomFarZ - PreviewCameraWallMargin);
+						  PreviewRoomFarZ - PreviewCameraWallMargin);
 	// 注視点を室内に保つ。ドラッグの蓄積値にも補正を戻し、壁際で操作が引っ掛からないようにする。
 	const Vector3 targetPosition(std::clamp(requestedTarget.x, minimum.x + 0.1f, maximum.x - 0.1f),
-		std::clamp(requestedTarget.y, minimum.y + 0.1f, maximum.y - 0.1f),
-		std::clamp(requestedTarget.z, minimum.z + 0.1f, maximum.z - 0.1f));
+								 std::clamp(requestedTarget.y, minimum.y + 0.1f, maximum.y - 0.1f),
+								 std::clamp(requestedTarget.z, minimum.z + 0.1f, maximum.z - 0.1f));
 	cameraTargetOffset = targetPosition - baseTarget;
-	if (cameraDragButton >= 0) cameraDragTarget = targetPosition;
+
+	if (cameraDragButton >= 0)
+	{
+		cameraDragTarget = targetPosition;
+	}
+
 	const float yawRadians = XMConvertToRadians(cameraYawDegrees);
 	const float pitchRadians = XMConvertToRadians(cameraPitchDegrees);
 	const float cosPitch = std::cos(pitchRadians);
-	const Vector3 forward(
-		std::sin(yawRadians) * cosPitch,
-		std::sin(pitchRadians),
-		std::cos(yawRadians) * cosPitch);
+	const Vector3 forward(std::sin(yawRadians) * cosPitch, std::sin(pitchRadians), std::cos(yawRadians) * cosPitch);
 
 	// 注視点から本来のカメラ位置への線分と、余白付き室内AABBの交点を求める。
 	// XYZ別の位置クランプと異なり、旋回角度と注視点を変えずに距離だけを縮める。
 	const Vector3 direction = -forward;
 	float allowedDistance = cameraDistance;
+
 	const auto limitAxis = [&](float target, float axis, float lower, float upper)
 	{
-		if (axis > 0.00001f) allowedDistance = std::min(allowedDistance, (upper - target) / axis);
-		else if (axis < -0.00001f) allowedDistance = std::min(allowedDistance, (lower - target) / axis);
+		if (axis > 0.00001f)
+		{
+			allowedDistance = std::min(allowedDistance, (upper - target) / axis);
+		}
+		else if (axis < -0.00001f)
+		{
+			allowedDistance = std::min(allowedDistance, (lower - target) / axis);
+		}
 	};
 	limitAxis(targetPosition.x, direction.x, minimum.x, maximum.x);
 	limitAxis(targetPosition.y, direction.y, minimum.y, maximum.y);
 	limitAxis(targetPosition.z, direction.z, minimum.z, maximum.z);
 	allowedDistance = std::max(0.001f, allowedDistance);
 	// 接近時は即時に壁内へ戻し、余裕ができた場合のみ固定フレームの係数で復帰する。
-	actualCameraDistance = actualCameraDistance > allowedDistance ? allowedDistance
-		: std::min(allowedDistance, actualCameraDistance + (allowedDistance - actualCameraDistance) * 0.15f);
+	actualCameraDistance =
+		actualCameraDistance > allowedDistance
+			? allowedDistance
+			: std::min(allowedDistance, actualCameraDistance + (allowedDistance - actualCameraDistance) * 0.15f);
 	const Vector3 cameraPosition = targetPosition + direction * actualCameraDistance;
 	TransformSystem::SetLocalPosition(cameraTransform, cameraPosition);
 	// 位置の球面計算とEuler回転のPitch符号を別々に扱わない。
 	// 実際の位置から注視点へのLookAtを作り、その逆行列からカメラの向きを復元する。
 	Matrix view;
-	XMStoreFloat4x4(&view, XMMatrixLookAtLH(XMLoadFloat3(&cameraPosition),
-		XMLoadFloat3(&targetPosition), XMVectorSet(0, 1, 0, 0)));
+	XMStoreFloat4x4(
+		&view, XMMatrixLookAtLH(XMLoadFloat3(&cameraPosition), XMLoadFloat3(&targetPosition), XMVectorSet(0, 1, 0, 0)));
 	Quaternion rotation = Quaternion::CreateFromRotationMatrix(view.Invert());
 	rotation.Normalize();
 	TransformSystem::SetLocalRotationQuaternion(cameraTransform, rotation);
 }
 
-void CustomizePreviewController::DrawAttackBoxes(Renderer& renderer, const AttackData& attackData, bool editingCommonMotion)
+/// <summary>現在フレームが active 範囲なら技の AttackBox を描画する。</summary>
+/// <param name="renderer">DebugBox 描画に使う Renderer。</param>
+/// <param name="attackData">表示する技データ。</param>
+/// <param name="editingCommonMotion">汎用モーション編集中なら true。</param>
+void CustomizePreviewController::DrawAttackBoxes(Renderer &renderer, const AttackData &attackData,
+												 bool editingCommonMotion)
 {
 	if (editingCommonMotion || !IsAttackFrameActive(attackData.frame, GetActionFrame()))
 	{
@@ -946,68 +1149,64 @@ void CustomizePreviewController::DrawAttackBoxes(Renderer& renderer, const Attac
 	const Color attackBoxColor(1.0f, 0.0f, 0.0f, 0.35f);
 	const Vector3 basePosition = TransformSystem::GetWorldPosition(playerTransform);
 
-	for (const AttackHitboxData& hitbox : attackData.hitboxes)
+	for (const AttackHitboxData &hitbox : attackData.hitboxes)
 	{
 		if (hitbox.size.x <= 0.0f || hitbox.size.y <= 0.0f)
 		{
 			continue;
 		}
 
-		const Vector3 center(
-			basePosition.x + hitbox.offset.x,
-			basePosition.y + hitbox.offset.y,
-			basePosition.z);
+		const Vector3 center(basePosition.x + hitbox.offset.x, basePosition.y + hitbox.offset.y, basePosition.z);
 		const Matrix boxWorld =
-			Matrix::CreateScale(hitbox.size.x * 0.5f, hitbox.size.y * 0.5f, PreviewBoxDepth * 0.5f)
-			* Matrix::CreateTranslation(center);
+			Matrix::CreateScale(hitbox.size.x * 0.5f, hitbox.size.y * 0.5f, PreviewBoxDepth * 0.5f) *
+			Matrix::CreateTranslation(center);
 
 		renderer.DrawDebugBox(boxWorld, attackBoxColor);
 	}
 }
 
-void CustomizePreviewController::DrawJointMarkers(
-	const RECT& region,
-	const ModelResource& model,
-	int selectedBodyPartIndex)
+/// <summary>関節マーカーを画面へ重ね、クリックされた部位を記録する。</summary>
+/// <param name="region">プレビュー描画矩形。</param>
+/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
+void CustomizePreviewController::DrawJointMarkers(const RECT &region, const ModelResource &model,
+												  int selectedBodyPartIndex)
 {
-	if (!skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
+	if (!skeletonPose.initialized || skeletonPose.boneModelMatrices.empty())
 	{
 		return;
 	}
 
 	const ImVec2 viewportOrigin = ImGui::GetMainViewport()->Pos;
-	const ImVec2 regionMin(
-		viewportOrigin.x + static_cast<float>(region.left),
-		viewportOrigin.y + static_cast<float>(region.top));
-	const ImVec2 regionMax(
-		viewportOrigin.x + static_cast<float>(region.right),
-		viewportOrigin.y + static_cast<float>(region.bottom));
+	const ImVec2 regionMin(viewportOrigin.x + static_cast<float>(region.left),
+						   viewportOrigin.y + static_cast<float>(region.top));
+	const ImVec2 regionMax(viewportOrigin.x + static_cast<float>(region.right),
+						   viewportOrigin.y + static_cast<float>(region.bottom));
 	const ImVec2 mousePosition = ImGui::GetIO().MousePos;
-	const bool mouseInPreview =
-		mousePosition.x >= regionMin.x
-		&& mousePosition.x <= regionMax.x
-		&& mousePosition.y >= regionMin.y
-		&& mousePosition.y <= regionMax.y
-		&& !IsOverEditorToolbar(POINT{static_cast<LONG>(mousePosition.x - viewportOrigin.x), static_cast<LONG>(mousePosition.y - viewportOrigin.y)});
+	const bool mouseInPreview = mousePosition.x >= regionMin.x && mousePosition.x <= regionMax.x &&
+								mousePosition.y >= regionMin.y && mousePosition.y <= regionMax.y &&
+								!IsOverEditorToolbar(POINT{static_cast<LONG>(mousePosition.x - viewportOrigin.x),
+														   static_cast<LONG>(mousePosition.y - viewportOrigin.y)});
 
 	std::array<ImVec2, MotionBodyPartCount> markerPositions = {};
 	std::array<bool, MotionBodyPartCount> markerVisible = {};
 	const Matrix playerWorld = TransformSystem::GetWorldMatrix(playerTransform);
 	const Matrix view = camera.viewMatrix;
 	const Matrix projection = camera.projectionMatrix;
+
 	for (int bodyPartIndex = 0; bodyPartIndex < MotionBodyPartCount; ++bodyPartIndex)
 	{
-		const int modelBoneIndex = MotionSkeleton::FindModelBoneIndex(
-			model,
-			MotionSkeleton::GetBodyPartName(bodyPartIndex));
-		if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneWorldMatrices.size()))
+		const int modelBoneIndex =
+			MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(bodyPartIndex));
+		if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneModelMatrices.size()))
 		{
 			continue;
 		}
 
-		const Vector3 modelPosition = Vector3::Transform(Vector3::Zero, skeletonPose.boneWorldMatrices[modelBoneIndex]);
+		const Vector3 modelPosition = Vector3::Transform(Vector3::Zero, skeletonPose.boneModelMatrices[modelBoneIndex]);
 		const Vector3 worldPosition = Vector3::Transform(modelPosition, playerWorld);
 		ImVec2 screenPosition;
+
 		if (!ProjectToPreviewScreen(worldPosition, view, projection, region, screenPosition))
 		{
 			continue;
@@ -1017,7 +1216,8 @@ void CustomizePreviewController::DrawJointMarkers(
 		markerVisible[bodyPartIndex] = true;
 	}
 
-	ImDrawList* drawList = ImGui::GetForegroundDrawList();
+	ImDrawList *drawList = ImGui::GetForegroundDrawList();
+
 	for (int bodyPartIndex = 0; bodyPartIndex < MotionBodyPartCount; ++bodyPartIndex)
 	{
 		if (!markerVisible[bodyPartIndex])
@@ -1025,20 +1225,19 @@ void CustomizePreviewController::DrawJointMarkers(
 			continue;
 		}
 
-		const MotionBodyPartDefinition& definition = MotionSkeleton::GetBodyPartDefinition(bodyPartIndex);
+		const MotionBodyPartDefinition &definition = MotionSkeleton::GetBodyPartDefinition(bodyPartIndex);
 		const int parentIndex = static_cast<int>(definition.parent);
+
 		if (parentIndex >= 0 && parentIndex < MotionBodyPartCount && markerVisible[parentIndex])
 		{
-			drawList->AddLine(
-				markerPositions[parentIndex],
-				markerPositions[bodyPartIndex],
-				IM_COL32(80, 190, 255, 150),
-				2.0f);
+			drawList->AddLine(markerPositions[parentIndex], markerPositions[bodyPartIndex], IM_COL32(80, 190, 255, 150),
+							  2.0f);
 		}
 	}
 
 	int nearestBodyPartIndex = -1;
 	float nearestDistanceSquared = JointPickRadius * JointPickRadius;
+
 	for (int bodyPartIndex = 0; bodyPartIndex < MotionBodyPartCount; ++bodyPartIndex)
 	{
 		if (!markerVisible[bodyPartIndex])
@@ -1050,6 +1249,7 @@ void CustomizePreviewController::DrawJointMarkers(
 		const float dx = mousePosition.x - markerPosition.x;
 		const float dy = mousePosition.y - markerPosition.y;
 		const float distanceSquared = dx * dx + dy * dy;
+
 		if (mouseInPreview && distanceSquared < nearestDistanceSquared)
 		{
 			nearestDistanceSquared = distanceSquared;
@@ -1057,10 +1257,10 @@ void CustomizePreviewController::DrawJointMarkers(
 		}
 	}
 
-	if (mouseInPreview && !ImGui::GetIO().WantCaptureMouse && cameraDragButton < 0
-		&& ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	if (mouseInPreview && !ImGui::GetIO().WantCaptureMouse && cameraDragButton < 0 &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
-		if (!ImGuizmo::IsOver() && !ImGuizmo::IsUsing())
+		if (!gizmoBlocksMarkerPicking)
 		{
 			// -1はイベントなし、-2は空白クリックによる明示的な選択解除。
 			pickedBodyPartIndex = nearestBodyPartIndex >= 0 ? nearestBodyPartIndex : -2;
@@ -1076,12 +1276,12 @@ void CustomizePreviewController::DrawJointMarkers(
 
 		const bool selected = selectedMarkerParts[bodyPartIndex];
 		const bool hovered = bodyPartIndex == nearestBodyPartIndex;
-		const float radius = selected ? JointMarkerRadius + 3.0f : hovered ? JointMarkerRadius + 2.0f : JointMarkerRadius;
-		const ImU32 fillColor = selected
-			? IM_COL32(255, 230, 40, 245)
-			: hovered
-				? IM_COL32(70, 225, 205, 235)
-				: IM_COL32(0, 180, 170, 225);
+		const float radius = selected  ? JointMarkerRadius + 3.0f
+							 : hovered ? JointMarkerRadius + 2.0f
+									   : JointMarkerRadius;
+		const ImU32 fillColor = selected  ? IM_COL32(255, 230, 40, 245)
+								: hovered ? IM_COL32(70, 225, 205, 235)
+										  : IM_COL32(0, 180, 170, 225);
 		drawList->AddCircleFilled(markerPositions[bodyPartIndex], radius, fillColor, 18);
 		drawList->AddCircle(markerPositions[bodyPartIndex], radius, IM_COL32(0, 35, 55, 230), 18, 2.0f);
 		// 複数選択時も名前はアクティブ部位とホバーに絞り、全選択で文字が重なるのを防ぐ。
@@ -1089,47 +1289,63 @@ void CustomizePreviewController::DrawJointMarkers(
 		{
 			drawList->AddText(
 				ImVec2(markerPositions[bodyPartIndex].x + 10.0f, markerPositions[bodyPartIndex].y - 10.0f),
-				IM_COL32(255, 255, 255, 245),
-				MotionSkeleton::GetBodyPartName(bodyPartIndex));
+				IM_COL32(255, 255, 255, 245), MotionSkeleton::GetBodyPartName(bodyPartIndex));
 		}
 	}
 }
 
-void CustomizePreviewController::DrawRotationGizmo(
-	const RECT& region,
-	const ModelResource& model,
-	int selectedBodyPartIndex,
-	bool enabled)
+/// <summary>選択中部位のワールド回転ギズモを表示し、操作結果を内部ローカル回転として記録する。</summary>
+/// <param name="region">プレビュー描画矩形。</param>
+/// <param name="model">部位名から実ボーンを解決するモデル。</param>
+/// <param name="selectedBodyPartIndex">現在選択中の部位番号。</param>
+/// <param name="enabled">現在フレームで姿勢編集できる場合は true。</param>
+void CustomizePreviewController::DrawRotationGizmo(const RECT &region, const ModelResource &model,
+												   int selectedBodyPartIndex, bool enabled)
 {
-	if (!enabled || !skeletonPose.initialized || skeletonPose.boneWorldMatrices.empty())
+	if (!enabled || !skeletonPose.initialized || skeletonPose.boneModelMatrices.empty())
 	{
 		rotationGizmoDragActive = false;
-		if (translationGizmoActive) EndIkSolveSession();
+
+		if (translationGizmoActive)
+		{
+			EndIkSolveSession();
+		}
+
 		translationGizmoActive = false;
-		return;
-	}
-	if (selectedBodyPartIndex < 0 || selectedBodyPartIndex >= MotionBodyPartCount)
-	{
-		rotationGizmoDragActive = false;
-		if (translationGizmoActive) EndIkSolveSession();
-		translationGizmoActive = false;
+
 		return;
 	}
 
-	const int modelBoneIndex = MotionSkeleton::FindModelBoneIndex(
-		model,
-		MotionSkeleton::GetBodyPartName(selectedBodyPartIndex));
-	if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneWorldMatrices.size()))
+	if (selectedBodyPartIndex < 0 || selectedBodyPartIndex >= MotionBodyPartCount)
 	{
 		rotationGizmoDragActive = false;
+
+		if (translationGizmoActive)
+		{
+			EndIkSolveSession();
+		}
+
+		translationGizmoActive = false;
+
+		return;
+	}
+
+	const int modelBoneIndex =
+		MotionSkeleton::FindModelBoneIndex(model, MotionSkeleton::GetBodyPartName(selectedBodyPartIndex));
+	if (modelBoneIndex < 0 || modelBoneIndex >= static_cast<int>(skeletonPose.boneModelMatrices.size()))
+	{
+		rotationGizmoDragActive = false;
+
 		return;
 	}
 
 	Matrix boneWorld;
 	const Matrix playerWorld = TransformSystem::GetWorldMatrix(playerTransform);
+
 	if (!MotionPose::GetBoneWorldMatrix(skeletonPose, modelBoneIndex, playerWorld, boneWorld))
 	{
 		rotationGizmoDragActive = false;
+
 		return;
 	}
 
@@ -1138,6 +1354,7 @@ void CustomizePreviewController::DrawRotationGizmo(
 	const float regionY = viewportOrigin.y + static_cast<float>(region.top);
 	const float regionWidth = static_cast<float>(region.right - region.left);
 	const float regionHeight = static_cast<float>(region.bottom - region.top);
+
 	if (regionWidth <= 0.0f || regionHeight <= 0.0f)
 	{
 		return;
@@ -1147,46 +1364,73 @@ void CustomizePreviewController::DrawRotationGizmo(
 	ImGuizmo::SetOrthographic(false);
 	ImGuizmo::SetRect(regionX, regionY, regionWidth, regionHeight);
 	ImGuizmo::SetGizmoSizeClipSpace(RotationGizmoSizeClipSpace);
+
 	if (translationGizmoEnabled)
 	{
 		rotationGizmoDragActive = false;
-		const auto* chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBodyPartIndex));
-		if (!chain || chain->translationLocked) return;
-		if (translationGizmoActive && (translationGizmoPart != selectedBodyPartIndex || translationGizmoFrame != GetActionFrame()))
+
+		const auto *chain = MotionIk::FindChain(static_cast<MotionBodyPart>(selectedBodyPartIndex));
+
+		if (!chain || chain->translationLocked)
+		{
+			return;
+		}
+
+		if (translationGizmoActive &&
+			(translationGizmoPart != selectedBodyPartIndex || translationGizmoFrame != GetActionFrame()))
 		{
 			translationGizmoActive = false;
 			EndIkSolveSession();
 		}
+
 		// 要求位置の行列は到達位置で上書きしない。WORLDで関節回転に依存しない矢印を使う。
-		if (!translationGizmoActive) translationGizmoMatrix = Matrix::CreateTranslation(boneWorld.Translation());
+		if (!translationGizmoActive)
+		{
+			translationGizmoMatrix = Matrix::CreateTranslation(boneWorld.Translation());
+		}
+
 		ImGuizmo::SetRotationAngleLimit(false, 0, 0);
-		ImGuizmo::SetTranslationAxesOnly(true);
+		ImGuizmo::SetScreenTranslationEnabled(false);
+
 		const bool changed = ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11,
-			ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &translationGizmoMatrix._11);
-		ImGuizmo::SetTranslationAxesOnly(false);
+												  ImGuizmo::TRANSLATE, ImGuizmo::WORLD, &translationGizmoMatrix._11);
+		gizmoBlocksMarkerPicking = ImGuizmo::IsOver();
+		ImGuizmo::SetScreenTranslationEnabled(true);
+
 		const bool usingGizmo = ImGuizmo::IsUsing();
 		const int handle = ImGuizmo::GetActiveHandleType();
-		const bool axisHandle = handle == ImGuizmo::MT_MOVE_X || handle == ImGuizmo::MT_MOVE_Y || handle == ImGuizmo::MT_MOVE_Z;
-		if (usingGizmo && !translationGizmoActive && axisHandle)
+		const bool translationHandle =
+			handle == ImGuizmo::MT_MOVE_X || handle == ImGuizmo::MT_MOVE_Y || handle == ImGuizmo::MT_MOVE_Z ||
+			handle == ImGuizmo::MT_MOVE_YZ || handle == ImGuizmo::MT_MOVE_ZX || handle == ImGuizmo::MT_MOVE_XY;
+
+		if (usingGizmo && !translationGizmoActive && translationHandle)
 		{
 			Stop();
 			translationGizmoActive = BeginIkSolveSession(GetActionFrame());
 			translationGizmoPart = selectedBodyPartIndex;
 			translationGizmoFrame = GetActionFrame();
 		}
-		if (changed && translationGizmoActive && axisHandle
-			&& SolveIkTarget(selectedBodyPartIndex, translationGizmoMatrix.Translation(), translationGizmoResult))
+
+		if (changed && translationGizmoActive && translationHandle &&
+			SolveIkTarget(selectedBodyPartIndex, translationGizmoMatrix.Translation(), translationGizmoResult))
 		{
 			hasTranslationGizmoEdit = true;
+
 			for (int i = 0; i < 3; ++i)
-				skeletonPose.bonePoses[translationGizmoResult.boneIndices[i]].localRotation = translationGizmoResult.localRotations[i];
+			{
+				skeletonPose.bonePoses[translationGizmoResult.boneIndices[i]].localRotation =
+					translationGizmoResult.localRotations[i];
+			}
+
 			MotionPose::UpdateSkinningMatrices(skeletonPose, model);
 		}
+
 		if (!usingGizmo && translationGizmoActive)
 		{
 			translationGizmoActive = false;
 			EndIkSolveSession();
 		}
+
 		return;
 	}
 
@@ -1198,49 +1442,54 @@ void CustomizePreviewController::DrawRotationGizmo(
 	const bool wasDragActive = rotationGizmoDragActive;
 	Matrix editableWorld = rotationGizmoDragActive ? rotationGizmoDragWorldMatrix : boneWorld;
 	ImGuizmo::SetRotationAngleLimit(false, 0.0f, 0.0f);
+
 	if (rotationGizmoDragActive)
 	{
 		const auto part = static_cast<MotionBodyPart>(selectedBodyPartIndex);
+
 		if (MotionSkeleton::GetPoseRotationLimit(part).enabled)
 		{
 			ImGuizmo::SetRotationAngleLimit(true, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
 		}
 	}
 
-	const ImGuizmo::OPERATION rotationOperation =
-		ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z;
-	const bool manipulated = ImGuizmo::Manipulate(
-		&camera.viewMatrix._11,
-		&camera.projectionMatrix._11,
-		rotationOperation,
-		ImGuizmo::LOCAL,
-		&editableWorld._11);
+	const ImGuizmo::OPERATION rotationOperation = ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z;
+	const bool manipulated = ImGuizmo::Manipulate(&camera.viewMatrix._11, &camera.projectionMatrix._11,
+												  rotationOperation, ImGuizmo::LOCAL, &editableWorld._11);
+	gizmoBlocksMarkerPicking = ImGuizmo::IsOver();
 
 	const bool usingGizmo = ImGuizmo::IsUsing();
 	int axisIndex = GetRotationAxisIndex(ImGuizmo::GetActiveHandleType());
+
 	if (axisIndex < 0 && rotationGizmoDragActive && manipulated)
 	{
 		axisIndex = rotationGizmoDragAxisIndex;
 	}
+
 	if (axisIndex < 0 && rotationGizmoDragActive)
 	{
 		axisIndex = rotationGizmoDragAxisIndex;
 	}
+
 	if (!usingGizmo && !wasDragActive)
 	{
 		rotationGizmoDragActive = false;
+
 		return;
 	}
+
 	if (axisIndex < 0)
 	{
 		if (!usingGizmo)
 		{
 			rotationGizmoDragActive = false;
 		}
+
 		return;
 	}
 
 	const bool initializeRange = !rotationGizmoDragActive || rotationGizmoDragAxisIndex != axisIndex;
+
 	if (!rotationGizmoDragActive)
 	{
 		rotationGizmoDragActive = true;
@@ -1251,6 +1500,7 @@ void CustomizePreviewController::DrawRotationGizmo(
 		rotationGizmoDragStartLocalRotation.Normalize();
 		rotationGizmoDragAccumulatedRadians = 0.0f;
 	}
+
 	if (rotationGizmoDragAxisIndex != axisIndex)
 	{
 		rotationGizmoDragAxisIndex = axisIndex;
@@ -1262,20 +1512,29 @@ void CustomizePreviewController::DrawRotationGizmo(
 
 	const float rotationDeltaRadians = ImGuizmo::GetRotationLastDeltaRadians();
 	rotationGizmoDragAccumulatedRadians += rotationDeltaRadians;
+
 	const Vector3 localAxis = GetLocalAxisByIndex(rotationGizmoDragAxisIndex);
+
 	if (localAxis.LengthSquared() <= std::numeric_limits<float>::epsilon())
 	{
 		return;
 	}
 
 	const auto part = static_cast<MotionBodyPart>(selectedBodyPartIndex);
+
 	if (MotionSkeleton::GetPoseRotationLimit(part).enabled)
 	{
 		if (initializeRange)
-			rotationGizmoDragLimits = MotionRotationLimits::AxisRange(part, rotationGizmoDragStartLocalRotation,
-				localAxis, model.GetBones()[modelBoneIndex].bindLocalRotation);
-		rotationGizmoDragAccumulatedRadians = std::clamp(rotationGizmoDragAccumulatedRadians, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
+		{
+			rotationGizmoDragLimits =
+				MotionRotationLimits::AxisRange(part, rotationGizmoDragStartLocalRotation, localAxis,
+												model.GetBones()[modelBoneIndex].bindLocalRotation);
+		}
+
+		rotationGizmoDragAccumulatedRadians =
+			std::clamp(rotationGizmoDragAccumulatedRadians, rotationGizmoDragLimits.x, rotationGizmoDragLimits.y);
 	}
+
 	// 掴んだ瞬間は差分0でも、次フレームで使う可動域は先に確定する。
 	// ここより前で戻ると開始フラグだけが立ち、未初期化の範囲(0,0)や
 	// 前のドラッグの範囲が、その後の操作に使われ続けてしまう。
@@ -1283,8 +1542,10 @@ void CustomizePreviewController::DrawRotationGizmo(
 	{
 		return;
 	}
+
 	Quaternion deltaRotation = Quaternion::CreateFromAxisAngle(localAxis, rotationGizmoDragAccumulatedRadians);
 	deltaRotation.Normalize();
+
 	Quaternion editedLocalRotation = deltaRotation * rotationGizmoDragStartLocalRotation;
 	editedLocalRotation.Normalize();
 
@@ -1292,6 +1553,7 @@ void CustomizePreviewController::DrawRotationGizmo(
 	// 制限範囲・途中姿勢・確定保存までQuaternionを使い、Eulerへ往復しない。
 	skeletonPose.bonePoses[modelBoneIndex].localRotation = editedLocalRotation;
 	MotionPose::UpdateSkinningMatrices(skeletonPose, model);
+
 	if (!usingGizmo)
 	{
 		hasGizmoRotationEdit = true;

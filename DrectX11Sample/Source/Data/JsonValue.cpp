@@ -440,6 +440,11 @@ const JsonValue* JsonValue::Find(const std::string& key) const
 	return found == objectValue.end() ? nullptr : &found->second;
 }
 
+/// <summary>JSON 文字列を JsonValue に変換する。</summary>
+/// <param name="text">解析する JSON 文字列。</param>
+/// <param name="outValue">解析結果を書き込む JsonValue。</param>
+/// <param name="outError">失敗時のエラー内容を書き込む文字列。</param>
+/// <returns>解析に成功した場合は true。</returns>
 bool JsonParser::Parse(const std::string& text, JsonValue& outValue, std::string& outError)
 {
 	Parser parser(text);

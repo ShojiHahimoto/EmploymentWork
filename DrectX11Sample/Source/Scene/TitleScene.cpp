@@ -1,5 +1,9 @@
 ﻿#include "Scene/TitleScene.h"
 
+#include "Manager/SceneLoadRequest.h"
+#include "Data/BattleSetupData.h"
+#include "Resource/ModelResource.h"
+
 /// <summary>
 /// World とタイトル画面の担当コントローラーを初期化する。
 /// </summary>
@@ -13,13 +17,44 @@ TitleScene::TitleScene(int initialWidth, int initialHeight)
 }
 
 /// <summary>
+/// タイトル表示に使う共通プレイヤーモデルを要求する。
+/// </summary>
+/// <param name="request">遷移前に準備する素材一覧。</param>
+void TitleScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.bgmId = "BGM/BGM_Title_03_maou";
+	request.uiImageIds = {"title_v2_logo", "title_v2_normal", "title_v2_selected"};
+	request.models.push_back({PlayerModelKey, "assets/model/Player_01/Player_01_SurfaceAtlas.fbx", true});
+	request.motionIds.emplace_back("Common/Idle");
+	request.motionIds.emplace_back("Common/JumpLoop");
+	request.characterFolders.push_back(BattleSetup::BuildCharacterFolderPath(0));
+	request.prepareScene = []
+	{
+		PreparedSceneLoad result;
+		auto presentation = TitlePresentationController::Prepare();
+		for (const auto &attack : presentation.attacks)
+		{
+			result.motionIds.push_back(attack.motionDataId);
+		}
+
+		result.apply = [presentation = std::move(presentation)](Scene &scene) mutable
+		{
+			static_cast<TitleScene &>(scene).preparedPresentation = std::move(presentation);
+		};
+
+		return result;
+	};
+}
+
+/// <summary>
 /// タイトル用の入力マップを有効にする。
 /// </summary>
 void TitleScene::Enter()
 {
 	navigationController.Enter();
 	menuController.Enter();
-	presentationController.Enter(world);
+	presentationController.Enter(world, preparedPresentation,
+								 FindSceneCharacter(BattleSetup::BuildCharacterFolderPath(0)));
 }
 
 /// <summary>
@@ -33,11 +68,11 @@ void TitleScene::Exit()
 /// <summary>
 /// 遷移Controllerを更新し、メニューからの要求を渡す。
 /// </summary>
-void TitleScene::RunSystems()
+void TitleScene::Update()
 {
 	menuController.Update();
 	presentationController.Update(world);
-	navigationController.RunSystems(menuController.ConsumeCommand());
+	navigationController.Update(menuController.ConsumeCommand());
 }
 
 /// <summary>

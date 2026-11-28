@@ -9,11 +9,13 @@
 #include "Component/MotionPlayerComponent.h"
 #include "Component/SkeletonPoseComponent.h"
 #include "Component/StateComponent.h"
+#include "Component/VelocityComponent.h"
 #include "Data/EffectDataLoader.h"
 #include "Input/InputSystem.h"
 #include "Resource/ModelResource.h"
-#include "Scene/ResultScene.h"
-#include "Scene/SceneManager.h"
+#include "Scene/BattleSetupScene.h"
+#include "Scene/TitleScene.h"
+#include "Manager/SceneManager.h"
 #include "System/BattleCameraSystem.h"
 #include "System/BattleHUDSystem.h"
 #include "System/BattleResultSystem.h"
@@ -21,7 +23,7 @@
 #include "System/CommandInputSystem.h"
 #include "System/DebugCameraControlSystem.h"
 #include "System/DebugImGuiSystem.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 #include "System/EmbedResolveSystem.h"
 #include "System/EffectRenderSystem.h"
 #include "System/EffectSystem.h"
@@ -35,8 +37,8 @@
 #include "System/PlayerInvincibilitySystem.h"
 #include "System/PlayerFacingSystem.h"
 #include "System/PlayerControlSystem.h"
-#include "System/Renderer.h"
-#include "System/SoundManager.h"
+#include "Core/Renderer.h"
+#include "Manager/SoundManager.h"
 #include "System/SpawnDestroySystem.h"
 #include "System/StateUpdateSystem.h"
 #include "System/TransformSystem.h"
@@ -46,6 +48,59 @@
 #include <vector>
 
 using namespace DirectX::SimpleMath;
+
+namespace
+{
+	constexpr const char* GoldArmorTexture = "assets/model/Player_01/AlloyAtlas.gold.color.png";
+	constexpr float ResultBackdropOpacity = 0.48f;
+	constexpr const char* RoundBanners[] = {
+		"assets/texture/UI/Parts/Battle/Round_1.png",
+		"assets/texture/UI/Parts/Battle/Round_2.png",
+		"assets/texture/UI/Parts/Battle/Final_Round.png",
+		"assets/texture/UI/Parts/Battle/Fight.png",
+		"assets/texture/UI/Parts/Battle/KO.png",
+		"assets/texture/UI/Parts/Battle/Double_KO.png",
+		"assets/texture/UI/Parts/Battle/Time_Over.png",
+		"assets/texture/UI/Parts/Battle/Player1_Win.png",
+		"assets/texture/UI/Parts/Battle/Player2_Win.png",
+		"assets/texture/UI/Parts/Battle/Draw.png"
+	};
+
+	/// <summary>向きに応じた見た目オフセットを含め、通常描画と深度描画で共有するモデルの位置と姿勢を取り出す。</summary>
+	/// <param name="world">描画対象のWorld。</param>
+	/// <param name="id">モデルを持つオブジェクトID。</param>
+	/// <param name="transform">対象のTransform。</param>
+	/// <returns>描画するモデル、ワールド行列、ボーン行列。モデルがない場合は空。</returns>
+	Renderer::ShadowCaster GetModelDrawData(World &world, GameObjectId id, const TransformComponent &transform)
+	{
+		const auto *component = world.GetComponent<ModelComponent>(id);
+		if (!component)
+		{
+			return {};
+		}
+
+		Renderer::ShadowCaster data;
+		data.model = ModelResourceManager::GetModel(component->resourceKey);
+		data.world = TransformSystem::GetWorldMatrix(transform);
+		const auto *pose = world.GetComponent<SkeletonPoseComponent>(id);
+		data.skinningMatrices = pose && pose->initialized ? &pose->skinningMatrices : nullptr;
+
+		const auto *motion = world.GetComponent<MotionPlayerComponent>(id);
+		if (motion && motion->visualRootOffset != Vector3::Zero)
+		{
+			Vector3 drawOffset = motion->visualRootOffset;
+			const auto *state = world.GetComponent<StateComponent>(id);
+			if (state && state->facingDirection == FacingDirection::Left)
+			{
+				drawOffset.x = -drawOffset.x;
+			}
+
+			data.world = data.world * Matrix::CreateTranslation(drawOffset);
+		}
+
+		return data;
+	}
+}
 
 /// <summary>
 /// BattleScene を現在の描画サイズで初期化する。
@@ -72,14 +127,84 @@ BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup:
 {
 }
 
-/// <summary>
-/// バトル用 World、カメラ、初期モデル、デバッグ用オブジェクトを生成する。
-/// </summary>
+/// <summary>対戦開始前に必要なモデル、画像、音源、対戦データを要求する。</summary>
+/// <param name="request">ワーカーへ渡すロード要求。</param>
+void BattleScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.bgmId = SoundIds::BattleBgm01;
+	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
+	request.textures.emplace_back("assets/texture/number.png");
+	request.uiImageIds = {"button", "button_primary"};
+	for (const char* path : RoundBanners)
+	{
+		request.textures.emplace_back(path);
+	}
+	for (const char* path : BattleHUDSystem::TexturePaths)
+	{
+		request.textures.emplace_back(path);
+	}
+	request.optionalTextures.emplace_back(GoldArmorTexture);
+	request.effectIds = {"HitSpark", "GuardSpark"};
+	request.prepareScene = []
+	{
+		auto resultMusic = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::ResultBgm01));
+		auto normalHit = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::HitNormal));
+		auto hardHit = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::HitHard));
+
+		PreparedSceneLoad result;
+		result.apply = [normalHit, hardHit, resultMusic](Scene &)
+		{
+			auto &sound = SoundManager::GetInstance();
+			sound.RegisterSound(SoundIds::ResultBgm01, std::move(*resultMusic), true, true);
+			sound.RegisterSound(SoundIds::HitNormal, std::move(*normalHit), false, false);
+			sound.RegisterSound(SoundIds::HitHard, std::move(*hardHit), false, false);
+		};
+
+		return result;
+	};
+	request.motionIds = {"Common/Idle", "Common/WalkForward", "Common/WalkBack", "Common/Crouch",
+						 "Common/Guard", "Common/CrouchGuard", "Common/JumpStart", "Common/JumpLoop",
+						 "Common/Hitstun", "Common/AirHitstun", "Common/AirToDown", "Common/Down", "Common/Wakeup", "Common/Win"};
+
+	for (const auto &player : setupData.players)
+	{
+		request.characterFolders.push_back(player.characterFolderPath.empty()
+			? BattleSetup::BuildCharacterFolderPath(0) : player.characterFolderPath);
+	}
+}
+
+/// <summary>準備済み素材を使って対戦用のWorldとカメラを初期化する。</summary>
 void BattleScene::Enter()
 {
+	//キーコンを取得
 	Input::InputSystem::SetBindings(BattleSetup::BuildInputBindings(setupData));
+	//アクションマップをゲームプレイに変更
 	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
 
+	//ラウンド情報を初期化
+	round = {};
+	resultMenu = {};
+	visibleRoundPoints = {};
+	//ラウンド中の演出の時間を取得
+	roundTiming = BattleResultSystem::LoadTiming();
+	//サウンド初期化
+	//ラウンドごとにサウンドが再起動しないように他とは別で初期化する
+#if defined(_DEBUG)
+	InitializeDebugSceneView();
+#endif
+	//ラウンドを開始する
+	BuildRoundWorld();
+}
+
+/// <summary>試合の得点と対戦設定を保持し、ラウンド用のプレイヤー・カメラ・HUDを初期化する。</summary>
+void BattleScene::BuildRoundWorld()
+{
+	//ワールドを初期化
+	world.Clear();
+	//カメラを生成
 	GameObjectId cameraId = world.CreateTransform("MainCamera");
 	world.AddComponent<BattleCameraFollowComponent>(cameraId);
 	TransformComponent* cameraTransform = world.GetTransform(cameraId);
@@ -89,34 +214,28 @@ void BattleScene::Enter()
 		TransformSystem::SetLocalEulerRotationDegrees(*cameraTransform, Vector3(0.0f, 0.0f, 0.0f));
 	}
 
-	ModelResourceManager::LoadModel(
-		"Debugman",
-		"assets/model/Debugman/Akai.fbx",
-		Renderer::GetDevice());
+	//追跡対象にプレイヤーを登録
+	const auto preparedCharacter = [this](const std::string &folder)
+	{
+		return FindSceneCharacter(folder.empty() ? BattleSetup::BuildCharacterFolderPath(0) : folder);
+	};
 
-	ModelResourceManager::LoadModel(
-		"DebugPlayer",
-		"assets/model/DebugPlayer/man.fbx",
-		Renderer::GetDevice());
-
-	ModelResourceManager::LoadModel(
-		"DebugPlayer2",
-		"assets/model/DebugPlayer2/woman.fbx",
-		Renderer::GetDevice());
-
+	//プレイヤー生成
 	world.RequestSpawn(
 		SpawnType::DebugPlayer,
 		"DebugPlayer",
 		Vector3(-4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f),
-		setupData.players[0].characterFolderPath);
+		setupData.players[0].characterFolderPath,
+		preparedCharacter(setupData.players[0].characterFolderPath));
 
 	world.RequestSpawn(
 		SpawnType::DebugPlayer2,
 		"DebugPlayer2",
 		Vector3(4.0f, 0.0f, 8.0f),
 		Vector3(0.0f, 0.0f, 0.0f),
-		setupData.players[1].characterFolderPath);
+		setupData.players[1].characterFolderPath,
+		preparedCharacter(setupData.players[1].characterFolderPath));
 
 	//world.RequestSpawn(
 	//	SpawnType::DebugCube,
@@ -124,18 +243,26 @@ void BattleScene::Enter()
 	//	Vector3(0.0f, 0.0f, 6.0f),
 	//	Vector3(20.0f, 32.0f, 0.0f));
 
+	//HUD初期化
 	InitializeBattleHUD();
-	InitializeBattleSounds();
 
+	//カメラシステムにカメラ登録
 	CameraComponent camera;
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 	CameraSystem::SetPerspective(camera, 45.0f, aspectRatio, 0.1f, 1000.0f);
 	world.SetActiveCamera(cameraId, camera);
 
-#if defined(_DEBUG)
-	InitializeDebugSceneView();
-#endif
-
+	introFrame = 0;
+	endingFrame = 0;
+	fadeFrame = -1;
+	postStopMotionStarted = false;
+	victoryMotionStarted = false;
+	roundBanner = nullptr;
+	//ラウンド演出による遅延を計算
+	const int fadeIn = (round.number > 1 || rematchFadeIn) ? roundTiming.fadeInFrames : 0;
+	BattleResultSystem::BeginRound(world, round,
+		fadeIn + roundTiming.roundIntroDelayFrames + roundTiming.roundDisplayFrames +
+		roundTiming.roundToFightFrames + roundTiming.fightDisplayFrames + roundTiming.fightToControlFrames);
 	RunInitialWorldSetup();
 }
 
@@ -147,19 +274,272 @@ void BattleScene::Exit()
 #if defined(_DEBUG)
 	Renderer::ReleaseRenderTexture(sceneViewRenderTexture);
 #endif
-	Renderer::ReleaseTexture(hudNumberTexture);
+	hudNumberTexture = nullptr;
 	EffectRenderSystem::ReleaseResources();
-	EffectDataManager::UnloadAll();
-	SoundManager::GetInstance().StopBGM();
 	world.Clear();
 }
 
-void BattleScene::RunSystems()
+void BattleScene::Update()
 {
 #if defined(_DEBUG)
 	UpdateDebugSceneViewCamera();
 #endif
 
+	//決着がついた場合ラウンド終了演出を開始
+	if (resultMenu.choice == BattleResultChoice::Rematch)
+	{
+		RunRematchFadeOut();
+	}
+	else if (resultMenu.active)
+	{
+		RunResultMenu();
+	}
+	else if (round.endReason != RoundEndReason::None)
+	{
+		RunRoundEnding();
+	}
+	//待機時間が発生している場合待機時間の処理を進める
+	else if (round.waitFrames > 0)
+	{
+		RunRoundIntro();
+	}
+	//通常のラウンド処理（バトル処理）
+	else
+	{
+		RunActiveRound();
+	}
+}
+
+/// <summary>ラウンド開始時の演出。開幕表示と待機モーションを進め、最後の待ち時間まで対戦操作を止める。</summary>
+void BattleScene::RunRoundIntro()
+{
+	//演出時間を計算
+	const auto& timing = roundTiming;
+	const int fadeIn = (round.number > 1 || rematchFadeIn) ? timing.fadeInFrames : 0;
+	const int roundStart = fadeIn + timing.roundIntroDelayFrames;
+	const int fightStart = roundStart + timing.roundDisplayFrames + timing.roundToFightFrames;
+	//ラウンド開始時のバナーを選択する
+	roundBanner = nullptr;
+	if (introFrame >= roundStart && introFrame < roundStart + timing.roundDisplayFrames)
+	{
+		roundBanner = RoundBanners[std::clamp(round.number - 1, 0, 2)];
+	}
+	else if (introFrame >= fightStart && introFrame < fightStart + timing.fightDisplayFrames)
+	{
+		roundBanner = RoundBanners[3];
+	}
+
+	//演出による操作停止中もモーションは更新する
+	MotionSystem::Update(world);
+	++introFrame;
+	if (rematchFadeIn && introFrame >= fadeIn)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::BattleBgm01);
+		rematchFadeIn = false;
+	}
+	//待機時間計測を進める
+	BattleResultSystem::AdvanceWait(world, round);
+}
+
+/// <summary>ラウンド決着演出。操作を停止したまま、決着表示・モーション・暗転を順に進める。</summary>
+void BattleScene::RunRoundEnding()
+{
+	//時間を計測
+	const auto& timing = roundTiming;
+	const bool doubleKO = round.endReason == RoundEndReason::DoubleKnockOut;
+	const bool timeOver = round.endReason == RoundEndReason::TimeOver;
+	const int displayEnd = timing.roundEndDisplayDelayFrames + timing.roundEndDisplayFrames;
+	const int release = timeOver ? 0 : displayEnd;
+	const auto result = world.GetBattleResult();
+	const auto match = BattleResultSystem::GetMatchResult(round);
+	const int winner = result == BattleResult::Player1Win ? 0 : (result == BattleResult::Player2Win ? 1 : -1);
+	const int victoryStart = std::max(displayEnd + timing.roundEndAfterDisplayFrames, release +
+		(doubleKO ? timing.doubleKnockoutDownFrames : timing.releaseToVictoryFrames));
+	const bool matchFinished = match != BattleResult::None;
+	const int victoryFrames = winner >= 0 ? timing.victoryMotionFrames : 0;
+	const int framesBeforeFade = matchFinished ? timing.matchResultDisplayFrames : victoryFrames;
+
+	if (matchFinished && endingFrame == displayEnd)
+	{
+		SoundManager::GetInstance().StopBGM();
+	}
+
+	if (matchFinished && endingFrame == victoryStart)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::ResultBgm01);
+	}
+
+	//バナーを選択する
+	roundBanner = nullptr;
+	if (fadeFrame < 0 && endingFrame >= timing.roundEndDisplayDelayFrames && endingFrame < displayEnd)
+	{
+		roundBanner = RoundBanners[timeOver ? 6 : (doubleKO ? 5 : 4)];
+	}
+
+	if (!postStopMotionStarted && endingFrame >= release)
+	{
+		world.ClearHitStop();
+		for (int side = 0; side < World::BattlePlayerCount; ++side)
+		{
+			const auto id = world.GetBattlePlayerId(side);
+			auto* motion = world.GetComponent<MotionPlayerComponent>(id);
+			auto* state = world.GetComponent<StateComponent>(id);
+			if (motion && state)
+			{
+				const bool down = !timeOver && (doubleKO || side != winner);
+				const bool airborne = !state->isGrounded;
+				state->currentActionState = airborne ? PlayerActionState::Fall
+					: (down ? PlayerActionState::Down : PlayerActionState::Idle);
+				if (auto* velocity = world.GetComponent<VelocityComponent>(id))
+				{
+					MovementSystem::SetVelocityX(*velocity, 0);
+					MovementSystem::SetVelocityZ(*velocity, 0);
+				}
+
+				*motion = {};
+				motion->motionDataId = airborne ? "Common/JumpLoop" : (down ? "Common/Down" : "Common/Idle");
+				motion->looping = airborne || !down;
+				motion->holdFinalFrame = !airborne && down;
+			}
+		}
+
+		BattleHUDSystem::Update(world, width, height, false);
+		postStopMotionStarted = true;
+	}
+
+	if (fadeFrame < 0 && endingFrame >= victoryStart)
+	{
+		visibleRoundPoints = round.points;
+		const int victoryFrame = endingFrame - victoryStart;
+		if (!victoryMotionStarted && winner >= 0 && (matchFinished || victoryFrames > 0))
+		{
+			auto* motion = world.GetComponent<MotionPlayerComponent>(world.GetBattlePlayerId(winner));
+			if (motion)
+			{
+				*motion = {};
+				motion->motionDataId = "Common/Win";
+				motion->looping = false;
+				victoryMotionStarted = true;
+			}
+		}
+
+		if (matchFinished && victoryFrame < framesBeforeFade)
+		{
+			roundBanner = RoundBanners[match == BattleResult::Draw ? 9 : (match == BattleResult::Player1Win ? 7 : 8)];
+		}
+
+		bool skip = false;
+		const bool canSkip = matchFinished
+			? victoryFrame < framesBeforeFade
+			: victoryMotionStarted && victoryFrame > 0 && victoryFrame < victoryFrames;
+		if (canSkip)
+		{
+			for (int side = 0; side < World::BattlePlayerCount; ++side)
+			{
+				for (int action = 0; action < static_cast<int>(Input::InputActionId::Count); ++action)
+				{
+					skip |= Input::InputSystem::GetActionState(side, static_cast<Input::InputActionId>(action)).trigger;
+				}
+			}
+		}
+
+		if (skip || victoryFrame >= framesBeforeFade)
+		{
+			roundBanner = nullptr;
+			fadeFrame = 0;
+		}
+	}
+
+	if (postStopMotionStarted)
+	{
+		MovementSystem::Update(world);
+		EmbedResolveSystem::Update(world);
+		for (int side = 0; side < World::BattlePlayerCount; ++side)
+		{
+			const auto id = world.GetBattlePlayerId(side);
+			auto* motion = world.GetComponent<MotionPlayerComponent>(id);
+			const auto* state = world.GetComponent<StateComponent>(id);
+			if (motion && state && state->isGrounded && motion->motionDataId == "Common/JumpLoop")
+			{
+				const bool down = !timeOver && (doubleKO || side != winner);
+				*motion = {};
+				motion->motionDataId = down ? "Common/AirToDown" : "Common/Idle";
+				motion->holdFinalFrame = down;
+			}
+		}
+
+		MotionSystem::Update(world, false);
+		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
+	}
+
+	if (fadeFrame >= 0)
+	{
+		if (fadeFrame >= timing.fadeOutFrames)
+		{
+			if (match != BattleResult::None)
+			{
+				resultMenu.active = true;
+				Input::InputSystem::SetActionMap(Input::InputActionMapId::UI);
+				fadeFrame = -1;
+				roundBanner = RoundBanners[match == BattleResult::Draw ? 9 : (match == BattleResult::Player1Win ? 7 : 8)];
+			}
+			else
+			{
+				++round.number;
+				BuildRoundWorld();
+			}
+
+			return;
+		}
+
+		++fadeFrame;
+	}
+
+	++endingFrame;
+}
+
+/// <summary>ラウンド演出の文字と暗転を描画する。</summary>
+void BattleScene::DrawRoundPresentation()
+{
+	if (roundBanner)
+	{
+		auto* texture = FindSceneTexture(roundBanner);
+		int textureWidth = 0;
+		int textureHeight = 0;
+		Renderer::GetTextureSize(texture, textureWidth, textureHeight);
+		const float scale = std::min(width / 1600.0f, height / 900.0f) * 0.53f;
+		const int w = static_cast<int>(textureWidth * scale);
+		const int h = static_cast<int>(textureHeight * scale);
+		const int x = (width - w) / 2;
+		const int y = static_cast<int>(height * 0.31f);
+		Renderer::DrawTextureRegion(texture, {x, y, x + w, y + h}, {0, 0, textureWidth, textureHeight},
+			Color(1, 1, 1, 1));
+	}
+
+	float alpha = 0.0f;
+	if (fadeFrame >= 0 && !resultMenu.active)
+	{
+		alpha = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
+		if (BattleResultSystem::GetMatchResult(round) != BattleResult::None)
+		{
+			alpha *= ResultBackdropOpacity;
+		}
+	}
+	else if ((round.number > 1 || rematchFadeIn) && introFrame < roundTiming.fadeInFrames)
+	{
+		alpha = 1.0f - static_cast<float>(introFrame) / roundTiming.fadeInFrames;
+	}
+
+	if (alpha > 0.0f)
+	{
+		Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, alpha));
+	}
+}
+
+/// <summary>操作可能なラウンドを1フレーム進め、ダメージ反映後に決着を判定する。</summary>
+void BattleScene::RunActiveRound()
+{
+	roundBanner = nullptr;
 	SpawnDestroySystem::Update(world);
 	const bool hitStopActive = world.IsHitStopActive();
 
@@ -189,11 +569,17 @@ void BattleScene::RunSystems()
 		TransformSystem::UpdateWorldTransforms(world.GetGameObjects());
 	}
 
-	BattleResultSystem::Update(world);
+	BattleResultSystem::Update(world, round);
+	if (round.endReason != RoundEndReason::None && round.endReason != RoundEndReason::TimeOver)
+	{
+		world.ClearHitStop();
+		world.RequestHitStop(HitStopLevel::SpecialAttack,
+			roundTiming.roundEndDisplayDelayFrames + roundTiming.roundEndDisplayFrames);
+	}
 	EffectSystem::Update(world);
 	BattleHUDSystem::Update(world, width, height);
 
-	if (hitStopActive)
+	if (hitStopActive && round.endReason == RoundEndReason::None)
 	{
 		HitStopSystem::Update(world);
 	}
@@ -208,7 +594,6 @@ void BattleScene::RunSystems()
 		}
 	}
 
-	RequestResultSceneIfBattleFinished();
 }
 
 /// <summary>
@@ -223,6 +608,25 @@ void BattleScene::Draw(Renderer& renderer)
 	}
 
 	const CameraComponent& camera = world.GetActiveCamera();
+	std::vector<Renderer::ShadowCaster> casters;
+	casters.reserve(2);
+	for (const auto &object : world.GetGameObjects())
+	{
+		if (object.tag != GameObjectTag::Player)
+		{
+			continue;
+		}
+
+		const auto *transform = world.GetTransform(object.id);
+		if (transform)
+		{
+			casters.push_back(GetModelDrawData(world, object.id, *transform));
+		}
+	}
+
+	const float stageCenterX = (EmbedResolveSystem::StageMinX + EmbedResolveSystem::StageMaxX) * 0.5f;
+	renderer.DrawShadowMap(casters, Vector3(stageCenterX, 5.0f, 8.0f),
+						   EmbedResolveSystem::StageMaxX - EmbedResolveSystem::StageMinX + 38.0f);
 	DrawWorldWithCamera(renderer, camera);
 	EffectRenderSystem::Draw(world, camera);
 
@@ -232,7 +636,22 @@ void BattleScene::Draw(Renderer& renderer)
 	DrawDebugHitBoxes(renderer);
 #endif
 
-	DrawBattleHUD();
+	DrawBattleHUD(renderer);
+	if (resultMenu.active)
+	{
+		Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, ResultBackdropOpacity));
+	}
+
+	DrawRoundPresentation();
+	if (resultMenu.active)
+	{
+		BattleHUDSystem::DrawResultMenu(renderer, width, height, setupData, resultMenu);
+		if (resultMenu.choice == BattleResultChoice::Rematch)
+		{
+			const float opacity = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
+			Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, opacity));
+		}
+	}
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
 	DebugImGuiSystem::DrawWorldInspector(world);
@@ -249,8 +668,11 @@ void BattleScene::Draw(Renderer& renderer)
 void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera)
 {
 	renderer.SetViewProjection(camera.viewMatrix, camera.projectionMatrix);
-	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX);
+	renderer.DrawTrainingRoomBackground(EmbedResolveSystem::StageMinX, EmbedResolveSystem::StageMaxX,
+										-30.0f, 56.0f, 48.0f, 5.0f, true);
 
+	const auto secondPlayer = world.GetBattlePlayerId(1);
+	const Renderer::ModelAlbedoOverride goldArmor{"AlloyAtlas.color.png", FindSceneTexture(GoldArmorTexture)};
 	for (GameObject& object : world.GetGameObjects())
 	{
 		if (object.id == world.GetActiveCameraId())
@@ -266,27 +688,12 @@ void BattleScene::DrawWorldWithCamera(Renderer& renderer, const CameraComponent&
 		TransformComponent* transform = world.GetTransform(object.id);
 		if (transform)
 		{
-			const ModelComponent* modelComponent = world.GetComponent<ModelComponent>(object.id);
-			if (modelComponent)
+			const auto data = GetModelDrawData(world, object.id, *transform);
+			const auto* armor = object.id == secondPlayer ? &goldArmor : nullptr;
+			if (data.model && renderer.DrawModel(*data.model, data.world, Color(1, 1, 1, 1), false,
+				data.skinningMatrices, armor))
 			{
-				const ModelResource* model = ModelResourceManager::GetModel(modelComponent->resourceKey);
-				if (model)
-				{
-					const SkeletonPoseComponent* pose = world.GetComponent<SkeletonPoseComponent>(object.id);
-					const std::vector<Matrix>* skinningMatrices =
-						pose && pose->initialized ? &pose->skinningMatrices : nullptr;
-					const MotionPlayerComponent* motionPlayer = world.GetComponent<MotionPlayerComponent>(object.id);
-					Matrix modelWorld = TransformSystem::GetWorldMatrix(*transform);
-					if (motionPlayer && motionPlayer->visualRootOffset != Vector3::Zero)
-					{
-						modelWorld = modelWorld * Matrix::CreateTranslation(motionPlayer->visualRootOffset);
-					}
-
-					if (renderer.DrawModel(*model, modelWorld, skinningMatrices))
-					{
-						continue;
-					}
-				}
+				continue;
 			}
 
 			renderer.DrawDebugCube(TransformSystem::GetWorldMatrix(*transform));
@@ -324,23 +731,7 @@ void BattleScene::InitializeBattleHUD()
 	player2Gauge.targetPlayerIndex = 1;
 	world.AddComponent<HealthGaugeComponent>(player2GaugeId, player2Gauge);
 
-	const HRESULT hr = Renderer::LoadTextureFromFile("assets/texture/number.png", &hudNumberTexture);
-	if (FAILED(hr))
-	{
-		DebugLog("[BattleHUD] Number texture load failed. hr=", static_cast<long>(hr));
-	}
-}
-
-/// <summary>
-/// BattleScene で使う BGM と既定ヒット SE を読み込み、バトル BGM をループ再生する。
-/// </summary>
-void BattleScene::InitializeBattleSounds()
-{
-	SoundManager& soundManager = SoundManager::GetInstance();
-	soundManager.LoadBGM(SoundIds::BattleBgm01, "assets/Sound/BGM/BGM_Battle01_maou_.wav", true);
-	soundManager.LoadSE(SoundIds::HitNormal, "assets/Sound/SE/Battle/SE_Hit_Normal_maou.wav");
-	soundManager.LoadSE(SoundIds::HitHard, "assets/Sound/SE/Battle/SE_Hit_Hard_maou.wav");
-	soundManager.PlayBGM(SoundIds::BattleBgm01);
+	hudNumberTexture = FindSceneTexture("assets/texture/number.png");
 }
 
 /// <summary>
@@ -368,9 +759,15 @@ void BattleScene::RunInitialWorldSetup()
 /// <summary>
 /// BattleScene の HPバーとタイマーをゲームビューに重ねて描画する。
 /// </summary>
-void BattleScene::DrawBattleHUD()
+void BattleScene::DrawBattleHUD(Renderer& renderer)
 {
-	BattleHUDSystem::Draw(world, width, height, hudNumberTexture);
+	BattleHUDSystem::Textures textures{};
+	for (size_t index = 0; index < textures.size(); ++index)
+	{
+		textures[index] = FindSceneTexture(BattleHUDSystem::TexturePaths[index]);
+	}
+
+	BattleHUDSystem::Draw(renderer, world, width, height, hudNumberTexture, textures, visibleRoundPoints);
 }
 
 /// <summary>
@@ -424,20 +821,52 @@ const World& BattleScene::GetWorld() const
 }
 
 /// <summary>
-/// World に勝敗結果が記録されていれば、ResultScene への切り替えを予約する。
+/// 両者の決定が揃うまで結果画面を維持し、採用された操作で再戦または遷移する。
 /// </summary>
-void BattleScene::RequestResultSceneIfBattleFinished()
+void BattleScene::RunResultMenu()
 {
-	if (!world.HasBattleResult())
+	if (resultMenu.choice != BattleResultChoice::None)
 	{
 		return;
 	}
 
-	const BattleResult result = world.GetBattleResult();
-	DebugLog("[BattleScene] Battle finished. Result=", static_cast<int>(result));
+	BattleResultSystem::UpdateMenu(setupData, resultMenu);
+	switch (resultMenu.choice)
+	{
+	case BattleResultChoice::Rematch:
+		SoundManager::GetInstance().StopBGM();
+		fadeFrame = 0;
+		break;
+	case BattleResultChoice::CharacterSelect:
+		SceneManager::GetInstance().RequestChangeScene(std::make_unique<BattleSetupScene>(width, height, setupData));
+		break;
+	case BattleResultChoice::Title:
+		SceneManager::GetInstance().RequestChangeScene(std::make_unique<TitleScene>(width, height));
+		break;
+	case BattleResultChoice::None:
+		break;
+	}
+}
 
-	SceneManager::GetInstance().RequestChangeScene(
-		std::make_unique<ResultScene>(width, height, result));
+/// <summary>再戦の暗転が完了したら対戦を初期化し、暗転明けまで対戦BGMを待たせる。</summary>
+void BattleScene::RunRematchFadeOut()
+{
+	if (fadeFrame < roundTiming.fadeOutFrames)
+	{
+		++fadeFrame;
+		return;
+	}
+
+	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
+	round = {};
+	visibleRoundPoints = {};
+	resultMenu = {};
+	rematchFadeIn = roundTiming.fadeInFrames > 0;
+	BuildRoundWorld();
+	if (!rematchFadeIn)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::BattleBgm01);
+	}
 }
 
 #if defined(_DEBUG)

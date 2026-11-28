@@ -1,0 +1,16 @@
+﻿{
+  "roundIntroDelayFrames": 60,
+  "roundDisplayFrames": 120,
+  "roundToFightFrames": 10,
+  "fightDisplayFrames": 60,
+  "fightToControlFrames": 4,
+  "roundEndDisplayDelayFrames": 15,
+  "roundEndDisplayFrames": 120,
+  "roundEndAfterDisplayFrames": 8,
+  "releaseToVictoryFrames": 120,
+  "victoryMotionFrames": 180,
+  "matchResultDisplayFrames": 120,
+  "doubleKnockoutDownFrames": 120,
+  "fadeOutFrames": 20,
+  "fadeInFrames": 18
+}

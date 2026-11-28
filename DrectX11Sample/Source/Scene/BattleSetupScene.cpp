@@ -1,5 +1,7 @@
 ﻿#include "Scene/BattleSetupScene.h"
 
+#include "Manager/SceneLoadRequest.h"
+
 /// <summary>
 /// セットアップ用データと画面フロー担当コントローラーを初期化する。
 /// </summary>
@@ -10,12 +12,50 @@ BattleSetupScene::BattleSetupScene(int initialWidth, int initialHeight)
 {
 }
 
+/// <summary>前の試合のデバイスとキャラクター設定を保持してセットアップへ戻る。</summary>
+/// <param name="initialWidth">初期ウィンドウ幅。</param>
+/// <param name="initialHeight">初期ウィンドウ高さ。</param>
+/// <param name="previousMatch">引き継ぐ対戦設定。</param>
+BattleSetupScene::BattleSetupScene(int initialWidth, int initialHeight, const BattleSetup::BattleSetupData& previousMatch)
+	: BattleSetupScene(initialWidth, initialHeight)
+{
+	session.setupData = previousMatch;
+	resumeCharacterSelection = true;
+}
+
 /// <summary>
 /// セットアップ画面の開始処理をControllerへ委譲する。
 /// </summary>
 void BattleSetupScene::Enter()
 {
-	flowController.Enter();
+	flowController.Enter(saveWorker, resumeCharacterSelection);
+}
+
+/// <summary>対戦設定のキャラクターと入力設定一覧を遷移前に準備する。</summary>
+/// <param name="request">ワーカーへ渡すロード要求。</param>
+void BattleSetupScene::DescribeLoad(SceneLoadRequest &request) const
+{
+	request.bgmId = "BGM/BGM_BattleSetUp_02_maou";
+	request.uiImageIds = {"header_accent", "back", "panel", "battle_panel", "button", "button_primary",
+		"badge_a", "badge_b", "badge_x", "badge_y", "battle_keyboard", "battle_gamepad",
+		"battle_tab_left", "battle_tab_right", "battle_surface", "battle_roster_button"};
+	request.prepareScene = []
+	{
+		BattleSetupSession prepared;
+		BattleSetupCharacterSelectionController(prepared).RefreshCharacterSlotSummaries();
+		BattleSetupInputConfigController(prepared).RefreshInputConfigSummaries();
+
+		PreparedSceneLoad result;
+		result.apply = [prepared = std::move(prepared)](Scene &scene) mutable
+		{
+			auto &session = static_cast<BattleSetupScene &>(scene).session;
+			session.characterSlotSummaries = std::move(prepared.characterSlotSummaries);
+			session.keyboardInputConfigs = std::move(prepared.keyboardInputConfigs);
+			session.gamepadInputConfigs = std::move(prepared.gamepadInputConfigs);
+		};
+
+		return result;
+	};
 }
 
 /// <summary>
@@ -30,9 +70,9 @@ void BattleSetupScene::Exit()
 /// <summary>
 /// セットアップ処理の更新をControllerへ委譲する。
 /// </summary>
-void BattleSetupScene::RunSystems()
+void BattleSetupScene::Update()
 {
-	flowController.RunSystems();
+	flowController.Update();
 }
 
 /// <summary>

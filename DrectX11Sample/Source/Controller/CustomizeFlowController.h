@@ -1,65 +1,54 @@
 ﻿#pragma once
 
-#include "Data/AttackData.h"
 #include "Controller/CustomizeAttackEditorController.h"
 #include "Controller/CustomizeCharacterEditorController.h"
-#include "Controller/CustomizeMotionEditorController.h"
-#include "Controller/CustomizePreviewController.h"
-#include "Controller/CustomizeEditHistory.h"
-#include "Controller/CustomizeTypes.h"
-#include "System/Renderer.h"
-#include "UI/CustomizeAttackEditorView.h"
-#include "UI/CustomizeMenuView.h"
-#include "World/World.h"
+#include "Customize/CustomizeTypes.h"
+#include "Core/Renderer.h"
+#include "UI/UIRoot.h"
+#include <future>
 
 #include <string>
 
+class LoadWorker;
+class SaveWorker;
+
 class CustomizeFlowController
 {
-public:
-	CustomizeFlowController(World& world, int initialWidth, int initialHeight);
+  public:
+	CustomizeFlowController(int initialWidth, int initialHeight, CustomizeMode initialMode,
+		CustomizeAttackCategory category);
 
-	void Enter();
-	void Exit();
-	void RunSystems();
-	void Draw(Renderer& renderer);
+	void Enter(LoadWorker *worker, SaveWorker *writer);
+	void Update();
+	void DrawInterface(Renderer &renderer);
 	void OnResize(int newWidth, int newHeight);
-	/// <summary>表示方式によらず、メニュー選択を次の更新へ予約する。</summary>
-	/// <param name="character">trueはキャラクター作成、falseは技作成。</param>
 	void RequestCreationMenu(bool character);
 
-	World& GetWorld();
-	const World& GetWorld() const;
+  private:
 
-private:
-	static constexpr int CommonMotionSlotCount = 13;
-
-	World& world;
 	CustomizeMode mode = CustomizeMode::MainMenu;
 	int creationMenuSelection = 0; // 0:技作成、1:キャラクター作成。今後の専用UIも共有する。
-	GameUI::CustomizeMenuView creationMenuView;
+	GameUI::Root creationMenuInput;
 	int previousMenuDirection = 0;
-	int pendingMenuRequest = -1; // 描画側では遷移せず更新で一度だけ消費する。
-	bool menuSubmitReady = false; // 入場時の決定押しっぱなしを防ぐ。
+	int pendingMenuRequest = -1; // imguiが残っている際、Draw内の処理で繊維しないための保持用の変数
+	bool menuSubmitReady = false; // 決定入力の連続入力を防ぐ。
 #if defined(_DEBUG)
 	bool pendingCommonMotionRequest = false;
 #endif
 	void UpdateCreationMenu();
+	void UpdateMenuPointer(GameUI::Root &root, const GameUI::InputFrame &frame, int &selection, bool categories);
+	void DrawSelectionMenu(Renderer &renderer, int selection, bool categories);
+	GameUI::Rect MenuButtonRect(int index, bool categories) const;
+	GameUI::Rect MapMenuRect(const GameUI::Rect &rectangle) const;
 	CustomizeAttackCategory selectedCategory = CustomizeAttackCategory::Ground;
 	int width = 0;
 	int height = 0;
 
 	CustomizeAttackEditorController attackEditor;
-	CustomizeAttackEditorView attackEditorView;
-	CustomizeMotionEditorController motionEditor;
-	CustomizeEditHistory editHistory; // 攻撃/モーション画面で共有し、スロットを抜けたら破棄する。
 	CustomizeCharacterEditorController characterEditor;
-	DirectX::SimpleMath::Vector2 attackMovementKeyOffset = DirectX::SimpleMath::Vector2::Zero;
-	bool editingCommonMotion = false;
-	int selectedCommonMotionIndex = 0;
-	std::string editingCommonMotionId;
-	std::string statusMessage;
-	CustomizePreviewController previewController;
+	LoadWorker *loadWorker = nullptr;
+	std::future<CustomizeAttackEditorController> pendingAttackSummaries;
+	std::future<CustomizeCharacterEditorController> pendingCharacterSummaries;
 
 	bool WasCancelTriggered();
 	void RequestTitleScene();
@@ -69,44 +58,36 @@ private:
 	void DrawDebugMenu();
 #endif
 	void UpdateAttackCategorySelect();
-	GameUI::CustomizeMenuView categoryMenuView;
+	GameUI::Root categoryMenuInput;
 	int categoryMenuSelection = 0;
 	int previousCategoryDirection = 0;
 	bool categorySubmitReady = false;
-	void DrawAttackSlotSelect();
+	void UpdateSlots();
+	void DrawSlots(Renderer &renderer) const;
+	void ResetSlots();
+	void DeleteSlot();
+	bool IsCharacterList() const;
+	bool SlotOccupied(int slot) const;
+	bool SlotsLoading() const;
+	GameUI::Rect SlotRect(int index) const;
+	GameUI::Rect SlotActionRect(int index) const;
+	GameUI::Root slotInput;
+	int slotPage = 0;
+	int slotFocus = 0;
+	int slotAction = -1;
+	int slotDirection = 0;
+	bool slotHighlighted = true;
+	bool confirmDelete = false;
+	std::wstring slotStatus;
+	SaveWorker *saveWorker = nullptr;
+	std::future<int> pendingDelete;
+#if defined(_DEBUG)
 	void DrawCommonMotionSelect();
-	void DrawAttackEditor(Renderer& renderer);
-	void DrawMotionEditorScreen(Renderer& renderer);
-	void UpdateAttackEditorControls();
-	/// <summary>保存対象だけを複製し、現在フレームを復元用に付ける。</summary>
-	/// <returns>カメラやコピー用姿勢を含まない編集状態。</returns>
-	CustomizeEditSnapshot CaptureEditSnapshot();
-	/// <summary>履歴の下書きを復元し、古い入力・Gizmoの捕捉を終了する。</summary>
-	/// <param name="snapshot">復元する状態。</param>
-	void RestoreEditSnapshot(const CustomizeEditSnapshot& snapshot);
-	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 	void SelectCommonMotionSlot(int slotIndex);
-	void EnsureDraftAttackMotionDataId();
-	void LoadDraftMotionFromEditorId();
-	void SaveDraftMotion();
-	void InitializePreview();
-	void ReleasePreview();
-	void UpdatePreviewPlayback();
-	void RenderAttackPreview(Renderer& renderer, const RECT* region = nullptr);
-	void ClampPreviewCurrentFrame();
+#endif
+	void SelectAttackSlot(CustomizeAttackCategory category, int slotIndex);
 
-	int GetPreviewTotalFrames() const;
-	int GetPreviewActionFrame() const;
-	const char* GetPreviewPhaseText() const;
-	std::string GetEditingMotionDataId() const;
-
-	int GetAttackSlotCount(CustomizeAttackCategory category) const;
 	void RefreshAttackSlotSummaries(CustomizeAttackCategory category);
-	std::string BuildAttackSlotButtonLabel(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildAttackDataId(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildMotionDataId(CustomizeAttackCategory category, int slotIndex) const;
-	std::string BuildCommonMotionDataId(int slotIndex) const;
-	void CopyMotionEditorBuffers();
+	void RefreshCharacterSlotSummaries();
+	void ApplyPreparedSummaries();
 };
-
-

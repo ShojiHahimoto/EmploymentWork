@@ -4,9 +4,9 @@
 #include "Input/InputTypes.h"
 #include "Scene/BattleScene.h"
 #include "Scene/BattleSetupScene.h"
-#include "Scene/CustomizeScene.h"
-#include "Scene/SceneManager.h"
-#include "System/Application.h"
+#include "Scene/CustomizeSelectScene.h"
+#include "Manager/SceneManager.h"
+#include "Core/Application.h"
 
 #include <Windows.h>
 
@@ -26,7 +26,7 @@ void TitleNavigationController::Enter()
 /// メニューで確定した選択と開発用ショートカットから遷移先を決める。
 /// </summary>
 /// <param name="menuCommand">メニュー更新側が確定した操作。</param>
-void TitleNavigationController::RunSystems(TitleMenuCommand menuCommand)
+void TitleNavigationController::Update(TitleMenuCommand menuCommand)
 {
 	if (WasCustomizeTriggered() || menuCommand == TitleMenuCommand::OpenCustomize)
 	{
@@ -82,12 +82,12 @@ void TitleNavigationController::RequestBattleSetupScene()
 }
 
 /// <summary>
-/// タイトルから CustomizeScene への切り替えを予約する。
+/// タイトルからカスタマイズ選択シーンへの切り替えを予約する。
 /// </summary>
 void TitleNavigationController::RequestCustomizeScene()
 {
 	SceneManager::GetInstance().RequestChangeScene(
-		std::make_unique<CustomizeScene>(
+		std::make_unique<CustomizeSelectScene>(
 			static_cast<int>(Application::GetWidth()),
 			static_cast<int>(Application::GetHeight())));
 }

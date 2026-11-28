@@ -1,0 +1,9 @@
+﻿{
+  "waitSeconds": 2.0,
+  "attackDataIds": [
+    "Ground/slot_01",
+    "Ground/slot_04",
+    "Special/slot_00",
+    "Special/slot_01"
+  ]
+}

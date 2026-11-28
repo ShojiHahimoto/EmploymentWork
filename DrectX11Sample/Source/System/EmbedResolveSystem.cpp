@@ -6,7 +6,7 @@
 #include "Component/VelocityComponent.h"
 #include "System/BattleCameraSystem.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 #include <algorithm>
 #include <cmath>
@@ -315,6 +315,8 @@ namespace
 	}
 }
 
+/// <summary>移動後の地面、壁、プレイヤー同士のめり込みを補正する。</summary>
+/// <param name="world">補正対象の GameObject と Component を保持する World。</param>
 void EmbedResolveSystem::Update(World& world)
 {
 	ResolveWallBounds(world);

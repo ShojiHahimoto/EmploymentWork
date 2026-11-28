@@ -2,10 +2,11 @@
 
 #include "Input/InputSystem.h"
 #include "Input/InputTypes.h"
-#include "Scene/SceneManager.h"
+#include "Input/UIInputSystem.h"
+#include "Manager/SceneManager.h"
 #include "Scene/TitleScene.h"
-#include "System/Application.h"
-#include "System/Debugger.h"
+#include "Core/Application.h"
+#include "Core/Debugger.h"
 
 #include <memory>
 
@@ -28,26 +29,28 @@ void ResultNavigationController::Enter()
 }
 
 /// <summary>
-/// Submit または画面ボタンの要求を受けてタイトルへの遷移を予約する。
+/// 決定・キャンセルまたは画面ボタンの要求を受けてタイトルへの遷移を予約する。
 /// </summary>
 /// <param name="returnRequestedByView">表示側でボタンが押されたか。</param>
-void ResultNavigationController::RunSystems(bool returnRequestedByView)
+void ResultNavigationController::Update(bool returnRequestedByView)
 {
-	if (returnRequestedByView || WasSubmitTriggered())
+	const auto& frame = GameUI::UIInputSystem::GetFrame();
+	if (returnRequestedByView || WasReturnTriggered() || (frame.rightPointerPressed && !frame.focusLost))
 	{
 		RequestTitleScene();
 	}
 }
 
 /// <summary>
-/// いずれかのプレイヤーに割り当てられた Submit 入力を検出する。
+/// いずれかのプレイヤーに割り当てられた決定・キャンセル入力を検出する。
 /// </summary>
-/// <returns>Submit が今フレーム押された場合は true。</returns>
-bool ResultNavigationController::WasSubmitTriggered() const
+/// <returns>決定またはキャンセルが今フレーム押された場合はtrue。</returns>
+bool ResultNavigationController::WasReturnTriggered() const
 {
 	for (int playerIndex = 0; playerIndex < Input::MaxPlayers; ++playerIndex)
 	{
-		if (Input::InputSystem::GetActionState(playerIndex, Input::InputActionId::Submit).trigger)
+		if (Input::InputSystem::GetActionState(playerIndex, Input::InputActionId::Submit).trigger ||
+			Input::InputSystem::GetActionState(playerIndex, Input::InputActionId::Cancel).trigger)
 		{
 			return true;
 		}

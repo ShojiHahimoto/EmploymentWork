@@ -25,6 +25,7 @@ enum class AttackCommandId
 {
 	None,
 	Hadouken,
+	Tatsumaki,
 	Shoryuu,
 	Yoga,
 	ReverseYoga,

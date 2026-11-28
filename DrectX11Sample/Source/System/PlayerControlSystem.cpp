@@ -1,11 +1,11 @@
 ﻿#include "System/PlayerControlSystem.h"
 
 #include "Component/CharacterParameterComponent.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 #include "Component/TransformComponent.h"
 #include "System/MovementSystem.h"
 #include "System/TransformSystem.h"
-#include "World/World.h"
+#include "Core/World.h"
 
 using namespace DirectX::SimpleMath;
 

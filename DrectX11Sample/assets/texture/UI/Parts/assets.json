@@ -6,6 +6,12 @@
     "bottom"
   ],
   "assets": [
+    { "name": "slot_focused", "file": "SlotSelect/focused.png", "slice": [28,28,28,28] },
+    { "name": "slot_forward", "file": "SlotSelect/forward.png", "slice": [0,0,0,0] },
+    { "name": "badge_a", "file": "SlotSelect/badge_a.png", "slice": [0,0,0,0] },
+    { "name": "badge_b", "file": "SlotSelect/badge_b.png", "slice": [0,0,0,0] },
+    { "name": "badge_x", "file": "SlotSelect/badge_x.png", "slice": [0,0,0,0] },
+    { "name": "badge_y", "file": "SlotSelect/badge_y.png", "slice": [0,0,0,0] },
     { "name": "customize_menu_normal", "file": "CustomizeMenu/button_normal.png", "slice": [0,0,0,0] },
     { "name": "customize_menu_selected", "file": "CustomizeMenu/button_selected.png", "slice": [0,0,0,0] },
     { "name": "title_v2_logo", "file": "TitleV2/title_logo.png", "slice": [0,0,0,0] },
@@ -691,6 +697,46 @@
       "name": "keyframe_movement",
       "file": "keyframe_movement.png",
       "height": 199
+    },
+    {
+      "name": "battle_keyboard",
+      "file": "BattleSetup/device_keyboard.png",
+      "slice": [0, 0, 0, 0]
+    },
+    {
+      "name": "battle_gamepad",
+      "file": "BattleSetup/device_gamepad.png",
+      "slice": [0, 0, 0, 0]
+    },
+    {
+      "name": "battle_roster_button",
+      "file": "button.png",
+      "slice": [28, 28, 28, 28],
+      "tintRgb": [0.31, 0.39, 0.45]
+    },
+    {
+      "name": "battle_panel",
+      "file": "panel.png",
+      "slice": [28, 28, 28, 28],
+      "tintRgb": [0.25, 0.31, 0.36]
+    },
+    {
+      "name": "battle_tab_left",
+      "file": "BattleSetup/player_tab.png",
+      "slice": [0, 0, 0, 0],
+      "tintRgb": [0.18, 0.82, 0.76],
+      "mirrorX": true
+    },
+    {
+      "name": "battle_tab_right",
+      "file": "BattleSetup/player_tab.png",
+      "slice": [0, 0, 0, 0],
+      "tintRgb": [1.0, 0.73, 0.28]
+    },
+    {
+      "name": "battle_surface",
+      "file": "BattleSetup/battle_surface_overlay.png",
+      "slice": [20, 20, 20, 20]
     }
   ],
   "version": 1

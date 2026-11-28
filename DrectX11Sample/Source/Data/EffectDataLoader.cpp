@@ -1,7 +1,8 @@
 ﻿#include "Data/EffectDataLoader.h"
 
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
+#include "Manager/SceneManager.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -316,6 +317,10 @@ namespace
 	}
 }
 
+/// <summary>指定 EffectData ID に対応する JSON を読み込む。</summary>
+/// <param name="effectDataId">assets/EffectData 配下のエフェクト ID。</param>
+/// <param name="outEffectData">読み込んだエフェクトデータの書き込み先。</param>
+/// <returns>読み込みに成功した場合は true。</returns>
 bool EffectDataLoader::LoadEffectData(const std::string& effectDataId, EffectData& outEffectData)
 {
 	std::filesystem::path effectPath;
@@ -359,37 +364,17 @@ bool EffectDataLoader::LoadEffectData(const std::string& effectDataId, EffectDat
 	return true;
 }
 
-std::unordered_map<std::string, std::unique_ptr<EffectData>> EffectDataManager::resources;
-
-bool EffectDataManager::LoadEffectData(const std::string& effectDataId)
+/// <summary>現在のシーンが準備したエフェクト定義を取得する。</summary>
+/// <param name="effectDataId">参照するエフェクトID。</param>
+/// <returns>定義が存在しない場合はnullptr。</returns>
+const EffectData *EffectDataManager::GetEffectData(const std::string &effectDataId)
 {
-	if (effectDataId.empty())
+	const auto *scene = SceneManager::GetInstance().GetCurrentScene();
+	if (!scene)
 	{
-		return false;
+		return nullptr;
 	}
 
-	if (resources.find(effectDataId) != resources.end())
-	{
-		return true;
-	}
-
-	std::unique_ptr<EffectData> effectData = std::make_unique<EffectData>();
-	if (!EffectDataLoader::LoadEffectData(effectDataId, *effectData))
-	{
-		return false;
-	}
-
-	resources[effectDataId] = std::move(effectData);
-	return true;
-}
-
-const EffectData* EffectDataManager::GetEffectData(const std::string& effectDataId)
-{
-	const auto found = resources.find(effectDataId);
-	return found != resources.end() ? found->second.get() : nullptr;
-}
-
-void EffectDataManager::UnloadAll()
-{
-	resources.clear();
+	const auto found = scene->sceneEffects.find(effectDataId);
+	return found == scene->sceneEffects.end() ? nullptr : &found->second;
 }

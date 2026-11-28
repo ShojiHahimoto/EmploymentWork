@@ -1,8 +1,8 @@
 ﻿#include "UI/UIRenderer.h"
 
-#include "System/Renderer.h"
+#include "Core/Renderer.h"
 #include "Data/JsonValue.h"
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
 
 #include <d2d1.h>
 #include <dwrite.h>
@@ -23,6 +23,9 @@
 
 namespace GameUI
 {
+/// <summary>画像の横幅と高さの比率を返す。</summary>
+/// <param name="imageId">登録された画像名。</param>
+/// <returns>横幅/高さ。未登録の場合は1。</returns>
 float UIRenderer::GetImageAspectRatio(std::string_view imageId)
 {
 	const auto found = imageAssets.find(std::string(imageId));
@@ -300,16 +303,17 @@ void DrawBitmapNineSlice(ID2D1RenderTarget* target, ID2D1Bitmap* bitmap,
 	if (left + right >= sourceWidth || top + bottom >= sourceHeight) return;
 	// 小さい表示先では角だけを縦横別に潰さず、素材全体の縮小率で角を揃えて縮める。
 	const float cornerScale = std::min({1.0f, destinationWidth / sourceWidth, destinationHeight / sourceHeight});
-	const float destinationLeft = left * cornerScale;
-	const float destinationRight = right * cornerScale;
-	const float destinationTop = top * cornerScale;
-	const float destinationBottom = bottom * cornerScale;
+	// 隣接する半透明パーツを重ねず、共有境界をピクセル境界へ揃える。
+	const float destinationLeft = static_cast<float>(static_cast<int>(left * cornerScale + 0.5f));
+	const float destinationRight = static_cast<float>(static_cast<int>(right * cornerScale + 0.5f));
+	const float destinationTop = static_cast<float>(static_cast<int>(top * cornerScale + 0.5f));
+	const float destinationBottom = static_cast<float>(static_cast<int>(bottom * cornerScale + 0.5f));
 	const float sourceX[] = {0.0f, left, sourceWidth - right, sourceWidth};
 	const float sourceY[] = {0.0f, top, sourceHeight - bottom, sourceHeight};
 	const float destinationX[] = {destination.left, destination.left + destinationLeft,
-		destination.right - destinationRight, destination.right};
+		std::max(destination.left + destinationLeft, destination.right - destinationRight), destination.right};
 	const float destinationY[] = {destination.top, destination.top + destinationTop,
-		destination.bottom - destinationBottom, destination.bottom};
+		std::max(destination.top + destinationTop, destination.bottom - destinationBottom), destination.bottom};
 	for (int row = 0; row < 3; ++row)
 	{
 		for (int column = 0; column < 3; ++column)
@@ -370,6 +374,11 @@ IDWriteTextFormat *GetTextFormat(float requestedSize, bool bold = false)
 }
 } // namespace
 
+/// <summary>Direct2D、DirectWrite、WICと画面合成用テクスチャを初期化する。</summary>
+/// <param name="d3dDevice">描画テクスチャを作るDirect3D11デバイス。</param>
+/// <param name="width">クライアント領域の幅。</param>
+/// <param name="height">クライアント領域の高さ。</param>
+/// <returns>必要な描画リソースをすべて作成できた場合はtrue。</returns>
 bool UIRenderer::Initialize(ID3D11Device *d3dDevice, int width, int height)
 {
 	Shutdown();
@@ -417,6 +426,7 @@ bool UIRenderer::Initialize(ID3D11Device *d3dDevice, int width, int height)
 	return true;
 }
 
+/// <summary>ウィンドウ終了時にUI描画リソースを解放する。</summary>
 void UIRenderer::Shutdown()
 {
 	initialized = false;
@@ -434,6 +444,10 @@ void UIRenderer::Shutdown()
 	}
 }
 
+/// <summary>ウィンドウサイズに合わせて合成先を作り直す。</summary>
+/// <param name="width">新しいクライアント領域の幅。</param>
+/// <param name="height">新しいクライアント領域の高さ。</param>
+/// <returns>新しいサイズのリソースを作成できた場合はtrue。</returns>
 bool UIRenderer::Resize(int width, int height)
 {
 	if (!device || width <= 0 || height <= 0)
@@ -452,15 +466,25 @@ bool UIRenderer::Resize(int width, int height)
 	return initialized;
 }
 
-bool UIRenderer::LoadAssets(const std::string& manifestPath)
+/// <summary>指定IDの画像をワーカー上でデコードする。</summary>
+/// <param name="manifestPath">画像マニフェストのパス。</param>
+/// <param name="imageIds">このシーンで使う画像ID。</param>
+/// <returns>CPU側の画像セット。失敗時は空。</returns>
+UIRenderer::PreparedImages UIRenderer::PrepareAssets(const std::string &manifestPath,
+													 const std::vector<std::string> &imageIds)
 {
-	if (!imagingFactory || !surfaceTarget) return false;
+	ComPtr<IWICImagingFactory> factory;
+	if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory))))
+	{
+		return {};
+	}
+
 	const std::filesystem::path resolvedManifest = ResolveManifestPath(manifestPath);
 	std::ifstream stream(resolvedManifest, std::ios::binary);
 	if (!stream)
 	{
 		DebugLog("[UI] Could not open UI asset manifest: " + manifestPath);
-		return false;
+		return {};
 	}
 	std::string jsonText((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
 	if (jsonText.size() >= 3 && static_cast<unsigned char>(jsonText[0]) == 0xEF
@@ -471,10 +495,10 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 	if (!JsonParser::Parse(jsonText, root, parseError) || !root.Find("assets") || !root.Find("assets")->IsArray())
 	{
 		DebugLog("[UI] Invalid UI asset manifest: " + parseError);
-		return false;
+		return {};
 	}
 	const std::filesystem::path basePath = resolvedManifest.parent_path();
-	std::unordered_map<std::string, ImageAsset> loadedAssets;
+	PreparedImages loadedAssets;
 	for (const JsonValue& value : root.Find("assets")->AsArray())
 	{
 		const JsonValue* name = value.Find("name");
@@ -487,6 +511,11 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 			continue;
 		}
 		const std::string id = name->AsString();
+		if (std::find(imageIds.begin(), imageIds.end(), id) == imageIds.end())
+		{
+			continue;
+		}
+
 		if (id.empty() || loadedAssets.contains(id))
 		{
 			DebugLog("[UI] Skipping empty or duplicate UI asset ID: " + id);
@@ -494,24 +523,32 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 		}
 		const std::filesystem::path imagePath = basePath / file->AsString();
 		ComPtr<IWICBitmapDecoder> decoder;
-		HRESULT hr = imagingFactory->CreateDecoderFromFilename(imagePath.c_str(), nullptr, GENERIC_READ,
+		HRESULT hr = factory->CreateDecoderFromFilename(imagePath.c_str(), nullptr, GENERIC_READ,
 			WICDecodeMetadataCacheOnLoad, decoder.GetAddressOf());
 		ComPtr<IWICBitmapFrameDecode> frame;
 		if (SUCCEEDED(hr)) hr = decoder->GetFrame(0, frame.GetAddressOf());
 		ComPtr<IWICFormatConverter> converter;
-		if (SUCCEEDED(hr)) hr = imagingFactory->CreateFormatConverter(converter.GetAddressOf());
+		if (SUCCEEDED(hr)) hr = factory->CreateFormatConverter(converter.GetAddressOf());
 		if (SUCCEEDED(hr)) hr = converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppPBGRA,
 			WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
-		ImageAsset asset;
-		if (SUCCEEDED(hr)) hr = imagingFactory->CreateBitmapFromSource(converter.Get(), WICBitmapCacheOnLoad,
-			asset.source.GetAddressOf());
-		UINT imageWidth = 0, imageHeight = 0;
-		if (SUCCEEDED(hr)) hr = asset.source->GetSize(&imageWidth, &imageHeight);
-		if (FAILED(hr) || imageWidth == 0 || imageHeight == 0)
+		PreparedImage asset;
+		UINT imageWidth = 0;
+		UINT imageHeight = 0;
+		if (FAILED(hr) || FAILED(converter->GetSize(&imageWidth, &imageHeight)) ||
+			!imageWidth || !imageHeight || imageWidth > 16384 || imageHeight > 16384)
 		{
-			DebugLog("[UI] Could not load UI image; skipping ID: ", id, " hr=", hr);
+			DebugLog("[UI] Could not decode image: ", id);
 			continue;
 		}
+
+		const UINT pitch = imageWidth * 4;
+		const UINT size = pitch * imageHeight;
+		asset.pixels.resize(size);
+		if (FAILED(converter->CopyPixels(nullptr, pitch, size, asset.pixels.data())))
+		{
+			continue;
+		}
+
 		asset.width = static_cast<int>(imageWidth);
 		asset.height = static_cast<int>(imageHeight);
 		const auto& slices = slice->AsArray();
@@ -531,26 +568,83 @@ bool UIRenderer::LoadAssets(const std::string& manifestPath)
 			DebugLog("[UI] Skipping UI image with invalid slice bounds: " + id);
 			continue;
 		}
+
+		const JsonValue* mirror = value.Find("mirrorX");
+		if (mirror && mirror->AsBool())
+		{
+			for (UINT y = 0; y < imageHeight; ++y)
+			{
+				for (UINT x = 0; x < imageWidth / 2; ++x)
+				{
+					const UINT left = y * pitch + x * 4;
+					const UINT right = y * pitch + (imageWidth - 1 - x) * 4;
+					std::swap_ranges(asset.pixels.begin() + left, asset.pixels.begin() + left + 4,
+						asset.pixels.begin() + right);
+				}
+			}
+			std::swap(asset.sliceLeft, asset.sliceRight);
+		}
+
+		const JsonValue* tint = value.Find("tintRgb");
+		if (tint && tint->IsArray() && tint->AsArray().size() == 3)
+		{
+			const auto& channels = tint->AsArray();
+			for (UINT i = 0; i < size; i += 4)
+			{
+				for (UINT channel = 0; channel < 3; ++channel)
+				{
+					const double multiplier = std::clamp(channels[2 - channel].AsNumber(1.0), 0.0, 1.0);
+					asset.pixels[i + channel] = static_cast<unsigned char>(asset.pixels[i + channel] * multiplier);
+				}
+			}
+		}
+
 		loadedAssets.emplace(id, std::move(asset));
 	}
-	if (loadedAssets.empty())
+	return loadedAssets;
+}
+
+/// <summary>新しい画像セットを作成できた場合だけ表示中のセットと入れ替える。</summary>
+/// <param name="images">ワーカーでデコードした画像。</param>
+/// <returns>登録に成功した場合はtrue。</returns>
+bool UIRenderer::UploadAssets(const PreparedImages &images)
+{
+	std::unordered_map<std::string, ImageAsset> next;
+	for (const auto &[id, image] : images)
 	{
-		DebugLog("[UI] No usable UI images were found in the manifest.");
-		return false;
+		if (!imagingFactory || !surfaceTarget)
+		{
+			return false;
+		}
+
+		ImageAsset asset;
+		const UINT pitch = image.width * 4;
+		const HRESULT hr = imagingFactory->CreateBitmapFromMemory(image.width, image.height,
+			GUID_WICPixelFormat32bppPBGRA, pitch, static_cast<UINT>(image.pixels.size()),
+			const_cast<BYTE *>(image.pixels.data()), asset.source.GetAddressOf());
+		if (FAILED(hr) || FAILED(surfaceTarget->CreateBitmapFromWicBitmap(asset.source.Get(), nullptr,
+																		 asset.targetBitmap.GetAddressOf())))
+		{
+			return false;
+		}
+
+		asset.width = image.width;
+		asset.height = image.height;
+		asset.sliceLeft = image.sliceLeft;
+		asset.sliceTop = image.sliceTop;
+		asset.sliceRight = image.sliceRight;
+		asset.sliceBottom = image.sliceBottom;
+		next.emplace(id, std::move(asset));
 	}
-	imageAssets = std::move(loadedAssets);
+
+	imageAssets = std::move(next);
 	cachedCommands.clear();
 	previousCachedCommands.clear();
-	if (!CreateTargetBitmaps())
-	{
-		imageAssets.clear();
-		DebugLog("[UI] Could not create Direct2D UI image bitmaps.");
-		return false;
-	}
-	DebugLog("[UI] Loaded UI image assets: ", imageAssets.size());
+
 	return true;
 }
 
+/// <summary>画像キャッシュだけを解放する。</summary>
 void UIRenderer::UnloadAssets()
 {
 	imageAssets.clear();
@@ -570,6 +664,9 @@ bool UIRenderer::CreateTargetBitmaps()
 	return true;
 }
 
+/// <summary>矩形・文字・画像の描画要求を登録順に合成し、透明なUIレイヤーとして画面へ描く。</summary>
+/// <param name="renderer">最終合成に使うDirect3D11レンダラー。</param>
+/// <param name="commands">矩形・文字・画像の描画要求。</param>
 void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &commands)
 {
 	if (!initialized || commands.empty())
@@ -707,17 +804,27 @@ void UIRenderer::Draw(Renderer &renderer, const std::vector<DrawCommand> &comman
 	renderer.DrawFullscreenTexture(compositeTextureView.Get(), surfaceWidth, surfaceHeight);
 }
 
+/// <summary>描画リソースが利用可能か返す。</summary>
+/// <returns>初期化済みならtrue。</returns>
 bool UIRenderer::IsInitialized()
 {
 	return initialized;
 }
 
+/// <summary>名前付きUI画像がロード済みか確認する。</summary>
+/// <param name="imageId">画像一覧JSONに登録された画像名。</param>
+/// <returns>描画可能なDirect2Dビットマップがあればtrue。</returns>
 bool UIRenderer::HasImage(std::string_view imageId)
 {
 	const auto image = imageAssets.find(std::string(imageId));
 	return image != imageAssets.end() && image->second.targetBitmap != nullptr;
 }
 
+/// <summary>描画に使うフォントサイズで文字列の横幅を測る。</summary>
+/// <param name="text">測定するUTF-16文字列。</param>
+/// <param name="fontSize">96 DPI基準の文字サイズ。</param>
+/// <param name="bold">太字フォントを測る場合はtrue。</param>
+/// <returns>文字列の横幅。描画前または失敗時は0。</returns>
 float UIRenderer::MeasureText(std::wstring_view text, float fontSize, bool bold)
 {
 	if (!initialized || text.empty())

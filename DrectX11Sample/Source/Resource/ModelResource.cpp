@@ -1,10 +1,11 @@
 ﻿#include "Resource/ModelResource.h"
 
 #include <assimp/Importer.hpp>
-#include "System/Debugger.h"
+#include "Core/Debugger.h"
+#include "Manager/SceneManager.h"
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
-#include <WICTextureLoader.h>
+#include <chrono>
 
 #include <algorithm>
 #include <cctype>
@@ -285,246 +286,118 @@ namespace
 		return diffuseTextures.front();
 	}
 
-	/// <summary>
-	/// 圧縮済みの埋め込みテクスチャを WIC 経由で ShaderResourceView に変換する。
-	/// </summary>
-	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
-	/// <param name="embeddedTexture">Assimp が保持している埋め込みテクスチャ。</param>
-	/// <param name="textureView">作成した ShaderResourceView の受け取り先。</param>
-	/// <returns>DirectX API の HRESULT。</returns>
-	HRESULT CreateCompressedEmbeddedTextureView(
-		ID3D11Device* device,
-		const aiTexture& embeddedTexture,
-		ID3D11ShaderResourceView** textureView)
+	/// <summary>モデルのマテリアルに対応する画像をデコードする。同一画像は結果内で共有する。</summary>
+	/// <param name="scene">Assimpが読み込んだモデルデータ。</param>
+	/// <param name="path">外部画像を解決する基準となるモデルのパス。</param>
+	/// <param name="materials">マテリアルごとの準備結果。</param>
+	void PrepareMaterials(const aiScene &scene, const std::filesystem::path &path,
+						  std::vector<PreparedModelMaterial> &materials)
 	{
-		return DirectX::CreateWICTextureFromMemory(
-			device,
-			reinterpret_cast<const uint8_t*>(embeddedTexture.pcData),
-			embeddedTexture.mWidth,
-			nullptr,
-			textureView);
-	}
-
-	/// <summary>
-	/// raw texel の埋め込みテクスチャを DirectX11 Texture2D と ShaderResourceView に変換する。
-	/// </summary>
-	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
-	/// <param name="embeddedTexture">Assimp が保持している埋め込みテクスチャ。</param>
-	/// <param name="textureView">作成した ShaderResourceView の受け取り先。</param>
-	/// <returns>DirectX API の HRESULT。</returns>
-	HRESULT CreateRawEmbeddedTextureView(
-		ID3D11Device* device,
-		const aiTexture& embeddedTexture,
-		ID3D11ShaderResourceView** textureView)
-	{
-		if (embeddedTexture.mWidth == 0 || embeddedTexture.mHeight == 0 || !embeddedTexture.pcData)
-		{
-			return E_INVALIDARG;
-		}
-
-		const size_t pixelCount = static_cast<size_t>(embeddedTexture.mWidth) * static_cast<size_t>(embeddedTexture.mHeight);
-		std::vector<uint8_t> rgbaPixels(pixelCount * 4);
-		for (size_t pixelIndex = 0; pixelIndex < pixelCount; ++pixelIndex)
-		{
-			const aiTexel& source = embeddedTexture.pcData[pixelIndex];
-			const size_t destinationIndex = pixelIndex * 4;
-			rgbaPixels[destinationIndex] = source.r;
-			rgbaPixels[destinationIndex + 1] = source.g;
-			rgbaPixels[destinationIndex + 2] = source.b;
-			rgbaPixels[destinationIndex + 3] = source.a;
-		}
-
-		D3D11_TEXTURE2D_DESC textureDesc = {};
-		textureDesc.Width = embeddedTexture.mWidth;
-		textureDesc.Height = embeddedTexture.mHeight;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-
-		D3D11_SUBRESOURCE_DATA textureData = {};
-		textureData.pSysMem = rgbaPixels.data();
-		textureData.SysMemPitch = embeddedTexture.mWidth * 4;
-
-		ID3D11Texture2D* texture = nullptr;
-		HRESULT hr = device->CreateTexture2D(&textureDesc, &textureData, &texture);
-		if (FAILED(hr))
-		{
-			return hr;
-		}
-
-		hr = device->CreateShaderResourceView(texture, nullptr, textureView);
-		texture->Release();
-		return hr;
-	}
-
-	/// <summary>
-	/// FBX 内に埋め込まれた diffuse テクスチャを読み込み、Material に ShaderResourceView を設定する。
-	/// </summary>
-	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
-	/// <param name="scene">埋め込みテクスチャを保持している Assimp Scene。</param>
-	/// <param name="material">テクスチャ情報を書き込む Material。</param>
-	/// <param name="texturePath">Assimp Material が持つテクスチャ参照。</param>
-	/// <param name="textureCache">同一テクスチャを共有するためのキャッシュ。</param>
-	/// <returns>埋め込みテクスチャを読み込めた場合は true。</returns>
-	bool LoadEmbeddedDiffuseTexture(
-		ID3D11Device* device,
-		const aiScene& scene,
-		ModelMaterial& material,
-		const aiString& texturePath,
-		std::unordered_map<std::string, ID3D11ShaderResourceView*>& textureCache)
-	{
-		const aiTexture* embeddedTexture = scene.GetEmbeddedTexture(texturePath.C_Str());
-		if (!embeddedTexture)
-		{
-			return false;
-		}
-
-		const std::string textureKey = std::string("embedded:") + texturePath.C_Str();
-		const auto cachedTexture = textureCache.find(textureKey);
-		if (cachedTexture != textureCache.end())
-		{
-			material.diffuseTexturePath = textureKey;
-			material.diffuseTextureView = cachedTexture->second;
-			if (material.diffuseTextureView)
-			{
-				material.diffuseTextureView->AddRef();
-				return true;
-			}
-
-			return false;
-		}
-
-		ID3D11ShaderResourceView* textureView = nullptr;
-		const HRESULT hr = embeddedTexture->mHeight == 0
-			? CreateCompressedEmbeddedTextureView(device, *embeddedTexture, &textureView)
-			: CreateRawEmbeddedTextureView(device, *embeddedTexture, &textureView);
-
-		if (SUCCEEDED(hr) && textureView)
-		{
-			material.diffuseTexturePath = textureKey;
-			material.diffuseTextureView = textureView;
-			textureCache[textureKey] = textureView;
-			DebugLog("[Model] Embedded texture loaded: ", textureKey);
-			return true;
-		}
-
-		DebugLog("[Model] Embedded texture load failed: ", textureKey, " hr=", static_cast<long>(hr));
-		return false;
-	}
-
-	/// <summary>
-	/// diffuse テクスチャを読み込み、Material に ShaderResourceView を設定する。
-	/// </summary>
-	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
-	/// <param name="material">テクスチャ情報を書き込む Material。</param>
-	/// <param name="texturePath">読み込むテクスチャパス。</param>
-	/// <param name="textureCache">同一テクスチャを共有するためのキャッシュ。</param>
-	/// <returns>外部テクスチャを読み込めた場合は true。</returns>
-	bool LoadDiffuseTexture(
-		ID3D11Device* device,
-		ModelMaterial& material,
-		const std::filesystem::path& texturePath,
-		std::unordered_map<std::string, ID3D11ShaderResourceView*>& textureCache)
-	{
-		if (texturePath.empty())
-		{
-			return false;
-		}
-
-		material.diffuseTexturePath = texturePath.string();
-		const auto cachedTexture = textureCache.find(material.diffuseTexturePath);
-		if (cachedTexture != textureCache.end())
-		{
-			material.diffuseTextureView = cachedTexture->second;
-			if (material.diffuseTextureView)
-			{
-				material.diffuseTextureView->AddRef();
-				return true;
-			}
-
-			return false;
-		}
-
-		const std::wstring widePath = ToWideString(material.diffuseTexturePath);
-		const HRESULT hr = DirectX::CreateWICTextureFromFile(
-			device,
-			widePath.c_str(),
-			nullptr,
-			&material.diffuseTextureView);
-
-		if (SUCCEEDED(hr) && material.diffuseTextureView)
-		{
-			textureCache[material.diffuseTexturePath] = material.diffuseTextureView;
-			DebugLog("[Model] Texture loaded: ", material.diffuseTexturePath);
-			return true;
-		}
-		else
-		{
-			DebugLog("[Model] Texture load failed: ", material.diffuseTexturePath, " hr=", static_cast<long>(hr));
-			return false;
-		}
-	}
-
-	/// <summary>
-	/// Assimp Scene の Material 情報から、描画用 ModelMaterial 配列を作る。
-	/// </summary>
-	/// <param name="device">テクスチャ作成に使う DirectX11 Device。</param>
-	/// <param name="scene">Material を含む Assimp Scene。</param>
-	/// <param name="modelPath">読み込んでいるモデルファイルのパス。</param>
-	/// <param name="materials">作成した Material を書き込む配列。</param>
-	void LoadMaterials(
-		ID3D11Device* device,
-		const aiScene& scene,
-		const std::filesystem::path& modelPath,
-		std::vector<ModelMaterial>& materials)
-	{
-		materials.clear();
 		materials.resize(scene.mNumMaterials);
+		const auto fallback = FindDiffuseTextures(path.parent_path());
+		std::unordered_map<std::string, std::shared_ptr<const TexturePreparation::Image>> decoded;
 
-		const std::vector<std::filesystem::path> fallbackDiffuseTextures = FindDiffuseTextures(modelPath.parent_path());
-		std::unordered_map<std::string, ID3D11ShaderResourceView*> textureCache;
-
-		for (unsigned int materialIndex = 0; materialIndex < scene.mNumMaterials; ++materialIndex)
+		for (unsigned int index = 0; index < scene.mNumMaterials; ++index)
 		{
-			const aiMaterial* sourceMaterial = scene.mMaterials[materialIndex];
-			if (!sourceMaterial)
+			const aiMaterial *source = scene.mMaterials[index];
+			if (!source)
 			{
 				continue;
 			}
 
-			aiString texturePath;
-			if (sourceMaterial->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+			auto &material = materials[index];
+			aiString materialName;
+			if (source->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS)
 			{
-				if (LoadEmbeddedDiffuseTexture(
-					device,
-					scene,
-					materials[materialIndex],
-					texturePath,
-					textureCache))
+				material.satinMetal = std::string(materialName.C_Str()).starts_with("SatinMetal_");
+			}
+
+			if (material.satinMetal)
+			{
+				const auto normalPath = path.parent_path() / (std::string(materialName.C_Str()) + ".normal.png");
+				auto normalImage = std::make_shared<TexturePreparation::Image>();
+				if (std::filesystem::is_regular_file(normalPath) &&
+					SUCCEEDED(TexturePreparation::DecodeFile(normalPath.c_str(), *normalImage)))
 				{
-					continue;
+					normalImage->format = DXGI_FORMAT_R8G8B8A8_UNORM;
+					material.normalImage = std::move(normalImage);
+				}
+			}
+
+			const auto load = [&](const std::string &key, const aiTexture *embedded)
+			{
+				if (key.empty())
+				{
+					return false;
 				}
 
-				if (LoadDiffuseTexture(
-					device,
-					materials[materialIndex],
-					ResolveTexturePath(modelPath, texturePath),
-					textureCache))
+				material.path = key;
+				if (const auto found = decoded.find(key); found != decoded.end())
+				{
+					material.image = found->second;
+
+					return true;
+				}
+
+				auto image = std::make_shared<TexturePreparation::Image>();
+				HRESULT hr = S_OK;
+				if (!embedded)
+				{
+					const auto widePath = ToWideString(key);
+					hr = TexturePreparation::DecodeFile(widePath.c_str(), *image);
+				}
+				else if (embedded->mHeight == 0)
+				{
+					hr = TexturePreparation::DecodeMemory(reinterpret_cast<const uint8_t *>(embedded->pcData),
+														 embedded->mWidth, *image);
+				}
+				else if (embedded->pcData && embedded->mWidth &&
+						 embedded->mWidth <= D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION &&
+						 embedded->mHeight <= D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION)
+				{
+					image->width = embedded->mWidth;
+					image->height = embedded->mHeight;
+					const size_t count = static_cast<size_t>(image->width) * image->height;
+					image->pixels.reserve(count * 4);
+
+					for (size_t i = 0; i < count; ++i)
+					{
+						const auto &pixel = embedded->pcData[i];
+						image->pixels.insert(image->pixels.end(), {pixel.r, pixel.g, pixel.b, pixel.a});
+					}
+				}
+				else
+				{
+					hr = E_INVALIDARG;
+				}
+
+				if (FAILED(hr))
+				{
+					DebugLog("[Model] Texture decode failed: ", key, " hr=", static_cast<long>(hr));
+
+					return false;
+				}
+
+				decoded.emplace(key, image);
+				material.image = std::move(image);
+
+				return true;
+			};
+
+			aiString texturePath;
+			if (source->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)
+			{
+				const auto *embedded = scene.GetEmbeddedTexture(texturePath.C_Str());
+				if ((embedded && load(std::string("embedded:") + texturePath.C_Str(), embedded)) ||
+					load(ResolveTexturePath(path, texturePath).string(), nullptr))
 				{
 					continue;
 				}
 			}
 
-			aiString materialName;
-			sourceMaterial->Get(AI_MATKEY_NAME, materialName);
-			LoadDiffuseTexture(
-				device,
-				materials[materialIndex],
-				FindFallbackDiffuseTexture(fallbackDiffuseTextures, materialName.C_Str()),
-				textureCache);
+			aiString name;
+			source->Get(AI_MATKEY_NAME, name);
+			load(FindFallbackDiffuseTexture(fallback, name.C_Str()).string(), nullptr);
 		}
 	}
 
@@ -682,8 +555,10 @@ ModelMaterial::~ModelMaterial()
 /// </summary>
 /// <param name="other">ムーブ元の ModelMaterial。</param>
 ModelMaterial::ModelMaterial(ModelMaterial&& other) noexcept
-	: diffuseTexturePath(std::move(other.diffuseTexturePath))
+	: satinMetal(other.satinMetal)
+	, diffuseTexturePath(std::move(other.diffuseTexturePath))
 	, diffuseTextureView(other.diffuseTextureView)
+	, normalTextureView(std::move(other.normalTextureView))
 {
 	other.diffuseTextureView = nullptr;
 }
@@ -703,7 +578,9 @@ ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 	ReleaseTexture(diffuseTextureView);
 
 	diffuseTexturePath = std::move(other.diffuseTexturePath);
+	satinMetal = other.satinMetal;
 	diffuseTextureView = other.diffuseTextureView;
+	normalTextureView = std::move(other.normalTextureView);
 	other.diffuseTextureView = nullptr;
 
 	return *this;
@@ -717,14 +594,31 @@ ModelMaterial& ModelMaterial::operator=(ModelMaterial&& other) noexcept
 /// <returns>描画可能なメッシュを 1 つ以上読み込めた場合は true。</returns>
 bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 {
-	DebugLog("[Model] Load start: ", path);
-
 	if (!device)
 	{
-		DebugLog("[Model] Load failed: device is null");
 		return false;
 	}
 
+	PreparedModelData prepared;
+	const auto start = std::chrono::steady_clock::now();
+	const bool parsed = PrepareFromFile(path, prepared);
+	const auto ready = std::chrono::steady_clock::now();
+	const bool loaded = parsed && Upload(device, std::move(prepared));
+	const auto end = std::chrono::steady_clock::now();
+
+	using Milliseconds = std::chrono::duration<double, std::milli>;
+	DebugLog("[Model] ", path, " CPU ms=", Milliseconds(ready - start).count(),
+			 " GPU ms=", Milliseconds(end - ready).count(), " success=", loaded);
+
+	return loaded;
+}
+
+/// <summary>モデルと画像をGPUに触れずに読み込む。呼び出しスレッドはCOM初期化済みとする。</summary>
+/// <param name="path">モデルのファイルパス。</param>
+/// <param name="output">読み込み結果の受け取り先。</param>
+/// <returns>有効なメッシュを読み込めた場合はtrue。</returns>
+bool ModelResource::PrepareFromFile(const std::string &path, PreparedModelData &output)
+{
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(
 		path,
@@ -748,12 +642,9 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 		" Animations=",
 		scene->mNumAnimations);
 
-	meshes.clear();
-	materials.clear();
-	bones.clear();
-	animationClips.clear();
-
-	LoadMaterials(device, *scene, std::filesystem::path(path), materials);
+	PreparedModelData prepared;
+	PrepareMaterials(*scene, std::filesystem::path(path), prepared.materials);
+	auto &bones = prepared.bones;
 
 	std::unordered_map<std::string, uint32_t> boneIndexByName;
 	CollectNodeHierarchy(scene->mRootNode, -1, bones, boneIndexByName);
@@ -839,29 +730,7 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 			continue;
 		}
 
-		if (FAILED(CreateBuffer(
-			device,
-			mesh.vertices.data(),
-			static_cast<UINT>(mesh.vertices.size() * sizeof(ModelVertex)),
-			D3D11_BIND_VERTEX_BUFFER,
-			&mesh.vertexBuffer)))
-		{
-			DebugLog("[Model] Vertex buffer creation failed. Mesh=", meshIndex);
-			return false;
-		}
-
-		if (FAILED(CreateBuffer(
-			device,
-			mesh.indices.data(),
-			static_cast<UINT>(mesh.indices.size() * sizeof(uint32_t)),
-			D3D11_BIND_INDEX_BUFFER,
-			&mesh.indexBuffer)))
-		{
-			DebugLog("[Model] Index buffer creation failed. Mesh=", meshIndex);
-			return false;
-		}
-
-		meshes.push_back(std::move(mesh));
+		prepared.meshes.push_back(std::move(mesh));
 	}
 
 	for (unsigned int animationIndex = 0; animationIndex < scene->mNumAnimations; ++animationIndex)
@@ -872,22 +741,83 @@ bool ModelResource::LoadFromFile(ID3D11Device* device, const std::string& path)
 			continue;
 		}
 
-		animationClips.push_back(ConvertAnimationClip(*sourceAnimation, bones, boneIndexByName));
+		prepared.animationClips.push_back(ConvertAnimationClip(*sourceAnimation, bones, boneIndexByName));
 	}
 
-	const bool loaded = !meshes.empty();
-	DebugLog(
-		"[Model] Load result: ",
-		loaded ? "success" : "failed",
-		" MeshBuffers=",
-		meshes.size(),
-		" Materials=",
-		materials.size(),
-		" Bones=",
-		bones.size(),
-		" Animations=",
-		animationClips.size());
-	return loaded;
+	if (prepared.meshes.empty())
+	{
+		return false;
+	}
+
+	output = std::move(prepared);
+
+	return true;
+}
+
+/// <summary>CPU準備済みのモデルをGPUに登録する。</summary>
+/// <param name="device">登録先のDirect3Dデバイス。</param>
+/// <param name="prepared">準備済みデータ。成功時にメッシュと骨格を移譲する。</param>
+/// <returns>描画に必要なバッファを作成できた場合はtrue。</returns>
+bool ModelResource::Upload(ID3D11Device *device, PreparedModelData &&prepared)
+{
+	if (!device || prepared.meshes.empty())
+	{
+		return false;
+	}
+
+	for (auto &mesh : prepared.meshes)
+	{
+		if (FAILED(CreateBuffer(device, mesh.vertices.data(),
+							   static_cast<UINT>(mesh.vertices.size() * sizeof(ModelVertex)),
+							   D3D11_BIND_VERTEX_BUFFER, &mesh.vertexBuffer)) ||
+			FAILED(CreateBuffer(device, mesh.indices.data(),
+							   static_cast<UINT>(mesh.indices.size() * sizeof(uint32_t)),
+							   D3D11_BIND_INDEX_BUFFER, &mesh.indexBuffer)))
+		{
+			DebugLog("[Model] GPU buffer creation failed");
+
+			return false;
+		}
+	}
+
+	std::vector<ModelMaterial> uploadedMaterials;
+	std::unordered_map<const TexturePreparation::Image *, ID3D11ShaderResourceView *> uploaded;
+	for (const auto &source : prepared.materials)
+	{
+		auto &material = uploadedMaterials.emplace_back();
+		material.diffuseTexturePath = source.path;
+		material.satinMetal = source.satinMetal;
+		if (source.normalImage)
+		{
+			TexturePreparation::Upload(device, *source.normalImage, material.normalTextureView.GetAddressOf());
+		}
+
+		if (!source.image)
+		{
+			continue;
+		}
+
+		if (const auto found = uploaded.find(source.image.get()); found != uploaded.end())
+		{
+			material.diffuseTextureView = found->second;
+			material.diffuseTextureView->AddRef();
+		}
+		else if (SUCCEEDED(TexturePreparation::Upload(device, *source.image, &material.diffuseTextureView)))
+		{
+			uploaded.emplace(source.image.get(), material.diffuseTextureView);
+		}
+		else
+		{
+			DebugLog("[Model] GPU texture creation failed: ", source.path);
+		}
+	}
+
+	meshes = std::move(prepared.meshes);
+	materials = std::move(uploadedMaterials);
+	bones = std::move(prepared.bones);
+	animationClips = std::move(prepared.animationClips);
+
+	return true;
 }
 
 /// <summary>
@@ -983,6 +913,15 @@ bool ModelResourceManager::LoadModel(const std::string& key, const std::string& 
 /// <returns>見つかった ModelResource。存在しない場合は nullptr。</returns>
 const ModelResource* ModelResourceManager::GetModel(const std::string& key)
 {
+	const auto *scene = SceneManager::GetInstance().GetCurrentScene();
+	if (scene)
+	{
+		if (const auto *model = scene->FindSceneModel(key))
+		{
+			return model;
+		}
+	}
+
 	const auto found = resources.find(key);
 	if (found == resources.end())
 	{
@@ -990,6 +929,16 @@ const ModelResource* ModelResourceManager::GetModel(const std::string& key)
 	}
 
 	return found->second.get();
+}
+
+/// <summary>
+/// 共通プレイヤーモデルをメインスレッドから登録する。
+/// </summary>
+/// <param name="key">モデルの共有キー。</param>
+/// <param name="model">GPU登録済みのモデル。</param>
+void ModelResourceManager::RegisterPreparedPlayer(const std::string &key, std::unique_ptr<ModelResource> model)
+{
+	resources.try_emplace(key, std::move(model));
 }
 
 /// <summary>
