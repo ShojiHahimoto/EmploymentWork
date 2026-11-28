@@ -35,6 +35,7 @@ void BattleSetupScene::Enter()
 /// <param name="request">ワーカーへ渡すロード要求。</param>
 void BattleSetupScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = "BGM/BGM_BattleSetUp_02_maou";
 	request.uiImageIds = {"header_accent", "back", "panel", "battle_panel", "button", "button_primary",
 		"badge_a", "badge_b", "badge_x", "badge_y", "battle_keyboard", "battle_gamepad",
 		"battle_tab_left", "battle_tab_right", "battle_surface", "battle_roster_button"};

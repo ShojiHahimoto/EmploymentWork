@@ -131,6 +131,7 @@ BattleScene::BattleScene(int initialWidth, int initialHeight, const BattleSetup:
 /// <param name="request">ワーカーへ渡すロード要求。</param>
 void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = SoundIds::BattleBgm01;
 	request.models.push_back({"Debugman", "assets/model/Debugman/Akai.fbx"});
 	request.textures.emplace_back("assets/texture/number.png");
 	request.uiImageIds = {"button", "button_primary"};
@@ -146,18 +147,18 @@ void BattleScene::DescribeLoad(SceneLoadRequest &request) const
 	request.effectIds = {"HitSpark", "GuardSpark"};
 	request.prepareScene = []
 	{
-		auto battleMusic = std::make_shared<SoundManager::PreparedSound>(
-			SoundManager::PrepareSound(SoundIds::BattleBgm01));
+		auto resultMusic = std::make_shared<SoundManager::PreparedSound>(
+			SoundManager::PrepareSound(SoundIds::ResultBgm01));
 		auto normalHit = std::make_shared<SoundManager::PreparedSound>(
 			SoundManager::PrepareSound(SoundIds::HitNormal));
 		auto hardHit = std::make_shared<SoundManager::PreparedSound>(
 			SoundManager::PrepareSound(SoundIds::HitHard));
 
 		PreparedSceneLoad result;
-		result.apply = [battleMusic, normalHit, hardHit](Scene &)
+		result.apply = [normalHit, hardHit, resultMusic](Scene &)
 		{
 			auto &sound = SoundManager::GetInstance();
-			sound.RegisterSound(SoundIds::BattleBgm01, std::move(*battleMusic), true, true);
+			sound.RegisterSound(SoundIds::ResultBgm01, std::move(*resultMusic), true, true);
 			sound.RegisterSound(SoundIds::HitNormal, std::move(*normalHit), false, false);
 			sound.RegisterSound(SoundIds::HitHard, std::move(*hardHit), false, false);
 		};
@@ -191,7 +192,6 @@ void BattleScene::Enter()
 	roundTiming = BattleResultSystem::LoadTiming();
 	//サウンド初期化
 	//ラウンドごとにサウンドが再起動しないように他とは別で初期化する
-	InitializeBattleSounds();
 #if defined(_DEBUG)
 	InitializeDebugSceneView();
 #endif
@@ -259,7 +259,7 @@ void BattleScene::BuildRoundWorld()
 	victoryMotionStarted = false;
 	roundBanner = nullptr;
 	//ラウンド演出による遅延を計算
-	const int fadeIn = round.number > 1 ? roundTiming.fadeInFrames : 0;
+	const int fadeIn = (round.number > 1 || rematchFadeIn) ? roundTiming.fadeInFrames : 0;
 	BattleResultSystem::BeginRound(world, round,
 		fadeIn + roundTiming.roundIntroDelayFrames + roundTiming.roundDisplayFrames +
 		roundTiming.roundToFightFrames + roundTiming.fightDisplayFrames + roundTiming.fightToControlFrames);
@@ -276,7 +276,6 @@ void BattleScene::Exit()
 #endif
 	hudNumberTexture = nullptr;
 	EffectRenderSystem::ReleaseResources();
-	SoundManager::GetInstance().StopBGM();
 	world.Clear();
 }
 
@@ -287,7 +286,11 @@ void BattleScene::Update()
 #endif
 
 	//決着がついた場合ラウンド終了演出を開始
-	if (resultMenu.active)
+	if (resultMenu.choice == BattleResultChoice::Rematch)
+	{
+		RunRematchFadeOut();
+	}
+	else if (resultMenu.active)
 	{
 		RunResultMenu();
 	}
@@ -312,7 +315,7 @@ void BattleScene::RunRoundIntro()
 {
 	//演出時間を計算
 	const auto& timing = roundTiming;
-	const int fadeIn = round.number > 1 ? timing.fadeInFrames : 0;
+	const int fadeIn = (round.number > 1 || rematchFadeIn) ? timing.fadeInFrames : 0;
 	const int roundStart = fadeIn + timing.roundIntroDelayFrames;
 	const int fightStart = roundStart + timing.roundDisplayFrames + timing.roundToFightFrames;
 	//ラウンド開始時のバナーを選択する
@@ -329,6 +332,11 @@ void BattleScene::RunRoundIntro()
 	//演出による操作停止中もモーションは更新する
 	MotionSystem::Update(world);
 	++introFrame;
+	if (rematchFadeIn && introFrame >= fadeIn)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::BattleBgm01);
+		rematchFadeIn = false;
+	}
 	//待機時間計測を進める
 	BattleResultSystem::AdvanceWait(world, round);
 }
@@ -350,6 +358,16 @@ void BattleScene::RunRoundEnding()
 	const bool matchFinished = match != BattleResult::None;
 	const int victoryFrames = winner >= 0 ? timing.victoryMotionFrames : 0;
 	const int framesBeforeFade = matchFinished ? timing.matchResultDisplayFrames : victoryFrames;
+
+	if (matchFinished && endingFrame == displayEnd)
+	{
+		SoundManager::GetInstance().StopBGM();
+	}
+
+	if (matchFinished && endingFrame == victoryStart)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::ResultBgm01);
+	}
 
 	//バナーを選択する
 	roundBanner = nullptr;
@@ -499,7 +517,7 @@ void BattleScene::DrawRoundPresentation()
 	}
 
 	float alpha = 0.0f;
-	if (fadeFrame >= 0)
+	if (fadeFrame >= 0 && !resultMenu.active)
 	{
 		alpha = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
 		if (BattleResultSystem::GetMatchResult(round) != BattleResult::None)
@@ -507,7 +525,7 @@ void BattleScene::DrawRoundPresentation()
 			alpha *= ResultBackdropOpacity;
 		}
 	}
-	else if (round.number > 1 && round.waitFrames > 0 && introFrame < roundTiming.fadeInFrames)
+	else if ((round.number > 1 || rematchFadeIn) && introFrame < roundTiming.fadeInFrames)
 	{
 		alpha = 1.0f - static_cast<float>(introFrame) / roundTiming.fadeInFrames;
 	}
@@ -628,6 +646,11 @@ void BattleScene::Draw(Renderer& renderer)
 	if (resultMenu.active)
 	{
 		BattleHUDSystem::DrawResultMenu(renderer, width, height, setupData, resultMenu);
+		if (resultMenu.choice == BattleResultChoice::Rematch)
+		{
+			const float opacity = static_cast<float>(fadeFrame) / std::max(1, roundTiming.fadeOutFrames);
+			Renderer::DrawScreenRect({0, 0, width, height}, Color(0, 0, 0, opacity));
+		}
 	}
 
 	DebugImGuiSystem::DrawSpawnWindow(world);
@@ -709,15 +732,6 @@ void BattleScene::InitializeBattleHUD()
 	world.AddComponent<HealthGaugeComponent>(player2GaugeId, player2Gauge);
 
 	hudNumberTexture = FindSceneTexture("assets/texture/number.png");
-}
-
-/// <summary>
-/// 準備済みのバトルBGMをループ再生する。
-/// </summary>
-void BattleScene::InitializeBattleSounds()
-{
-	SoundManager& soundManager = SoundManager::GetInstance();
-	soundManager.PlayBGM(SoundIds::BattleBgm01);
 }
 
 /// <summary>
@@ -820,11 +834,8 @@ void BattleScene::RunResultMenu()
 	switch (resultMenu.choice)
 	{
 	case BattleResultChoice::Rematch:
-		Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
-		round = {};
-		visibleRoundPoints = {};
-		resultMenu = {};
-		BuildRoundWorld();
+		SoundManager::GetInstance().StopBGM();
+		fadeFrame = 0;
 		break;
 	case BattleResultChoice::CharacterSelect:
 		SceneManager::GetInstance().RequestChangeScene(std::make_unique<BattleSetupScene>(width, height, setupData));
@@ -834,6 +845,27 @@ void BattleScene::RunResultMenu()
 		break;
 	case BattleResultChoice::None:
 		break;
+	}
+}
+
+/// <summary>再戦の暗転が完了したら対戦を初期化し、暗転明けまで対戦BGMを待たせる。</summary>
+void BattleScene::RunRematchFadeOut()
+{
+	if (fadeFrame < roundTiming.fadeOutFrames)
+	{
+		++fadeFrame;
+		return;
+	}
+
+	Input::InputSystem::SetActionMap(Input::InputActionMapId::Gameplay);
+	round = {};
+	visibleRoundPoints = {};
+	resultMenu = {};
+	rematchFadeIn = roundTiming.fadeInFrames > 0;
+	BuildRoundWorld();
+	if (!rematchFadeIn)
+	{
+		SoundManager::GetInstance().PlayBGM(SoundIds::BattleBgm01);
 	}
 }
 

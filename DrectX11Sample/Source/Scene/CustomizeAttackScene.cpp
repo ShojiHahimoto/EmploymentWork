@@ -18,6 +18,7 @@ void CustomizeAttackScene::Enter()
 /// <param name="request">遷移前に準備する素材一覧。</param>
 void CustomizeAttackScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = "BGM/BGM_CustomizeEditor_01_maou";
 	request.uiImageIds = {"panel_flat_white", "button_primary_clean", "panel", "button", "button_primary",
 						  "number_field", "checkbox_off", "checkbox_on", "label_background", "back", "reset",
 						  "play", "pause", "previous", "next", "camera", "keyframe", "header", "playback_panel",

@@ -33,6 +33,7 @@ private:
 	std::array<int, 2> visibleRoundPoints{};
 	BattleRoundTiming roundTiming;
 	int introFrame = 0;
+	bool rematchFadeIn = false;
 	int endingFrame = 0;
 	int fadeFrame = -1;
 	bool postStopMotionStarted = false;
@@ -44,7 +45,6 @@ private:
 	ID3D11ShaderResourceView* hudNumberTexture = nullptr;
 
 	void InitializeBattleHUD();
-	void InitializeBattleSounds();
 	void RunInitialWorldSetup();
 	void BuildRoundWorld();
 	void RunActiveRound();
@@ -54,6 +54,7 @@ private:
 	void DrawWorldWithCamera(Renderer& renderer, const CameraComponent& camera);
 	void DrawBattleHUD(Renderer& renderer);
 	void RunResultMenu();
+	void RunRematchFadeOut();
 
 #if defined(_DEBUG)
 	TransformComponent debugSceneCameraTransform;

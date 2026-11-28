@@ -12,6 +12,7 @@ CustomizeSelectScene::CustomizeSelectScene(int initialWidth, int initialHeight, 
 /// <param name="request">シーン入場前のロード要求。</param>
 void CustomizeSelectScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = "BGM/BGM_Customize_01_maou";
 	request.uiImageIds = {"customize_menu_normal", "customize_menu_selected", "header", "header_accent",
 						  "button", "back", "panel", "slot_focused", "slot_forward",
 						  "badge_a", "badge_b", "badge_x", "badge_y"};

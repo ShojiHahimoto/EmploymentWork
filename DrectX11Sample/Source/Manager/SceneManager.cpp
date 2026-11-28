@@ -64,9 +64,12 @@ void SceneManager::RequestChangeScene(std::unique_ptr<Scene> nextScene)
 	});
 
 	pendingScene = std::move(nextScene);
+	pendingBgmId = request.bgmId;
 	loadingDrawn = false;
 
-	if (!request.models.empty() || !request.textures.empty() || !request.optionalTextures.empty() || !request.characterFolders.empty() ||
+	SoundManager::GetInstance().StopBGM();
+
+	if (!request.bgmId.empty() || !request.models.empty() || !request.textures.empty() || !request.optionalTextures.empty() || !request.characterFolders.empty() ||
 		!request.motionIds.empty() || request.prepareScene || !request.uiImageIds.empty() || !request.effectIds.empty())
 	{
 		using PreparationTask = std::packaged_task<std::optional<PreparedAssets>()>;
@@ -88,6 +91,11 @@ void SceneManager::RequestChangeScene(std::unique_ptr<Scene> nextScene)
 std::optional<SceneManager::PreparedAssets> SceneManager::PrepareAssets(const SceneLoadRequest &request)
 {
 	PreparedAssets result;
+	if (!request.bgmId.empty())
+	{
+		result.bgm = SoundManager::PrepareSound(request.bgmId);
+	}
+
 	if (!request.uiImageIds.empty())
 	{
 		result.uiImages = GameUI::UIRenderer::PrepareAssets("assets/texture/UI/Parts/assets.json", request.uiImageIds);
@@ -274,7 +282,18 @@ bool SceneManager::PublishAssets(PreparedAssets &&assets)
 		assets.applySceneData(*pendingScene);
 	}
 
-	return GameUI::UIRenderer::UploadAssets(assets.uiImages);
+	if (!GameUI::UIRenderer::UploadAssets(assets.uiImages))
+	{
+		return false;
+	}
+
+	if (!pendingBgmId.empty() &&
+		!SoundManager::GetInstance().RegisterSound(pendingBgmId, std::move(assets.bgm), true, true))
+	{
+		DebugLog("[Sound] Scene BGM unavailable: ", pendingBgmId);
+	}
+
+	return true;
 }
 
 /// <summary>
@@ -310,6 +329,8 @@ void SceneManager::ApplyPendingSceneChange()
 		{
 			DebugLog("[Loading] Scene transition canceled.");
 			pendingScene.reset();
+			pendingBgmId.clear();
+			SoundManager::GetInstance().PlayBGM(currentBgmId);
 
 			return;
 		}
@@ -327,11 +348,13 @@ void SceneManager::ApplyPendingSceneChange()
 	}
 
 	currentScene = std::move(pendingScene);
+	currentBgmId = std::move(pendingBgmId);
 	currentScene->loadWorker = loadWorker;
 	currentScene->saveWorker = saveWorker;
 
 	currentScene->OnResize(width, height);
 	currentScene->Enter();
+	SoundManager::GetInstance().PlayBGM(currentBgmId);
 }
 
 /// <summary>

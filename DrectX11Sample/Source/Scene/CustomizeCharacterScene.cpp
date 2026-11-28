@@ -23,6 +23,7 @@ void CustomizeCharacterScene::Enter()
 /// <param name="request">ロードワーカーへ渡す要求。</param>
 void CustomizeCharacterScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = "BGM/BGM_CustomizeEditor_01_maou";
 	flow.DescribeLoad(request);
 	request.prepareScene = [index = slotIndex]
 	{

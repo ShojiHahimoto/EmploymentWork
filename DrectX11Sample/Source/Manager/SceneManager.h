@@ -4,6 +4,7 @@
 #include "Manager/LoadWorker.h"
 #include "Manager/SaveWorker.h"
 #include "Manager/SceneLoadRequest.h"
+#include "Manager/SoundManager.h"
 #include "UI/UIRenderer.h"
 #include <memory>
 #include <optional>
@@ -36,6 +37,8 @@ private:
 
 	std::unique_ptr<Scene> currentScene;
 	std::unique_ptr<Scene> pendingScene;
+	std::string currentBgmId;
+	std::string pendingBgmId;
 
 	/// <summary>
 	/// 準備した素材をここに格納する
@@ -43,6 +46,7 @@ private:
 	struct PreparedAssets
 	{
 		GameUI::UIRenderer::PreparedImages uiImages;
+		SoundManager::PreparedSound bgm;
 		std::unordered_map<std::string, EffectData> effects;
 		std::vector<std::pair<SceneModelLoad, PreparedModelData>> models;
 		std::vector<std::pair<std::string, TexturePreparation::Image>> textures;

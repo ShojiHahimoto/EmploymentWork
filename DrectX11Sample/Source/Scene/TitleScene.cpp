@@ -22,6 +22,7 @@ TitleScene::TitleScene(int initialWidth, int initialHeight)
 /// <param name="request">遷移前に準備する素材一覧。</param>
 void TitleScene::DescribeLoad(SceneLoadRequest &request) const
 {
+	request.bgmId = "BGM/BGM_Title_03_maou";
 	request.uiImageIds = {"title_v2_logo", "title_v2_normal", "title_v2_selected"};
 	request.models.push_back({PlayerModelKey, "assets/model/Player_01/Player_01_SurfaceAtlas.fbx", true});
 	request.motionIds.emplace_back("Common/Idle");

@@ -23,6 +23,7 @@ struct SceneLoadRequest
 {
 	// CPU準備はシーンに触れず、apply は遷移先が確定するまで実行しない。
 	std::function<PreparedSceneLoad()> prepareScene;
+	std::string bgmId;
 	std::vector<std::string> uiImageIds;
 	std::vector<std::string> effectIds;
 	std::vector<SceneModelLoad> models;			//モデル

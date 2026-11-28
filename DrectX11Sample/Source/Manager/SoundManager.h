@@ -20,7 +20,8 @@ class SaveWorker;
 
 namespace SoundIds
 {
-	inline constexpr const char* BattleBgm01 = "BGM/BGM_Battle01_maou_";
+	inline constexpr const char* BattleBgm01 = "BGM/BGM_Battle_01_maou_";
+	inline constexpr const char* ResultBgm01 = "BGM/BGM_Result_01_maou";
 	inline constexpr const char* HitNormal = "SE/Battle/SE_Hit_Normal_maou";
 	inline constexpr const char* HitHard = "SE/Battle/SE_Hit_Hard_maou";
 }
